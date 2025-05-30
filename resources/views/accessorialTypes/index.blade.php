@@ -1,0 +1,54 @@
+@extends('layouts.app')
+
+@section('title', 'FCZCNYX')
+
+@section('content')
+    <!-- Container to hold both elements in a row -->
+    <div class="flex justify-between items-center mb-4">
+        <!-- Search Form (aligned to the left) -->
+        <form method="GET" action="{{ route('accessorialTypes.index') }}" class="flex items-center flex-grow space-x-4">
+            <!-- Search Input (Longer Input) -->
+            <input type="text" id="search" name="search" value="{{ $search ?? '' }}" class="px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-2/3 md:w-3/4 lg:w-1/2 xl:w-1/2" placeholder="Search Accessorial Types...">
+        </form>
+
+        <!-- Create New Accessorial Type Button (aligned to the right) -->
+        <a href="{{ route('accessorialTypes.create') }}" class="btn btn-primary bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-4 whitespace-nowrap">
+            Create New Accessorial Type
+        </a>
+    </div>
+
+    <!-- Accessorial Type Rates Table -->
+    <div id="accessorial-types-table" class="bg-white shadow-md rounded-lg overflow-hidden">
+        @include('accessorialTypes.table', ['accessorialTypes' => $accessorialTypes])
+    </div>
+
+@endsection
+
+@section('scripts')
+    <!-- Add jQuery from CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        // Listen for input changes in the search field
+        document.getElementById('search').addEventListener('input', function () {
+            let searchQuery = this.value;
+
+            // Fetch the filtered Accessorial Types
+            fetchAccessorialTypes(searchQuery);
+        });
+
+        // Function to fetch Accessorial Types using AJAX
+        function fetchAccessorialTypes(searchQuery) {
+            // Use the Fetch API to send a GET request with the search query
+            fetch(`{{ route('accessorialTypes.index') }}?search=${searchQuery}`)
+                .then(response => response.text())
+                .then(data => {
+                    // Replace the content of the Accessorial Types rates table with the new data
+                    document.getElementById('accessorial-types-table').innerHTML = data;
+                })
+                .catch(error => {
+                    console.error('Error fetching accessorial types:', error);
+                });
+        }
+    </script>
+@endsection
