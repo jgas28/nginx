@@ -31,7 +31,7 @@
                     <td class="py-2 px-4 border-b">{{ $cashVoucherRequest->cvr_number }}</td>
                     <td class="py-2 px-4 border-b">{{ $cashVoucherRequest->amount }}</td>
                     <td class="py-2 px-4 border-b space-x-2">
-                        <a href="{{ route('cashVoucherRequests.print', ['id' => $cashVoucherRequest->id, 'cvr_number' => $cashVoucherRequest->cvr_number, 'mtm' => $cashVoucherRequest->mtm]) }}"
+                        <a href="{{ route('cashVoucherRequests.print', ['id' => $cashVoucherRequest->id, 'cvr_number' => $cashVoucherRequest->dr_id, 'mtm' => $cashVoucherRequest->mtm]) }}"
                            class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
                            title="Print Cash Voucher" target="_blank">
                            @if(empty($cashVoucherRequest->print_status) || $cashVoucherRequest->print_status === '0')

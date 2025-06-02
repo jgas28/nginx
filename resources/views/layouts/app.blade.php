@@ -306,6 +306,9 @@
                         <a href="{{ route('cashVoucherRequests.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             List - Admin
                         </a>
+                        <a href="{{ route('cashVoucherRequests.cvrList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            List - DR
+                        </a>
                         <a href="{{ route('cashVoucherRequests.rejectView') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Reject - DR
                         </a>

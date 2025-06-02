@@ -150,6 +150,9 @@ Route::middleware('auth')->group(function () {
         ->name('cashVoucherRequests.editCVR');
     Route::put('/cash-voucher-requests/{id}/update-cvr', [CashVoucherController::class, 'updateCVR'])
     ->name('cashVoucherRequests.updateCVR');
+    Route::get('/cash-voucher-list', [CashVoucherController::class, 'cvrList'])->name('cashVoucherRequests.cvrList');
+    Route::get('/cash-voucher/{id}/{cvr_number}/{mtm}/print', [CashVoucherController::class, 'printCVR'])->name('cashVoucherRequests.print');
+    Route::get('/cash-voucher-requests/print-multiple', [CashVoucherController::class, 'printMultiple'])->name('cashVoucherRequests.printMultiple');
 
     //admin
     Route::post('/cvr/generate', [AdminController::class, 'generateCvrNumber'])->name('cvr.generate');

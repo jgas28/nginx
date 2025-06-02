@@ -326,18 +326,18 @@
                             @else
                                 DRIVER: {{ $drivers->fname }} {{ $drivers->lname }} W/ FLEET CARD OF {{ $fleets->account_name }}
                             @endif
-
+                            <br>
                             {{-- Remarks --}}
                             @if (!empty($remarks))
-                                <br><br><strong>Remarks:</strong><br>
+                               <strong>Remarks:</strong><br>
                                 @foreach($remarks as $remark)
                                     {{ $remark }}<br>
                                 @endforeach
                             @endif
 
                             {{-- Transfer Charge / Cash Charge --}}
-                            @if(!empty($cvrApprovals->charge) && $cvrApprovals->charge != 0)
-                                <br><br><strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }}
+                            @if(isset($cvrApprovals) && floatval($cvrApprovals->charge) > 0)
+                            <strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }}
                             @endif
                         </td>
                         <td style="padding: 0;">
@@ -394,9 +394,8 @@
             <button 
                 onclick="printAndUpdateStatusSingle(this);" 
                 class="btn"
-                data-cvr-id="{{ $cashVoucherRequest->cvr_approvals_id }}" 
-                data-voucher-id="{{ $cashVoucherRequest->cash_vouchers_id }}">
-                Print
+                data-cvr-id="{{$cvrApprovals->id}}" 
+                data-voucher-id="{{$cashVoucherRequest->cash_vouchers_id}}"> Print
             </button>
         </div>
     </div>
