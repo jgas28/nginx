@@ -64,7 +64,7 @@
                     <a href="{{ route('cashVoucherRequests.showCustomCVR', ['id' => $cashVouchers->id, 'cvr_number' => $cashVouchers->dr_id]) }}"
                         target="_blank"
                         class="inline-block bg-yellow-500 text-white px-5 py-2 rounded hover:bg-yellow-600 transition">
-                        View CVR
+                        {{$cashVouchers->id}}
                     </a>
                 </div>
             </fieldset>
