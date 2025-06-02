@@ -92,7 +92,7 @@
                     @endif
                 </div>
                 <div class="my-2">
-                   <a href="{{ route('admin.cashvoucher.printPreview', $cashVouchers->id) }}"
+                   <a href="{{ route('adminCV.printPreview', $cashVouchers->id) }}"
                         target="_blank"
                         class="inline-block bg-yellow-500 text-white px-5 py-2 rounded hover:bg-yellow-600 transition">
                         View CVR

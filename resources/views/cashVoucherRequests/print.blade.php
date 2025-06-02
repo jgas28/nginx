@@ -13,7 +13,7 @@
             background-color: #f7f7f7;
         }
 
-        .container {
+        .container { 
             width: 8.5in;   /* 8.5 inches width */
             /* height: 11in;   11 inches height */
             margin: 0 auto; /* Center the container horizontally */

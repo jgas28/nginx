@@ -163,7 +163,7 @@ Route::middleware('auth')->group(function () {
 
     // Confirm/Release Request
     Route::get('/admin/approval-request/{id}', [AdminController::class, 'approvalRequest'])->name('admin.approvalRequest');
-    Route::get('/admin/cashvoucher/print-preview/{id}', [AdminController::class, 'printPreview'])->name('admin.cashvoucher.printPreview');
+    Route::get('/admin/cashvoucher/print-preview/{id}', [AdminController::class, 'printPreview'])->name('adminCV.printPreview');
     Route::post('/admin-update', [AdminController::class, 'StoreApprovalRequest'])->name('admin.storeRequest');
 
 

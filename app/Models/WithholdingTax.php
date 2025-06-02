@@ -14,4 +14,5 @@ class WithholdingTax extends Model
         'description',
         'percentage',
     ];
+
 }

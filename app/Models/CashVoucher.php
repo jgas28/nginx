@@ -82,4 +82,9 @@ class CashVoucher extends Model
     {
         return $this->belongsTo(Truck::class, 'truck_id');
     }
+
+    public function withholdingTax()
+    {
+        return $this->belongsTo(WithholdingTax::class, 'withholding_tax_id');
+    }
 }

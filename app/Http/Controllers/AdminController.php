@@ -400,6 +400,6 @@ class AdminController extends Controller
 
     public function printPreview()
     {
-         return view('adminCV.printPreview');
+         return view('adminCV.printPreview'); 
     }
 }

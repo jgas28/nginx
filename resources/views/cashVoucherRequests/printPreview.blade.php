@@ -193,7 +193,10 @@
             <h1 style="font-size:15px">Cash Voucher Request</h1>
             <div class="series-no">
                 <div class="label" style="font-size:12px">Series No</div>
-                <div class="value" style="font-size:12px">{{ $cashVoucherRequest->cvr_number ?? 'N/A' }}</div> 
+              
+                <div class="value" style="font-size:12px">{{ $cashVoucherRequest->cvr_number ?? 'N/A' }}-
+                    {{$allocations->truck->truck_name}}-{{$deliveryRequest->company->company_code}}{{$deliveryRequest->expenseType->expense_code}}
+                </div> 
             </div>
         </div>
 
@@ -221,66 +224,124 @@
                 </thead>
 
                 <tbody>
+                    @php
+                        $lineCount = 0;
+
+                        // Estimate line count from delivery items
+                        foreach ($deliveryLineItems as $item) {
+                            $lineCount += in_array($deliveryRequest->name, ['ADM', 'FE', 'ND', 'OPS-INC']) ? 1 : 3;
+                        }
+
+                        // Add lines for remarks
+                        $lineCount += !empty($remarks) ? count($remarks) + 1 : 0;
+
+                        // Add one line if there's withholding tax
+                        if ($cashVoucherRequest->voucher_type === 'with_tax') {
+                            $lineCount += 1;
+                        }
+
+                        // Dynamically set font size
+                        $fontSize = $lineCount > 12 ? '10px' : '12px';
+                    @endphp
+                    {{-- Start table body --}}
+<tbody>
+
+    {{-- Loop Delivery Info --}}
+    @if (in_array($deliveryRequest->name, ['ADM', 'FE', 'ND', 'OPS-INC']))
+        @foreach($deliveryLineItems as $item)
+            <tr>
+                <td style="text-align: left;">{{ $item->delivery_address }}</td>
+                <td style="text-align: right;">₱ {{ number_format($cashVoucherRequest->amount ?? 0, 2) }}</td>
+            </tr>
+        @endforeach
+    @else
+        @foreach($deliveryLineItems as $item)
+            <tr>
+                <td style="text-align: left;">{{ $requestTypes->request_type }} - {{ $item->site_name }}</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td style="text-align: left;">{{ $item->delivery_address }}</td>
+                <td style="text-align: right;">₱ {{ number_format($cashVoucherRequest->amount ?? 0, 2) }}</td>
+            </tr>
+            <tr>
+                <td style="text-align: left;">{{ $item->mtm }} - {{ $item->delivery_number }}</td>
+                <td></td>
+            </tr>
+        @endforeach
+    @endif
+
+    {{-- Tax Base --}}
+    @if($cashVoucherRequest->voucher_type === 'with_tax')
+        <tr>
+            <td style="text-align: left; font-size: 10px;">Tax Based Amount</td>
+            <td style="text-align: right;">₱ {{ number_format($cashVoucherRequest->tax_based_amount ?? 0, 2) }}</td>
+        </tr>
+        <tr>
+            <td style="text-align: left; font-size: 10px;">{{ $cashVoucherRequest->tax_description }}</td>
+            <td style="text-align: right;">
+                ₱ {{
+                    number_format(
+                        ($cashVoucherRequest->tax_based_amount ?? 0) * ($cashVoucherRequest->tax_percentage ?? 0),
+                        2
+                    )
+                }}
+            </td>
+        </tr>
+    @endif
+
+    {{-- Remarks --}}
+    @if (!empty($remarks))
+        <tr>
+            <td style="text-align: left;">Remarks:</td>
+            <td></td>
+        </tr>
+        @foreach($remarks as $remark)
+            <tr>
+                <td style="text-align: left;">{{ $remark }}</td>
+                <td></td>
+            </tr>
+        @endforeach
+    @endif
+
+    {{-- Transfer Charge --}}
+    @if(!empty($cvrApprovals->charge) && $cvrApprovals->charge != 0)
+        <tr>
+            <td style="text-align: left;">Transfer Charge</td>
+            <td style="text-align: right;">₱ {{ number_format($cvrApprovals->charge, 2) }}</td>
+        </tr>
+    @endif
+
+
+
+                    {{-- TOTAL ROW --}}
                     <tr>
-                        <td style="height: 150px; font-size:12px">
-                            @if ($deliveryRequest->name === 'ADM' || $deliveryRequest->name === 'FE' || $deliveryRequest->name === 'ND' || $deliveryRequest->name === 'OPS-INC')
-                                @foreach($deliveryLineItems as $index => $deliveryLineItem)    
-                                    {{ $deliveryLineItem->delivery_address }}
-                                    @if ($index < count($deliveryLineItems) - 1)
-                                        <br><br> <!-- Adds space only if it's not the last item -->
+                        <td style="padding: 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                {{-- LEFT SIDE: DRIVER INFO --}}
+                                <div style="font-size: 12px;">
+                                    @if(
+                                        $drivers->employee_code === 'NONE' || 
+                                        in_array($deliveryRequest->name, ['ADM', 'FE', 'ND', 'OPS-INC'])
+                                    )
+                                        {{-- No driver text --}}
+                                    @elseif(empty($fleets->account_name))
+                                        DRIVER: {{ $drivers->fname }} {{ $drivers->lname }}
+                                    @elseif(strtoupper($drivers->fname . ' ' . $drivers->lname) === strtoupper($fleets->account_name))
+                                        DRIVER: {{ $drivers->fname }} {{ $drivers->lname }} W/ FLEET CARD
+                                    @else
+                                        DRIVER: {{ $drivers->fname }} {{ $drivers->lname }} W/ FLEET CARD OF {{ $fleets->account_name }}
                                     @endif
-                                @endforeach
-                            @else
-                                @foreach($deliveryLineItems as $index => $deliveryLineItem)
-                                    {{ $requestTypes->request_type }} - {{ $deliveryLineItem->site_name }}<br>
-                                    {{ $deliveryLineItem->delivery_address }}<br>
-                                    {{ $deliveryLineItem->mtm }} - {{ $deliveryLineItem->delivery_number }}<br>
+                                </div>
 
-                                    @if ($index < count($deliveryLineItems) - 1)
-                                        <br><br>
-                                    @endif
-                                @endforeach
-                            @endif
-                            <br><br>
-                            @foreach($remarks as $index => $remark)
-                                {{ $remark }}
-                                @if ($index < count($remarks) - 1)
-                                    <br><br>
-                                @endif
-                            @endforeach
+                                {{-- RIGHT SIDE: TOTAL LABEL --}}
+                                <div style="font-size: 12px; color: red; font-weight: bold;">
+                                    TOTAL:
+                                </div>
+                            </div>
                         </td>
-                        <td style="height: 150px; font-size:15px">{{ $cashVoucherRequest->amount ?? '' }}</td>
-                    </tr>
-
-                    <tr>
-                        <td colspan="1" style="height: 10px; padding: 15px; font-size:15px; display: flex; justify-content: space-between;">
-                        
-                        @if($drivers->employee_code === 'NONE' 
-                            || $deliveryRequest->name === 'ADM' 
-                            || $deliveryRequest->name === 'FE' 
-                            || $deliveryRequest->name === 'ND' 
-                            || $deliveryRequest->name === 'OPS-INC')
-                            <strong style="text-align: left; font-size:12px;"></strong>
-                            <strong style="text-align: right; color:red;">TOTAL:</strong>
-
-                        @elseif(empty($fleets->account_name))
-                            {{-- account_name is null --}}
-                            <strong style="text-align: left; font-size:12px;">DRIVER: {{$drivers->fname}} {{$drivers->lname}}</strong>
-                            <strong style="text-align: right; color:red;">TOTAL:</strong>
-
-                        @elseif(strtoupper($drivers->fname . ' ' . $drivers->lname) === strtoupper($fleets->account_name))
-                            <strong style="text-align: left; font-size:12px;">DRIVER: {{$drivers->fname}} {{$drivers->lname}} W/ FLEET CARD</strong>
-                            <strong style="text-align: right; color:red;">TOTAL:</strong>
-
-                        @else
-                            <strong style="text-align: left; font-size:12px;">DRIVER: {{$drivers->fname}} {{$drivers->lname}} W/ FLEET CARD OF {{$fleets->account_name}}</strong>
-                            <strong style="text-align: right; color:red;">TOTAL:</strong>
-                        @endif
-
-
-                        </td>
-                        <td style="height: 10px; text-align: right; padding-right: 10px;">
-                            <strong style="font-size:15px; color:red;">{{ $cashVoucherRequest->amount ?? '' }}</strong>
+                        <td style="text-align: right; font-size: 14px;">
+                            <strong style="color: red;">₱ {{ number_format($cashVoucherRequest->amount ?? 0, 2) }}</strong>
                         </td>
                     </tr>
                 </tbody>

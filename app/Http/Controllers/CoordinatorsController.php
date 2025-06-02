@@ -1086,10 +1086,10 @@ class CoordinatorsController extends Controller
 
             $allocation = new Allocation([
                 'dr_id' => $request->dr_id,
-                'truck_id' => $request->request_type,
-                'amount' => $request->request_type,
-                'fleet_card_id' => $request->request_type,
-                'driver_id' => $request->request_type, 
+                'truck_id' => $request->truck_id,
+                'amount' => $request->amount,
+                'fleet_card_id' => $request->fleet_card_id,
+                'driver_id' => $request->driver_id, 
                 'helper' => $request->has('helpers') ? $request->helpers : null,
                 'created_by' => $employeeCode,
             ]);

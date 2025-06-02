@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Allocation;
 use App\Models\Approver;
 use Illuminate\Http\Request;
 use App\Models\cvr_approval;
@@ -858,22 +859,21 @@ class CashVoucherController extends Controller
 
 
         public function showCustomCVR($id, $cvr_number)
-        {
+        {   
             $cashVoucherRequest = DB::table('cash_vouchers')
-            ->join('delivery_request', 'cash_vouchers.dr_id', '=', 'delivery_request.id')
-            // ->join('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
-            // ->join('employees', 'cvr_approvals.receiver', '=', 'employees.id')
-            ->select(
-                'cash_vouchers.*',
-                'cash_vouchers.id as cash_vouchers_id',
-                'delivery_request.*'
-                // 'cvr_approver.*',
-                // 'employees.*',
-            )
-            ->where('cash_vouchers.id', $id)
-            ->where('cash_vouchers.dr_id', $cvr_number) 
-            ->first();
-    
+                ->join('delivery_request', 'cash_vouchers.dr_id', '=', 'delivery_request.id')
+                ->leftJoin('withholding_taxes', 'cash_vouchers.withholding_tax_id', '=', 'withholding_taxes.id')
+                ->select(
+                    'cash_vouchers.*',
+                    'cash_vouchers.id as cash_vouchers_id',
+                    'delivery_request.*',
+                    'withholding_taxes.description as tax_description',
+                    'withholding_taxes.percentage as tax_percentage'
+                )
+                ->where('cash_vouchers.id', $id)
+                ->where('cash_vouchers.dr_id', $cvr_number)
+                ->first();
+                
             // Check if the remarks column contains a JSON string
             if (is_string($cashVoucherRequest->remarks) && $this->isJson($cashVoucherRequest->remarks)) {
                 // Decode JSON if it is in JSON format
@@ -892,9 +892,13 @@ class CashVoucherController extends Controller
             ->where('delivery_request_line_items.mtm', $cashVoucherRequest->mtm)
             ->get();
     
-            $deliveryRequest = DB::table('delivery_request')
-            ->leftjoin('customers', 'delivery_request.customer_id', '=', 'customers.id')
-            ->where('delivery_request.mtm', $cashVoucherRequest->mtm) 
+            // $_POST = DB::table('delivery_request')
+            // ->leftjoin('customers', 'delivery_request.customer_id', '=', 'customers.id')
+            // ->where('delivery_request.id', $cashVoucherRequest->dr_id) 
+            // ->first();
+
+            $deliveryRequest = DeliveryRequest::with('company','customer')
+            ->where('id', $cashVoucherRequest->dr_id)
             ->first();
     
             $requestTypes = DB::table('cash_vouchers')
@@ -905,6 +909,10 @@ class CashVoucherController extends Controller
             $drivers = DB::table('allocations')
             ->join('users', 'allocations.driver_id', '=', 'users.id')
             ->where('allocations.dr_id', $cvr_number) 
+            ->first();
+
+            $allocations = Allocation::with('truck')
+            ->where('dr_id', $cashVoucherRequest->dr_id)
             ->first();
     
             $fleets = DB::table('allocations')
@@ -917,6 +925,9 @@ class CashVoucherController extends Controller
             ->select('users.*', 'cash_vouchers.*') 
             ->where('cash_vouchers.dr_id', $cvr_number) 
             ->first();
+
+            $cvrApprovals = cvr_approval::where('cvr_id', $id)
+            ->first();
     
             // Check if the amount exists and convert it to words
             $amountInWords = $cashVoucherRequest->amount ? $this->convertAmountToWordsPreview($cashVoucherRequest->amount) : 'N/A';
@@ -924,7 +935,7 @@ class CashVoucherController extends Controller
             // Return the print view with the data
             return view(
                 'cashVoucherRequests.printPreview', compact('cashVoucherRequest', 'amountInWords', 
-                'deliveryLineItems', 'employees', 'drivers', 'fleets', 'requestTypes', 'deliveryRequest', 'remarks'
+                'deliveryLineItems', 'employees', 'drivers', 'fleets', 'requestTypes', 'deliveryRequest', 'remarks', 'allocations', 'cvrApprovals'
             ));
         }
 
