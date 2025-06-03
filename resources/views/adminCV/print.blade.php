@@ -194,14 +194,12 @@
             <div class="series-no">
                 <div class="label" style="font-size:12px">Series No</div>
                 <div style="font-size:12px">
-                    @if(isset($vouchers->cvr_type) && strtolower($vouchers->cvr_type) === 'admin')
+                    @if(isset($vouchers->cashVoucher->cvr_type) && strtolower($vouchers->cashVoucher->cvr_type) === 'admin')
                         <!-- When cvr_type is admin -->
-                        {{ $vouchers->cvr_number ?? 'N/A' }}-{{ $vouchers->company->company_code ?? 'N/A' }}{{ $vouchers->expenseTypes->expense_code ?? 'N/A' }}
-                    @elseif(isset($vouchers->cvr_type) && strtolower($vouchers->cvr_type) === 'rpm')
+                        {{ $vouchers->cvr_number ?? 'N/A' }}-{{ $vouchers->cashVoucher->company->company_code ?? 'N/A' }}{{ $vouchers->cashVoucher->expenseTypes->expense_code ?? 'N/A' }}
+                    @elseif(isset($vouchers->cashVoucher->cvr_type) && strtolower($vouchers->cashVoucher->cvr_type) === 'rpm')
                         <!-- When cvr_type is rpm -->
-                        {{ $vouchers->cvr_number ?? 'N/A' }}-{{ $vouchers->trucks->truck_name ?? 'N/A' }}-{{ $vouchers->company->company_code ?? 'N/A' }}{{ $vouchers->expenseTypes->expense_code ?? 'N/A' }}
-                    @else
-                        {{ $vouchers->cvr_number ?? 'N/A' }}
+                        {{ $vouchers->cvr_number ?? 'N/A' }}-{{ $vouchers->cashVoucher->trucks->truck_name ?? 'N/A' }}-{{ $vouchers->cashVoucher->company->company_code ?? 'N/A' }}{{ $vouchers->cashVoucher->expenseTypes->expense_code ?? 'N/A' }}
                     @endif
                 </div>
             </div>
@@ -217,7 +215,7 @@
                 <thead>
                     <tr>
                         <th colspan="2" style="text-align: left; font-size: 18px; border: 1px solid #ccc;">
-                            PAID TO: {{ $vouchers->suppliers->supplier_name ?? 'N/A' }}
+                            PAID TO: {{ $vouchers->cashVoucher->suppliers->supplier_name}}
                         </th>
                     </tr>
                     <tr>
@@ -227,8 +225,8 @@
                 </thead>
                 <tbody>
                     @php
-                        $descriptions = json_decode($vouchers->description ?? '[]');
-                        $amounts = json_decode($vouchers->amount_details ?? '[]');
+                        $descriptions = json_decode($vouchers->cashVoucher->description ?? '[]');
+                        $amounts = json_decode($vouchers->cashVoucher->amount_details ?? '[]');
                     @endphp
                     <tr>
                         <td style="border: 1px solid #ccc; vertical-align: top; padding: 5px;">
@@ -245,7 +243,7 @@
                     <tr>
                         <td style="text-align: left; vertical-align: top; font-size: 12px; padding: 10px;">
                         @php
-                            $remarks = json_decode($vouchers->remarks);
+                            $remarks = json_decode($vouchers->cashVoucher->remarks);
                         @endphp
                         @if (!empty($remarks))
                             <strong>Remarks:</strong><br>
@@ -254,7 +252,7 @@
                             @endforeach
                         @endif
                         @if(!empty($vouchers->charge) && $vouchers->charge != 0)
-                            <br><br><strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }}
+                            <br><strong>Transfer Charge:</strong> ₱ {{ number_format($vouchers->charge, 2) }}
                          @endif
                         </td>
                         <td style="border: 1px solid #ccc; padding: 0;">
@@ -267,12 +265,12 @@
                                     <td style="text-align: left; padding: 4px;">Net Amount</td>
 
                                     @if($vouchers->voucher_type === 'with_tax')
-                                        <td style="text-align: right; padding: 4px;">₱ {{ number_format($vouchers->tax_based_amount, 2) }}</td>
+                                        <td style="text-align: right; padding: 4px;">₱ {{ number_format($vouchers->cashVoucher->tax_based_amount, 2) }}</td>
 
-                                    @elseif($vouchers->voucher_type === 'regular')
+                                    @elseif($vouchers->cashVoucher->voucher_type === 'regular')
                                         @php
                                             $totalAmount = 0;
-                                            $amountDetails = json_decode($vouchers->amount_details); // ✅ Corrected here
+                                            $amountDetails = json_decode($vouchers->cashVoucher->amount_details); // ✅ Corrected here
 
                                             if (is_array($amountDetails)) {
                                                 foreach ($amountDetails as $item) {
@@ -288,34 +286,34 @@
                                 <tr>
                                     <td style="text-align: left; padding: 4px;">VAT (12%)</td>
                                     <td style="text-align: right; padding: 4px;">
-                                        @if($vouchers->voucher_type === 'with_tax')
-                                            ₱ {{ number_format($vouchers->tax_based_amount * 0.12, 2) }}
-                                        @elseif($vouchers->voucher_type === 'regular')
+                                        @if($vouchers->cashVoucher->voucher_type === 'with_tax')
+                                            ₱ {{ number_format($vouchers->cashVoucher->tax_based_amount * 0.12, 2) }}
+                                        @elseif($vouchers->cashVoucher->voucher_type === 'regular')
                                         @endif
                                     </td>
                                 </tr>
                                 <tr>
                                     <td style="text-align: left; padding: 4px;">Less Withholding Tax</td>
                                     <td style="text-align: right; padding: 4px;">
-                                        @if($vouchers->voucher_type === 'with_tax')
-                                            ₱ {{ number_format($vouchers->tax_based_amount * $vouchers->withholdingTax->percentage, 2) }}
-                                         @elseif($vouchers->voucher_type === 'regular')
+                                        @if($vouchers->cashVoucher->voucher_type === 'with_tax')
+                                            ₱ {{ number_format($vouchers->cashVoucher->tax_based_amount * $vouchers->cashVoucher->withholdingTax->percentage, 2) }}
+                                         @elseif($vouchers->cashVoucher->voucher_type === 'regular')
                                         @endif
                                     </td>
                                 </tr>
                                 <tr>
                                     <td style="text-align: left; font-weight: bold; padding: 4px; color: red;">Total</td>
                                     <td style="text-align: right; font-weight: bold; color: red; padding: 4px;">
-                                        @if($vouchers->voucher_type === 'with_tax')
+                                        @if($vouchers->cashVoucher->voucher_type === 'with_tax')
                                             @php
-                                                $taxAmount = $vouchers->tax_based_amount * 0.12;
-                                                $withholdingAmount = $vouchers->tax_based_amount * $vouchers->withholdingTax->percentage;
-                                                $finalAmount = $vouchers->tax_based_amount + $taxAmount - $withholdingAmount;
+                                                $taxAmount = $vouchers->cashVoucher->tax_based_amount * 0.12;
+                                                $withholdingAmount = $vouchers->cashVoucher->tax_based_amount * $vouchers->cashVoucher->withholdingTax->percentage;
+                                                $finalAmount = $vouchers->cashVoucher->tax_based_amount + $taxAmount - $withholdingAmount;
                                             @endphp
 
                                             ₱ {{ number_format($finalAmount, 2) }}
 
-                                        @elseif($vouchers->voucher_type === 'regular')
+                                        @elseif($vouchers->cashVoucher->voucher_type === 'regular')
                                             ₱ {{ number_format($totalAmount, 2) }}
                                         @endif
                                     </td>
@@ -330,6 +328,7 @@
                 <tr>
                     <td>
                         <div class="label" style="font-size: 10px;">_________________________</div>
+                        <div style="font-size: 10px;">{{$approvers->name}}</div>
                         <div class="label" style="font-size: 10px;">Approver</div>
                     </td>
                     <td>

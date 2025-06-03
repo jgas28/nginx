@@ -398,8 +398,55 @@ class AdminController extends Controller
         return view('adminCV.rejectView', compact('cashVouchers'));
     }
 
-    public function printPreview()
+    public function printPreview($id)
     {
-         return view('adminCV.printPreview'); 
+        $user = Auth::user();
+        $fullname = $user->fname . ' ' . $user->lname;
+
+        $vouchers = CashVoucher::findOrFail($id);
+        return view('adminCV.printPreview', compact('vouchers', 'fullname')); 
     }
+
+    public function printMultiple()
+    {
+
+    }
+
+    public function printCVR($id, $cvr_number)
+    {
+        $user = Auth::user();
+        $fullname = $user->fname . ' ' . $user->lname;
+
+        $vouchers = cvr_approval::with('cashVoucher')->find($id);
+        $fullname = $user->fname . ' ' . $user->lname;
+        $approvers = DB::table('cvr_approvals')
+                ->leftjoin('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
+                ->where('cvr_approvals.id', $id)
+                ->first();
+
+        return view('AdminCV.print', compact('vouchers', 'fullname', 'approvers'));
+    }
+
+    public function cvrList(Request $request)
+    { 
+        // Get the search query from the request
+        $search = $request->get('search');
+    
+        // Fetch related delivery line items by joining with the correct table name
+        $cashVoucherRequests = cvr_approval::with('cashVoucher')
+        ->whereHas('cashVoucher', function ($query) {
+            $query->whereIn('cvr_type', ['admin', 'rpm'])
+                ->where('status', 2)
+                ->orderBy('print_status', 'asc');
+        })
+        ->paginate(10);
+
+        // Check if the request expects an AJAX response
+        if ($request->ajax()) {
+            return view('AdminCV.cvrList_table', compact('cashVoucherRequests'))->render();
+        }
+    
+        // For the normal view
+        return view('AdminCV.cvrList', compact('cashVoucherRequests', 'search'));
+    } 
 }

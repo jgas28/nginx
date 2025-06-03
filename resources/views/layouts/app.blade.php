@@ -303,7 +303,7 @@
                         <a href="{{ route('adminCV.approval') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Admin/RPM Approval
                         </a>
-                        <a href="{{ route('cashVoucherRequests.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                        <a href="{{ route('adminCV.cvrList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             List - Admin
                         </a>
                         <a href="{{ route('cashVoucherRequests.cvrList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">

@@ -275,10 +275,10 @@
                             @else
                                 DRIVER: {{ $drivers->fname }} {{ $drivers->lname }} W/ FLEET CARD OF {{ $fleets->account_name }}
                             @endif
-
+                            <br>
                             {{-- Remarks --}}
                             @if (!empty($remarks))
-                                <br><br><strong>Remarks:</strong><br>
+                                <strong>Remarks:</strong><br>
                                 @foreach($remarks as $remark)
                                     {{ $remark }}<br>
                                 @endforeach
@@ -286,7 +286,12 @@
 
                             {{-- Transfer Charge / Cash Charge --}}
                             @if(!empty($cvrApprovals->charge) && $cvrApprovals->charge != 0)
-                                <br><br><strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }}
+                                <strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }} <br>
+                               <strong>Reference:</strong>
+                                @if(isset($cvrApprovals->payment_type) && strtolower($cvrApprovals->payment_type) !== 'cash')
+                                    {{ $cvrApprovals->payment_name }} /
+                                @endif
+                                {{ $cvrApprovals->reference_number }}
                             @endif
                         </td>
                         <td style="padding: 0;">
@@ -337,7 +342,12 @@
 
                             {{-- Transfer Charge / Cash Charge --}}
                             @if(isset($cvrApprovals) && floatval($cvrApprovals->charge) > 0)
-                            <strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }}
+                            <strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }} <br>
+                            <strong>Reference:</strong>
+                            @if(isset($cvrApprovals->payment_type) && strtolower($cvrApprovals->payment_type) !== 'cash')
+                                {{ $cvrApprovals->payment_name }} /
+                            @endif
+                            {{ $cvrApprovals->reference_number }}
                             @endif
                         </td>
                         <td style="padding: 0;">
