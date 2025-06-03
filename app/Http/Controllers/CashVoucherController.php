@@ -204,7 +204,7 @@ class CashVoucherController extends Controller
     public function store(Request $request)
     {
         Log::info('Request Data:', ['data' => $request->all()]);
-
+        $company_id = $request->company_id;
         try {
             $validated = $request->validate([
                 'amount' => 'required|numeric',
@@ -224,48 +224,53 @@ class CashVoucherController extends Controller
             return redirect()->back()->withErrors($e->errors())->withInput();
         }
 
-        $company_id = $request->company_id;
+       
 
         // Run everything in a DB transaction
         DB::transaction(function () use ($company_id, $request) {
             // Handle potential rollover
-            $currentDate = new DateTime();
-            $lastDayOfMonth = $currentDate->format('t');
-            if ((int)$currentDate->format('j') === (int)$lastDayOfMonth) {
-                $currentDate->modify('first day of next month');
-            }
+            $currentDate = new DateTime(); // Always current date
+            $yearMonth = $currentDate->format('Y-m');
+            $year = $currentDate->format('Y');
+            $month = $currentDate->format('m');
+            $isFirstDayOfMonth = $currentDate->format('j') === '1';
 
-            $currentMonthString = $currentDate->format('Y-m');
-
-            // Lock and fetch or create MonthlySeriesNumber
+            // Lock and fetch the row for this company
             $monthlySeries = MonthlySeriesNumber::where('company_id', $company_id)
                 ->lockForUpdate()
                 ->first();
 
             if (!$monthlySeries) {
-                $monthlySeries = new MonthlySeriesNumber();
-                $monthlySeries->company_id = $company_id;
-                $monthlySeries->month = $currentMonthString;
-                $monthlySeries->series_number = 1;
-                $monthlySeries->save();
+                // Create if not exists
+                $monthlySeries = MonthlySeriesNumber::create([
+                    'company_id' => $company_id,
+                    'month' => $yearMonth,
+                    'series_number' => 1,
+                ]);
                 $nextCvrNumber = 1;
-                Log::info("Created new MonthlySeriesNumber with series_number = 1 for company_id: {$company_id}");
+                Log::info("Created MonthlySeriesNumber: company_id = $company_id, month = $yearMonth, series = 1");
             } else {
-                if ($monthlySeries->series_number <= 0) {
-                    $monthlySeries->series_number = 1;
+                if ($isFirstDayOfMonth || $monthlySeries->month !== $yearMonth) {
+                    // Reset series if it's first day OR stored month is outdated
+                    $monthlySeries->update([
+                        'month' => $yearMonth,
+                        'series_number' => 1,
+                    ]);
+                    $nextCvrNumber = 1;
+                    Log::info("Reset MonthlySeriesNumber: company_id = $company_id, new month = $yearMonth, series = 1");
                 } else {
+                    // Normal increment
                     $monthlySeries->increment('series_number');
-                    $nextCvrNumber = $currentMonthString;
+                    $nextCvrNumber = $monthlySeries->series_number;
+                    Log::info("Incremented MonthlySeriesNumber: company_id = $company_id, series = $nextCvrNumber");
                 }
-                $nextCvrNumber = $monthlySeries->series_number;
-                Log::info("Updated MonthlySeriesNumber to {$nextCvrNumber} for company_id: {$company_id}");
             }
 
             // Construct the final CVR number
             $currentYear = $currentDate->format('Y');
             $currentMonth = $currentDate->format('m');
             $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber);
-            $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}";
+            $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}/{$company_id}";
             $user = Auth::user();
             $employeeCode = $user->id;
 

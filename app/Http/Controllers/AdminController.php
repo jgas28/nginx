@@ -56,7 +56,7 @@ class AdminController extends Controller
     {
         $user = Auth::user();
         $employeeCode = $user->id;
-
+        $company_id = $request->company_id;
         $request->validate([
             'cvr_type' => 'required|string',
             'voucher_type' => 'required|string',
@@ -74,40 +74,47 @@ class AdminController extends Controller
             'remarks.*' => 'nullable|string',
         ]);
 
-        DB::transaction(function () use ($request, $employeeCode) {
-            $company_id = $request->company_id;
-
+        DB::transaction(function () use ($request, $employeeCode, $company_id) {
             // Calculate current (or next) month and year
-            $currentDate = new DateTime();
-            $lastDayOfMonth = $currentDate->format('t');
-            if ((int)$currentDate->format('j') === (int)$lastDayOfMonth) {
-                $currentDate->modify('first day of next month');
-            }
-
+            $currentDate = new DateTime(); // Always current date
             $yearMonth = $currentDate->format('Y-m');
             $year = $currentDate->format('Y');
             $month = $currentDate->format('m');
+            $isFirstDayOfMonth = $currentDate->format('j') === '1';
 
-            // Lock and update MonthlySeriesNumber
+            // Lock and fetch the row for this company
             $monthlySeries = MonthlySeriesNumber::where('company_id', $company_id)
                 ->lockForUpdate()
                 ->first();
 
             if (!$monthlySeries) {
+                // Create if not exists
                 $monthlySeries = MonthlySeriesNumber::create([
                     'company_id' => $company_id,
                     'month' => $yearMonth,
                     'series_number' => 1,
                 ]);
                 $nextCvrNumber = 1;
+                Log::info("Created MonthlySeriesNumber: company_id = $company_id, month = $yearMonth, series = 1");
             } else {
-                $monthlySeries->increment('series_number');
-                $nextCvrNumber = $monthlySeries->series_number;
-                $nextCvrNumber = $yearMonth;
+                if ($isFirstDayOfMonth || $monthlySeries->month !== $yearMonth) {
+                    // Reset series if it's first day OR stored month is outdated
+                    $monthlySeries->update([
+                        'month' => $yearMonth,
+                        'series_number' => 1,
+                    ]);
+                    $nextCvrNumber = 1;
+                    Log::info("Reset MonthlySeriesNumber: company_id = $company_id, new month = $yearMonth, series = 1");
+                } else {
+                    // Normal increment
+                    $monthlySeries->increment('series_number');
+                    $nextCvrNumber = $monthlySeries->series_number;
+                    Log::info("Incremented MonthlySeriesNumber: company_id = $company_id, series = $nextCvrNumber");
+                }
             }
 
             $nextCvrNumberFormatted = str_pad($nextCvrNumber, 3, '0', STR_PAD_LEFT);
-            $formattedCvrNumber = "CVR-{$year}-{$month}-{$nextCvrNumberFormatted}";
+            $formattedCvrNumber = "CVR-{$year}-{$month}-{$nextCvrNumberFormatted}/{$company_id}";
 
             // Save voucher
             $voucher = new CashVoucher();
@@ -138,27 +145,26 @@ class AdminController extends Controller
         $company = Company::findOrFail($request->company_id);
 
         $now = now();
-        if ($now->isLastOfMonth()) {
-            $now = $now->copy()->addMonthNoOverflow()->startOfMonth();
-        }
 
         $year = $now->format('Y');
         $month = $now->format('m');
         $yearMonth = $now->format('Y-m');
+        $isFirstDay = $now->day === 1;
 
-        // Just fetch, don't create or modify
-        $monthlySeries = MonthlySeriesNumber::where('company_id', $company->id)
-            ->where('month', $yearMonth)
-            ->first();
+        $monthlySeries = MonthlySeriesNumber::where('company_id', $company->id)->first();
 
-        // Get current or default to 0, then increment by 1
-        $seriesNumber = optional($monthlySeries)->series_number ?? 0;
-        $series = str_pad($seriesNumber + 1, 3, '0', STR_PAD_LEFT);
+        if (!$monthlySeries || $monthlySeries->month !== $yearMonth || $isFirstDay) {
+            $seriesNumber = 1;
+        } else {
+            $seriesNumber = $monthlySeries->series_number + 1;
+        }
 
+        $series = str_pad($seriesNumber, 3, '0', STR_PAD_LEFT);
         $cvrNumber = "CVR-{$year}-{$month}-{$series}";
 
         return response()->json(['cvr_number' => $cvrNumber]);
     }
+
 
     public function show($id)
     {
