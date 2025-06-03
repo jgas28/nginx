@@ -130,11 +130,11 @@ class AllocationController extends Controller
                 }
 
                 // Update delivery status
-                $lineItem->update(['delivery_status' => '9']);
+                $lineItem->update(['delivery_status' => '14']);
 
                 Log::info('Updated delivery status of line item.', [
                     'line_item_id' => $lineItem->id,
-                    'new_status' => '9',
+                    'new_status' => '14',
                 ]);
             }
         }

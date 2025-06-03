@@ -72,53 +72,65 @@ class AdminController extends Controller
             'tax_base_amount' => 'nullable|numeric',
             'remarks' => 'nullable|array',
             'remarks.*' => 'nullable|string',
-            'cvr_number' => 'required|string|unique:cash_vouchers,cvr_number',
         ]);
 
-        $monthlySeries = MonthlySeriesNumber::where('company_id', $request->company_id)->first();
-        $nextCvrNumber = $monthlySeries ? $monthlySeries->series_number + 1 : 1;
+        DB::transaction(function () use ($request, $employeeCode) {
+            $company_id = $request->company_id;
 
-        // Handle potential rollover
-        $currentDate = new DateTime();
-        $lastDayOfMonth = $currentDate->format('t');
-        if ((int)$currentDate->format('j') === (int)$lastDayOfMonth) {
-            $currentDate->modify('first day of next month');
-        }
+            // Calculate current (or next) month and year
+            $currentDate = new DateTime();
+            $lastDayOfMonth = $currentDate->format('t');
+            if ((int)$currentDate->format('j') === (int)$lastDayOfMonth) {
+                $currentDate->modify('first day of next month');
+            }
 
-        $currentYear = $currentDate->format('Y');
-        $currentMonth = $currentDate->format('m');
-        $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber);
+            $yearMonth = $currentDate->format('Y-m');
+            $year = $currentDate->format('Y');
+            $month = $currentDate->format('m');
 
-        $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}";
+            // Lock and update MonthlySeriesNumber
+            $monthlySeries = MonthlySeriesNumber::where('company_id', $company_id)
+                ->lockForUpdate()
+                ->first();
 
-        // Store main cash voucher
-        $voucher = new CashVoucher();
-        $voucher->cvr_type = $request->cvr_type;
-        $voucher->voucher_type = $request->voucher_type;
-        $voucher->cvr_number = $formattedCvrNumber;
-        $voucher->company_id = $request->company_id;
-        $voucher->supplier_id = $request->supplier_id;
-        $voucher->expense_type_id = $request->expense_type_id;
-        $voucher->withholding_tax_id = $request->withholding_tax;
-        $voucher->tax_based_amount = $request->tax_base_amount;
-        $voucher->description = json_encode($request->description);
-        $voucher->amount_details = json_encode($request->amount_details);
-        $voucher->remarks = json_encode($request->remarks);
-        $voucher->status = '1';
-        $voucher->truck_id =  $request->truck_id;
-        $voucher->created_by = $employeeCode;
-        $voucher->save();
+            if (!$monthlySeries) {
+                $monthlySeries = MonthlySeriesNumber::create([
+                    'company_id' => $company_id,
+                    'month' => $yearMonth,
+                    'series_number' => 1,
+                ]);
+                $nextCvrNumber = 1;
+            } else {
+                $monthlySeries->increment('series_number');
+                $nextCvrNumber = $monthlySeries->series_number;
+                $nextCvrNumber = $yearMonth;
+            }
 
-        // Increment the series number *after* successful creation
-        $yearMonth = now()->format('Y-m');
-        $monthlySeries = MonthlySeriesNumber::firstOrCreate(
-            ['company_id' => $request->company_id, 'month' => $yearMonth],
-            ['series_number' => 0]
-        );
-        $monthlySeries->increment('series_number');
+            $nextCvrNumberFormatted = str_pad($nextCvrNumber, 3, '0', STR_PAD_LEFT);
+            $formattedCvrNumber = "CVR-{$year}-{$month}-{$nextCvrNumberFormatted}";
+
+            // Save voucher
+            $voucher = new CashVoucher();
+            $voucher->cvr_type = $request->cvr_type;
+            $voucher->voucher_type = $request->voucher_type;
+            $voucher->cvr_number = $formattedCvrNumber;
+            $voucher->company_id = $company_id;
+            $voucher->supplier_id = $request->supplier_id;
+            $voucher->expense_type_id = $request->expense_type_id;
+            $voucher->withholding_tax_id = $request->voucher_type === 'with_tax' ? $request->withholding_tax : null;
+            $voucher->tax_based_amount = $request->voucher_type === 'with_tax' ? $request->tax_base_amount : null;
+            $voucher->description = json_encode($request->description);
+            $voucher->amount_details = json_encode($request->amount_details);
+            $voucher->remarks = $request->remarks ? json_encode($request->remarks) : null;
+            $voucher->status = '1';
+            $voucher->truck_id = $request->truck_id;
+            $voucher->created_by = $employeeCode;
+            $voucher->save();
+        });
 
         return redirect()->route('admin.index')->with('success', 'Cash Voucher successfully created.');
     }
+
 
 
     public function generateCvrNumber(Request $request)

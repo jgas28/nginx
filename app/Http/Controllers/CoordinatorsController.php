@@ -984,9 +984,6 @@ class CoordinatorsController extends Controller
         }
     }
 
-
-
-
     public function request($id)
     {
         $deliveryLineItems = DeliveryRequest::join('delivery_request_line_items', 'delivery_request.id', '=', 'delivery_request_line_items.dr_id')
@@ -1088,7 +1085,6 @@ class CoordinatorsController extends Controller
 
             // Lock and fetch or create MonthlySeriesNumber
             $monthlySeries = MonthlySeriesNumber::where('company_id', $company_id)
-                ->where('month', $currentMonthString)
                 ->lockForUpdate()
                 ->first();
 
@@ -1105,6 +1101,7 @@ class CoordinatorsController extends Controller
                     $monthlySeries->series_number = 1;
                 } else {
                     $monthlySeries->increment('series_number');
+                    $nextCvrNumber = $currentMonthString;
                 }
                 $nextCvrNumber = $monthlySeries->series_number;
                 Log::info("Updated MonthlySeriesNumber to {$nextCvrNumber} for company_id: {$company_id}");
