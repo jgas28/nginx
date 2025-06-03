@@ -12,90 +12,95 @@
     <form action="{{ route('coordinators.updateAllocation', $deliveryRequest) }}" method="POST">
         @csrf
         @method('PUT')
-        @foreach ($deliveryLineItems as $index => $lineItem)
-        <div class="border bg-white p-4 space-y-6 mb-6">
-            <input type="hidden" name="allocation_id[]" value="{{ $lineItem->allocation_id }}">
+        <div class="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow-md space-y-6">
+            @foreach ($allocate->allocations as $index => $allocation)
+                <div class="border border-gray-300 rounded-md p-4">
+                    <input type="hidden" name="allocation_id[]" value="{{ old('allocation_id.' . $index, $allocation->id) }}">
 
-            <div class="flex flex-wrap -mx-2">
-
-                {{-- Amount --}}
-                <div class="w-full md:w-2/12 px-2 mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                    <input type="number" name="amount[]" value="{{ $lineItem->amount }}"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500">
-                </div>
-
-                {{-- Fleet Card --}}
-                <div class="w-full md:w-2/12 px-2 mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Fleet Card</label>
-                    <select name="fleet_card_id[]" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                        <option value="">Select Fleet Card</option>
-                        @foreach ($fleetCards as $card)
-                            <option value="{{ $card->id }}" {{ $card->id == $lineItem->fleet_card_id ? 'selected' : '' }}>
-                                {{ $card->account_name.'-'. $card->account_number }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Truck --}}
-                <div class="w-full md:w-2/12 px-2 mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Truck</label>
-                    <select name="truck_id[]" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                        <option value="">Select Truck</option>
-                        @foreach ($trucks as $truck)
-                            <option value="{{ $truck->id }}" {{ $truck->id == $lineItem->truck_id ? 'selected' : '' }}>
-                                {{ $truck->truck_name.'-'. $truck->plate_number }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Driver --}}
-                <div class="w-full md:w-2/12 px-2 mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Driver</label>
-                    <select name="driver_id[]" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                        <option value="">Select Driver</option>
-                        @foreach ($drivers as $driver)
-                            <option value="{{ $driver->id }}" {{ $driver->id == $lineItem->driver_id ? 'selected' : '' }}>
-                                {{ $driver->fname.'-'. $driver->lname }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Helpers --}}
-                <div class="w-full md:w-4/12 px-2 mb-4" 
-                    x-data="{ helpers: {{ json_encode(json_decode($lineItem->helper ?? '[]')) }} }">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Helpers</label>
-
-                    <template x-for="(helper, i) in helpers" :key="i">
-                        <div class="flex items-center mb-2">
-                            <input type="text" 
-                                :name="'helper[{{ $index }}][' + i + ']'" 
-                                x-model="helpers[i]"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm mr-2" />
-                            <button type="button" @click="helpers.splice(i, 1)"
-                                    class="text-red-500 hover:text-red-700 text-sm font-medium">Remove</button>
+                    {{-- Row with Amount, Fleet Card, Truck, Driver --}}
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                        {{-- Amount --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                            <input type="number" name="amount[]" 
+                                value="{{ old('amount.' . $index, $allocation->amount) }}"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
                         </div>
-                    </template>
 
-                    <button type="button" 
-                            @click="helpers.push('')" 
+                        {{-- Fleet Card --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Fleet Card</label>
+                            <select name="fleet_card_id[]" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                                <option value="">Select Fleet Card</option>
+                                @foreach ($fleetCards as $card)
+                                    <option value="{{ $card->id }}"
+                                        {{ old('fleet_card_id.' . $index, $allocation->fleet_card_id) == $card->id ? 'selected' : '' }}>
+                                        {{ $card->account_name . ' - ' . $card->account_number }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- Truck --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Truck</label>
+                            <select name="truck_id[]" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                                <option value="">Select Truck</option>
+                                @foreach ($trucks as $truck)
+                                    <option value="{{ $truck->id }}"
+                                        {{ old('truck_id.' . $index, $allocation->truck_id) == $truck->id ? 'selected' : '' }}>
+                                        {{ $truck->truck_name . ' - ' . $truck->plate_number }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- Driver --}}
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Driver</label>
+                            <select name="driver_id[]" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                                <option value="">Select Driver</option>
+                                @foreach ($drivers as $driver)
+                                    <option value="{{ $driver->id }}"
+                                        {{ old('driver_id.' . $index, $allocation->driver_id) == $driver->id ? 'selected' : '' }}>
+                                        {{ $driver->fname . ' ' . $driver->lname }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    {{-- Helpers --}}
+                    <div x-data="{
+                        helpers: {{ json_encode(old('helper.' . $index, $allocation->helper ?? [])) }}
+                    }" class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Helpers</label>
+                        <template x-for="(helper, i) in helpers" :key="i">
+                            <div class="flex items-center mb-2 space-x-2">
+                                <input type="text" 
+                                    :name="'helper[' + {{ $index }} + '][' + i + ']'" 
+                                    x-model="helpers[i]"
+                                    class="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                                <button type="button" 
+                                    @click="helpers.splice(i, 1)"
+                                    class="inline-flex items-center px-3 py-1.5 border border-red-500 text-red-600 rounded-md hover:bg-red-600 hover:text-white transition duration-150">
+                                    Remove
+                                </button>
+                            </div>
+                        </template>
+                        <button type="button" 
+                            @click="helpers.push('')"
                             class="mt-2 text-blue-600 hover:underline text-sm">
-                        + Add Helper
-                    </button>
+                            + Add Helper
+                        </button>
+                    </div>
                 </div>
-
-            </div>
+            @endforeach
         </div>
-        @endforeach
-        <button type="submit" class="w-50 bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl hover:bg-blue-700 transition duration-300">Update Delivery Request</button>
-    </form>
-
         <div class="border bg-white p-4 space-y-6 mt-6">
             <!-- First row -->
             <div class="flex flex-wrap -mx-2">
+                 <input type="hidden" name="deliveryRequest_id" value="{{$deliveryRequest->id}}">
                 <div class="w-full md:w-4/12 px-2 mb-4 md:mb-0">
                 <label for="mtm" class="block text-sm font-medium text-gray-700 mb-1">MTM Number</label>
                 <input type="text" name="mtm" id="mtm" readonly
@@ -120,10 +125,10 @@
 
                 <div class="w-full md:w-4/12 px-2">
                 <label for="delivery_date" class="block text-sm font-medium text-gray-700 mb-1">Delivery Date</label>
-                <input type="date" name="delivery_date" id="delivery_date" readonly
+                <input type="date" name="delivery_date" id="delivery_date"
                         value="{{ old('delivery_date', $deliveryRequest->delivery_date) }}"
                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
-                        bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0 cursor-not-allowed">
+                        focus:outline-none focus:ring-0">
                 @error('delivery_date')
                     <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                 @enderror
@@ -134,10 +139,10 @@
             <div class="flex flex-wrap -mx-2">
                 <div class="w-full md:w-2/12 px-2 mb-4 md:mb-0">
                 <label for="delivery_rate" class="block text-sm font-medium text-gray-700 mb-1">Delivery Rate</label>
-                <input type="text" name="delivery_rate" id="delivery_rate" readonly
+                <input type="text" name="delivery_rate" id="delivery_rate"
                         value="{{ old('delivery_rate', $deliveryRequest->delivery_rate) }}"
                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
-                        bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0 cursor-not-allowed">
+                        focus:outline-none focus:ring-0">
                 @error('delivery_rate')
                     <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                 @enderror
@@ -147,7 +152,7 @@
                 <label for="truck_type_id" class="block text-sm font-medium text-gray-700 mb-1">Truck Type</label>
                 <select name="truck_type_id" id="truck_type_id" readyonly
                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
-                        bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0 cursor-not-allowed">
+                        focus:outline-none focus:ring-0">
                     <option value="">Select Truck Type</option>
                     @foreach($truckTypes as $truckType)
                     <option value="{{ $truckType->id }}" {{ $truckType->id == old('truck_type_id', $deliveryRequest->truck_type_id) ? 'selected' : '' }}>
@@ -309,10 +314,10 @@
                         <!-- Delivery Number -->
                         <div class="w-full md:w-4/12 px-2 mb-4">
                             <label for="regular_delivery_number_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Delivery Number</label>
-                            <input type="text" name="regular[{{ $index }}][delivery_number]" id="regular_delivery_number_{{ $index }}" readonly
+                            <input type="text" name="regular[{{ $index }}][delivery_number]" id="regular_delivery_number_{{ $index }}" 
                                 value="{{ old('regular.' . $index . '.delivery_number', $lineItem->delivery_number) }}"
                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
-                                bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0 cursor-not-allowed">
+                        focus:outline-none focus:ring-0">
                             @error('regular.' . $index . '.delivery_number')
                             <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                             @enderror
@@ -321,9 +326,9 @@
                         <!-- Accessorial Type -->
                         <div class="w-full md:w-2/12 px-2 mb-4">
                             <label for="regular_accessorial_type_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Type</label>
-                            <select name="regular[{{ $index }}][accessorial_type]" id="regular_accessorial_type_{{ $index }}" readonly
+                            <select name="regular[{{ $index }}][accessorial_type]" id="regular_accessorial_type_{{ $index }}"
                                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
-                                    bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0 cursor-not-allowed">
+                        focus:outline-none focus:ring-0">
                             <option value="" {{ old('regular.' . $index . '.accessorial_type', $lineItem->accessorial_type) == '' ? 'selected' : '' }}>
                                 Select an Accessorial Type
                             </option>
@@ -343,9 +348,9 @@
                         <div class="w-full md:w-2/12 px-2 mb-4">
                             <label for="regular_accessorial_rate_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Rate</label>
                             <input type="text" name="regular[{{ $index }}][accessorial_rate]" id="regular_accessorial_rate_{{ $index }}" 
-                                value="{{ old('regular.' . $index . '.accessorial_rate', $lineItem->accessorial_rate) }}" readonly
+                                value="{{ old('regular.' . $index . '.accessorial_rate', $lineItem->accessorial_rate) }}"
                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
-                        bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0 cursor-not-allowed">
+                        focus:outline-none focus:ring-0">
                             @error('regular.' . $index . '.accessorial_rate')
                             <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                             @enderror
@@ -366,9 +371,9 @@
                         <!-- Delivery Status -->
                         <div class="w-full md:w-4/12 px-2 mb-4">
                             <label for="regular_delivery_status_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
-                            <select name="regular[{{ $index }}][delivery_status]" id="regular_delivery_status_{{ $index }}" readonly
+                            <select name="regular[{{ $index }}][delivery_status]" id="regular_delivery_status_{{ $index }}"
                                     class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
-                        bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0 cursor-not-allowed">
+                        focus:outline-none focus:ring-0">
                             @foreach($deliveryStatuses as $deliveryStatus)
                                 <option value="{{ $deliveryStatus->id }}" 
                                 {{ $deliveryStatus->id == old('regular.' . $index . '.delivery_status', $lineItem->delivery_status) ? 'selected' : '' }}>
@@ -409,6 +414,7 @@
                         <div class="border border-gray-300 bg-white p-4 mt-3 rounded">
                             <div class="flex flex-wrap -mx-2">
                                 <!-- Warehouse -->
+                                    <input type="hidden" name="multi_drop[{{ $index }}][id]" value="{{ $lineItem->id }}">
                                 <div class="w-full md:w-1/3 px-2 mb-4">
                                     <label for="multi_drop_0_warehouse_id" class="block text-sm font-medium text-gray-700 mb-1">
                                         Warehouse
@@ -469,8 +475,9 @@
                                                 <div class="w-full md:w-1/4 px-2 mb-4">
                                                     <label for="delivery_number_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Delivery Number</label>
                                                     <input type="text" name="multi_drop[{{ $index }}][delivery_number]" id="delivery_number_{{ $index }}" 
-                                                        class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0"
-                                                        value="{{ old("multi_drop.{$index}.delivery_number", $lineItem->delivery_number) }}" readonly>
+                                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
+                        focus:outline-none focus:ring-0"
+                                                        value="{{ old("multi_drop.{$index}.delivery_number", $lineItem->delivery_number) }}">
                                                     @error("multi_drop.{$index}.delivery_number")
                                                         <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                                                     @enderror
@@ -490,7 +497,8 @@
                                                 <div class="w-full md:w-1/6 px-2 mb-4">
                                                     <label for="delivery_status_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
                                                     <select name="multi_drop[{{ $index }}][delivery_status]" id="delivery_status_{{ $index }}" 
-                                                            class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0" readonly>
+                                                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
+                        focus:outline-none focus:ring-0">
                                                         <option value="" {{ old('multi_drop.' . $index . '.delivery_status', $lineItem->delivery_status) == '' ? 'selected' : '' }}>
                                                             Select a Delivery Status
                                                         </option>
@@ -510,7 +518,8 @@
                                                 <div class="w-full md:w-1/12 px-2 mb-4">
                                                     <label for="accessorial_type_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Type</label>
                                                     <select name="multi_drop[{{ $index }}][accessorial_type]" id="accessorial_type_{{ $index }}" 
-                                                        class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0" readonly>
+                                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
+                        focus:outline-none focus:ring-0">
                                                         <option value="" {{ old('multi_drop.' . $index . '.accessorial_type', $lineItem->accessorial_type) == '' ? 'selected' : '' }}>
                                                             Select an Accessorial Type
                                                         </option>
@@ -530,8 +539,9 @@
                                                 <div class="w-full md:w-1/12 px-2 mb-4">
                                                     <label for="accessorial_rate_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Rate</label>
                                                     <input type="text" name="multi_drop[{{ $index }}][accessorial_rate]" id="accessorial_rate_{{ $index }}" 
-                                                    class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0" 
-                                                    value="{{ old('multi_drop.' . $index . '.accessorial_rate', $lineItem->accessorial_rate) }}" readonly>
+                                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
+                        focus:outline-none focus:ring-0" 
+                                                    value="{{ old('multi_drop.' . $index . '.accessorial_rate', $lineItem->accessorial_rate) }}" >
                                                     @error('multi_drop.' . $index . '.accessorial_rate')
                                                         <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                                                     @enderror
@@ -560,6 +570,7 @@
                             <div class="mt-2 p-4 border border-gray-300 bg-white rounded">
                                 <div class="flex flex-wrap -mx-2">
                                     <div class="w-full md:w-1/3 px-2 mb-4">
+                                         <input type="hidden" name="multi_pickup[{{ $index }}][id]" value="{{ $lineItem->id }}">
                                         <label for="multi_pickup_0_site_name" class="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
                                         <input type="text" name="multi_pickup[0][site_name]" id="multi_pickup_0_site_name" 
                                             class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0" 
@@ -624,7 +635,8 @@
                                                     <label for="multi_pickup_{{ $index }}_delivery_number" class="block text-sm font-medium text-gray-700 mb-1">Delivery Number</label>
                                                     <input type="text" name="multi_pickup[{{ $index }}][delivery_number]" id="multi_pickup_{{ $index }}_delivery_number" 
                                                         value="{{ old("multi_pickup.{$index}.delivery_number", $lineItem->delivery_number) }}" 
-                                                        class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0" readonly>
+                                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
+                        focus:outline-none focus:ring-0">
                                                     @error("multi_pickup.{$index}.delivery_number")
                                                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                                     @enderror
@@ -634,7 +646,8 @@
                                                 <div class="col-span-12 md:col-span-1">
                                                     <label for="delivery_status_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
                                                     <select name="multi_pickup[{{ $index }}][delivery_status]" id="delivery_status_{{ $index }}" 
-                                                        class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0" readonly>
+                                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
+                        focus:outline-none focus:ring-0">
                                                         <option value="" {{ old('multi_pickup.' . $index . '.delivery_status', $lineItem->delivery_status) == '' ? 'selected' : '' }}>Select a Delivery Status</option>
                                                         @foreach($deliveryStatuses as $deliveryStatus)
                                                             <option value="{{ $deliveryStatus->id }}" {{ old('multi_pickup.' . $index . '.delivery_status', $lineItem->delivery_status) == $deliveryStatus->id ? 'selected' : '' }}>
@@ -651,7 +664,8 @@
                                                 <div class="col-span-12 md:col-span-2">
                                                     <label for="accessorial_type_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Type</label>
                                                     <select name="multi_pickup[{{ $index }}][accessorial_type]" id="accessorial_type_{{ $index }}" 
-                                                        class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0" readonly>
+                                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
+                        focus:outline-none focus:ring-0" >
                                                         <option value="" {{ old('multi_pickup.' . $index . '.accessorial_type', $lineItem->accessorial_type) == '' ? 'selected' : '' }}>Select an Accessorial Type</option>
                                                         @foreach($accessorialTypes as $accessorialType)
                                                             <option value="{{ $accessorialType->id }}" {{ old('multi_pickup.' . $index . '.accessorial_type', $lineItem->accessorial_type) == $accessorialType->id ? 'selected' : '' }}>
@@ -669,7 +683,8 @@
                                                     <label for="accessorial_rate_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Rate</label>
                                                     <input type="text" name="multi_pickup[{{ $index }}][accessorial_rate]" id="accessorial_rate_{{ $index }}" 
                                                         value="{{ old('multi_pickup.' . $index . '.accessorial_rate', $lineItem->accessorial_rate) }}" 
-                                                        class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 text-gray-500 cursor-not-allowed focus:outline-none focus:ring-0" readonly>
+                                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
+                        focus:outline-none focus:ring-0" >
                                                     @error('multi_pickup.' . $index . '.accessorial_rate')
                                                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                                     @enderror
@@ -685,7 +700,10 @@
                 <div class="mt-3 text-gray-500 text-sm">No data available.</div>
             @endif
         @endif
-    
+            <div class="mt-5 flex justify-end">
+                <button type="submit" class="mt-3 w-50 bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl hover:bg-blue-700 transition duration-300">Update Delivery Request</button>
+            </div>
+        </form>
     <script>
         let multiDropIndex, currentIndex;
 

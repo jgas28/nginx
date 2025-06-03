@@ -35,7 +35,7 @@ class DeliveryRequest extends Model
 
     public function lineItems()
     {
-        return $this->hasMany(DeliveryRequestLineItem::class, 'mtm', 'mtm');
+        return $this->hasMany(DeliveryRequestLineItem::class, 'dr_id', 'id');
     }
 
     public function cashVoucher()

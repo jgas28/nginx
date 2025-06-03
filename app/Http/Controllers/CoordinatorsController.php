@@ -36,130 +36,89 @@ class CoordinatorsController extends Controller
     //
     public function index(Request $request)
     {
-        $user = Auth::user();
-        $employeeCode = $user->id;
+        $search = $request->input('search');
+        $mtm = $request->input('mtm');
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
+        $status = $request->input('status');
+        $activeTab = $request->input('tab', 'list');
 
-        if ($user) {
-            $employeeCode = $user->id;
-            session(['employee_id' => $employeeCode]); // Refresh session in case
-        } elseif (session()->has('employee_id')) {
-            $employeeCode = session('employee_id');
-        } else {
-            return redirect()->route('login')->with('error', 'Session expired. Please log in again.');
+        // Base query builder for DeliveryRequest (without lineItems filtering yet)
+        $baseQuery = DeliveryRequest::with(['lineItems.deliveryStatus', 'truckType', 'area', 'region', 'company'])
+            ->where('status', '!=', 0);
+
+        // Apply common filters
+        if ($search) {
+            $baseQuery->where(function ($q) use ($search) {
+                $q->where('mtm', 'like', "%{$search}%")
+                ->orWhereHas('region', fn($q) => $q->where('province', 'like', "%{$search}%"))
+                ->orWhereHas('area', fn($q) => $q->where('area_name', 'like', "%{$search}%"))
+                ->orWhereHas('company', fn($q) => $q->where('company_code', 'like', "%{$search}%"));
+            });
         }
 
-        $search = $request->input('search');
+        if ($mtm) {
+            $baseQuery->where('mtm', 'like', "%{$mtm}%");
+        }
 
-        $deliveryRequests = DeliveryRequest::with(['lineItems.deliveryStatus', 'truckType', 'area', 'region', 'company'])
-            ->where('status', '!=', 0)
-            ->where('created_by', $employeeCode)
-            ->whereHas('lineItems', function($query) {
-                $query->whereNotIn('delivery_status', ['"8"', '"9"', '"4"']);
-            })
-            ->when($search, function($query, $search) {
-                $query->where(function($q) use ($search) {
-                    $q->where('mtm', 'like', "%{$search}%")
-                    // Search by region name or code
-                    ->orWhereHas('region', function($q) use ($search) {
-                        $q->where('province', 'like', "%{$search}%")
-                            ->orWhere('region_code', 'like', "%{$search}%");
-                    })
-                    // Search by area name or code
-                    ->orWhereHas('area', function($q) use ($search) {
-                        $q->where('area_name', 'like', "%{$search}%")
-                            ->orWhere('area_code', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('company', function($q) use ($search) {
-                        $q->where('company_id', 'like', "%{$search}%")
-                            ->orWhere('company_code', 'like', "%{$search}%");
-                    });
-                });
-            })
-            ->paginate(10);
+        if ($dateFrom && $dateTo) {
+            $baseQuery->whereBetween('created_at', [$dateFrom, $dateTo]);
+        }
 
-        $forAllocations = DeliveryRequest::with(['lineItems.deliveryStatus', 'truckType', 'area', 'region', 'company'])
-            ->where('status', '!=', 0)
-            ->where('created_by', $employeeCode)
-            ->whereHas('lineItems', function($query) {
-                $query->where('delivery_status', '"8"');
-            })
-            ->when($search, function($query, $search) {
-                $query->where(function($q) use ($search) {
-                    $q->where('mtm', 'like', "%{$search}%")
-                    // Search by region name or code
-                    ->orWhereHas('region', function($q) use ($search) {
-                        $q->where('province', 'like', "%{$search}%")
-                            ->orWhere('region_code', 'like', "%{$search}%");
-                    })
-                    // Search by area name or code
-                    ->orWhereHas('area', function($q) use ($search) {
-                        $q->where('area_name', 'like', "%{$search}%")
-                            ->orWhere('area_code', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('company', function($q) use ($search) {
-                        $q->where('company_id', 'like', "%{$search}%")
-                            ->orWhere('company_code', 'like', "%{$search}%");
-                    });
-                });
-            })
-            ->paginate(10);
+        if ($status) {
+            // Filter by exact delivery_status from lineItems if status filter is applied
+            $baseQuery->whereHas('lineItems', fn($q) => $q->where('delivery_status', $status));
+        }
 
-        $allocated = DeliveryRequest::with(['lineItems.deliveryStatus', 'truckType', 'area', 'region', 'company'])
-            ->where('status', '!=', 0)
-            ->where('created_by', $employeeCode)
-            ->whereHas('lineItems', function($query) {
-                $query->where('delivery_status', '"9"');
-            })
-            ->when($search, function($query, $search) {
-                $query->where(function($q) use ($search) {
-                    $q->where('mtm', 'like', "%{$search}%")
-                    // Search by region name or code
-                    ->orWhereHas('region', function($q) use ($search) {
-                        $q->where('province', 'like', "%{$search}%")
-                            ->orWhere('region_code', 'like', "%{$search}%");
-                    })
-                    // Search by area name or code
-                    ->orWhereHas('area', function($q) use ($search) {
-                        $q->where('area_name', 'like', "%{$search}%")
-                            ->orWhere('area_code', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('company', function($q) use ($search) {
-                        $q->where('company_id', 'like', "%{$search}%")
-                            ->orWhere('company_code', 'like', "%{$search}%");
-                    });
-                });
-            })
-            ->paginate(10);
+        // Clone the base query for each status group, then filter lineItems accordingly:
 
-        $pullouts = DeliveryRequest::with(['lineItems.deliveryStatus', 'truckType', 'area', 'region', 'company'])
-            ->where('status', '!=', 0)
-            ->where('created_by', $employeeCode)
-            ->whereHas('lineItems', function($query) {
-                $query->where('delivery_status', '"4"');
-            })
-            ->when($search, function($query, $search) {
-                $query->where(function($q) use ($search) {
-                    $q->where('mtm', 'like', "%{$search}%")
-                    // Search by region name or code
-                    ->orWhereHas('region', function($q) use ($search) {
-                        $q->where('province', 'like', "%{$search}%")
-                            ->orWhere('region_code', 'like', "%{$search}%");
-                    })
-                    // Search by area name or code
-                    ->orWhereHas('area', function($q) use ($search) {
-                        $q->where('area_name', 'like', "%{$search}%")
-                            ->orWhere('area_code', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('company', function($q) use ($search) {
-                        $q->where('company_id', 'like', "%{$search}%")
-                            ->orWhere('company_code', 'like', "%{$search}%");
-                    });
-                });
-            })
-            ->paginate(10);
+        // deliveryRequests - status in [2,3,5,6]
+        $deliveryRequests = (clone $baseQuery)
+            ->whereHas('lineItems', fn($q) => $q->whereIn('delivery_status', ['"2"', '"3"', '"5"', '"6"']))
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->appends($request->all());
 
-        return view('coordinators.index', compact('deliveryRequests', 'forAllocations', 'allocated', 'search', 'pullouts'));
+        // pullouts - status in [4,7]
+        $pullouts = (clone $baseQuery)
+            ->whereHas('lineItems', fn($q) => $q->whereIn('delivery_status', ['"4"', '"7"']))
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->appends($request->all());
+
+        // forAllocations - status 8
+        $forAllocations = (clone $baseQuery)
+            ->whereHas('lineItems', fn($q) => $q->where('delivery_status', '"8"'))
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->appends($request->all());
+
+        // allocated - status 14
+        $allocated = (clone $baseQuery)
+            ->whereHas('lineItems', fn($q) => $q->where('delivery_status', '"14"'))
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->appends($request->all());
+
+        // delivered - status in [1, 15]
+        $delivered = (clone $baseQuery)
+            ->whereHas('lineItems', fn($q) => $q->whereIn('delivery_status', ['"1"', '"15"']))
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->appends($request->all());
+
+        // cancel - status in [11, 12]
+        $cancel = (clone $baseQuery)
+            ->whereHas('lineItems', fn($q) => $q->whereIn('delivery_status', ['"11"', '"12"']))
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->appends($request->all());
+
+        return view('coordinators.index', compact(
+            'deliveryRequests', 'pullouts', 'forAllocations', 'allocated', 'activeTab', 'delivered', 'cancel'
+        ));
     }
+
 
     public function create()
     {
@@ -843,21 +802,15 @@ class CoordinatorsController extends Controller
 
     public function editAllocation(DeliveryRequest $deliveryRequest)
     {
-        // Fetch related delivery line items by joining with the correct table name
-        // $deliveryLineItems = DeliveryRequestLineItem::join('delivery_request', 'delivery_request.mtm', '=', 'delivery_request_line_items.mtm')
-        // ->leftJoin('allocations', 'delivery_request.id', '=', 'allocations.dr_id')
-        // ->where('delivery_request.id', $deliveryRequest->id)
-        // ->where('delivery_request_line_items.status', '!=', 0)
-        // ->select('delivery_request_line_items.*', 'delivery_request.id as request_id', 'allocations.*')
-        // ->get();
 
-        $deliveryLineItems = DB::table('delivery_request_line_items')
-        ->join('delivery_request', 'delivery_request_line_items.dr_id', '=', 'delivery_request.id')
-        ->join('allocations', 'delivery_request.id', '=', 'allocations.dr_id')
-        ->where('delivery_request.id', $deliveryRequest->id)
-        ->where('delivery_request_line_items.status', '!=', 0)
-        ->select('delivery_request_line_items.*', 'delivery_request.*', 'allocations.*', 'allocations.id as allocation_id')
+        $deliveryLineItems = DeliveryRequestLineItem::with('deliveryRequest')
+            ->where('status', '!=', 0)
+            ->whereHas('deliveryRequest', function ($query) use ($deliveryRequest) {
+                $query->where('id', $deliveryRequest->id);
+            })
         ->get();
+
+        $allocate = DeliveryRequest::with('allocations')->find($deliveryRequest->id);
 
         // dd($deliveryLineItems);
 
@@ -882,56 +835,157 @@ class CoordinatorsController extends Controller
             'companies', 'regions', 'warehouses', 'AddOnRates_multiDrops', 
             'AddOnRates_multiPickUps', 'deliveryStatuses', 'trucks', 'distances', 'deliveryLineItems', 
             'deliveryRequest', 'deliveryTypes', 'accessorialTypes', 'customers', 'truckTypes', 'areas', 'expenseTypes',
-            'fleetCards','drivers'
+            'fleetCards','drivers', 'allocate'
         ));
     }
 
     public function updateAllocation(Request $request, DeliveryRequest $deliveryRequest)
     {
-        $request->validate([
-            'allocation_id' => 'required|array',
-            'allocation_id.*' => 'required|integer|exists:allocations,id',
-            'amount' => 'required|array',
-            'amount.*' => 'required|numeric|min:0',
-            'fleet_card_id' => 'nullable|array',
-            'fleet_card_id.*' => 'nullable|integer|exists:fleet_cards,id',
-            'truck_id' => 'required|array',
-            'truck_id.*' => 'required|integer|exists:trucks,id',
-            'driver_id' => 'required|array',
-            'driver_id.*' => 'required|integer|exists:users,id',
-            'helper' => 'nullable|array',
-            'helper.*' => 'nullable|array',
-            'helper.*.*' => 'nullable|string',
-        ]);
+        $user = Auth::user();
+        $employeeCode = $user->id;
 
-        $allocationIds = $request->input('allocation_id');
-        $amounts = $request->input('amount');
-        $fleetCardIds = $request->input('fleet_card_id');
-        $truckIds = $request->input('truck_id');
-        $driverIds = $request->input('driver_id');
-        $helpers = $request->input('helper');
+        // Start transaction
+        DB::beginTransaction();
 
-        foreach ($allocationIds as $index => $allocationId) {
-            $allocation = Allocation::find($allocationId);
-            if (!$allocation) {
-                continue; // or handle error
+        try {
+            $request->validate([
+                // Validation rules
+                'allocation_id' => 'nullable|array',
+                'allocation_id.*' => 'nullable|integer|exists:allocations,id',
+                'amount' => 'required|array',
+                'amount.*' => 'required|numeric|min:0',
+                'fleet_card_id' => 'nullable|array',
+                'fleet_card_id.*' => 'nullable|integer|exists:fleet_cards,id',
+                'truck_id' => 'required|array',
+                'truck_id.*' => 'required|integer|exists:trucks,id',
+                'driver_id' => 'required|array',
+                'driver_id.*' => 'required|integer|exists:users,id',
+                'helper' => 'nullable|array',
+                'helper.*' => 'nullable|array',
+                'helper.*.*' => 'nullable|string',
+
+                // DeliveryRequest fields
+                'delivery_date' => 'required|date',
+                'delivery_rate' => 'required|numeric',
+                'truck_type_id' => 'required|integer|exists:truck_types,id',
+
+                // Add any additional validation rules if needed
+            ]);
+
+            // Update DeliveryRequest fields
+            $deliveryRequest->update([
+                'delivery_date' => $request->input('delivery_date'),
+                'delivery_rate' => $request->input('delivery_rate'),
+                'truck_type_id' => $request->input('truck_type_id'),
+            ]);
+
+            Log::info('DeliveryRequest updated', ['deliveryRequest' => $deliveryRequest->toArray()]);
+
+            // Update Line Items - Regular
+            if ($request->has('regular')) {
+                foreach ($request->input('regular') as $item) {
+                    $lineItem = DeliveryRequestLineItem::find($item['id']);
+                    if ($lineItem) {
+                        $lineItem->delivery_number = $item['delivery_number'] ?? $lineItem->delivery_number;
+                        $lineItem->accessorial_type = $item['accessorial_type'] ?? null;
+                        $lineItem->accessorial_rate = $item['accessorial_rate'] ?? null;
+                        $lineItem->delivery_status = $item['delivery_status'] ?? $lineItem->delivery_status;
+                        $lineItem->save();
+                        Log::info('Updated regular line item', ['id' => $lineItem->id]);
+                    } else {
+                        Log::warning('Regular line item not found', ['id' => $item['id']]);
+                    }
+                }
             }
 
-            $allocation->amount = $amounts[$index] ?? $allocation->amount;
-            $allocation->fleet_card_id = $fleetCardIds[$index] ?? null;
-            $allocation->truck_id = $truckIds[$index] ?? $allocation->truck_id;
-            $allocation->driver_id = $driverIds[$index] ?? $allocation->driver_id;
+            // Update Line Items - Multi-Drop
+            if ($request->has('multi_drop')) {
+                foreach ($request->input('multi_drop') as $item) {
+                    $lineItem = DeliveryRequestLineItem::find($item['id']);
+                    if ($lineItem) {
+                        $lineItem->delivery_number = $item['delivery_number'] ?? $lineItem->delivery_number;
+                        $lineItem->accessorial_type = $item['accessorial_type'] ?? null;
+                        $lineItem->accessorial_rate = $item['accessorial_rate'] ?? null;
+                        $lineItem->delivery_status = $item['delivery_status'] ?? $lineItem->delivery_status;
+                        $lineItem->save();
+                        Log::info('Updated multi_drop line item', ['id' => $lineItem->id]);
+                    } else {
+                        Log::warning('Multi-drop line item not found', ['id' => $item['id']]);
+                    }
+                }
+            }
 
-            // Helpers is an array of strings, save as JSON string
-            $allocationHelpers = $helpers[$index] ?? [];
-            $allocation->helper = $allocationHelpers;
+            // Update Line Items - Multi-Pickup
+            if ($request->has('multi_pickup')) {
+                foreach ($request->input('multi_pickup') as $item) {
+                    $lineItem = DeliveryRequestLineItem::find($item['id']);
+                    if ($lineItem) {
+                        $lineItem->delivery_number = $item['delivery_number'] ?? $lineItem->delivery_number;
+                        $lineItem->accessorial_type = $item['accessorial_type'] ?? null;
+                        $lineItem->accessorial_rate = $item['accessorial_rate'] ?? null;
+                        $lineItem->delivery_status = $item['delivery_status'] ?? $lineItem->delivery_status;
+                        $lineItem->save();
+                        Log::info('Updated multi_pickup line item', ['id' => $lineItem->id]);
+                    } else {
+                        Log::warning('Multi-pickup line item not found', ['id' => $item['id']]);
+                    }
+                }
+            }
 
-            $allocation->save();
+            // Handle allocations — update existing or create new
+            $allocationIds = $request->input('allocation_id', []);
+            $amounts = $request->input('amount');
+            $fleetCardIds = $request->input('fleet_card_id', []);
+            $truckIds = $request->input('truck_id');
+            $driverIds = $request->input('driver_id');
+            $helpers = $request->input('helper', []);
+
+            foreach ($amounts as $index => $amount) {
+                $allocationId = $allocationIds[$index] ?? null;
+
+                if ($allocationId) {
+                    $allocation = Allocation::find($allocationId);
+                    if (!$allocation) {
+                        Log::warning('Allocation ID not found, creating new', ['allocationId' => $allocationId]);
+                        $allocation = new Allocation();
+                        $allocation->dr_id = $deliveryRequest->id;
+                    }
+                } else {
+                    // No allocation id — create new
+                    $allocation = new Allocation();
+                    $allocation->dr_id = $deliveryRequest->id;
+                }
+
+                // Update allocation fields
+                $allocation->amount = $amount;
+                $allocation->fleet_card_id = $fleetCardIds[$index] ?? null;
+                $allocation->truck_id = $truckIds[$index] ?? null;
+                $allocation->driver_id = $driverIds[$index] ?? null;
+                $allocation->helper = $helpers[$index] ?? [];
+                $allocation->created_by = $employeeCode;
+                $allocation->save();
+
+                Log::info('Allocation saved', ['allocationId' => $allocation->id, 'allocation' => $allocation->toArray()]);
+            }
+
+            // Commit transaction if all succeed
+            DB::commit();
+
+            return redirect()->route('coordinators.index', $deliveryRequest)
+                ->with('success', 'Delivery request, line items and allocations updated successfully.');
+
+        } catch (\Exception $e) {
+            // Rollback on error
+            DB::rollBack();
+
+            Log::error('Failed to update allocation', ['error' => $e->getMessage()]);
+
+            return back()->withErrors('Failed to update allocations. Please try again.');
         }
-
-        return redirect()->route('coordinators.index', $deliveryRequest)
-            ->with('success', 'Allocations updated successfully.');
     }
+
+
+
 
     public function request($id)
     {

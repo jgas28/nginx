@@ -67,7 +67,6 @@ class AllocationController extends Controller
 
     public function store(Request $request)
     {
-        // Validate incoming data
         $request->validate([
             'truck' => 'required|exists:trucks,id',
             'driver_id' => 'required|exists:users,id',
@@ -81,9 +80,8 @@ class AllocationController extends Controller
         $amount = $request->amount;
         $user = Auth::user();
         $employeeCode = $user->id;
-        $helpers = $request->helpers;
+        $helpers = $request->helpers ?? [];
 
-        // Log the start of the allocation process
         Log::info('Starting the allocation process.', [
             'user_id' => $employeeCode,
             'truck_id' => $truckId,
@@ -93,74 +91,65 @@ class AllocationController extends Controller
             'delivery_request_ids' => $request->delivery_request_ids
         ]);
 
-        // Loop through selected delivery requests
-        $firstDr = true; // Flag to track the first selected DR
+        $firstDr = true;
 
         foreach ($request->delivery_request_ids as $drId) {
-            // Log each DR being processed
             Log::info('Processing delivery request.', ['dr_id' => $drId]);
 
-            // Fetch line items related to this delivery request
             $lineItems = DeliveryRequestLineItem::where('dr_id', $drId)
                 ->where('status', '!=', 0)
-                ->where('delivery_status', '=', '"8"')
+                ->where('delivery_status', '=', '"8"') // fix: remove extra quotes
                 ->get();
 
-            foreach ($lineItems as $lineItem) {
-                // Determine amount: Full amount for first DR, 0 for the rest
-                $currentAmount = $firstDr ? $amount : 0;
+            $currentAmount = $firstDr ? $amount : 0;
+            $firstDr = false; // only true for the first DR
 
-                // Set $firstDr to false after processing the first DR
-                if ($firstDr) {
-                    $firstDr = false;
+            foreach ($lineItems as $lineItem) {
+                // Find existing allocation
+                $allocation = Allocation::where('dr_id', $drId)
+                    ->first();
+
+                if ($allocation) {
+                    $allocation->update([
+                        'amount' => $currentAmount,
+                        'helper' => $helpers,
+                        'created_by' => $employeeCode,
+                    ]);
+                    Log::info('Updated existing allocation.', ['allocation_id' => $allocation->id]);
+                } else {
+                    $allocation = Allocation::create([
+                        'dr_id' => $drId,
+                        'line_item_id' => $lineItem->id,
+                        'truck_id' => $truckId,
+                        'driver_id' => $driverId,
+                        'helper' => $helpers,
+                        'amount' => $currentAmount,
+                        'created_by' => $employeeCode,
+                    ]);
+                    Log::info('Created new allocation.', ['allocation_id' => $allocation->id]);
                 }
 
-                // Log the creation of each allocation
-                Log::info('Creating allocation.', [
-                    'dr_id' => $drId,
-                    'line_item_id' => $lineItem->id,
-                    'truck_id' => $truckId,
-                    'driver_id' => $driverId,
-                    'helper' => $helpers,
-                    'amount' => $currentAmount,
-                    'created_by' => $employeeCode
-                ]);
-
-                // Create the allocation
-                Allocation::create([
-                    'dr_id'        => $drId,
-                    'line_item_id' => $lineItem->id,
-                    'truck_id'     => $truckId,
-                    'driver_id'    => $driverId,
-                    'helper'       => $helpers,
-                    'amount'       => $currentAmount,
-                    'created_by'   => $employeeCode,
-                ]);
-
-                $lineItem->update([
-                    'delivery_status' => '9',  // Set the delivery status to "9"
-                ]);
+                // Update delivery status
+                $lineItem->update(['delivery_status' => '9']);
 
                 Log::info('Updated delivery status of line item.', [
                     'line_item_id' => $lineItem->id,
-                    'new_status' => '9'
+                    'new_status' => '9',
                 ]);
             }
         }
 
-        // Log completion of the allocation process
-        Log::info('Cash voucher allocations created successfully.', [
+        Log::info('Cash voucher allocations processed successfully.', [
             'user_id' => $employeeCode,
-            'delivery_request_ids' => $request->delivery_request_ids
+            'delivery_request_ids' => $request->delivery_request_ids,
         ]);
 
-        return redirect()->route('allocations.index')->with('success', 'Cash voucher allocations created successfully.');
+        return redirect()->route('allocations.index')->with('success', 'Cash voucher allocations processed successfully.');
     }
 
     public function allocate(Request $request)
     {
         $ids = explode(',', $request->query('ids'));
-
         $deliveryRequests = DeliveryRequest::whereIn('id', $ids)->with([
             'company',
             'region',

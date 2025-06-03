@@ -39,7 +39,7 @@ class DeliveryRequestLineItem extends Model
     // Relationship with DeliveryRequest model (assuming the relationship exists in DeliveryRequest model)
     public function deliveryRequest()
     {
-        return $this->belongsTo(DeliveryRequest::class, 'id', 'dr_id');
+        return $this->belongsTo(DeliveryRequest::class, 'dr_id', 'id');
     }
 
     public function deliveryStatus()
