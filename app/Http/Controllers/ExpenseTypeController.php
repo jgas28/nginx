@@ -51,14 +51,14 @@ class ExpenseTypeController extends Controller
         $request->validate([
             'expense_code' => 'required',
             'expense_name' => 'required',
-            'type' => 'required',
+            // 'type' => 'required',
         ]);
 
         // Create new region
         $region = new Expense_Type([
             'expense_code' => $request->expense_code,
             'expense_name' => $request->expense_name,
-            'type' => $request->type,
+            // 'type' => $request->type,
         ]);
 
         $region->save();
@@ -98,7 +98,7 @@ class ExpenseTypeController extends Controller
         // Update the region details
         $expenseType->expense_code = $request->expense_code;
         $expenseType->expense_name = $request->expense_name;
-        $expenseType->type = $request->type;
+        // $expenseType->type = $request->type;
         $expenseType->save();
 
         return redirect()->route('expenseTypes.index')->with('success', 'Expense Type updated successfully.');
