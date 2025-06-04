@@ -24,6 +24,17 @@
             <input type="number" step="0.01" name="amount" id="amount" class="mt-1 block w-full border rounded-md px-4 py-2 focus:outline-none focus:ring focus:ring-blue-500" required>
         </div>
 
+         <!-- Requestor Selection -->
+        <div>
+            <label for="requestor_id" class="block text-sm font-medium text-gray-700">Requestor</label>
+            <select name="requestor_id" id="requestor_id" class="mt-1 block w-full border rounded-md px-4 py-2 focus:outline-none focus:ring focus:ring-blue-500" required>
+                <option value="">Select Employee</option>
+                @foreach($employees as $employee)
+                    <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
+                @endforeach
+            </select>
+        </div>
+
         <!-- Driver Selection -->
         <div>
             <label for="driver_id" class="block text-sm font-medium text-gray-700">Driver</label>

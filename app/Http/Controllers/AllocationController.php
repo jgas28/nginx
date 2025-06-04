@@ -73,10 +73,12 @@ class AllocationController extends Controller
             'amount' => 'required|numeric|min:0',
             'helpers' => 'nullable|array',
             'delivery_request_ids' => 'required|array',
+            'requestor_id' => 'required',  
         ]);
 
         $truckId = $request->truck;
         $driverId = $request->driver_id;
+        $requestor_id = $request->requestor_id;
         $amount = $request->amount;
         $user = Auth::user();
         $employeeCode = $user->id;
@@ -85,6 +87,7 @@ class AllocationController extends Controller
         Log::info('Starting the allocation process.', [
             'user_id' => $employeeCode,
             'truck_id' => $truckId,
+            'requestor_id' => $requestor_id,
             'driver_id' => $driverId,
             'amount' => $amount,
             'helpers' => $helpers,
@@ -111,15 +114,22 @@ class AllocationController extends Controller
 
                 if ($allocation) {
                     $allocation->update([
+                        'dr_id' => $drId,
+                        'line_item_id' => $lineItem->id,
+                        'requestor_id' => $requestor_id,
+                        'truck_id' => $truckId,
+                        'driver_id' => $driverId,
                         'amount' => $currentAmount,
                         'helper' => $helpers,
                         'created_by' => $employeeCode,
+                        
                     ]);
                     Log::info('Updated existing allocation.', ['allocation_id' => $allocation->id]);
                 } else {
                     $allocation = Allocation::create([
                         'dr_id' => $drId,
                         'line_item_id' => $lineItem->id,
+                        'requestor_id' => $requestor_id,
                         'truck_id' => $truckId,
                         'driver_id' => $driverId,
                         'helper' => $helpers,

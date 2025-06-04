@@ -121,6 +121,8 @@ class CashVoucherController extends Controller
             ->select('delivery_request.*', 'delivery_request_line_items.*', 'delivery_request.id as request_id')
             ->get();
 
+        $allocation = Allocation::where('dr_id', $id)->first();
+
         if ($deliveryLineItems->isEmpty()) {
             abort(404, 'No delivery request line items found.');
         }
@@ -172,7 +174,8 @@ class CashVoucherController extends Controller
             'employees',
             'fleetCards',
             'trucks',
-            'taxes'
+            'taxes',
+            'allocation'
         ));
     }
 

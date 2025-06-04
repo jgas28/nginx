@@ -114,7 +114,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     
                     <!-- CVR Number -->
-                    <div>
+                    <div> 
                         <input type="text" name="cvr_number" value="{{ $formattedCvrNumber }}" readonly class="input bg-gray-100 w-full">
                         <label class="block text-sm text-gray-600 mt-1">CVR Number</label>
                     </div>
@@ -141,7 +141,10 @@
                         <select name="requestor" class="input w-full" required>
                             <option value="">Select Employee</option>
                             @foreach($employees as $emp)
-                                <option value="{{ $emp->id }}">{{ $emp->fname }} {{ $emp->lname }}</option>
+                                <option value="{{ $emp->id }}"
+                                    @if(!empty($allocation) && $allocation->requestor_id == $emp->id) selected @endif>
+                                    {{ $emp->fname }} {{ $emp->lname }}
+                                </option>
                             @endforeach
                         </select>
                         <label class="block text-sm text-gray-600 mt-1">Requestor</label>
