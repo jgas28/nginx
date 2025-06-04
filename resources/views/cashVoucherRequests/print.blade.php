@@ -192,7 +192,7 @@
         <h1 style="font-size:15px">Cash Voucher Request</h1>
         <div class="series-no">
             <div style="font-size:12px">Series No</div>
-            <div style="font-size:12px">{{ $cashVoucherRequest->cvr_number ?? 'N/A' }}-{{$allocations->truck->truck_name}}-{{$deliveryRequest->company->company_code}}{{$deliveryRequest->expenseType->expense_code}}</div>
+            <div style="font-size:12px">{{ preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number ?? 'N/A') }}-{{$allocations->truck->truck_name ?? ''}}-{{$deliveryRequest->company->company_code}}{{$deliveryRequest->expenseType->expense_code}}</div>
         </div>
     </div>
 
@@ -218,23 +218,23 @@
                 {{-- Grouped Delivery Items --}}
                 @if (in_array($deliveryRequest->name, ['ADM', 'FE', 'ND', 'OPS-INC']))
                     <tr>
-                       <td style="text-align: center; font-size: 12px; border-bottom: none;">
+                        <td style="text-align: center; font-size: 12px; border-bottom: none; height: 200px; vertical-align: top; overflow: auto;">
                             @foreach($deliveryLineItems as $item)
                                 {{ $item->delivery_address }}<br>
                             @endforeach
                         </td>
-                        <td style="text-align: right; font-size: 16px; color: red; border-bottom: none;">₱ {{ $cashVoucherRequest->amount }}</td>
+                        <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 500px; vertical-align: top;">₱ {{ $cashVoucherRequest->amount }}</td>
                     </tr>
                 @else
                     <tr>
-                        <td style="text-align: center; font-size: 12px; border-bottom: none;">
+                       <td style="text-align: center; font-size: 12px; border-bottom: none; height: 200px; vertical-align: top; overflow: auto;">
                             @foreach($deliveryLineItems as $item)
                                 {{ $requestTypes->request_type }} - {{ $item->site_name }}<br>
                                 {{ $item->delivery_address }}<br>
                                 {{ $item->mtm }} - {{ $item->delivery_number }}<br><br>
                             @endforeach
                         </td>   
-                        <td style="text-align: right; font-size: 16px; color: red; border-bottom: none;">₱ {{ $cashVoucherRequest->amount }}</td>
+                        <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 500px; vertical-align: top;">₱ {{ $cashVoucherRequest->amount }}</td>
                     </tr>
                 @endif
 
@@ -297,6 +297,10 @@
                         <td style="padding: 0;">
                             <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
                                 <tr>
+                                    <td style="text-align: left; padding: 4px;">Subtotal</td>
+                                    <td style="text-align: right; padding: 4px;">₱ {{ $cashVoucherRequest->amount }}</td>
+                                </tr>
+                                <tr>
                                     <td style="text-align: left; padding: 4px;">Net Amount</td>
                                     <td style="text-align: right; padding: 4px;">₱ {{ number_format($baseAmount, 2) }}</td>
                                 </tr>
@@ -352,6 +356,10 @@
                         </td>
                         <td style="padding: 0;">
                             <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                                <tr>
+                                    <td style="text-align: left; padding: 4px;">Subtotal</td>
+                                    <td style="text-align: right; padding: 4px;">₱ {{ $cashVoucherRequest->amount }}</td>
+                                </tr>
                                 <tr>
                                     <td style="text-align: left; padding: 4px;">Net Amount</td>
                                     <td style="text-align: right; padding: 4px;">₱ {{ $cashVoucherRequest->amount }}</td>
