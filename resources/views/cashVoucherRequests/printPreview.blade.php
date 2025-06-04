@@ -157,23 +157,23 @@
                 {{-- Grouped Delivery Items --}}
                 @if (in_array($deliveryRequest->name, ['ADM', 'FE', 'ND', 'OPS-INC']))
                     <tr>
-                       <td style="text-align: center; font-size: 12px; border-bottom: none; height: 200px; vertical-align: top; overflow: auto;">
+                       <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
                             @foreach($deliveryLineItems as $item)
                                 {{ $item->delivery_address }}<br>
                             @endforeach
                         </td>
-                        <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 200px; vertical-align: top;">₱ {{ $cashVoucherRequest->amount }}</td>
+                        <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 150px; vertical-align: top;">₱ {{ $cashVoucherRequest->amount }}</td>
                     </tr>
                 @else
                     <tr>
-                        <td style="text-align: center; font-size: 12px; border-bottom: none; height: 200px; vertical-align: top; overflow: auto;">
+                        <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
                             @foreach($deliveryLineItems as $item)
                                 {{ $requestTypes->request_type }} - {{ $item->site_name }}<br>
                                 {{ $item->delivery_address }}<br>
                                 {{ $item->mtm }} - {{ $item->delivery_number }}<br><br>
                             @endforeach
                         </td>   
-                        <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 200px; vertical-align: top;">₱ {{ $cashVoucherRequest->amount }}</td>
+                        <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 150px; vertical-align: top;">₱ {{ $cashVoucherRequest->amount }}</td>
                     </tr>
                 @endif
 
