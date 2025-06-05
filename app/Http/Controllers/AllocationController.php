@@ -24,46 +24,41 @@ class AllocationController extends Controller
 {
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
 
-        // Query the Delivery Request table
         $deliveryRequests = DeliveryRequest::with([
             'company',
             'region',
             'truckType',
             'area',
             'lineItems' => function ($query) {
-                $query->where('status', '!=', 0)
-                    ->where('delivery_status', '"8"');
+                $query->where('status', '!=', 0);
             },
             'lineItems.deliveryStatus',
             'lineItems.addOnRate',
         ])
-        ->whereHas('lineItems', function ($query) {
-            $query->where('status', '!=', 0)
-                  ->where('delivery_status', '"8"');
-        })
+        ->where('status', '!=', 0)
+        ->where('delivery_status', 8) // Now using delivery_status on DeliveryRequest
         ->when($search, function ($query, $search) {
             $query->where(function ($q) use ($search) {
                 $q->where('mtm', 'like', '%' . $search . '%')
-                ->orWhere('region', 'like', '%' . $search . '%')
-                ->orWhere('province', 'like', '%' . $search . '%')
+                ->orWhereHas('region', fn($r) => $r->where('province', 'like', "%{$search}%"))
+                ->orWhereHas('area', fn($a) => $a->where('area_name', 'like', "%{$search}%"))
                 ->orWhere('delivery_date', 'like', '%' . $search . '%');
             });
         })
-        ->where('status', '!=', 0)
+        ->orderBy('created_at', 'desc')
         ->paginate(10);
-               
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('allocations.table', compact('deliveryRequests'))->render());
+            return response()->json(
+                view('allocations.table', compact('deliveryRequests'))->render()
+            );
         }
 
-        // For non-AJAX requests, just return the view
         return view('allocations.index', compact('deliveryRequests', 'search'));
     }
+
 
     public function store(Request $request)
     {
@@ -73,25 +68,26 @@ class AllocationController extends Controller
             'amount' => 'required|numeric|min:0',
             'helpers' => 'nullable|array',
             'delivery_request_ids' => 'required|array',
-            'requestor_id' => 'required',  
+            'requestor_id' => 'required',
         ]);
 
         $truckId = $request->truck;
         $driverId = $request->driver_id;
-        $requestor_id = $request->requestor_id;
+        $requestorId = $request->requestor_id;
         $amount = $request->amount;
-        $user = Auth::user();
-        $employeeCode = $user->id;
+        $tripType = $request->trip_type;
         $helpers = $request->helpers ?? [];
+        $employeeCode = Auth::id();
 
         Log::info('Starting the allocation process.', [
             'user_id' => $employeeCode,
             'truck_id' => $truckId,
-            'requestor_id' => $requestor_id,
+            'requestor_id' => $requestorId,
             'driver_id' => $driverId,
             'amount' => $amount,
             'helpers' => $helpers,
-            'delivery_request_ids' => $request->delivery_request_ids
+            'delivery_request_ids' => $request->delivery_request_ids,
+            'trip_type' => $tripType,
         ]);
 
         $firstDr = true;
@@ -101,50 +97,34 @@ class AllocationController extends Controller
 
             $lineItems = DeliveryRequestLineItem::where('dr_id', $drId)
                 ->where('status', '!=', 0)
-                ->where('delivery_status', '=', '"8"') // fix: remove extra quotes
                 ->get();
 
             $currentAmount = $firstDr ? $amount : 0;
-            $firstDr = false; // only true for the first DR
+            $firstDr = false;
 
             foreach ($lineItems as $lineItem) {
-                // Find existing allocation
-                $allocation = Allocation::where('dr_id', $drId)
-                    ->first();
+                $allocation = Allocation::create([
+                    'dr_id' => $drId,
+                    'line_item_id' => $lineItem->id,
+                    'requestor_id' => $requestorId,
+                    'truck_id' => $truckId,
+                    'driver_id' => $driverId,
+                    'helper' => $helpers,
+                    'amount' => $currentAmount,
+                    'trip_type' => 'delivery',
+                    'created_by' => $employeeCode,
+                ]);
 
-                if ($allocation) {
-                    $allocation->update([
-                        'dr_id' => $drId,
-                        'line_item_id' => $lineItem->id,
-                        'requestor_id' => $requestor_id,
-                        'truck_id' => $truckId,
-                        'driver_id' => $driverId,
-                        'amount' => $currentAmount,
-                        'helper' => $helpers,
-                        'created_by' => $employeeCode,
-                        
-                    ]);
-                    Log::info('Updated existing allocation.', ['allocation_id' => $allocation->id]);
-                } else {
-                    $allocation = Allocation::create([
-                        'dr_id' => $drId,
-                        'line_item_id' => $lineItem->id,
-                        'requestor_id' => $requestor_id,
-                        'truck_id' => $truckId,
-                        'driver_id' => $driverId,
-                        'helper' => $helpers,
-                        'amount' => $currentAmount,
-                        'created_by' => $employeeCode,
-                    ]);
-                    Log::info('Created new allocation.', ['allocation_id' => $allocation->id]);
-                }
+                Log::info('Created new allocation.', ['allocation_id' => $allocation->id]);
 
-                // Update delivery status
-                $lineItem->update(['delivery_status' => '14']);
+                $deliveryRequest = DeliveryRequest::find($drId);
+
+                // Update delivery status if needed
+                $deliveryRequest->update(['delivery_status' => 14]);
 
                 Log::info('Updated delivery status of line item.', [
                     'line_item_id' => $lineItem->id,
-                    'new_status' => '14',
+                    'new_status' => 14,
                 ]);
             }
         }
@@ -154,8 +134,10 @@ class AllocationController extends Controller
             'delivery_request_ids' => $request->delivery_request_ids,
         ]);
 
-        return redirect()->route('allocations.index')->with('success', 'Cash voucher allocations processed successfully.');
+        return redirect()->route('allocations.index')
+            ->with('success', 'Cash voucher allocations processed successfully.');
     }
+
 
     public function allocate(Request $request)
     {

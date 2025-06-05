@@ -24,13 +24,6 @@
         </a> -->
     </div>
 
-    <!-- Success Message -->
-    @if (session('success'))
-        <div class="alert alert-success mb-4 bg-green-100 text-green-800 p-3 rounded-md">
-            {{ session('success') }}
-        </div>
-    @endif
-
     <!-- Employees Table -->
     <div id="delivery-requests-table" class="bg-white shadow-md rounded-lg overflow-hidden">
         @include('deliveryRequest.table', ['deliveryRequests' => $deliveryRequests])

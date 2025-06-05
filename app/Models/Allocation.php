@@ -19,7 +19,8 @@ class Allocation extends Model
         'driver_id',
         'helper',
         'created_by',
-        'requestor_id'
+        'requestor_id',
+        'trip_type'
     ];
 
     // Automatically casts the `helper` column to an array

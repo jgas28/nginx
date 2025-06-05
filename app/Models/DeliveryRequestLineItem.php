@@ -16,7 +16,6 @@ class DeliveryRequestLineItem extends Model
         'delivery_number',
         'truck_id',
         'status',
-        'delivery_status',
         'delivery_address',
         'distance_type',
         'add_on_rate',

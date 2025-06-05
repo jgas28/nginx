@@ -298,9 +298,10 @@ class CashVoucherController extends Controller
             $cashVoucher->save();
 
             // Update DeliveryRequest status
-            $deliveryRequest = DeliveryRequest::where('mtm', $request->mtm)->first();
+            $deliveryRequest = DeliveryRequest::where('id', $request->dr_id)->first();
             if ($deliveryRequest && $deliveryRequest->status != 0) {
                 $deliveryRequest->status = '1';
+                $deliveryRequest->delivery_status = 2;
                 $deliveryRequest->save();
                 Log::info('Updated DeliveryRequest status to 1.');
             }
@@ -318,7 +319,7 @@ class CashVoucherController extends Controller
             Log::info('Updated DeliveryRequestLineItems status to 1.');
         });
 
-        return redirect()->route('cashVoucherRequests.index')
+        return redirect()->route('coordinators.index')
             ->with('success', 'Cash Voucher created successfully and statuses updated.');
     }
 
@@ -931,8 +932,9 @@ class CashVoucherController extends Controller
             $employees = DB::table('cash_vouchers')
             ->join('users', 'cash_vouchers.requestor', '=', 'users.id')
             ->select('users.*', 'cash_vouchers.*') 
-            ->where('cash_vouchers.dr_id', $cvr_number) 
+            ->where('cash_vouchers.dr_id', $id) 
             ->first();
+
 
             $cvrApprovals = cvr_approval::where('cvr_id', $id)
             ->first();

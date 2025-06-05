@@ -69,7 +69,7 @@
             @csrf
             <input type="hidden" name="dr_id" value="{{ $deliveryLineItems->first()->dr_id }}">
             <input type="hidden" name="mtm" value="{{ $deliveryLineItems->first()->mtm }}">
-            <input type="hidden" name="cvr_type" value="basic">
+            <input type="hidden" name="cvr_type" value="pullout">
             <input type="hidden" name="company_id" value="{{ $deliveryLineItems->first()->company->id }}">
 
             <!-- CVR Type -->
@@ -177,7 +177,12 @@
                                 <option value="{{ $fleetCard->id }}">{{ $fleetCard->account_name }} - {{ $fleetCard->account_number }}</option>
                             @endforeach
                         </select>
-                        <label class="block text-sm text-gray-600 mt-1">Fllet Card</label>
+                        <label class="block text-sm text-gray-600 mt-1">Fleet Card</label>
+                    </div>
+
+                    <div>
+                        <input type="text" name="trip_type" class="input w-full" value="pullout" readonly>
+                        <label class="block text-sm text-gray-600 mt-1">Trip Type</label>
                     </div>
                 </div>
             </fieldset>

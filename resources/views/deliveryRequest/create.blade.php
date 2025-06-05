@@ -14,17 +14,24 @@
                         <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                     @enderror
                 </div>
+                @php
+                    $today = \Carbon\Carbon::today()->toDateString();
+                @endphp
+
                 <div class="w-full md:w-1/3 px-2 mb-4">
                     <label for="booking_date" class="block text-sm font-medium text-gray-700 mb-1">Booking Date</label>
                     <input type="date" name="booking_date" id="booking_date" required
+                        value="{{ old('booking_date', $today) }}"
                         class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                     @error('booking_date')
                         <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                     @enderror
                 </div>
+
                 <div class="w-full md:w-1/3 px-2 mb-4">
                     <label for="delivery_date" class="block text-sm font-medium text-gray-700 mb-1">Delivery Date</label>
                     <input type="date" name="delivery_date" id="delivery_date" required
+                        value="{{ old('delivery_date', $today) }}"
                         class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                     @error('delivery_date')
                         <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
@@ -119,13 +126,26 @@
                         <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                     @enderror
                 </div>
-                <div class="w-full md:w-1/3 px-2 mb-4">
+                <div class="w-full md:w-1/6 px-2 mb-4">
                     <label for="customer_id" class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
                     <select name="customer_id" id="customer_id" required
                             class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                         <option value="">Select Customer</option>
                         @foreach($customers as $customer)
                             <option value="{{ $customer->id }}" data-type="{{ $customer->name }}">{{ $customer->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('customer_id')
+                        <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                    @enderror
+                </div>
+                <div class="w-full md:w-1/6 px-2 mb-4">
+                    <label for="delivery_status" class="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
+                    <select name="delivery_status" id="delivery_status" required
+                            class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                        <option value="">Select Status</option>
+                        @foreach($deliveryStatuses as $deliveryStatus)
+                            <option value="{{ $deliveryStatus->id }}" data-type="{{ $deliveryStatus->status_name }}">{{ $deliveryStatus->status_name }}</option>
                         @endforeach
                     </select>
                     @error('customer_id')
@@ -182,20 +202,6 @@
                     <input type="text" name="regular[0][site_name]" id="regular_site_name"
                         class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                     @error('regular.0.site_name')
-                        <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <!-- Delivery Status -->
-                <div class="w-full md:w-1/3 px-2 mb-4">
-                    <label for="regular_delivery_status" class="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
-                    <select name="regular[0][delivery_status]" id="regular_delivery_status"
-                        class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                        @foreach($deliveryStatuses as $deliveryStatus)
-                            <option value="{{ $deliveryStatus->id }}">{{ $deliveryStatus->status_name }}</option>
-                        @endforeach
-                    </select>
-                    @error('regular.0.delivery_status')
                         <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                     @enderror
                 </div>
@@ -281,19 +287,6 @@
                                     <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
-
-                            <div class="w-full md:w-1/4 px-2 mb-4">
-                                <label for="delivery_status_0" class="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
-                                <select name="multi_drop[0][delivery_status]" id="delivery_status_0"
-                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
-                                    @foreach($deliveryStatuses as $deliveryStatus)
-                                        <option value="{{ $deliveryStatus->id }}">{{ $deliveryStatus->status_name }}</option>
-                                    @endforeach
-                                </select>
-                                @error('multi_drop.0.delivery_status')
-                                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
                         </div>
                     </div>
 
@@ -323,19 +316,6 @@
                                 <textarea name="multi_drop[1][delivery_address]" id="delivery_address_1" rows="2"
                                     class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"></textarea>
                                 @error('multi_drop.1.delivery_address')
-                                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-
-                            <div class="w-full md:w-1/4 px-2 mb-4">
-                                <label for="delivery_status_1" class="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
-                                <select name="multi_drop[1][delivery_status]" id="delivery_status_1"
-                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
-                                    @foreach($deliveryStatuses as $deliveryStatus)
-                                        <option value="{{ $deliveryStatus->id }}">{{ $deliveryStatus->status_name }}</option>
-                                    @endforeach
-                                </select>
-                                @error('multi_drop.1.delivery_status')
                                     <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                                 @enderror
                             </div>
@@ -412,19 +392,6 @@
                                 <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                             @enderror
                         </div>
-
-                        <div class="w-full md:w-1/4 px-2 mb-4">
-                            <label for="multi_pickup_0_delivery_status" class="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
-                            <select name="multi_pickup[0][delivery_status]" id="multi_pickup_0_delivery_status"
-                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
-                                @foreach($deliveryStatuses as $deliveryStatus)
-                                    <option value="{{ $deliveryStatus->id }}">{{ $deliveryStatus->status_name }}</option>
-                                @endforeach
-                            </select>
-                            @error('multi_pickup.0.delivery_status')
-                                <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
-                            @enderror
-                        </div>
                     </div>
                 </div>
 
@@ -449,19 +416,6 @@
                             <input type="text" name="multi_pickup[1][delivery_number]" id="multi_pickup_1_delivery_number"
                                 class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                             @error('multi_pickup.1.delivery_number')
-                                <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="w-full md:w-1/4 px-2 mb-4">
-                            <label for="multi_pickup_1_delivery_status" class="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
-                            <select name="multi_pickup[1][delivery_status]" id="multi_pickup_1_delivery_status"
-                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
-                                @foreach($deliveryStatuses as $deliveryStatus)
-                                    <option value="{{ $deliveryStatus->id }}">{{ $deliveryStatus->status_name }}</option>
-                                @endforeach
-                            </select>
-                            @error('multi_pickup.1.delivery_status')
                                 <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                             @enderror
                         </div>
@@ -541,14 +495,6 @@
                         <label for="multi_pickup_${currentIndex}_delivery_number" class="block text-sm font-medium text-gray-700">Delivery Number</label>
                         <input type="text" name="multi_pickup[${currentIndex}][delivery_number]" id="multi_pickup_${currentIndex}_delivery_number" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <div class="text-red-600 text-sm mt-1 hidden" id="error_multi_pickup_${currentIndex}_delivery_number"></div>
-                    </div>
-
-                    <div class="w-full md:w-1/4 px-2 mb-4 md:mb-0">
-                        <label for="multi_pickup_${currentIndex}_delivery_status" class="block text-sm font-medium text-gray-700">Delivery Status</label>
-                        <select name="multi_pickup[${currentIndex}][delivery_status]" id="multi_pickup_${currentIndex}_delivery_status" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                            <!-- JS-rendered options -->
-                        </select>
-                        <div class="text-red-600 text-sm mt-1 hidden" id="error_multi_pickup_${currentIndex}_delivery_status"></div>
                     </div>
 
                     <div class="w-full md:w-1/12 px-2 flex items-end justify-center">
@@ -637,14 +583,6 @@
                         <label for="delivery_address_${multiDropIndex}" class="block text-sm font-medium text-gray-700">Delivery Address</label>
                         <textarea name="multi_drop[${multiDropIndex}][delivery_address]" id="delivery_address_${multiDropIndex}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
                         <div class="text-red-600 text-sm mt-1 hidden" id="error_multi_drop_${multiDropIndex}_delivery_address"></div>
-                    </div>
-
-                    <div class="w-full md:w-3/12 px-2 mb-4 md:mb-0">
-                        <label for="delivery_status_${multiDropIndex}" class="block text-sm font-medium text-gray-700">Delivery Status</label>
-                        <select name="multi_drop[${multiDropIndex}][delivery_status]" id="delivery_status_${multiDropIndex}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <!-- Delivery status options rendered by server or JS -->
-                        </select>
-                        <div class="text-red-600 text-sm mt-1 hidden" id="error_multi_drop_${multiDropIndex}_delivery_status"></div>
                     </div>
 
                     <div class="w-full md:w-1/12 px-2 flex items-center justify-center">

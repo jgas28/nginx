@@ -33,91 +33,120 @@ use DateTime;
 
 class CoordinatorsController extends Controller
 {
-    //
-    public function index(Request $request)
+   public function index(Request $request)
+    {
+        $activeTab = $request->input('tab', 'list');
+
+        // Load only the active tab's data
+        $tabData = $this->getFilteredQuery($request, true);
+
+        return view('coordinators.index', array_merge($tabData, compact('activeTab')));
+    }
+
+    public function loadTabData(Request $request)
+    {
+        $tab = $request->input('tab', 'list');
+        $query = $this->getFilteredQuery($request, true)[$tab] ?? collect();
+
+        return view('coordinators.partials.' . $tab, ['data' => $query])->render();
+    }
+
+    private function getFilteredQuery(Request $request, bool $singleTab = false)
     {
         $search = $request->input('search');
         $mtm = $request->input('mtm');
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
-        $status = $request->input('status');
-        $activeTab = $request->input('tab', 'list');
+        $tab = $request->input('tab', 'list');
 
-        // Base query builder for DeliveryRequest (without lineItems filtering yet)
-        $baseQuery = DeliveryRequest::with(['lineItems.deliveryStatus', 'truckType', 'area', 'region', 'company'])
-            ->where('status', '!=', 0);
+        $tabs = [
+            'list' => [2, 5, 6],
+            'status4' => [4, 7],
+            'status8' => [8],
+            'status9' => [14],
+            'status10' => [1, 15],
+            'status11' => [11, 12],
+            'staging' => [3],
+            'accessorial' => [16]
+        ];
 
-        // Apply common filters
-        if ($search) {
-            $baseQuery->where(function ($q) use ($search) {
-                $q->where('mtm', 'like', "%{$search}%")
-                ->orWhereHas('region', fn($q) => $q->where('province', 'like', "%{$search}%"))
-                ->orWhereHas('area', fn($q) => $q->where('area_name', 'like', "%{$search}%"))
-                ->orWhereHas('company', fn($q) => $q->where('company_code', 'like', "%{$search}%"));
-            });
+        if ($singleTab) {
+            // Only build query for the active tab
+            $statuses = $tabs[$tab] ?? [];
+
+            $query = DeliveryRequest::with(['lineItems', 'truckType', 'area', 'region', 'company'])
+                ->where('status', '!=', 0)
+                ->whereIn('delivery_status', $statuses);
+
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('mtm', 'like', "%{$search}%")
+                    ->orWhereHas('region', fn($q) => $q->where('province', 'like', "%{$search}%"))
+                    ->orWhereHas('area', fn($q) => $q->where('area_name', 'like', "%{$search}%"))
+                    ->orWhereHas('company', fn($q) => $q->where('company_code', 'like', "%{$search}%"));
+                });
+            }
+
+            if ($mtm) {
+                $query->where('mtm', 'like', "%{$mtm}%");
+            }
+
+            if ($dateFrom && $dateTo) {
+                $start = \Carbon\Carbon::parse($dateFrom)->startOfDay();
+                $end = \Carbon\Carbon::parse($dateTo)->endOfDay();
+                $query->whereBetween('created_at', [$start, $end]);
+            } elseif ($dateFrom) {
+                $start = \Carbon\Carbon::parse($dateFrom)->startOfDay();
+                $query->where('created_at', '>=', $start);
+            } elseif ($dateTo) {
+                $end = \Carbon\Carbon::parse($dateTo)->endOfDay();
+                $query->where('created_at', '<=', $end);
+            }
+
+            return [$tab => $query->orderBy('created_at', 'desc')->paginate(10)->appends($request->all())];
         }
 
-        if ($mtm) {
-            $baseQuery->where('mtm', 'like', "%{$mtm}%");
+        // If not singleTab, process all tabs (e.g., for initial page load)
+        $results = [];
+
+        foreach ($tabs as $tabKey => $statuses) {
+            $query = DeliveryRequest::with(['lineItems', 'truckType', 'area', 'region', 'company'])
+                ->where('status', '!=', 0)
+                ->whereIn('delivery_status', $statuses);
+
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('mtm', 'like', "%{$search}%")
+                    ->orWhereHas('region', fn($q) => $q->where('province', 'like', "%{$search}%"))
+                    ->orWhereHas('area', fn($q) => $q->where('area_name', 'like', "%{$search}%"))
+                    ->orWhereHas('company', fn($q) => $q->where('company_code', 'like', "%{$search}%"));
+                });
+            }
+
+            if ($mtm) {
+                $query->where('mtm', 'like', "%{$mtm}%");
+            }
+
+            if ($dateFrom && $dateTo) {
+                $start = \Carbon\Carbon::parse($dateFrom)->startOfDay();
+                $end = \Carbon\Carbon::parse($dateTo)->endOfDay();
+                $query->whereBetween('created_at', [$start, $end]);
+            } elseif ($dateFrom) {
+                $start = \Carbon\Carbon::parse($dateFrom)->startOfDay();
+                $query->where('created_at', '>=', $start);
+            } elseif ($dateTo) {
+                $end = \Carbon\Carbon::parse($dateTo)->endOfDay();
+                $query->where('created_at', '<=', $end);
+            }
+
+            $results[$tabKey] = $query->orderBy('created_at', 'desc')
+                ->paginate(10)
+                ->appends($request->all());
         }
 
-        if ($dateFrom && $dateTo) {
-            $baseQuery->whereBetween('created_at', [$dateFrom, $dateTo]);
-        }
-
-        if ($status) {
-            // Filter by exact delivery_status from lineItems if status filter is applied
-            $baseQuery->whereHas('lineItems', fn($q) => $q->where('delivery_status', $status));
-        }
-
-        // Clone the base query for each status group, then filter lineItems accordingly:
-
-        // deliveryRequests - status in [2,3,5,6]
-        $deliveryRequests = (clone $baseQuery)
-            ->whereHas('lineItems', fn($q) => $q->whereIn('delivery_status', ['"2"', '"3"', '"5"', '"6"']))
-            ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->appends($request->all());
-
-        // pullouts - status in [4,7]
-        $pullouts = (clone $baseQuery)
-            ->whereHas('lineItems', fn($q) => $q->whereIn('delivery_status', ['"4"', '"7"']))
-            ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->appends($request->all());
-
-        // forAllocations - status 8
-        $forAllocations = (clone $baseQuery)
-            ->whereHas('lineItems', fn($q) => $q->where('delivery_status', '"8"'))
-            ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->appends($request->all());
-
-        // allocated - status 14
-        $allocated = (clone $baseQuery)
-            ->whereHas('lineItems', fn($q) => $q->where('delivery_status', '"14"'))
-            ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->appends($request->all());
-
-        // delivered - status in [1, 15]
-        $delivered = (clone $baseQuery)
-            ->whereHas('lineItems', fn($q) => $q->whereIn('delivery_status', ['"1"', '"15"']))
-            ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->appends($request->all());
-
-        // cancel - status in [11, 12]
-        $cancel = (clone $baseQuery)
-            ->whereHas('lineItems', fn($q) => $q->whereIn('delivery_status', ['"11"', '"12"']))
-            ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->appends($request->all());
-
-        return view('coordinators.index', compact(
-            'deliveryRequests', 'pullouts', 'forAllocations', 'allocated', 'activeTab', 'delivered', 'cancel'
-        ));
+        return $results;
     }
+
 
 
     public function create()
@@ -169,6 +198,7 @@ class CoordinatorsController extends Controller
             'area_id' => 'required',
             'delivery_type' => 'required', // This is always required
             'expense_type_id' => 'required',
+            'delivery_status' => 'required',
         ];
 
         // Add specific validation for delivery types
@@ -177,7 +207,6 @@ class CoordinatorsController extends Controller
             // $validationRules['regular.*.warehouse_id'] = 'nullable|string';
             $validationRules['regular.*.site_name'] = 'nullable|string';
             $validationRules['regular.*.delivery_number'] = 'nullable|string';
-            $validationRules['regular.*.delivery_status'] = 'nullable|string';
             $validationRules['regular.*.delivery_address'] = 'nullable|string';
             $validationRules['regular.*.distance_type'] = 'nullable|string';
             $validationRules['regular.*.accessorial_type'] = 'nullable|string';
@@ -190,7 +219,6 @@ class CoordinatorsController extends Controller
             $validationRules['multi_drop.*.warehouse_id'] = 'nullable|string';
             // $validationRules['multi_drop.*.site_name'] = 'nullable|string';
             $validationRules['multi_drop.*.delivery_number'] = 'nullable|string';
-            $validationRules['multi_drop.*.delivery_status'] = 'nullable|string';
             // $validationRules['multi_drop.*.delivery_address'] = 'nullable|string';
             $validationRules['multi_drop.*.distance_type'] = 'nullable|string';
             $validationRules['multi_drop.*.accessorial_type'] = 'nullable|string';
@@ -202,7 +230,6 @@ class CoordinatorsController extends Controller
             $validationRules['multi_pickup'] = 'nullable|array';
             $validationRules['multi_pickup.*.warehouse_id'] = 'nullable|string';
             $validationRules['multi_pickup.*.site_name'] = 'nullable|string';
-            $validationRules['multi_pickup.*.delivery_status'] = 'nullable|string';
             $validationRules['multi_pickup.*.delivery_address'] = 'nullable|string';
             $validationRules['multi_pickup.*.distance_type'] = 'nullable|string';
             $validationRules['multi_pickup.*.add_on_rate'] = 'nullable|string';
@@ -235,6 +262,7 @@ class CoordinatorsController extends Controller
                 'status' => 1,
                 'expense_type_id' => $request->expense_type_id,
                 'created_by' => $employeeCode,
+                'delivery_status' => $request->delivery_status,
             ]);
             $deliveryRequest->save();
 
@@ -335,7 +363,6 @@ class CoordinatorsController extends Controller
                     'warehouse_id' => $lineItem['warehouse_id'] ?? null,
                     'site_name' => $lineItem['site_name'] ?? null,
                     'delivery_number' => $lineItem['delivery_number'] ?? null,
-                    'delivery_status' => trim($lineItem['delivery_status']) ?? null,
                     'delivery_address' => $lineItem['delivery_address'] ?? null,
                     'distance_type' => $lineItem['distance_type'] ?? null,
                     'add_on_rate' => $lineItem['add_on_rate'] ?? null,
@@ -413,6 +440,7 @@ class CoordinatorsController extends Controller
             'area_id' => 'required',
             'delivery_type' => 'required', // This is always required
             'expense_type_id' => 'required',     
+            'delivery_status' => 'required',
         ];
 
         // Add specific validation for delivery types
@@ -420,7 +448,6 @@ class CoordinatorsController extends Controller
             $validationRules['regular'] = 'nullable|array';
             $validationRules['regular.*.site_name'] = 'nullable|string';
             $validationRules['regular.*.delivery_number'] = 'nullable|string';
-            $validationRules['regular.*.delivery_status'] = 'nullable|string';
             $validationRules['regular.*.delivery_address'] = 'nullable|string';
             $validationRules['regular.*.distance_type'] = 'nullable|string';
 
@@ -432,7 +459,6 @@ class CoordinatorsController extends Controller
             $validationRules['multi_drop'] = 'nullable|array';
             $validationRules['multi_drop.*.warehouse_id'] = 'nullable|string';
             $validationRules['multi_drop.*.delivery_number'] = 'nullable|string';
-            $validationRules['multi_drop.*.delivery_status'] = 'nullable|string';
             $validationRules['multi_drop.*.distance_type'] = 'nullable|string';
 
             $validationRules['multi_drop.*.accessorial_type'] = 'nullable|string';
@@ -443,7 +469,6 @@ class CoordinatorsController extends Controller
             $validationRules['multi_pickup'] = 'nullable|array';
             $validationRules['multi_pickup.*.warehouse_id'] = 'nullable|string';
             $validationRules['multi_pickup.*.site_name'] = 'nullable|string';
-            $validationRules['multi_pickup.*.delivery_status'] = 'nullable|string';
             $validationRules['multi_pickup.*.delivery_address'] = 'nullable|string';
             $validationRules['multi_pickup.*.distance_type'] = 'nullable|string';
             $validationRules['multi_pickup.*.add_on_rate'] = 'nullable|string';
@@ -477,6 +502,7 @@ class CoordinatorsController extends Controller
             $deliveryRequest->area_id = $request->area_id;
             $deliveryRequest->expense_type_id = $request->expense_type_id;
             $deliveryRequest->status = '1';
+            $deliveryRequest->delivery_status = $request->delivery_status;
 
             $deliveryRequest->update();
             Log::debug('DeliveryRequest saved:', $deliveryRequest->toArray());
@@ -604,7 +630,6 @@ class CoordinatorsController extends Controller
                         'warehouse_id' => $lineItem['warehouse_id'] ?? $deliveryRequestLineItem->warehouse_id,
                         'site_name' => $lineItem['site_name'] ?? $deliveryRequestLineItem->site_name,
                         'delivery_number' => $lineItem['delivery_number'], // Update the delivery number
-                        'delivery_status' => $lineItem['delivery_status'] ?? $deliveryRequestLineItem->delivery_status,
                         'delivery_address' => $lineItem['delivery_address'], // Use the modified value
                         'distance_type' => $lineItem['distance_type'] ?? $deliveryRequestLineItem->distance_type,
                         'add_on_rate' => $lineItem['add_on_rate'] ?? $deliveryRequestLineItem->add_on_rate,
@@ -766,6 +791,7 @@ class CoordinatorsController extends Controller
             'expense_type_id' => $data['expense_type_id'],
             'customer_id' => $data['customer_id'],
             'delivery_type' => $data['delivery_type'],
+            'delivery_status' => $data['delivery_status'],
             'status' => 1,
             'created_by' => $employeeCode,
         ];
@@ -784,7 +810,6 @@ class CoordinatorsController extends Controller
                     'warehouse_id' => $lineItemData['warehouse_id'],
                     'delivery_number' => $lineItemData['delivery_number'],
                     'site_name' => $lineItemData['site_name'],
-                    'delivery_status' => $lineItemData['delivery_status'],
                     'delivery_address' => $lineItemData['delivery_address'],
                     'status' => 1,
                     'created_by' => $employeeCode,
@@ -868,7 +893,6 @@ class CoordinatorsController extends Controller
                 'delivery_date' => 'required|date',
                 'delivery_rate' => 'required|numeric',
                 'truck_type_id' => 'required|integer|exists:truck_types,id',
-
                 // Add any additional validation rules if needed
             ]);
 
@@ -877,6 +901,7 @@ class CoordinatorsController extends Controller
                 'delivery_date' => $request->input('delivery_date'),
                 'delivery_rate' => $request->input('delivery_rate'),
                 'truck_type_id' => $request->input('truck_type_id'),
+                'delivery_status' => $request->input('delivery_status'),
             ]);
 
             Log::info('DeliveryRequest updated', ['deliveryRequest' => $deliveryRequest->toArray()]);
@@ -889,7 +914,6 @@ class CoordinatorsController extends Controller
                         $lineItem->delivery_number = $item['delivery_number'] ?? $lineItem->delivery_number;
                         $lineItem->accessorial_type = $item['accessorial_type'] ?? null;
                         $lineItem->accessorial_rate = $item['accessorial_rate'] ?? null;
-                        $lineItem->delivery_status = $item['delivery_status'] ?? $lineItem->delivery_status;
                         $lineItem->save();
                         Log::info('Updated regular line item', ['id' => $lineItem->id]);
                     } else {
@@ -906,7 +930,6 @@ class CoordinatorsController extends Controller
                         $lineItem->delivery_number = $item['delivery_number'] ?? $lineItem->delivery_number;
                         $lineItem->accessorial_type = $item['accessorial_type'] ?? null;
                         $lineItem->accessorial_rate = $item['accessorial_rate'] ?? null;
-                        $lineItem->delivery_status = $item['delivery_status'] ?? $lineItem->delivery_status;
                         $lineItem->save();
                         Log::info('Updated multi_drop line item', ['id' => $lineItem->id]);
                     } else {
@@ -923,7 +946,6 @@ class CoordinatorsController extends Controller
                         $lineItem->delivery_number = $item['delivery_number'] ?? $lineItem->delivery_number;
                         $lineItem->accessorial_type = $item['accessorial_type'] ?? null;
                         $lineItem->accessorial_rate = $item['accessorial_rate'] ?? null;
-                        $lineItem->delivery_status = $item['delivery_status'] ?? $lineItem->delivery_status;
                         $lineItem->save();
                         Log::info('Updated multi_pickup line item', ['id' => $lineItem->id]);
                     } else {
@@ -939,6 +961,7 @@ class CoordinatorsController extends Controller
             $truckIds = $request->input('truck_id');
             $driverIds = $request->input('driver_id');
             $helpers = $request->input('helper', []);
+            $tripTypes = $request->input('trip_type');
 
             foreach ($amounts as $index => $amount) {
                 $allocationId = $allocationIds[$index] ?? null;
@@ -951,13 +974,12 @@ class CoordinatorsController extends Controller
                         $allocation->dr_id = $deliveryRequest->id;
                     }
                 } else {
-                    // No allocation id — create new
                     $allocation = new Allocation();
                     $allocation->dr_id = $deliveryRequest->id;
                 }
 
-                // Update allocation fields
                 $allocation->amount = $amount;
+                $allocation->trip_type = 'Pullout'; // Add this
                 $allocation->fleet_card_id = $fleetCardIds[$index] ?? null;
                 $allocation->truck_id = $truckIds[$index] ?? null;
                 $allocation->driver_id = $driverIds[$index] ?? null;
@@ -965,7 +987,11 @@ class CoordinatorsController extends Controller
                 $allocation->created_by = $employeeCode;
                 $allocation->save();
 
-                Log::info('Allocation saved', ['allocationId' => $allocation->id, 'allocation' => $allocation->toArray()]);
+                Log::info('Allocation saved', [
+                    'allocationId' => $allocation->id,
+                    'trip_type' => $allocation->trip_type,
+                    'allocation' => $allocation->toArray()
+                ]);
             }
 
             // Commit transaction if all succeed
@@ -1050,7 +1076,6 @@ class CoordinatorsController extends Controller
     public function storePullout(Request $request)
     {
         Log::info('Request Data:', ['data' => $request->all()]);
-
         try {
             $validated = $request->validate([
                 'amount' => 'required|numeric',
@@ -1143,24 +1168,221 @@ class CoordinatorsController extends Controller
             $allocation = new Allocation([
                 'dr_id' => $request->dr_id,
                 'truck_id' => $request->truck_id,
+                'requestor_id' => $request->requestor,
                 'amount' => $request->amount,
                 'fleet_card_id' => $request->fleet_card_id,
                 'driver_id' => $request->driver_id, 
                 'helper' => $request->has('helpers') ? $request->helpers : null,
+                'trip_type' => $request->trip_type,
                 'created_by' => $employeeCode,
             ]);
             $allocation->save();
 
             // Update DeliveryRequest status
-            $deliveryRequest = DeliveryRequest::where('mtm', $request->mtm)->first();
+            $deliveryRequest = DeliveryRequest::where('id', $request->dr_id)->first();
             if ($deliveryRequest && $deliveryRequest->status != 0) {
                 $deliveryRequest->status = '1';
+                $deliveryRequest->delivery_status = '3';
                 $deliveryRequest->save();
                 Log::info('Updated DeliveryRequest status to 1.');
             }
 
             // Update Line Items
-            $lineItems = DeliveryRequestLineItem::where('mtm', $request->mtm)
+            $lineItems = DeliveryRequestLineItem::where('dr_id', $request->dr_id)
+                ->where('status', '!=', 0)
+                ->get();
+
+            foreach ($lineItems as $lineItem) {
+                $lineItem->status = '1';
+                $lineItem->save();
+            }
+
+            Log::info('Updated DeliveryRequestLineItems status to 1.');
+        });
+
+        return redirect()->route('coordinators.index')
+            ->with('success', 'Cash Voucher created successfully and statuses updated.');
+    }
+
+    public function requestAccessorial($id)
+    {
+        $deliveryLineItems = DeliveryRequest::join('delivery_request_line_items', 'delivery_request.id', '=', 'delivery_request_line_items.dr_id')
+            ->where('delivery_request.id', $id)
+            ->where('delivery_request_line_items.status', '!=', 0)
+            ->select('delivery_request.*', 'delivery_request_line_items.*', 'delivery_request.id as request_id')
+            ->get();
+
+        if ($deliveryLineItems->isEmpty()) {
+            abort(404, 'No delivery request line items found.');
+        }
+
+        $mtms = $deliveryLineItems->pluck('mtm')->unique();
+
+        // Determine relevant trucks
+        $truckIds = DeliveryRequestLineItem::whereIn('mtm', $mtms)->distinct()->pluck('truck_id');
+        $trucks = Truck::all();
+
+        $firstDeliveryLineItem = $deliveryLineItems->first();
+        $company_id = $firstDeliveryLineItem->company_id ?? null;
+
+        // Preview CVR Number (non-incremental, only for display)
+        $monthlySeries = MonthlySeriesNumber::where('company_id', $company_id)->first();
+        $nextCvrNumber = $monthlySeries ? $monthlySeries->series_number + 1 : 1;
+
+        // Extract required codes for formatting
+        $companyCode = DB::table('companies')->where('id', $company_id)->value('company_code') ?? '';
+        $customerCode = DB::table('customers')->where('id', $firstDeliveryLineItem->customer_id)->value('name') ?? '';
+        $expenseCode = DB::table('expense_types')->where('id', $firstDeliveryLineItem->expense_type_id)->value('expense_code') ?? '';
+
+        $truckCode = Truck::where('id', $firstDeliveryLineItem->truck_id)->value('truck_code') ?? '';
+
+        // Handle potential rollover
+        $currentDate = new DateTime();
+        $lastDayOfMonth = $currentDate->format('t');
+        if ((int)$currentDate->format('j') === (int)$lastDayOfMonth) {
+            $currentDate->modify('first day of next month');
+        }
+
+        $currentYear = $currentDate->format('Y');
+        $currentMonth = $currentDate->format('m');
+        $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber);
+
+        $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}";
+
+        // Fetch other required data
+        $requestType = cvr_request_type::all();
+        $employees = User::all();
+        $fleetCards = FleetCard::all();
+        $taxes = WithholdingTax::all();
+
+        return view('coordinators.requestAccessorial', compact(
+            'deliveryLineItems',
+            'nextCvrNumberFormatted',
+            'formattedCvrNumber',
+            'requestType',
+            'employees',
+            'fleetCards',
+            'trucks',
+            'taxes'
+        ));
+    }
+
+    public function storeAccessorial(Request $request)
+    {
+        Log::info('Request Data:', ['data' => $request->all()]);
+        try {
+            $validated = $request->validate([
+                'amount' => 'required|numeric',
+                'request_type' => 'required',
+                'requestor' => 'required',
+                'mtm' => 'required',
+                'remarks' => 'nullable|array',
+                'remarks.*' => 'nullable|string',
+                'voucher_type' => 'required|in:regular,with_tax',
+                'withholding_tax' => 'nullable|exists:withholding_taxes,id',
+                'tax_base_amount' => 'nullable|numeric|min:0',
+            ]);
+            Log::info('Validation Passed:', ['validated_data' => $validated]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation Errors:', ['errors' => $e->errors()]);
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        }
+
+        $company_id = $request->company_id;
+
+        // Run everything in a DB transaction
+        DB::transaction(function () use ($company_id, $request) {
+            // Handle potential rollover
+            $currentDate = new DateTime(); // Always current date
+            $yearMonth = $currentDate->format('Y-m');
+            $year = $currentDate->format('Y');
+            $month = $currentDate->format('m');
+            $isFirstDayOfMonth = $currentDate->format('j') === '1';
+
+            // Lock and fetch the row for this company
+            $monthlySeries = MonthlySeriesNumber::where('company_id', $company_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$monthlySeries) {
+                // Create if not exists
+                $monthlySeries = MonthlySeriesNumber::create([
+                    'company_id' => $company_id,
+                    'month' => $yearMonth,
+                    'series_number' => 1,
+                ]);
+                $nextCvrNumber = 1;
+                Log::info("Created MonthlySeriesNumber: company_id = $company_id, month = $yearMonth, series = 1");
+            } else {
+                if ($isFirstDayOfMonth || $monthlySeries->month !== $yearMonth) {
+                    // Reset series if it's first day OR stored month is outdated
+                    $monthlySeries->update([
+                        'month' => $yearMonth,
+                        'series_number' => 1,
+                    ]);
+                    $nextCvrNumber = 1;
+                    Log::info("Reset MonthlySeriesNumber: company_id = $company_id, new month = $yearMonth, series = 1");
+                } else {
+                    // Normal increment
+                    $monthlySeries->increment('series_number');
+                    $nextCvrNumber = $monthlySeries->series_number;
+                    Log::info("Incremented MonthlySeriesNumber: company_id = $company_id, series = $nextCvrNumber");
+                }
+            }
+
+            // Construct the final CVR number
+            $currentYear = $currentDate->format('Y');
+            $currentMonth = $currentDate->format('m');
+            $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber);
+            $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}/{$company_id}";
+            $user = Auth::user();
+            $employeeCode = $user->id;
+
+            // Save the actual cash voucher
+            $cashVoucher = new CashVoucher([
+                'cvr_number' => $formattedCvrNumber,
+                'cvr_type' => $request->cvr_type,
+                'amount' => $request->amount,
+                'request_type' => $request->request_type,
+                'requestor' => $request->requestor,
+                'mtm' => $request->mtm,    
+                'status' => '1',
+                'voucher_type' => $request->voucher_type,
+                'withholding_tax_id' => $request->voucher_type === 'with_tax' ? $request->withholding_tax : null,
+                'tax_based_amount' => $request->voucher_type === 'with_tax' ? $request->tax_base_amount : null,
+                'remarks' => $request->has('remarks') ? json_encode($request->remarks) : null,
+                'created_by' => $employeeCode,
+                'dr_id' => $request->dr_id,
+            ]);
+
+            Log::info('Saving Cash Voucher:', ['cash_voucher' => $cashVoucher->toArray()]);
+            $cashVoucher->save();
+
+            $allocation = new Allocation([
+                'dr_id' => $request->dr_id,
+                'truck_id' => $request->truck_id,
+                'requestor_id' => $request->requestor,
+                'amount' => $request->amount,
+                'fleet_card_id' => $request->fleet_card_id,
+                'driver_id' => $request->driver_id, 
+                'helper' => $request->has('helpers') ? $request->helpers : null,
+                'trip_type' => $request->trip_type,
+                'created_by' => $employeeCode,
+            ]);
+            $allocation->save();
+
+            // Update DeliveryRequest status
+            $deliveryRequest = DeliveryRequest::where('id', $request->dr_id)->first();
+            if ($deliveryRequest && $deliveryRequest->status != 0) {
+                $deliveryRequest->status = '1';
+                $deliveryRequest->delivery_status = '2';
+                $deliveryRequest->save();
+                Log::info('Updated DeliveryRequest status to 1.');
+            }
+
+            // Update Line Items
+            $lineItems = DeliveryRequestLineItem::where('dr_id', $request->dr_id)
                 ->where('status', '!=', 0)
                 ->get();
 

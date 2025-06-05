@@ -78,9 +78,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('deliveryRequestType', DeliveryRequestTypeController::class);
     Route::resource('deliveryRequest', DeliveryRequestController::class);
     Route::resource('cashVoucherRequests', CashVoucherController::class);
-    Route::resource('coordinators', CoordinatorsController::class)->parameters([
-        'coordinators' => 'deliveryRequest'
-    ]);
+    Route::resource('coordinators', CoordinatorsController::class)
+        ->parameters(['coordinators' => 'deliveryRequest'])
+        ->except(['show']);
     Route::resource('admin', AdminController::class);
     Route::get('/running-balance', [RunningBalanceController::class, 'index'])->name('running_balance.index');
     Route::post('/running-balance/store', [RunningBalanceController::class, 'store'])->name('running_balance.store');
@@ -132,6 +132,9 @@ Route::middleware('auth')->group(function () {
     ->name('coordinators.updateAllocation');
     Route::get('coordinators/{id}/request', [CoordinatorsController::class, 'request'])->name('coordinators.coordinators');
     Route::post('coordinators/store-pullout', [CoordinatorsController::class, 'storePullout'])->name('coordinators.storePullout');
+    Route::get('/coordinators/load-tab-data', [CoordinatorsController::class, 'loadTabData'])->name('coordinators.loadTabData');
+    Route::get('coordinators/{id}/requestAccessorial', [CoordinatorsController::class, 'requestAccessorial'])->name('coordinators.requestAccessorial');
+     Route::post('coordinators/store-accessorial', [CoordinatorsController::class, 'storeAccessorial'])->name('coordinators.storeAccessorial');
 
     Route::get('cashVoucherRequests/{id}/request', [CashVoucherController::class, 'request'])->name('cashVoucherRequests.request');
     Route::get('/cash-voucher-accessorial', [CashVoucherController::class, 'accessorial'])->name('cashVoucherRequests.accessorial');

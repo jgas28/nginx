@@ -65,11 +65,11 @@
     </div>
 
     <div class="p-6">
-        <form action="{{ route('cashVoucherRequests.store') }}" method="POST" class="space-y-6">
+        <form action="{{ route('coordinators.storeAccessorial') }}" method="POST" class="space-y-6">
             @csrf
             <input type="hidden" name="dr_id" value="{{ $deliveryLineItems->first()->dr_id }}">
             <input type="hidden" name="mtm" value="{{ $deliveryLineItems->first()->mtm }}">
-            <input type="hidden" name="cvr_type" value="delivery">
+            <input type="hidden" name="cvr_type" value="accessorial">
             <input type="hidden" name="company_id" value="{{ $deliveryLineItems->first()->company->id }}">
 
             <!-- CVR Type -->
@@ -114,7 +114,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     
                     <!-- CVR Number -->
-                    <div> 
+                    <div>
                         <input type="text" name="cvr_number" value="{{ $formattedCvrNumber }}" readonly class="input bg-gray-100 w-full">
                         <label class="block text-sm text-gray-600 mt-1">CVR Number</label>
                     </div>
@@ -141,17 +141,60 @@
                         <select name="requestor" class="input w-full" required>
                             <option value="">Select Employee</option>
                             @foreach($employees as $emp)
-                                <option value="{{ $emp->id }}"
-                                    @if(!empty($allocation) && $allocation->requestor_id == $emp->id) selected @endif>
-                                    {{ $emp->fname }} {{ $emp->lname }}
-                                </option>
+                                <option value="{{ $emp->id }}">{{ $emp->fname }} {{ $emp->lname }}</option>
                             @endforeach
                         </select>
                         <label class="block text-sm text-gray-600 mt-1">Requestor</label>
                     </div>
+
+                     <!-- Truck -->
+                    <div>
+                        <select name="truck_id" class="input w-full" required>
+                            <option value="">Select Truck</option>
+                            @foreach($trucks as $truck)
+                                <option value="{{ $truck->id }}">{{ $truck->truck_name }}</option>
+                            @endforeach
+                        </select>
+                        <label class="block text-sm text-gray-600 mt-1">Truck</label>
+                    </div>
+
+                     <!-- Driver -->
+                    <div>
+                         <select name="driver_id" class="input w-full" required>
+                            <option value="">Select Driver</option>
+                            @foreach($employees as $emp)
+                                <option value="{{ $emp->id }}">{{ $emp->fname }} {{ $emp->lname }}</option>
+                            @endforeach
+                        </select>
+                        <label class="block text-sm text-gray-600 mt-1">Driver</label>
+                    </div>
+
+                    <!-- Fleet Card -->
+                    <div>
+                         <select name="fleet_card_id" class="input w-full" required>
+                            <option value="">Select Fleet Card</option>
+                            @foreach($fleetCards as $fleetCard)
+                                <option value="{{ $fleetCard->id }}">{{ $fleetCard->account_name }} - {{ $fleetCard->account_number }}</option>
+                            @endforeach
+                        </select>
+                        <label class="block text-sm text-gray-600 mt-1">Fleet Card</label>
+                    </div>
+
+                    <div>
+                        <input type="text" name="trip_type" class="input w-full" value="accessorial" readonly>
+                        <label class="block text-sm text-gray-600 mt-1">Trip Type</label>
+                    </div>
                 </div>
             </fieldset>
-
+    
+            <!-- Helpers -->
+            <fieldset class="bg-gray-100 p-4 rounded">
+                <legend class="text-blue-700 font-semibold text-sm uppercase mb-3">Helpers</legend>
+                <div id="helpers_fields" class="space-y-2"></div>
+                <button type="button" id="add_helpers" class="text-blue-600 hover:underline text-sm mt-2">
+                    + Add Helpers
+                </button>
+            </fieldset>
 
             <!-- Remarks -->
             <fieldset class="bg-gray-100 p-4 rounded">
@@ -279,6 +322,27 @@
 
         document.getElementById('remarks_fields').addEventListener('click', function (e) {
             if (e.target.classList.contains('remove_remarks')) {
+                e.target.parentElement.remove();
+            }
+        });
+
+        // ============================
+        // Helpers Field Add/Remove
+        // ============================
+        document.getElementById('add_helpers').addEventListener('click', function () {
+            const newRemarksField = document.createElement('div');
+            newRemarksField.classList.add('flex', 'gap-2', 'items-center');
+
+            newRemarksField.innerHTML = `
+                <input type="text" name="helpers[]" class="form-input w-full rounded border-gray-300" placeholder="Enter Helpers">
+                <button type="button" class="text-red-600 hover:text-red-800 font-bold remove_helpers">×</button>
+            `;
+
+            document.getElementById('helpers_fields').appendChild(newRemarksField);
+        });
+
+        document.getElementById('helpers_fields').addEventListener('click', function (e) {
+            if (e.target.classList.contains('remove_helpers')) {
                 e.target.parentElement.remove();
             }
         });

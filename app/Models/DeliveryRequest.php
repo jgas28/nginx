@@ -14,7 +14,7 @@ class DeliveryRequest extends Model
     protected $fillable = [
         'mtm', 'booking_date', 'delivery_date', 'delivery_type', 'delivery_rate', 
         'company_id', 'project_name', 'region_id', 'status', 'customer_id', 'truck_type_id','area_id', 'expense_type_id', 'delivery_request_type', 
-        'created_by'
+        'created_by','delivery_status'
     ];
 
     // Define relationships
