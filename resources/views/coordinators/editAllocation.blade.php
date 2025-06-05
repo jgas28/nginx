@@ -4,7 +4,7 @@
     <!-- <h1>Edit Delivery Request</h1> -->
 
     @if(session('error'))
-        <div class="alert alert-danger">
+        <div class="alert alert-danger"> 
             {{ session('error') }}
         </div>
     @endif

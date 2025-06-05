@@ -873,28 +873,28 @@ class CoordinatorsController extends Controller
         DB::beginTransaction();
 
         try {
-            $request->validate([
-                // Validation rules
-                'allocation_id' => 'nullable|array',
-                'allocation_id.*' => 'nullable|integer|exists:allocations,id',
-                'amount' => 'required|array',
-                'amount.*' => 'required|numeric|min:0',
-                'fleet_card_id' => 'nullable|array',
-                'fleet_card_id.*' => 'nullable|integer|exists:fleet_cards,id',
-                'truck_id' => 'required|array',
-                'truck_id.*' => 'required|integer|exists:trucks,id',
-                'driver_id' => 'required|array',
-                'driver_id.*' => 'required|integer|exists:users,id',
-                'helper' => 'nullable|array',
-                'helper.*' => 'nullable|array',
-                'helper.*.*' => 'nullable|string',
+            // $request->validate([
+            //     // Validation rules
+            //     'allocation_id' => 'nullable|array',
+            //     'allocation_id.*' => 'nullable|integer|exists:allocations,id',
+            //     'amount' => 'required|array',
+            //     'amount.*' => 'required|numeric|min:0',
+            //     'fleet_card_id' => 'nullable|array',
+            //     'fleet_card_id.*' => 'nullable|integer|exists:fleet_cards,id',
+            //     'truck_id' => 'required|array',
+            //     'truck_id.*' => 'required|integer|exists:trucks,id',
+            //     'driver_id' => 'required|array',
+            //     'driver_id.*' => 'required|integer|exists:users,id',
+            //     'helper' => 'nullable|array',
+            //     'helper.*' => 'nullable|array',
+            //     'helper.*.*' => 'nullable|string',
 
-                // DeliveryRequest fields
-                'delivery_date' => 'required|date',
-                'delivery_rate' => 'required|numeric',
-                'truck_type_id' => 'required|integer|exists:truck_types,id',
-                // Add any additional validation rules if needed
-            ]);
+            //     // DeliveryRequest fields
+            //     'delivery_date' => 'required|date',
+            //     'delivery_rate' => 'required|numeric',
+            //     'truck_type_id' => 'required|integer|exists:truck_types,id',
+            //     // Add any additional validation rules if needed
+            // ]);
 
             // Update DeliveryRequest fields
             $deliveryRequest->update([
@@ -955,44 +955,44 @@ class CoordinatorsController extends Controller
             }
 
             // Handle allocations — update existing or create new
-            $allocationIds = $request->input('allocation_id', []);
-            $amounts = $request->input('amount');
-            $fleetCardIds = $request->input('fleet_card_id', []);
-            $truckIds = $request->input('truck_id');
-            $driverIds = $request->input('driver_id');
-            $helpers = $request->input('helper', []);
-            $tripTypes = $request->input('trip_type');
+            // $allocationIds = $request->input('allocation_id', []);
+            // $amounts = $request->input('amount');
+            // $fleetCardIds = $request->input('fleet_card_id', []);
+            // $truckIds = $request->input('truck_id');
+            // $driverIds = $request->input('driver_id');
+            // $helpers = $request->input('helper', []);
+            // $tripTypes = $request->input('trip_type');
 
-            foreach ($amounts as $index => $amount) {
-                $allocationId = $allocationIds[$index] ?? null;
+            // foreach ($amounts as $index => $amount) {
+            //     $allocationId = $allocationIds[$index] ?? null;
 
-                if ($allocationId) {
-                    $allocation = Allocation::find($allocationId);
-                    if (!$allocation) {
-                        Log::warning('Allocation ID not found, creating new', ['allocationId' => $allocationId]);
-                        $allocation = new Allocation();
-                        $allocation->dr_id = $deliveryRequest->id;
-                    }
-                } else {
-                    $allocation = new Allocation();
-                    $allocation->dr_id = $deliveryRequest->id;
-                }
+            //     if ($allocationId) {
+            //         $allocation = Allocation::find($allocationId);
+            //         if (!$allocation) {
+            //             Log::warning('Allocation ID not found, creating new', ['allocationId' => $allocationId]);
+            //             $allocation = new Allocation();
+            //             $allocation->dr_id = $deliveryRequest->id;
+            //         }
+            //     } else {
+            //         $allocation = new Allocation();
+            //         $allocation->dr_id = $deliveryRequest->id;
+            //     }
 
-                $allocation->amount = $amount;
-                $allocation->trip_type = 'Pullout'; // Add this
-                $allocation->fleet_card_id = $fleetCardIds[$index] ?? null;
-                $allocation->truck_id = $truckIds[$index] ?? null;
-                $allocation->driver_id = $driverIds[$index] ?? null;
-                $allocation->helper = $helpers[$index] ?? [];
-                $allocation->created_by = $employeeCode;
-                $allocation->save();
+            //     $allocation->amount = $amount;
+            //     $allocation->trip_type = 'Pullout'; // Add this
+            //     $allocation->fleet_card_id = $fleetCardIds[$index] ?? null;
+            //     $allocation->truck_id = $truckIds[$index] ?? null;
+            //     $allocation->driver_id = $driverIds[$index] ?? null;
+            //     $allocation->helper = $helpers[$index] ?? [];
+            //     $allocation->created_by = $employeeCode;
+            //     $allocation->save();
 
-                Log::info('Allocation saved', [
-                    'allocationId' => $allocation->id,
-                    'trip_type' => $allocation->trip_type,
-                    'allocation' => $allocation->toArray()
-                ]);
-            }
+            //     Log::info('Allocation saved', [
+            //         'allocationId' => $allocation->id,
+            //         'trip_type' => $allocation->trip_type,
+            //         'allocation' => $allocation->toArray()
+            //     ]);
+            // }
 
             // Commit transaction if all succeed
             DB::commit();
