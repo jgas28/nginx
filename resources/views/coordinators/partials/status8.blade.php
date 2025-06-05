@@ -38,9 +38,7 @@
                 <td class="px-4 py-2 border-b">{{ $deliveryRequest->area->area_code ?? 'N/A' }}</td>
                 <td class="px-4 py-2 border-b">{{ $deliveryRequest->region->province ?? 'N/A' }}</td>
                 <td class="px-4 py-2 border-b">
-                    @foreach($deliveryRequest->lineItems as $lineItem)
-                        {{ $lineItem->deliveryStatus->status_name ?? 'N/A' }}@if(!$loop->last), @endif
-                    @endforeach
+                    {{ $deliveryRequest->deliveryStatus->status_name ?? 'N/A' }}
                 </td>
             </tr>
         @endforeach

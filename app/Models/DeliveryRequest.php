@@ -68,4 +68,10 @@ class DeliveryRequest extends Model
         // delivery_request.id = allocation.dr_id
         return $this->hasMany(Allocation::class, 'dr_id', 'id');
     }
+
+    public function deliveryStatus()
+    {
+        return $this->belongsTo(DeliveryStatus::class, 'delivery_status');
+    }
+
 }
