@@ -145,7 +145,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/cash-voucher/edit/{id}', [CashVoucherController::class, 'editView'])->name('cashVoucherRequests.editView');
     Route::put('/cash-voucher/{id}/update', [CashVoucherController::class, 'cvrUpdate'])
     ->name('cashVoucherRequests.cvrUpdate');
-    Route::get('/cvr/{id}/{cvr_number}', [CashVoucherController::class, 'showCustomCVR'])->name('cashVoucherRequests.showCustomCVR');
+    Route::get('/cash-voucher/{id}/{cvr_number}/{cvr_type}', [CashVoucherController::class, 'showCustomCVR'])->name('cashVoucherRequests.showCustomCVR');
     Route::post('cashVoucherRequests/approvalRequestStore', [CashVoucherController::class, 'approvalRequestStore'])->name('cashVoucherRequests.approvalRequestStore');
     Route::post('/cash-voucher/reject', [CashVoucherController::class, 'reject'])->name('cashVoucherRequests.reject');
     Route::get('/cash-voucher/rejectView', [CashVoucherController::class, 'rejectView'])->name('cashVoucherRequests.rejectView');

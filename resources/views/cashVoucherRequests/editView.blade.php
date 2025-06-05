@@ -12,7 +12,7 @@
                       d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z"/>
             </svg>
             Cash Voucher Request
-        </h4>
+        </h4> 
     </div>
     <div class="p-6">
         <form action="{{ route('cashVoucherRequests.cvrUpdate', ['id' => $deliveryRequestId]) }}" method="POST">

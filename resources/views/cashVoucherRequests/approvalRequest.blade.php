@@ -13,7 +13,7 @@
                     d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z"/>
             </svg>
             Cash Voucher Details
-            </h4>
+            </h4> 
         </div>
         <div class="p-6">
             <fieldset class="mb-6 p-4 border border-gray-200 rounded bg-gray-50">
@@ -61,10 +61,14 @@
                     @endif
                 </div>
                 <div class="my-2">
-                    <a href="{{ route('cashVoucherRequests.showCustomCVR', ['id' => $cashVouchers->id, 'cvr_number' => $cashVouchers->dr_id]) }}"
+                   <a href="{{ route('cashVoucherRequests.showCustomCVR', [
+                        'id' => $cashVouchers->id,
+                        'cvr_number' => $cashVouchers->dr_id,
+                        'cvr_type' => $cashVouchers->cvr_type
+                    ]) }}"
                         target="_blank"
                         class="inline-block bg-yellow-500 text-white px-5 py-2 rounded hover:bg-yellow-600 transition">
-                        {{$cashVouchers->id}}
+                        View
                     </a>
                 </div>
             </fieldset>

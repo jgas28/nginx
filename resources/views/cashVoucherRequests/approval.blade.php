@@ -34,12 +34,12 @@
                         <td class="py-2 px-4 border-b">{{ $deliveryRequest->cvr_type }}</td>
                         <td class="py-2 px-4 border-b">
                             <a href="{{ route('cashVoucherRequests.approvalRequest', $deliveryRequest->id) }}" class="btn btn-warning bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600" title="Create Cash Voucher">
-                                {{$deliveryRequest->id}}
+                                View
                             </a>
-                            <a href="{{ route('cashVoucherRequests.editView', ['id' => $deliveryRequest->cvr_number]) }}" class="btn btn-success bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600" title="Edit Cash Voucher">
+                            <a href="{{ route('cashVoucherRequests.editView', ['id' => $deliveryRequest->id]) }}" class="btn btn-success bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600" title="Edit Cash Voucher">
                                 Edit
                             </a>
-                        </td>
+                        </td> 
                     </tr>
                 @endforeach
             </tbody>

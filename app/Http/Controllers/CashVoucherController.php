@@ -603,7 +603,7 @@ class CashVoucherController extends Controller
             })
             ->where('cash_vouchers.status', '=', 2)
             ->orderBy('cash_vouchers.print_status', 'asc')
-            ->select('delivery_request.*', 'cash_vouchers.*', 'cvr_request_type.request_type as cvr_type', 'cash_vouchers.print_status' )
+            ->select('delivery_request.*', 'cash_vouchers.*', 'cvr_request_type.request_type as cvr_types', 'cash_vouchers.print_status' )
             ->paginate(10);
     
         // Check if the request expects an AJAX response
@@ -711,20 +711,13 @@ class CashVoucherController extends Controller
 
     public function printCVR($id, $cvr_number, $mtm)
     {
-        $cashVoucherRequest = DB::table('cash_vouchers')
-                ->join('delivery_request', 'cash_vouchers.dr_id', '=', 'delivery_request.id')
-                ->leftJoin('withholding_taxes', 'cash_vouchers.withholding_tax_id', '=', 'withholding_taxes.id')
-                ->select(
-                    'cash_vouchers.*',
-                    'cash_vouchers.id as cash_vouchers_id',
-                    'delivery_request.*',
-                    'withholding_taxes.description as tax_description',
-                    'withholding_taxes.percentage as tax_percentage'
-                )
-                ->where('cash_vouchers.id', $id)
-                ->where('cash_vouchers.dr_id', $cvr_number)
-                ->first();
-            
+         $cashVoucherRequest = CashVoucher::with([
+                'deliveryRequest',
+                'withholdingTax:id,description,percentage'
+            ])
+            ->where('id', $id)
+            ->where('dr_id', $cvr_number)
+            ->first();
 
             // Check if the remarks column contains a JSON string
             if (is_string($cashVoucherRequest->remarks) && $this->isJson($cashVoucherRequest->remarks)) {
@@ -741,8 +734,9 @@ class CashVoucherController extends Controller
             ->select(
                 'delivery_request_line_items.*'
             )
-            ->where('delivery_request_line_items.mtm', $cashVoucherRequest->mtm)
+            ->where('delivery_request_line_items.dr_id', $cvr_number)
             ->get();
+
     
             $deliveryRequest = DeliveryRequest::with('company','customer')
             ->where('id', $cashVoucherRequest->dr_id)
@@ -756,15 +750,18 @@ class CashVoucherController extends Controller
             $drivers = DB::table('allocations')
             ->join('users', 'allocations.driver_id', '=', 'users.id')
             ->where('allocations.dr_id', $cvr_number) 
+             ->where('allocations.trip_type', $mtm) 
             ->first();
 
             $allocations = Allocation::with('truck')
             ->where('dr_id', $cashVoucherRequest->dr_id)
+            ->where('allocations.trip_type', $mtm) 
             ->first();
     
             $fleets = DB::table('allocations')
             ->join('fleet_cards', 'allocations.fleet_card_id', '=', 'fleet_cards.id')
             ->where('allocations.dr_id', $cvr_number) 
+            ->where('allocations.trip_type', $mtm) 
             ->first();
     
             $employees = DB::table('cash_vouchers')
@@ -816,7 +813,7 @@ class CashVoucherController extends Controller
         Log::info("Approval request ID: $id");
     
         
-        $cashVouchers = CashVoucher::where('cvr_number', $id)->firstOrFail();
+        $cashVouchers = CashVoucher::where('id', $id)->firstOrFail();
         $deliveryRequestId = $cashVouchers->id;
         $employees = User::all();
         $approves = Approver::all();
@@ -866,22 +863,16 @@ class CashVoucherController extends Controller
         }
 
 
-        public function showCustomCVR($id, $cvr_number)
+        public function showCustomCVR($id, $cvr_number, $cvr_type)
         {   
 
-            $cashVoucherRequest = DB::table('cash_vouchers')
-                ->join('delivery_request', 'cash_vouchers.dr_id', '=', 'delivery_request.id')
-                ->leftJoin('withholding_taxes', 'cash_vouchers.withholding_tax_id', '=', 'withholding_taxes.id')
-                ->select(
-                    'cash_vouchers.*',
-                    'cash_vouchers.id as cash_vouchers_id',
-                    'delivery_request.*',
-                    'withholding_taxes.description as tax_description',
-                    'withholding_taxes.percentage as tax_percentage'
-                )
-                ->where('cash_vouchers.id', $id)
-                ->where('cash_vouchers.dr_id', $cvr_number)
-                ->first();
+            $cashVoucherRequest = CashVoucher::with([
+                'deliveryRequest',
+                'withholdingTax:id,description,percentage'
+            ])
+            ->where('id', $id)
+            ->where('dr_id', $cvr_number)
+            ->first();
                 
             // Check if the remarks column contains a JSON string
             if (is_string($cashVoucherRequest->remarks) && $this->isJson($cashVoucherRequest->remarks)) {
@@ -918,21 +909,25 @@ class CashVoucherController extends Controller
             $drivers = DB::table('allocations')
             ->join('users', 'allocations.driver_id', '=', 'users.id')
             ->where('allocations.dr_id', $cvr_number) 
+            ->where('trip_type', $cvr_type)
             ->first();
 
             $allocations = Allocation::with('truck')
             ->where('dr_id', $cashVoucherRequest->dr_id)
+            ->where('trip_type', $cvr_type)
             ->first();
     
             $fleets = DB::table('allocations')
             ->join('fleet_cards', 'allocations.fleet_card_id', '=', 'fleet_cards.id')
             ->where('allocations.dr_id', $cvr_number) 
+            ->where('trip_type', $cvr_type)
             ->first();
     
-            $employees = DB::table('cash_vouchers')
-            ->join('users', 'cash_vouchers.requestor', '=', 'users.id')
-            ->select('users.*', 'cash_vouchers.*') 
-            ->where('cash_vouchers.dr_id', $id) 
+            $employees = DB::table('allocations')
+            ->join('users', 'allocations.requestor_id', '=', 'users.id')
+            ->select('users.*', 'allocations.*') 
+            ->where('allocations.dr_id', $cvr_number) 
+            ->where('trip_type', $cvr_type)
             ->first();
 
 

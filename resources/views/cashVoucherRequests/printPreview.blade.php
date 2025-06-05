@@ -136,7 +136,7 @@
     </div>
 
     <div class="voucher-details">
-        <table>
+        <table> 
             <thead>
                 <tr>
                     <th colspan="2" style="text-align: left; font-size: 18px;">PAID TO: {{ $employees->fname ?? 'N/A' }} {{ $employees->lname ?? 'N/A' }}</th>
