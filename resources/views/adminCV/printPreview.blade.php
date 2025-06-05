@@ -228,15 +228,15 @@
                 <tbody>
                     @php
                         $descriptions = json_decode($vouchers->description ?? '[]');
-                        $amounts = json_decode($vouchers->amount_details ?? '[]');
+                        $amounts = json_decode($vouchers->amount_details ?? '[]'); 
                     @endphp
                     <tr>
-                        <td style="border: 1px solid #ccc; vertical-align: top; padding: 5px;">
+                         <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
                             @foreach ($descriptions as $desc)
                                 {{ $desc }}<br>
                             @endforeach
                         </td>
-                        <td style="border: 1px solid #ccc; vertical-align: top; padding: 5px;">
+                         <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
                             @foreach ($amounts as $amt)
                                 ₱ {{ number_format($amt, 2) }}<br>
                             @endforeach
