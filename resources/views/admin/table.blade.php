@@ -36,7 +36,7 @@
                 @endif
             </td>
             <td class="py-2 px-4 border-b">{{ $cashVoucher->company->company_code ?? 'N/A' }}</td>
-            <td class="py-2 px-4 border-b">{{ $cashVoucher->suppliers->supplier_code ?? 'N/A' }}</td>
+            <td class="py-2 px-4 border-b">{{ $cashVoucher->suppliers->supplier_name ?? 'N/A' }}</td>
             <td class="py-2 px-4 border-b">₱{{ number_format($sum, 2) ?? 'N/A' }}</td>
              <td class="py-2 px-4 border-b">{{ $cashVoucher->cvr_type ?? 'N/A' }}</td>
             <td class="py-2 px-4 border-b">{{ $cashVoucher->voucher_type ?? 'N/A' }}</td>

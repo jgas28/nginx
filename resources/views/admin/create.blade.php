@@ -117,7 +117,7 @@
                             <select name="supplier_id" id="supplier_id" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
                                 <option value="" disabled selected>Select Supplier</option>
                                 @foreach($suppliers as $supplier)
-                                    <option value="{{ $supplier->id }}">{{ $supplier->supplier_code }}</option>
+                                    <option value="{{ $supplier->id }}">{{ $supplier->supplier_name }}</option>
                                 @endforeach
                             </select>
                         </div>

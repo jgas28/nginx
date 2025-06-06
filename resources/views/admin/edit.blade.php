@@ -126,7 +126,7 @@
                                 <option value="" disabled>Select Supplier</option>
                                 @foreach($suppliers as $supplier)
                                     <option value="{{ $supplier->id }}" {{ $voucher->supplier_id == $supplier->id ? 'selected' : '' }}>
-                                        {{ $supplier->supplier_code }}
+                                        {{ $supplier->supplier_name }}
                                     </option>
                                 @endforeach
                             </select>
