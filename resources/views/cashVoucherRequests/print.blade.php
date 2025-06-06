@@ -394,7 +394,8 @@
                 <td>
                     <div style="font-size: 10px; text-align:left;">RECEIVED from {{$deliveryRequest->company->company_name}} the amount of</div>
                     <div style="font-size: 10px; text-align: left; text-transform: uppercase;">
-                        <strong><u>{{ $amountInWords ?? 'Zero' }}</u></strong>
+        
+                   <strong><u>{{ $amountInWords == 'N/A' ? 'Zero' : ($amountInWords ?? 'Zero') }}</u></strong>
                     </div>
                     <div style="font-size: 10px; text-align:left;">in full payment of amount described above</div>
                 </td>
