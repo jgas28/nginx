@@ -754,6 +754,7 @@ class CashVoucherController extends Controller
             $requestTypes = DB::table('cash_vouchers')
             ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
             ->where('cash_vouchers.dr_id', $cvr_number) 
+            ->where('cash_vouchers.cvr_type', $mtm) 
             ->first();
     
             $drivers = DB::table('allocations')
@@ -777,6 +778,7 @@ class CashVoucherController extends Controller
             ->join('users', 'cash_vouchers.requestor', '=', 'users.id')
             ->select('users.*', 'cash_vouchers.*') 
             ->where('cash_vouchers.dr_id', $cvr_number) 
+             ->where('cash_vouchers.cvr_type', $mtm) 
             ->first();
 
             $cvrApprovals = cvr_approval::where('cvr_id', $id)
