@@ -328,7 +328,7 @@
                 <tr>
                     <td>
                         <div class="label" style="font-size: 10px;">_________________________</div>
-                        <div style="font-size: 10px;">{{$approvers->name}}</div>asd
+                        <div style="font-size: 10px;">{{$approvers->name}}</div>
                         <div class="label" style="font-size: 10px;">Approver</div>
                     </td>
                     <td>
