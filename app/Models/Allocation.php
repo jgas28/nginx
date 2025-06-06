@@ -12,7 +12,6 @@ class Allocation extends Model
 
      protected $fillable = [
         'dr_id',
-        'line_item_id',
         'truck_id',
         'amount',
         'fleet_card_id',

@@ -864,6 +864,47 @@ class CoordinatorsController extends Controller
         ));
     }
 
+    public function editAllocated(DeliveryRequest $deliveryRequest)
+    {
+
+        $deliveryLineItems = DeliveryRequestLineItem::with('deliveryRequest')
+            ->where('status', '!=', 0)
+            ->whereHas('deliveryRequest', function ($query) use ($deliveryRequest) {
+                $query->where('id', $deliveryRequest->id);
+            })
+        ->get();
+
+        $allocate = DeliveryRequest::with(['allocations' => function ($query) {
+            $query->where('trip_type', 'delivery');
+        }])->find($deliveryRequest->id);
+
+        // dd($deliveryLineItems);
+
+        $companies = Company::all();
+        $regions = Region::all();
+        $deliveryTypes = DeliveryType::all();
+        $warehouses = Warehouse::all();
+        $AddOnRates_multiDrops = AddOnRate::where('delivery_type', 'Multi-Drop')->get();
+        $AddOnRates_multiPickUps = AddOnRate::where('delivery_type', 'Multi Pick-Up')->get();
+        $deliveryStatuses = DeliveryStatus::all();
+        $trucks = Truck::all();
+        $distances = DistanceType::all();
+        $accessorialTypes = AccessorialType::all();
+        $customers = Customer::all();
+        $truckTypes = TruckType::all();
+        $areas = Area::all();
+        $expenseTypes = Expense_Type::all();
+        $fleetCards = FleetCard::all(); 
+        $drivers = User::all();
+
+        return view('coordinators.editAllocated', compact(
+            'companies', 'regions', 'warehouses', 'AddOnRates_multiDrops', 
+            'AddOnRates_multiPickUps', 'deliveryStatuses', 'trucks', 'distances', 'deliveryLineItems', 
+            'deliveryRequest', 'deliveryTypes', 'accessorialTypes', 'customers', 'truckTypes', 'areas', 'expenseTypes',
+            'fleetCards','drivers', 'allocate'
+        ));
+    }
+
     public function updateAllocation(Request $request, DeliveryRequest $deliveryRequest)
     {
         $user = Auth::user();
@@ -993,6 +1034,154 @@ class CoordinatorsController extends Controller
             //         'allocation' => $allocation->toArray()
             //     ]);
             // }
+
+            // Commit transaction if all succeed
+            DB::commit();
+
+            return redirect()->route('coordinators.index', $deliveryRequest)
+                ->with('success', 'Delivery request, line items and allocations updated successfully.');
+
+        } catch (\Exception $e) {
+            // Rollback on error
+            DB::rollBack();
+
+            Log::error('Failed to update allocation', ['error' => $e->getMessage()]);
+
+            return back()->withErrors('Failed to update allocations. Please try again.');
+        }
+    }
+
+    public function updateAllocated(Request $request, DeliveryRequest $deliveryRequest)
+    {
+        $user = Auth::user();
+        $employeeCode = $user->id;
+
+        // Start transaction
+        DB::beginTransaction();
+
+        try {
+            $request->validate([
+                // Validation rules
+                'allocation_id' => 'nullable|array',
+                'allocation_id.*' => 'nullable|integer|exists:allocations,id',
+                'amount' => 'required|array',
+                'amount.*' => 'required|numeric|min:0',
+                'fleet_card_id' => 'nullable|array',
+                'fleet_card_id.*' => 'nullable|integer|exists:fleet_cards,id',
+                'truck_id' => 'required|array',
+                'truck_id.*' => 'required|integer|exists:trucks,id',
+                'driver_id' => 'required|array',
+                'driver_id.*' => 'required|integer|exists:users,id',
+                'helper' => 'nullable|array',
+                'helper.*' => 'nullable|array',
+                'helper.*.*' => 'nullable|string',
+
+                // DeliveryRequest fields
+                'delivery_date' => 'required|date',
+                'delivery_rate' => 'required|numeric',
+                'truck_type_id' => 'required|integer|exists:truck_types,id',
+                // Add any additional validation rules if needed
+            ]);
+
+            // Update DeliveryRequest fields
+            $deliveryRequest->update([
+                'delivery_date' => $request->input('delivery_date'),
+                'delivery_rate' => $request->input('delivery_rate'),
+                'truck_type_id' => $request->input('truck_type_id'),
+                'delivery_status' => $request->input('delivery_status'),
+            ]);
+
+            Log::info('DeliveryRequest updated', ['deliveryRequest' => $deliveryRequest->toArray()]);
+
+            // Update Line Items - Regular
+            if ($request->has('regular')) {
+                foreach ($request->input('regular') as $item) {
+                    $lineItem = DeliveryRequestLineItem::find($item['id']);
+                    if ($lineItem) {
+                        $lineItem->delivery_number = $item['delivery_number'] ?? $lineItem->delivery_number;
+                        $lineItem->accessorial_type = $item['accessorial_type'] ?? null;
+                        $lineItem->accessorial_rate = $item['accessorial_rate'] ?? null;
+                        $lineItem->save();
+                        Log::info('Updated regular line item', ['id' => $lineItem->id]);
+                    } else {
+                        Log::warning('Regular line item not found', ['id' => $item['id']]);
+                    }
+                }
+            }
+
+            // Update Line Items - Multi-Drop
+            if ($request->has('multi_drop')) {
+                foreach ($request->input('multi_drop') as $item) {
+                    $lineItem = DeliveryRequestLineItem::find($item['id']);
+                    if ($lineItem) {
+                        $lineItem->delivery_number = $item['delivery_number'] ?? $lineItem->delivery_number;
+                        $lineItem->accessorial_type = $item['accessorial_type'] ?? null;
+                        $lineItem->accessorial_rate = $item['accessorial_rate'] ?? null;
+                        $lineItem->save();
+                        Log::info('Updated multi_drop line item', ['id' => $lineItem->id]);
+                    } else {
+                        Log::warning('Multi-drop line item not found', ['id' => $item['id']]);
+                    }
+                }
+            }
+
+            // Update Line Items - Multi-Pickup
+            if ($request->has('multi_pickup')) {
+                foreach ($request->input('multi_pickup') as $item) {
+                    $lineItem = DeliveryRequestLineItem::find($item['id']);
+                    if ($lineItem) {
+                        $lineItem->delivery_number = $item['delivery_number'] ?? $lineItem->delivery_number;
+                        $lineItem->accessorial_type = $item['accessorial_type'] ?? null;
+                        $lineItem->accessorial_rate = $item['accessorial_rate'] ?? null;
+                        $lineItem->save();
+                        Log::info('Updated multi_pickup line item', ['id' => $lineItem->id]);
+                    } else {
+                        Log::warning('Multi-pickup line item not found', ['id' => $item['id']]);
+                    }
+                }
+            }
+
+            // Handle allocations — update existing or create new
+            $allocationIds = $request->input('allocation_id', []);
+            $amounts = $request->input('amount');
+            $fleetCardIds = $request->input('fleet_card_id', []);
+            $truckIds = $request->input('truck_id');
+            $driverIds = $request->input('driver_id');
+            $helpers = $request->input('helper', []);
+            // $tripTypes = $request->input('trip_type');
+
+            foreach ($amounts as $index => $amount) {
+                $allocationId = $allocationIds[$index] ?? null;
+
+                if ($allocationId) {
+                    // Find only existing delivery-type allocations
+                    $allocation = Allocation::where('id', $allocationId)
+                        ->where('trip_type', 'delivery')
+                        ->first();
+
+                    if (!$allocation) {
+                        Log::warning('Allocation not found or not of trip_type "delivery"', [
+                            'allocationId' => $allocationId
+                        ]);
+                        continue; // Skip if not found or not delivery
+                    }
+
+                    // Update allocation (do NOT change the trip_type!)
+                    $allocation->amount = $amount;
+                    $allocation->fleet_card_id = $fleetCardIds[$index] ?? null;
+                    $allocation->truck_id = $truckIds[$index] ?? null;
+                    $allocation->driver_id = $driverIds[$index] ?? null;
+                    $allocation->helper = $helpers[$index] ?? [];
+                    $allocation->created_by = $employeeCode;
+                    $allocation->save();
+
+                    Log::info('Allocation updated', [
+                        'allocationId' => $allocation->id,
+                        'trip_type' => $allocation->trip_type,
+                        'allocation' => $allocation->toArray()
+                    ]);
+                }
+            }
 
             // Commit transaction if all succeed
             DB::commit();

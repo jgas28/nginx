@@ -42,7 +42,7 @@
                     {{ $deliveryRequest->deliveryStatus->status_name ?? 'N/A' }}
                 </td>
                 <td class="px-4 py-2 border-b space-x-2">
-                    <a href="{{ route('coordinators.editAllocation', $deliveryRequest) }}" class="text-yellow-600 hover:underline">Edit</a>
+                    <a href="{{ route('coordinators.editAllocated', $deliveryRequest) }}" class="text-yellow-600 hover:underline">Edit</a>
                     <a href="{{ route('cashVoucherRequests.request', $deliveryRequest) }}" class="text-yellow-600 hover:underline">Request CV</a>
                 </td>
             </tr>

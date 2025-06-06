@@ -128,8 +128,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/coordinators/split/{id}', [CoordinatorsController::class, 'performSplit'])->name('coordinators.split.perform');
     Route::get('/coordinators/{deliveryRequest}/edit-allocation', [CoordinatorsController::class, 'editAllocation'])
     ->name('coordinators.editAllocation');
+    Route::get('/coordinators/{deliveryRequest}/edit-allocated', [CoordinatorsController::class, 'editAllocated'])
+    ->name('coordinators.editAllocated');
     Route::put('/coordinators/{deliveryRequest}/update-allocation', [CoordinatorsController::class, 'updateAllocation'])
     ->name('coordinators.updateAllocation');
+      Route::put('/coordinators/{deliveryRequest}/update-allocated', [CoordinatorsController::class, 'updateAllocated'])
+    ->name('coordinators.updateAllocated');
     Route::get('coordinators/{id}/request', [CoordinatorsController::class, 'request'])->name('coordinators.coordinators');
     Route::post('coordinators/store-pullout', [CoordinatorsController::class, 'storePullout'])->name('coordinators.storePullout');
     Route::get('/coordinators/load-tab-data', [CoordinatorsController::class, 'loadTabData'])->name('coordinators.loadTabData');

@@ -55,15 +55,20 @@ class CashVoucherController extends Controller
         $search = $request->get('search');
     
         // Fetch related delivery line items by joining with the correct table name
-        $deliveryRequests = CashVoucher::join('delivery_request', 'cash_vouchers.dr_id', '=', 'delivery_request.id')
-            ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
-            ->when($search, function ($query, $search) {
-                return $query->where('delivery_request.mtm', 'like', '%' . $search . '%');
-            })
-            ->where('cash_vouchers.status', '=', 1)
-            ->select('delivery_request.*', 'cash_vouchers.*', 'cvr_request_type.request_type as cvr_type')
-            ->paginate(10);
-    
+       $deliveryRequests = CashVoucher::with([
+            'deliveryRequest.deliveryAllocations',
+            'deliveryRequest.pulloutAllocations',
+            'deliveryRequest.accessorialAllocations',
+            'cvrTypes'
+        ])
+        ->when($search, function ($query, $search) {
+            return $query->whereHas('deliveryRequest', function ($q) use ($search) {
+                $q->where('mtm', 'like', '%' . $search . '%');
+            });
+        })
+        ->where('status', 1)
+        ->paginate(10);
+
         // Check if the request expects an AJAX response
         if ($request->ajax()) {
             return view('cashVoucherRequests.approval', compact('deliveryRequests'))->render();
@@ -423,11 +428,15 @@ class CashVoucherController extends Controller
         $deliveryRequestId = $id;
 
         $cashVouchers = CashVoucher::where('id', $id)->first();
+        $deliveryRequests = DeliveryRequest::where('id', $cashVouchers->dr_id)->first();
+        $allocations = Allocation::where('dr_id', $cashVouchers->dr_id)
+            ->where('trip_type', $cashVouchers->cvr_type)
+            ->first();
 
         $employees = User::all();
         $approves = Approver::all(); 
 
-        return view('cashVoucherRequests.approvalRequest', compact('deliveryRequestId', 'employees', 'approves', 'cashVouchers'));
+        return view('cashVoucherRequests.approvalRequest', compact('deliveryRequestId', 'employees', 'approves', 'cashVouchers', 'allocations', 'deliveryRequests'));
     }
 
     public function reject(Request $request)

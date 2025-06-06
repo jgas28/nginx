@@ -69,6 +69,21 @@ class DeliveryRequest extends Model
         return $this->hasMany(Allocation::class, 'dr_id', 'id');
     }
 
+    public function deliveryAllocations()
+    {
+        return $this->hasMany(Allocation::class, 'dr_id')->where('trip_type', 'delivery');
+    }
+
+    public function pulloutAllocations()
+    {
+        return $this->hasMany(Allocation::class, 'dr_id')->where('trip_type', 'pullout');
+    }
+
+    public function accessorialAllocations()
+    {
+        return $this->hasMany(Allocation::class, 'dr_id')->where('trip_type', 'accessorial');
+    }
+
     public function deliveryStatus()
     {
         return $this->belongsTo(DeliveryStatus::class, 'delivery_status');

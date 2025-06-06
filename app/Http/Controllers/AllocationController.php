@@ -102,31 +102,20 @@ class AllocationController extends Controller
             $currentAmount = $firstDr ? $amount : 0;
             $firstDr = false;
 
-            foreach ($lineItems as $lineItem) {
-                $allocation = Allocation::create([
-                    'dr_id' => $drId,
-                    'line_item_id' => $lineItem->id,
-                    'requestor_id' => $requestorId,
-                    'truck_id' => $truckId,
-                    'driver_id' => $driverId,
-                    'helper' => $helpers,
-                    'amount' => $currentAmount,
-                    'trip_type' => 'delivery',
-                    'created_by' => $employeeCode,
-                ]);
+            Allocation::create([
+                'dr_id' => $drId,
+                'requestor_id' => $requestorId,
+                'truck_id' => $truckId,
+                'driver_id' => $driverId,
+                'helper' => $helpers,
+                'amount' => $currentAmount,
+                'trip_type' => 'delivery',
+                'created_by' => $employeeCode,
+            ]);
 
-                Log::info('Created new allocation.', ['allocation_id' => $allocation->id]);
+            $deliveryRequest = DeliveryRequest::find($drId);
+            $deliveryRequest->update(['delivery_status' => 14]);
 
-                $deliveryRequest = DeliveryRequest::find($drId);
-
-                // Update delivery status if needed
-                $deliveryRequest->update(['delivery_status' => 14]);
-
-                Log::info('Updated delivery status of line item.', [
-                    'line_item_id' => $lineItem->id,
-                    'new_status' => 14,
-                ]);
-            }
         }
 
         Log::info('Cash voucher allocations processed successfully.', [

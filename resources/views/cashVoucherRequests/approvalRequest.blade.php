@@ -25,24 +25,26 @@
                     </svg>
                     CVR Information
                 </legend>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                    <div class="md:col-span-3">
                         <input type="hidden" name="dr_id" value="{{ $cashVouchers->dr_id }}">
                         <label for="cvr_number" class="block text-sm font-medium text-gray-700">CVR Number</label>
-                        <input type="text" name="cvr_number" id="cvr_number" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->cvr_number }}" readonly>
+                        <input type="text" name="cvr_number" id="cvr_number" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ preg_replace('/\/\d+$/', '', $cashVouchers->cvr_number) }}-{{ $allocations->truck->truck_name }}-{{ $deliveryRequests->company->company_code }}{{ $deliveryRequests->expenseType->expense_code }}" readonly>
                     </div>
 
-                    <div>
+                    <div class="md:col-span-3">
                         <label for="amount" class="block text-sm font-medium text-gray-700">Amount</label>
                         <input type="text" name="amount" id="amount" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ number_format($cashVouchers->amount, 2) }}" readonly>
                     </div>
+                </div>
 
-                    <div>
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mt-4">
+                    <div class="md:col-span-3">
                         <label for="requestor" class="block text-sm font-medium text-gray-700">Requestor</label>
                         <input type="text" name="requestor" id="requestor" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->employee->fname }} {{ $cashVouchers->employee->lname }}" readonly>
                     </div>
 
-                    <div>
+                    <div class="md:col-span-3">
                         <label for="request_type" class="block text-sm font-medium text-gray-700">Request Type</label>
                         <input type="text" name="request_type" id="request_type" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->cvrTypes->request_code }}" readonly>
                     </div>
