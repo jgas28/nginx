@@ -332,11 +332,11 @@
                         <div class="label" style="font-size: 10px;">Approver</div>
                     </td>
                     <td>
-                        <div class="label" style="font-size: 10px; text-align:left;">RECEIVED from the amount of</div>
-                        <div class="label" style="font-size: 10px; text-align: left; text-transform: uppercase;">
-                        
+                        <div style="font-size: 10px; text-align:left;">RECEIVED from the amount of</div>
+                        <div style="font-size: 10px; text-align: left; text-transform: uppercase;">
+                            <strong><u>{{ $amountInWords ?? 'N/A' }}</u></strong>
                         </div>
-                        <div class="label" style="font-size: 10px; text-align:left;">in full payment of amount described above</div>
+                        <div style="font-size: 10px; text-align:left;">in full payment of amount described above</div>
                     </td>
                     <td>
                         <div class="label" style="font-size: 10px;">_________________________</div>

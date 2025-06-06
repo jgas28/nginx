@@ -20,6 +20,7 @@ use Carbon\Carbon;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use NumberToWords\NumberToWords;
 
 class AdminController extends Controller
 {
@@ -422,7 +423,8 @@ class AdminController extends Controller
         $fullname = $user->fname . ' ' . $user->lname;
 
         $vouchers = CashVoucher::findOrFail($id);
-        return view('adminCV.printPreview', compact('vouchers', 'fullname')); 
+        $amountInWords = $vouchers->amount ? $this->convertAmountToWordsPreview($vouchers->amount) : 'N/A';
+        return view('adminCV.printPreview', compact('vouchers', 'fullname', 'amountInWords')); 
     }
 
     public function printMultiple()
@@ -441,8 +443,9 @@ class AdminController extends Controller
                 ->leftjoin('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
                 ->where('cvr_approvals.id', $id)
                 ->first();
+        $amountInWords = $vouchers->amount ? $this->convertAmountToWords($vouchers->amount) : 'N/A';
 
-        return view('AdminCV.print', compact('vouchers', 'fullname', 'approvers'));
+        return view('AdminCV.print', compact('vouchers', 'fullname', 'approvers', 'amountInWords'));
     }
 
     public function cvrList(Request $request)
@@ -467,4 +470,76 @@ class AdminController extends Controller
         // For the normal view
         return view('AdminCV.cvrList', compact('cashVoucherRequests', 'search'));
     } 
+
+    public function convertAmountToWords($amount)
+        {
+            // Handle edge cases like 0, null or non-numeric values
+            if (is_null($amount) || !is_numeric($amount) || $amount <= 0) {
+                return 'Zero or Invalid Amount';
+            }
+
+            // Initialize the NumberToWords class
+            $numberToWords = new NumberToWords();
+
+            // Get the number to words transformer (not currency transformer)
+            $numberTransformer = $numberToWords->getNumberTransformer('en');
+            
+            // Convert the amount (integer part) into words
+            $amountInWords = $numberTransformer->toWords(floor($amount)); // Get the integer part
+
+            // Handle fractional part (cents)
+            $fractionalPart = round(($amount - floor($amount)) * 100); // Get the cents (if any)
+
+            $currency = 'pesos'; // Default currency
+            $fractionalCurrency = 'centavos'; // Default fractional currency
+            
+            // Check for singular/plural currency
+            if ($amount == 1) {
+                $currency = 'peso';
+            }
+
+            // If there is a fractional part, format it as a fraction (e.g., 45/100)
+            if ($fractionalPart > 0) {
+                return ucfirst($amountInWords) . ' ' . $currency . ' & ' . $fractionalPart . '/100 ';
+            }
+
+            // Return the amount in words with currency (e.g., "five hundred pesos")
+            return ucfirst($amountInWords) . ' ' . $currency;
+        }
+
+        public function convertAmountToWordsPreview($amount)
+        {
+            // Handle edge cases like 0, null or non-numeric values
+            if (is_null($amount) || !is_numeric($amount) || $amount <= 0) {
+                return 'Zero or Invalid Amount';
+            }
+
+            // Initialize the NumberToWords class
+            $numberToWords = new NumberToWords();
+
+            // Get the number to words transformer (not currency transformer)
+            $numberTransformer = $numberToWords->getNumberTransformer('en');
+            
+            // Convert the amount (integer part) into words
+            $amountInWords = $numberTransformer->toWords(floor($amount)); // Get the integer part
+
+            // Handle fractional part (cents)
+            $fractionalPart = round(($amount - floor($amount)) * 100); // Get the cents (if any)
+
+            $currency = 'pesos'; // Default currency
+            $fractionalCurrency = 'centavos'; // Default fractional currency
+            
+            // Check for singular/plural currency
+            if ($amount == 1) {
+                $currency = 'peso';
+            }
+
+            // If there is a fractional part, format it as a fraction (e.g., 45/100)
+            if ($fractionalPart > 0) {
+                return ucfirst($amountInWords) . ' ' . $currency . ' & ' . $fractionalPart . '/100 ';
+            }
+
+            // Return the amount in words with currency (e.g., "five hundred pesos")
+            return ucfirst($amountInWords) . ' ' . $currency;
+        }
 }

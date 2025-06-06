@@ -194,15 +194,7 @@
             <div class="series-no">
                 <div class="label" style="font-size:12px">Series No</div>
                 <div style="font-size:12px">
-                    @if(isset($vouchers->cvr_type) && strtolower($vouchers->cvr_type) === 'admin')
-                        <!-- When cvr_type is admin -->
-                        {{ preg_replace('/\/\d+$/', '', $vouchers->cvr_number ?? 'N/A') }}-{{ $vouchers->company->company_code ?? 'N/A' }}{{ $vouchers->expenseTypes->expense_code ?? 'N/A' }}
-                    @elseif(isset($vouchers->cvr_type) && strtolower($vouchers->cvr_type) === 'rpm')
-                        <!-- When cvr_type is rpm -->
-                        {{ preg_replace('/\/\d+$/', '', $vouchers->cvr_number ?? 'N/A') }}-{{ $vouchers->trucks->truck_name ?? 'N/A' }}-{{ $vouchers->company->company_code ?? 'N/A' }}{{ $vouchers->expenseTypes->expense_code ?? 'N/A' }}
-                    @else
-                        {{ $vouchers->cvr_number ?? 'N/A' }}
-                    @endif
+
                 </div>
             </div>
         </div>
@@ -217,7 +209,7 @@
                 <thead>
                     <tr>
                         <th colspan="2" style="text-align: left; font-size: 18px; border: 1px solid #ccc;">
-                            PAID TO: {{ $vouchers->suppliers->supplier_name ?? 'N/A' }}
+   
                         </th>
                     </tr>
                     <tr>
@@ -226,36 +218,18 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @php
-                        $descriptions = json_decode($vouchers->description ?? '[]');
-                        $amounts = json_decode($vouchers->amount_details ?? '[]'); 
-                    @endphp
+
                     <tr>
                          <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
-                            @foreach ($descriptions as $desc)
-                                {{ $desc }}<br>
-                            @endforeach
+
                         </td>
-                         <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
-                            @foreach ($amounts as $amt)
-                                ₱ {{ number_format($amt, 2) }}<br>
-                            @endforeach
+                        <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
+    
                         </td>
                     </tr>
                     <tr>
                         <td style="text-align: left; vertical-align: top; font-size: 12px; padding: 10px;">
-                        @php
-                            $remarks = json_decode($vouchers->remarks);
-                        @endphp
-                        @if (!empty($remarks))
-                            <strong>Remarks:</strong><br>
-                            @foreach($remarks as $remark)
-                                {{ $remark }}<br>
-                            @endforeach
-                        @endif
-                        @if(!empty($vouchers->charge) && $vouchers->charge != 0)
-                            <br><br><strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }}
-                         @endif 
+
                         </td>
                         <td style="border: 1px solid #ccc; padding: 0;">
                             <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
@@ -264,61 +238,16 @@
                                     <col style="width: 40%;">
                                 </colgroup>
                                 <tr>
-                                    <td style="text-align: left; padding: 4px;">Net Amount</td>
 
-                                    @if($vouchers->voucher_type === 'with_tax')
-                                        <td style="text-align: right; padding: 4px;">₱ {{ number_format($vouchers->tax_based_amount, 2) }}</td>
-
-                                    @elseif($vouchers->voucher_type === 'regular')
-                                        @php
-                                            $totalAmount = 0;
-                                            $amountDetails = json_decode($vouchers->amount_details); // ✅ Corrected here
-
-                                            if (is_array($amountDetails)) {
-                                                foreach ($amountDetails as $item) {
-                                                    if (is_numeric($item)) {
-                                                        $totalAmount += $item;
-                                                    }
-                                                }
-                                            }
-                                        @endphp
-                                        <td style="text-align: right; padding: 4px;">₱ {{ number_format($totalAmount, 2) }}</td>
-                                    @endif
                                 </tr>
                                 <tr>
-                                    <td style="text-align: left; padding: 4px;">VAT (12%)</td>
-                                    <td style="text-align: right; padding: 4px;">
-                                        @if($vouchers->voucher_type === 'with_tax')
-                                            ₱ {{ number_format($vouchers->tax_based_amount * 0.12, 2) }}
-                                        @elseif($vouchers->voucher_type === 'regular')
-                                        @endif
-                                    </td>
+
                                 </tr>
                                 <tr>
-                                    <td style="text-align: left; padding: 4px;">Less Withholding Tax</td>
-                                    <td style="text-align: right; padding: 4px;">
-                                        @if($vouchers->voucher_type === 'with_tax')
-                                            ₱ {{ number_format($vouchers->tax_based_amount * $vouchers->withholdingTax->percentage, 2) }}
-                                         @elseif($vouchers->voucher_type === 'regular')
-                                        @endif
-                                    </td>
+ 
                                 </tr>
                                 <tr>
-                                    <td style="text-align: left; font-weight: bold; padding: 4px; color: red;">Total</td>
-                                    <td style="text-align: right; font-weight: bold; color: red; padding: 4px;">
-                                        @if($vouchers->voucher_type === 'with_tax')
-                                            @php
-                                                $taxAmount = $vouchers->tax_based_amount * 0.12;
-                                                $withholdingAmount = $vouchers->tax_based_amount * $vouchers->withholdingTax->percentage;
-                                                $finalAmount = $vouchers->tax_based_amount + $taxAmount - $withholdingAmount;
-                                            @endphp
 
-                                            ₱ {{ number_format($finalAmount, 2) }}
-
-                                        @elseif($vouchers->voucher_type === 'regular')
-                                            ₱ {{ number_format($totalAmount, 2) }}
-                                        @endif
-                                    </td>
                                 </tr>
                             </table>
                         </td>
@@ -329,20 +258,13 @@
             <table class="no-border-table">
                 <tr>
                     <td>
-                        <div class="label" style="font-size: 10px;">_________________________</div>
-                        <div class="label" style="font-size: 10px;">Approver</div>
+
                     </td>
                     <td>
-                        <div style="font-size: 10px; text-align:left;">RECEIVED from the amount of</div>
-                        <div style="font-size: 10px; text-align: left; text-transform: uppercase;">
-                            <strong><u>{{ $amountInWords ?? 'N/A' }}</u></strong>
-                        </div>
-                        <div style="font-size: 10px; text-align:left;">in full payment of amount described above</div>
+
                     </td>
                     <td>
-                        <div class="label" style="font-size: 10px;">_________________________</div>
-                        <div style="font-size: 10px;">{{ $fullname ?? 'N/A' }}</div>
-                        <div class="label" style="font-size: 10px;">REQUEST BY:</div>
+                       
                     </td>
                 </tr>
             </table>
