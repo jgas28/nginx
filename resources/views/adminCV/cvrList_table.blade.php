@@ -31,9 +31,9 @@
                     </td>
                    <td class="py-2 px-4 border-b">
                         @if ($cashVoucherRequest->cashVoucher->cvr_type === 'admin')
-                            {{ $cashVoucherRequest->cvr_number }}-{{ $cashVoucherRequest->cashVoucher->company->company_code }}{{ $cashVoucherRequest->cashVoucher->expenseTypes->expense_code }}
+                            {{ preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number) }}-{{ $cashVoucherRequest->cashVoucher->company->company_code }}{{ $cashVoucherRequest->cashVoucher->expenseTypes->expense_code }}
                         @elseif ($cashVoucherRequest->cashVoucher->cvr_type === 'rpm')
-                            {{ $cashVoucherRequest->cvr_number }}-{{ $cashVoucherRequest->cashVoucher->trucks->truck_name }}-{{ $cashVoucherRequest->cashVoucher->company->company_code }}{{ $cashVoucherRequest->cashVoucher->expenseTypes->expense_code }}
+                            {{ preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number) }}-{{ $cashVoucherRequest->cashVoucher->trucks->truck_name }}-{{ $cashVoucherRequest->cashVoucher->company->company_code }}{{ $cashVoucherRequest->cashVoucher->expenseTypes->expense_code }}
                         @endif
                     </td>
                     <td class="py-2 px-4 border-b">{{ $cashVoucherRequest->cashVoucher->cvr_type }}</td>

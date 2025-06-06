@@ -199,7 +199,7 @@
                         {{ preg_replace('/\/\d+$/', '', $vouchers->cvr_number ?? 'N/A') }}-{{ $vouchers->company->company_code ?? 'N/A' }}{{ $vouchers->expenseTypes->expense_code ?? 'N/A' }}
                     @elseif(isset($vouchers->cvr_type) && strtolower($vouchers->cvr_type) === 'rpm')
                         <!-- When cvr_type is rpm -->
-                        {{ preg_replace('/\/\d+$/', '',$vouchers->cvr_number ?? 'N/A') }}-{{ $vouchers->trucks->truck_name ?? 'N/A' }}-{{ $vouchers->company->company_code ?? 'N/A' }}{{ $vouchers->expenseTypes->expense_code ?? 'N/A' }}
+                        {{ preg_replace('/\/\d+$/', '', $vouchers->cvr_number ?? 'N/A') }}-{{ $vouchers->trucks->truck_name ?? 'N/A' }}-{{ $vouchers->company->company_code ?? 'N/A' }}{{ $vouchers->expenseTypes->expense_code ?? 'N/A' }}
                     @else
                         {{ $vouchers->cvr_number ?? 'N/A' }}
                     @endif
