@@ -913,6 +913,7 @@ class CashVoucherController extends Controller
             $requestTypes = DB::table('cash_vouchers')
             ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
             ->where('cash_vouchers.dr_id', $cvr_number) 
+            ->where('cash_vouchers.id', $id) 
             ->first();
     
             $drivers = DB::table('allocations')
