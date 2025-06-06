@@ -23,7 +23,7 @@
                 @endphp
                     <tr>
                         <td class="px-6 py-4 text-sm text-gray-900">
-                            {{ $item->cashVoucher->cvr_number ?? 'N/A' }}-{{ $truckName }}
+                            {{ preg_replace('/\/\d+$/', '',$item->cashVoucher->cvr_number ?? 'N/A') }}-{{ $truckName }}-
                             {{ $item->cashVoucher->deliveryRequest->company->company_code ?? 'N/A' }}{{ $item->cashVoucher->deliveryRequest->expenseType->expense_code ?? '' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -41,7 +41,7 @@
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 space-x-2">
                             <a href="{{ route('liquidations.liquidate', $item->id) }}" 
                             class="inline-block px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">
-                            {{ $item->id }}
+                            Liquidate
                             </a>
                             <a href="{{ route('liquidations.edit', $item->id) }}" 
                             class="inline-block px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
