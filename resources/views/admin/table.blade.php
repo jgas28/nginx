@@ -23,19 +23,27 @@
     @foreach($cashVouchers as $cashVoucher)
         @php
             $details = json_decode($cashVoucher->amount_details, true);
-            $sum = array_sum(array_map('floatval', $details));
+            $sum = is_array($details) ? array_sum(array_map('floatval', $details)) : 0;
         @endphp
         <tr class="hover:bg-gray-50">
-            <td class="py-2 px-4 border-b">{{ $cashVoucher->cvr_number }}</td>
-            <td class="py-2 px-4 border-b">{{ $cashVoucher->company->company_code }}</td>
-            <td class="py-2 px-4 border-b">{{ $cashVoucher->suppliers->supplier_code }}</td>
-            <td class="py-2 px-4 border-b">₱{{ number_format($sum, 2) }}</td>
-             <td class="py-2 px-4 border-b">{{ $cashVoucher->cvr_type }}</td>
-            <td class="py-2 px-4 border-b">{{ $cashVoucher->voucher_type }}</td>
-            <td class="py-2 px-4 border-b">{{ $cashVoucher->expenseTypes->expense_code }}</td>
+            <td class="py-2 px-4 border-b">
+                @if ($cashVoucher->cvr_type === 'admin')
+                    {{ $cashVoucher->cvr_number ?? 'N/A' }}-{{ $cashVoucher->company->company_code ?? 'N/A' }}{{ $cashVoucher->expenseTypes->expense_code ?? 'N/A' }}
+                @elseif ($cashVoucher->cvr_type === 'rpm')
+                    {{ $cashVoucher->cvr_number ?? 'N/A' }}-{{ $cashVoucher->trucks->truck_name ?? 'N/A' }}-{{ $cashVoucher->company->company_code ?? 'N/A' }}{{ $cashVoucher->expenseTypes->expense_code ?? 'N/A' }}
+                @else
+                    {{ $cashVoucher->cvr_number ?? 'N/A' }}
+                @endif
+            </td>
+            <td class="py-2 px-4 border-b">{{ $cashVoucher->company->company_code ?? 'N/A' }}</td>
+            <td class="py-2 px-4 border-b">{{ $cashVoucher->suppliers->supplier_code ?? 'N/A' }}</td>
+            <td class="py-2 px-4 border-b">₱{{ number_format($sum, 2) ?? 'N/A' }}</td>
+             <td class="py-2 px-4 border-b">{{ $cashVoucher->cvr_type ?? 'N/A' }}</td>
+            <td class="py-2 px-4 border-b">{{ $cashVoucher->voucher_type ?? 'N/A' }}</td>
+            <td class="py-2 px-4 border-b">{{ $cashVoucher->expenseTypes->expense_code ?? 'N/A' }}</td>
             <td class="py-2 px-4 border-b">
                 <a href="{{ route('admin.edit', $cashVoucher->id) }}" class="btn btn-warning bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">Edit</a>
-                <a href="{{ route('admin.viewPrint', $cashVoucher->id) }}" class="btn btn-success bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">View</a>
+                <a href="{{ route('adminCV.printPreview', $cashVoucher->id) }}" class="btn btn-success bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">View</a>
                 <form action="{{ route('admin.destroy', $cashVoucher->id) }}" method="POST" style="display:inline;">
                     @csrf
                     @method('DELETE')

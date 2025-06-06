@@ -196,10 +196,10 @@
                 <div style="font-size:12px">
                     @if(isset($vouchers->cashVoucher->cvr_type) && strtolower($vouchers->cashVoucher->cvr_type) === 'admin')
                         <!-- When cvr_type is admin -->
-                        {{ $vouchers->cvr_number ?? 'N/A' }}-{{ $vouchers->cashVoucher->company->company_code ?? 'N/A' }}{{ $vouchers->cashVoucher->expenseTypes->expense_code ?? 'N/A' }}
+                        {{ preg_replace('/\/\d+$/', '',$vouchers->cvr_number ?? 'N/A') }}-{{ $vouchers->cashVoucher->company->company_code ?? 'N/A' }}{{ $vouchers->cashVoucher->expenseTypes->expense_code ?? 'N/A' }}
                     @elseif(isset($vouchers->cashVoucher->cvr_type) && strtolower($vouchers->cashVoucher->cvr_type) === 'rpm')
                         <!-- When cvr_type is rpm -->
-                        {{ $vouchers->cvr_number ?? 'N/A' }}-{{ $vouchers->cashVoucher->trucks->truck_name ?? 'N/A' }}-{{ $vouchers->cashVoucher->company->company_code ?? 'N/A' }}{{ $vouchers->cashVoucher->expenseTypes->expense_code ?? 'N/A' }}
+                        {{ preg_replace('/\/\d+$/', '',$vouchers->cvr_number ?? 'N/A') }}-{{ $vouchers->cashVoucher->trucks->truck_name ?? 'N/A' }}-{{ $vouchers->cashVoucher->company->company_code ?? 'N/A' }}{{ $vouchers->cashVoucher->expenseTypes->expense_code ?? 'N/A' }}
                     @endif
                 </div>
             </div>

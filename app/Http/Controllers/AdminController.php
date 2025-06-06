@@ -33,7 +33,7 @@ class AdminController extends Controller
         ->when($search, function ($query, $search) {
             return $query->where('cvr_type', 'like', '%' . $search . '%');
         })
-        ->where('cvr_type', '!=', 'basic')
+        ->whereNotIn('cvr_type', ['delivery', 'pullout', 'accessorial'])
         ->where('status', '=', '1')
         ->paginate(10);
 
