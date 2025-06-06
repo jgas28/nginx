@@ -21,7 +21,7 @@ class LiquidationController extends Controller
        $data = cvr_approval::with('cashVoucher')
         ->where('status', '1')
         ->whereHas('cashVoucher', function ($query) {
-            $query->where('cvr_type', 'basic')
+            $query->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial'])
                 ->where('status', '2');
         })
         ->get();
