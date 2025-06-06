@@ -333,7 +333,7 @@
                         <div class="label" style="font-size: 10px;">Approver</div>
                     </td>
                     <td>
-                        <div style="font-size: 10px; text-align:left;">RECEIVED from the amount of</div>
+                        <div style="font-size: 10px; text-align:left;">RECEIVED from {{ $vouchers->company->company_name ?? 'N/A' }} the amount of</div>
                         <div style="font-size: 10px; text-align: left; text-transform: uppercase;">
                             <strong><u>{{ $amountInWords ?? 'N/A' }}</u></strong>
                         </div>

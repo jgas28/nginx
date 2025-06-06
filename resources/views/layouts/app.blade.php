@@ -315,7 +315,7 @@
                         <a href="{{ route('admin.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Admin/RPM Request
                         </a>
-                        <a href="{{ route('admin.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                        <a href="" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Liquidation R&R
                         </a>
                     </div>

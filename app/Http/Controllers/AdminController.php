@@ -423,7 +423,19 @@ class AdminController extends Controller
         $fullname = $user->fname . ' ' . $user->lname;
 
         $vouchers = CashVoucher::findOrFail($id);
-        $amountInWords = $vouchers->amount ? $this->convertAmountToWordsPreview($vouchers->amount) : 'N/A';
+        // Compute the amount that will be shown on the Blade
+        if ($vouchers->voucher_type === 'with_tax') {
+            $taxAmount = $vouchers->tax_based_amount * 0.12;
+            $withholdingAmount = $vouchers->tax_based_amount * $vouchers->withholdingTax->percentage;
+            $finalAmount = $vouchers->tax_based_amount + $taxAmount - $withholdingAmount;
+        } elseif ($vouchers->voucher_type === 'regular') {
+            $finalAmount = $vouchers->amount;
+        } else {
+            $finalAmount = 0; // fallback
+        }
+
+        // Convert the calculated amount to words
+        $amountInWords = $this->convertAmountToWordsPreview($finalAmount);
         return view('adminCV.printPreview', compact('vouchers', 'fullname', 'amountInWords')); 
     }
 
@@ -443,7 +455,20 @@ class AdminController extends Controller
                 ->leftjoin('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
                 ->where('cvr_approvals.id', $id)
                 ->first();
-        $amountInWords = $vouchers->amount ? $this->convertAmountToWords($vouchers->amount) : 'N/A';
+
+        // Compute the amount that will be shown on the Blade
+        if ($vouchers->cashVoucher->voucher_type === 'with_tax') {
+            $taxAmount = $vouchers->cashVoucher->tax_based_amount * 0.12;
+            $withholdingAmount = $vouchers->cashVoucher->tax_based_amount * $vouchers->cashVoucher->withholdingTax->percentage;
+            $finalAmount = $vouchers->cashVoucher->tax_based_amount + $taxAmount - $withholdingAmount;
+        } elseif ($vouchers->cashVoucher->voucher_type === 'regular') {
+            $finalAmount = $vouchers->amount;
+        } else {
+            $finalAmount = 0; // fallback
+        }
+
+        // Convert the calculated amount to words
+        $amountInWords = $this->convertAmountToWords($finalAmount);
 
         return view('AdminCV.print', compact('vouchers', 'fullname', 'approvers', 'amountInWords'));
     }

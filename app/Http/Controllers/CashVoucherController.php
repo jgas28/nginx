@@ -787,10 +787,27 @@ class CashVoucherController extends Controller
                 ->where('cvr_approvals.cvr_number', $cashVoucherRequest->cvr_number)
                 ->first();
 
-        // Check if the amount exists and convert it to words
-        $amountInWords = $cvrApprovals->amount ? $this->convertAmountToWords($cvrApprovals->amount) : 'N/A';
+        // Recalculate the amount to match the view logic
+            if ($cashVoucherRequest->voucher_type === 'with_tax') {
+                $baseAmount = $cashVoucherRequest->tax_based_amount ?? 0;
+                $vatAmount = $baseAmount * 0.12;
+                $taxPercentage = $cashVoucherRequest->tax_percentage ?? 0;
+                $taxDeduction = $baseAmount * $taxPercentage;
+                $finalAmount = $baseAmount + $vatAmount - $taxDeduction;
+            } elseif ($cashVoucherRequest->voucher_type === 'regular') {
+                $baseAmount = $cashVoucherRequest->amount ?? 0;
+                $vatAmount = 0;
+                $taxDeduction = 0;
+                $finalAmount = $cashVoucherRequest->amount ?? 0;
+            } else {
+                $baseAmount = 0;
+                $vatAmount = 0;
+                $taxDeduction = 0;
+                $finalAmount = 0;
+            }
 
-        
+            $amountInWords = $finalAmount > 0 ? $this->convertAmountToWords($finalAmount) : 'N/A';
+   
         // Return the print view with the data
         return view(
             'cashVoucherRequests.print', compact('cashVoucherRequest', 'amountInWords', 
@@ -944,8 +961,26 @@ class CashVoucherController extends Controller
             $cvrApprovals = cvr_approval::where('cvr_id', $id)
             ->first();
     
-            // Check if the amount exists and convert it to words
-            $amountInWords = $cashVoucherRequest->amount ? $this->convertAmountToWordsPreview($cashVoucherRequest->amount) : 'N/A';
+            // Recalculate the amount to match the view logic
+            if ($cashVoucherRequest->voucher_type === 'with_tax') {
+                $baseAmount = $cashVoucherRequest->tax_based_amount ?? 0;
+                $vatAmount = $baseAmount * 0.12;
+                $taxPercentage = $cashVoucherRequest->tax_percentage ?? 0;
+                $taxDeduction = $baseAmount * $taxPercentage;
+                $finalAmount = $baseAmount + $vatAmount - $taxDeduction;
+            } elseif ($cashVoucherRequest->voucher_type === 'regular') {
+                $baseAmount = $cashVoucherRequest->amount ?? 0;
+                $vatAmount = 0;
+                $taxDeduction = 0;
+                $finalAmount = $cashVoucherRequest->amount ?? 0;
+            } else {
+                $baseAmount = 0;
+                $vatAmount = 0;
+                $taxDeduction = 0;
+                $finalAmount = 0;
+            }
+
+            $amountInWords = $finalAmount > 0 ? $this->convertAmountToWordsPreview($finalAmount) : 'N/A';
     
             // Return the print view with the data
             return view(
