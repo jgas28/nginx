@@ -277,7 +277,6 @@
                                     {{ $remark }}<br>
                                 @endforeach
                             @endif
-
                             {{-- Transfer Charge / Cash Charge --}}
                             @if(!empty($cvrApprovals->charge) && $cvrApprovals->charge != 0)
                                 <br><br><strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }}

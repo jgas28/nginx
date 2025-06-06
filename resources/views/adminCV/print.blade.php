@@ -253,7 +253,7 @@
                         @endif
                         @if(!empty($vouchers->charge) && $vouchers->charge != 0)
                             <br><strong>Transfer Charge:</strong> ₱ {{ number_format($vouchers->charge, 2) }}
-                         @endif
+                         @endif 
                         </td>
                         <td style="border: 1px solid #ccc; padding: 0;">
                             <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
@@ -328,7 +328,7 @@
                 <tr>
                     <td>
                         <div class="label" style="font-size: 10px;">_________________________</div>
-                        <div style="font-size: 10px;">{{$approvers->name}}</div>
+                        <div style="font-size: 10px;">{{$approvers->name}}</div>asd
                         <div class="label" style="font-size: 10px;">Approver</div>
                     </td>
                     <td>
@@ -340,7 +340,7 @@
                     </td>
                     <td>
                         <div class="label" style="font-size: 10px;">_________________________</div>
-                        <div style="font-size: 10px;">{{ $fullname ?? 'N/A' }}</div>
+                        <div style="font-size: 10px;">{{ $vouchers->cashVoucher->suppliers->supplier_name}}</div>
                         <div class="label" style="font-size: 10px;">REQUEST BY:</div>
                     </td>
                 </tr>

@@ -255,7 +255,7 @@
                         @endif
                         @if(!empty($vouchers->charge) && $vouchers->charge != 0)
                             <br><br><strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }}
-                         @endif
+                         @endif 
                         </td>
                         <td style="border: 1px solid #ccc; padding: 0;">
                             <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
