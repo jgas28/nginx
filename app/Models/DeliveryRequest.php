@@ -55,7 +55,7 @@ class DeliveryRequest extends Model
 
     public function truckType()
     {
-        return $this->belongsTo(truckType::class, 'truck_type_id');
+        return $this->belongsTo(TruckType::class, 'truck_type_id');
     }
 
     public function area()

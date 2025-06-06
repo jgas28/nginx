@@ -489,11 +489,11 @@ class AdminController extends Controller
 
         // Check if the request expects an AJAX response
         if ($request->ajax()) {
-            return view('AdminCV.cvrList_table', compact('cashVoucherRequests'))->render();
+            return view('adminCV.cvrList_table', compact('cashVoucherRequests'))->render();
         }
     
         // For the normal view
-        return view('AdminCV.cvrList', compact('cashVoucherRequests', 'search'));
+        return view('adminCV.cvrList', compact('cashVoucherRequests', 'search'));
     } 
 
     public function convertAmountToWords($amount)
