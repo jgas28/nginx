@@ -1,53 +1,58 @@
-<table class="min-w-full bg-white border border-gray-200">
-    <thead class="bg-gray-100">
-        <tr>
-            <th class="px-4 py-2 border-b">MTM</th>
-            <th class="px-4 py-2 border-b">Company Code</th>
-            <th class="px-4 py-2 border-b">Delivery Number</th>
-            <th class="px-4 py-2 border-b">Site ID</th>
-            <th class="px-4 py-2 border-b">Delivery Address</th>
-            <th class="px-4 py-2 border-b">Delivery Rate</th>
-            <th class="px-4 py-2 border-b">Truck Type</th>
-            <th class="px-4 py-2 border-b">Region</th>
-            <th class="px-4 py-2 border-b">Province</th>
-            <th class="px-4 py-2 border-b">Status</th>
-            <th class="px-4 py-2 border-b">Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach($data as $deliveryRequest)
-            <tr class="hover:bg-gray-50">
-                <td class="px-4 py-2 border-b">{{ $deliveryRequest->mtm ?? 'N/A' }}</td>
-                <td class="px-4 py-2 border-b">{{ $deliveryRequest->company->company_code ?? 'N/A' }}</td>
-                <td class="px-4 py-2 border-b">
-                    @foreach($deliveryRequest->lineItems as $lineItem)
-                        {{ $lineItem->delivery_number ?? 'N/A' }}@if(!$loop->last)/ @endif
-                    @endforeach
-                </td>
-                <td class="px-4 py-2 border-b">
-                    @foreach($deliveryRequest->lineItems as $lineItem)
-                        {{ $lineItem->site_name ?? 'N/A' }}@if(!$loop->last)/ @endif
-                    @endforeach
-                </td>
-                <td class="px-4 py-2 border-b">
-                    @foreach($deliveryRequest->lineItems as $lineItem)
-                        {{ $lineItem->delivery_address ?? 'N/A' }}@if(!$loop->last)/ @endif
-                    @endforeach
-                </td>
-                <td class="px-4 py-2 border-b">{{ $deliveryRequest->delivery_rate ?? 'N/A' }}</td>
-                <td class="px-4 py-2 border-b">{{ $deliveryRequest->truckType->truck_code ?? 'N/A' }}</td>
-                <td class="px-4 py-2 border-b">{{ $deliveryRequest->area->area_code ?? 'N/A' }}</td>
-                <td class="px-4 py-2 border-b">{{ $deliveryRequest->region->province ?? 'N/A' }}</td>
-                <td class="px-4 py-2 border-b">
-                    {{ $deliveryRequest->deliveryStatus->status_name ?? 'N/A' }}
-                </td>
-                <td class="px-4 py-2 border-b space-x-2">
-                    <a href="{{ route('coordinators.editAllocation', $deliveryRequest) }}" class="text-yellow-600 hover:underline">Edit</a>
-                    <a href="{{ route('coordinators.coordinators', $deliveryRequest) }}" class="text-yellow-600 hover:underline">Request CV</a>
-                </td>
+<div class="w-full overflow-x-auto">
+    <table class="min-w-full bg-white border border-gray-200">
+        <thead class="bg-gray-100">
+            <tr>
+                <th class="px-4 py-2 border-b">MTM</th>
+                <th class="px-4 py-2 border-b">Company Code</th>
+                <th class="px-4 py-2 border-b">Delivery Number</th>
+                <th class="px-4 py-2 border-b">Site ID</th>
+                <th class="px-4 py-2 border-b">Delivery Address</th>
+                <th class="px-4 py-2 border-b">Delivery Rate</th>
+                <th class="px-4 py-2 border-b">Truck Type</th>
+                <th class="px-4 py-2 border-b">Region</th>
+                <th class="px-4 py-2 border-b">Province</th>
+                <th class="px-4 py-2 border-b">Status</th>
+                <th class="px-4 py-2 border-b">Actions</th>
             </tr>
-        @endforeach
-    </tbody>
-</table>
+        </thead>
+        <tbody>
+            @foreach($data as $deliveryRequest)
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-2 border-b">{{ $deliveryRequest->mtm ?? 'N/A' }}</td>
+                    <td class="px-4 py-2 border-b">{{ $deliveryRequest->company->company_code ?? 'N/A' }}</td>
+                    <td class="px-4 py-2 border-b">
+                        @foreach($deliveryRequest->lineItems as $lineItem)
+                            {{ $lineItem->delivery_number ?? 'N/A' }}@if(!$loop->last)/ @endif
+                        @endforeach
+                    </td>
+                    <td class="px-4 py-2 border-b">
+                        @foreach($deliveryRequest->lineItems as $lineItem)
+                            {{ $lineItem->site_name ?? 'N/A' }}@if(!$loop->last)/ @endif
+                        @endforeach
+                    </td>
+                    <td class="px-4 py-2 border-b">
+                        @foreach($deliveryRequest->lineItems as $lineItem)
+                            {{ $lineItem->delivery_address ?? 'N/A' }}@if(!$loop->last)/ @endif
+                        @endforeach
+                    </td>
+                    <td class="px-4 py-2 border-b">{{ $deliveryRequest->delivery_rate ?? 'N/A' }}</td>
+                    <td class="px-4 py-2 border-b">{{ $deliveryRequest->truckType->truck_code ?? 'N/A' }}</td>
+                    <td class="px-4 py-2 border-b">{{ $deliveryRequest->area->area_code ?? 'N/A' }}</td>
+                    <td class="px-4 py-2 border-b">{{ $deliveryRequest->region->province ?? 'N/A' }}</td>
+                    <td class="px-4 py-2 border-b">
+                        {{ $deliveryRequest->deliveryStatus->status_name ?? 'N/A' }}
+                    </td>
+                    <td class="px-4 py-2 border-b space-x-2">
+                        <a href="{{ route('coordinators.editAllocation', $deliveryRequest) }}" class="text-yellow-600 hover:underline">Edit</a>
+                        <a href="{{ route('coordinators.coordinators', $deliveryRequest) }}" class="text-yellow-600 hover:underline">Request CV</a>
+                    </td>
+                </tr>
+            @endforeach
+        </tbody>
+    </table>    
+</div>
 
-{{ $data->links() }}
+<!-- Pagination -->
+<div class="mt-4">
+    {{ $data->links() }}
+</div>

@@ -69,7 +69,7 @@
             @csrf
             <input type="hidden" name="dr_id" value="{{ $deliveryLineItems->first()->dr_id }}">
             <input type="hidden" name="mtm" value="{{ $deliveryLineItems->first()->mtm }}">
-            <input type="hidden" name="cvr_type" value="accessorial">
+            <!-- <input type="hidden" name="cvr_type" value="accessorial"> -->
             <input type="hidden" name="company_id" value="{{ $deliveryLineItems->first()->company->id }}">
 
             <!-- CVR Type -->
@@ -181,7 +181,11 @@
                     </div>
 
                     <div>
-                        <input type="text" name="trip_type" class="input w-full" value="accessorial" readonly>
+                        <select name="trip_type" class="input w-full">
+                            <option value="accessorial" {{ old('trip_type', 'accessorial') === 'accessorial' ? 'selected' : '' }}>Accessorial</option>
+                            <option value="freight" {{ old('trip_type') === 'freight' ? 'selected' : '' }}>Freight</option>
+                            <option value="others" {{ old('trip_type') === 'others' ? 'selected' : '' }}>Others</option>
+                        </select>
                         <label class="block text-sm text-gray-600 mt-1">Trip Type</label>
                     </div>
                 </div>

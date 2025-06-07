@@ -67,7 +67,7 @@ class CoordinatorsController extends Controller
             'status10' => [1, 15],
             'status11' => [11, 12],
             'staging' => [3],
-            'accessorial' => [16]
+            'accessorial' => [16,17,18]
         ];
 
         if ($singleTab) {
@@ -1531,7 +1531,7 @@ class CoordinatorsController extends Controller
             // Save the actual cash voucher
             $cashVoucher = new CashVoucher([
                 'cvr_number' => $formattedCvrNumber,
-                'cvr_type' => $request->cvr_type,
+                'cvr_type' => $request->trip_type,
                 'amount' => $request->amount,
                 'request_type' => $request->request_type,
                 'requestor' => $request->requestor,
