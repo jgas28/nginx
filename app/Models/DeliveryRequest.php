@@ -84,6 +84,16 @@ class DeliveryRequest extends Model
         return $this->hasMany(Allocation::class, 'dr_id')->where('trip_type', 'accessorial');
     }
 
+     public function freightAllocations()
+    {
+        return $this->hasMany(Allocation::class, 'dr_id')->where('trip_type', 'freight');
+    }
+
+    public function othersAllocations()
+    {
+        return $this->hasMany(Allocation::class, 'dr_id')->where('trip_type', 'others');
+    }
+
     public function deliveryStatus()
     {
         return $this->belongsTo(DeliveryStatus::class, 'delivery_status');

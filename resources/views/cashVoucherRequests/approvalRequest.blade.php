@@ -43,11 +43,14 @@
                         <label for="requestor" class="block text-sm font-medium text-gray-700">Requestor</label>
                         <input type="text" name="requestor" id="requestor" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->employee->fname }} {{ $cashVouchers->employee->lname }}" readonly>
                     </div>
-
-                    <div class="md:col-span-3">
-                        <label for="request_type" class="block text-sm font-medium text-gray-700">Request Type</label>
-                        <input type="text" name="request_type" id="request_type" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->cvrTypes->request_code }}" readonly>
-                    </div>
+                    @if ($cashVouchers->cvrTypes && !in_array($cashVouchers->cvr_type, ['admin', 'rpm']))
+                        <div class="md:col-span-3">
+                            <label for="request_type" class="block text-sm font-medium text-gray-700">Request Type</label>
+                            <input type="text" name="request_type" id="request_type"
+                                class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100"
+                                value="{{ $cashVouchers->cvrTypes->request_code }}" readonly>
+                        </div>
+                    @endif
                 </div>
                 <div>
                     @php $remarks = json_decode($cashVouchers->remarks, true); @endphp

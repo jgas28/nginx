@@ -46,7 +46,9 @@
                             {{ preg_replace('/\/\d+$/', '', $deliveryRequest->cvr_number) }}-{{ $truckName }}-{{ $companyCode }}-{{ $expenseTypeCode }}
                         </td>
                         <td class="py-2 px-4 border-b">{{ $deliveryRequest->amount }}</td>
-                        <td class="py-2 px-4 border-b">{{ $deliveryRequest->cvrTypes->request_type }}</td>
+                        <td class="py-2 px-4 border-b">
+                            {{ $deliveryRequest->cvrTypes->request_type ?? 'N/A' }}
+                        </td>
                         <td class="py-2 px-4 border-b">
                             <a href="{{ route('cashVoucherRequests.approvalRequest', $deliveryRequest->id) }}" class="btn btn-warning bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600" title="Create Cash Voucher">
                                 View 

@@ -55,10 +55,12 @@ class CashVoucherController extends Controller
         $search = $request->get('search');
     
         // Fetch related delivery line items by joining with the correct table name
-       $deliveryRequests = CashVoucher::with([
+        $deliveryRequests = CashVoucher::with([
             'deliveryRequest.deliveryAllocations',
             'deliveryRequest.pulloutAllocations',
             'deliveryRequest.accessorialAllocations',
+            'deliveryRequest.othersAllocations',
+            'deliveryRequest.freightAllocations',
             'cvrTypes'
         ])
         ->when($search, function ($query, $search) {
@@ -67,7 +69,9 @@ class CashVoucherController extends Controller
             });
         })
         ->where('status', 1)
+        ->whereNotIn('cvr_type', ['admin', 'rpm']) // 👈 this is the fix
         ->paginate(10);
+
 
         // Check if the request expects an AJAX response
         if ($request->ajax()) {
@@ -466,6 +470,7 @@ class CashVoucherController extends Controller
 
     public function approvalRequestStore(Request $request)
     {
+        dd( $request);
         $cvr_id = $request->cvr_id;
         $cashVouchers = CashVoucher::where('id', $cvr_id)->first();
 
