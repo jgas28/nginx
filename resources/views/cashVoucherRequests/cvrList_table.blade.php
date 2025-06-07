@@ -28,13 +28,32 @@
                             value="{{ $cashVoucherRequest->cvr_number }}">
                     </td>
                     <td class="py-2 px-4 border-b">{{ $cashVoucherRequest->mtm }}</td>
-                    <td class="py-2 px-4 border-b">{{ $cashVoucherRequest->cvr_number }}</td>
+                    <td class="py-2 px-4 border-b">
+                        @php
+                            $tripType = strtolower($cashVoucherRequest->cvr_type);
+
+                            $allocations = match($tripType) {
+                                'delivery' => $cashVoucherRequest->deliveryRequest->deliveryAllocations ?? [],
+                                'pullout' => $cashVoucherRequest->deliveryRequest->pulloutAllocations ?? [],
+                                'accessorial' => $cashVoucherRequest->deliveryRequest->accessorialAllocations ?? [],
+                                'others' => $cashVoucherRequest->deliveryRequest->othersAllocations ?? [],
+                                'freight' => $cashVoucherRequest->deliveryRequest->freightAllocations ?? [],
+                                default => [],
+                            };
+
+                            $truckId = $allocations[0]->truck->truck_name ?? 'N/A';
+                            $companyId = $cashVoucherRequest->deliveryRequest->company->company_code ?? 'N/A';
+                            $expenseTypeId = $cashVoucherRequest->deliveryRequest->expenseType->expense_code ?? 'N/A';
+                        @endphp
+
+                        {{ preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number) }}-{{ $truckId }}-{{ $companyId }}{{ $expenseTypeId }}
+                    </td>
                     <td class="py-2 px-4 border-b">{{ $cashVoucherRequest->amount }}</td>
                     <td class="py-2 px-4 border-b space-x-2">
                         <a href="{{ route('cashVoucherRequests.print', ['id' => $cashVoucherRequest->id, 'cvr_number' => $cashVoucherRequest->dr_id, 'mtm' => $cashVoucherRequest->cvr_type]) }}"
-                           class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
-                           title="Print Cash Voucher" target="_blank">
-                           @if(empty($cashVoucherRequest->print_status) || $cashVoucherRequest->print_status === '0')
+                        class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+                        title="Print Cash Voucher" target="_blank">
+                        @if(empty($cashVoucherRequest->print_status) || $cashVoucherRequest->print_status === '0')
                                 Print
                             @else
                                 Re-Print 

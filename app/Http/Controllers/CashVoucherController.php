@@ -203,7 +203,7 @@ class CashVoucherController extends Controller
             'accessorial_types.accessorial_types_name as accessorial_type_name'
         )
         ->get();
-        // dd($deliveryLineItems);
+
 
         $cvr = MonthlySeriesNumber::all();
         $requestType = cvr_request_type::all();
@@ -470,7 +470,6 @@ class CashVoucherController extends Controller
 
     public function approvalRequestStore(Request $request)
     {
-        dd( $request);
         $cvr_id = $request->cvr_id;
         $cashVouchers = CashVoucher::where('id', $cvr_id)->first();
 
@@ -610,15 +609,24 @@ class CashVoucherController extends Controller
         $search = $request->get('search');
     
         // Fetch related delivery line items by joining with the correct table name
-        $cashVoucherRequests = CashVoucher::join('delivery_request', 'cash_vouchers.dr_id', '=', 'delivery_request.id')
-            ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
-            ->when($search, function ($query, $search) {
-                return $query->where('delivery_request.mtm', 'like', '%' . $search . '%');
-            })
-            ->where('cash_vouchers.status', '=', 2)
-            ->orderBy('cash_vouchers.print_status', 'asc')
-            ->select('delivery_request.*', 'cash_vouchers.*', 'cvr_request_type.request_type as cvr_types', 'cash_vouchers.print_status' )
-            ->paginate(10);
+        $cashVoucherRequests = CashVoucher::with([
+            'deliveryRequest.deliveryAllocations',
+            'deliveryRequest.pulloutAllocations',
+            'deliveryRequest.accessorialAllocations',
+            'deliveryRequest.othersAllocations',
+            'deliveryRequest.freightAllocations',
+            'cvrTypes'
+        ])
+        ->when($search, function ($query, $search) {
+            return $query->whereHas('deliveryRequest', function ($q) use ($search) {
+                $q->where('mtm', 'like', '%' . $search . '%');
+            });
+        })
+        ->where('status', 2)
+        ->whereNotIn('cvr_type', ['admin', 'rpm'])
+        ->orderBy('print_status', 'asc')
+        ->paginate(10);
+
     
         // Check if the request expects an AJAX response
         if ($request->ajax()) {
@@ -794,11 +802,10 @@ class CashVoucherController extends Controller
                 ->where('cvr_approvals.cvr_number', $cashVoucherRequest->cvr_number)
                 ->first();
 
-        // Recalculate the amount to match the view logic
             if ($cashVoucherRequest->voucher_type === 'with_tax') {
                 $baseAmount = $cashVoucherRequest->tax_based_amount ?? 0;
                 $vatAmount = $baseAmount * 0.12;
-                $taxPercentage = $cashVoucherRequest->tax_percentage ?? 0;
+                $taxPercentage = $cashVoucherRequest->withholdingTax->percentage ?? 0;
                 $taxDeduction = $baseAmount * $taxPercentage;
                 $finalAmount = $baseAmount + $vatAmount - $taxDeduction;
             } elseif ($cashVoucherRequest->voucher_type === 'regular') {
@@ -827,7 +834,7 @@ class CashVoucherController extends Controller
         // validate & extract ids
         $cvrIds = $request->input('cvr_ids', []);
         $voucherIds = $request->input('voucher_ids', []);
-
+ 
         // update as needed
         cvr_approval::whereIn('id', $cvrIds)->update(['print_status' => '1']);
         CashVoucher::whereIn('id', $voucherIds)->update(['print_status' => '1']);
@@ -938,6 +945,7 @@ class CashVoucherController extends Controller
             ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
             ->where('cash_vouchers.dr_id', $cvr_number) 
             ->where('cash_vouchers.id', $id) 
+            ->where('cvr_type', $cvr_type)
             ->first();
     
             $drivers = DB::table('allocations')
@@ -972,7 +980,7 @@ class CashVoucherController extends Controller
             if ($cashVoucherRequest->voucher_type === 'with_tax') {
                 $baseAmount = $cashVoucherRequest->tax_based_amount ?? 0;
                 $vatAmount = $baseAmount * 0.12;
-                $taxPercentage = $cashVoucherRequest->tax_percentage ?? 0;
+                $taxPercentage = $cashVoucherRequest->withholdingTax->percentage ?? 0;
                 $taxDeduction = $baseAmount * $taxPercentage;
                 $finalAmount = $baseAmount + $vatAmount - $taxDeduction;
             } elseif ($cashVoucherRequest->voucher_type === 'regular') {

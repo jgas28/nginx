@@ -35,6 +35,8 @@
                                     'delivery' => $deliveryRequest->deliveryRequest->deliveryAllocations ?? [],
                                     'pullout' => $deliveryRequest->deliveryRequest->pulloutAllocations ?? [],
                                     'accessorial' => $deliveryRequest->deliveryRequest->accessorialAllocations ?? [],
+                                    'others' => $deliveryRequest->deliveryRequest->othersAllocations ?? [],
+                                    'freight' => $deliveryRequest->deliveryRequest->freightAllocations ?? [],
                                     default => [],
                                 };
 
@@ -42,7 +44,6 @@
                                 $companyCode = $deliveryRequest->deliveryRequest->company->company_code ?? 'N/A';
                                 $expenseTypeCode = $deliveryRequest->deliveryRequest->expenseType->expense_code ?? 'N/A';
                             @endphp
-
                             {{ preg_replace('/\/\d+$/', '', $deliveryRequest->cvr_number) }}-{{ $truckName }}-{{ $companyCode }}-{{ $expenseTypeCode }}
                         </td>
                         <td class="py-2 px-4 border-b">{{ $deliveryRequest->amount }}</td>
