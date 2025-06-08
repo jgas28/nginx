@@ -160,15 +160,18 @@ Route::middleware('auth')->group(function () {
     ->name('cashVoucherRequests.updateCVR');
     Route::get('/cash-voucher-list', [CashVoucherController::class, 'cvrList'])->name('cashVoucherRequests.cvrList');
     Route::get('/cash-voucher/{id}/{cvr_number}/{mtm}/print', [CashVoucherController::class, 'printCVR'])->name('cashVoucherRequests.print');
-    Route::get('/cash-voucher-requests/print-multiple', [CashVoucherController::class, 'printMultiple'])->name('cashVoucherRequests.printMultiple');
+    Route::post('/cash-voucher/print-multiple', [CashVoucherController::class, 'printMultiple'])
+    ->name('cashVoucherRequests.printMultiple');
+
     Route::post('/update-print-status', [CashVoucherController::class, 'updatePrintStatus']);
+    Route::post('/update-print-admin-status', [AdminController::class, 'updatePrintStatus']);
     //admin
     Route::post('/cvr/generate', [AdminController::class, 'generateCvrNumber'])->name('cvr.generate');
     Route::post('/admin/generate-cvr-number', [AdminController::class, 'generateCvrNumber'])->name('admin.generate-cvr-number');
     Route::get('/adminCV/approval', [AdminController::class, 'approvals'])->name('adminCV.approval');
     Route::put('/adminCV/{id}', [AdminController::class, 'update'])->name('adminCV.update');
     Route::get('/admin/{id}/viewPrint', [AdminController::class, 'viewPrint'])->name('admin.viewPrint');
-    Route::get('/adminCV/print-multiple', [AdminController::class, 'printMultiple'])->name('adminCV.printMultiple');
+    Route::post('/adminCV/print-multiple', [AdminController::class, 'printMultiple'])->name('adminCV.printMultiple');
     Route::get('/adminCV/{id}/{cvr_number}/print', [AdminController::class, 'printCVR'])->name('adminCV.print');
     Route::get('/admin-cvr-list', [AdminController::class, 'cvrList'])->name('adminCV.cvrList');
 

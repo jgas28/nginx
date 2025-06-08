@@ -1,351 +1,320 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Cash Voucher Request</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f7f7f7;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
+  <title>Cash Voucher Request</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f7f7f7;
+    }
 
-        .container { 
-            width: 8.5in;   /* 8.5 inches width */
-            /* height: 11in;   11 inches height */
-            margin: 0 auto; /* Center the container horizontally */
-            padding: 20px;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            position: relative; /* For absolute positioning inside container */
-            box-sizing: border-box; /* Ensure padding doesn't affect the overall size */
-        }
+    .container {
+      width: 8.5in; /* full page width */
+      height: 5.3in; /* half page height minus margin */
+      margin: 0 auto 0.4in; /* center + spacing below */
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      position: relative;
+      box-sizing: border-box;
+      page-break-inside: avoid; /* avoid breaking inside container */
+      /* Removed page-break-after */
+    }
 
-        .header {
-            position: relative;
-            width: 100%;
-            margin-bottom: 40px;
-        }
+    .header {
+      position: relative;
+      width: 100%;
+      margin-bottom: 40px;
+    }
 
-        .header h1 {
-            font-size: 28px;
-            font-weight: bold;
-            text-decoration: underline;
-            text-align: center;
-            margin: 0;
-        }
+    .header h1 {
+      font-size: 22px;
+      font-weight: bold;
+      text-decoration: underline;
+      text-align: center;
+      margin: 0;
+    }
 
-        .header .date,
-        .header .series-no {
-            position: absolute;
-            top: 0;
-            font-size: 14px;
-            font-weight: bold;
-        }
+    .header .date,
+    .header .series-no {
+      position: absolute;
+      top: 0;
+      font-size: 14px;
+      font-weight: bold;
+    }
 
-        .header .date {
-            left: 0;
-        }
+    .header .date { left: 0; }
+    .header .series-no { right: 0; }
 
-        .header .series-no {
-            right: 0;
-            text-align: right;
-        }
+    .voucher-details table {
+      width: 100%;
+      text-align: center;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
 
-        .header .series-no .value {
-            max-width: 100%;
-        }
+    .voucher-details th,
+    .voucher-details td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: center;
+    }
 
-        .voucher-details {
-            margin-top: 20px;
-        }
+    .no-border-table {
+      width: 100%;
+      margin-top: 20px;
+      border: none;
+      text-align: center;
+      font-size: 10px;
+    }
 
-        .voucher-details table {
-            width: 100%;
-            text-align: center;
-            border-collapse: collapse;
-        }
+    .no-border-table td {
+      border: none;
+      padding: 10px;
+    }
 
-        .voucher-details table, .voucher-details th, .voucher-details td {
-            border: 1px solid #ccc; /* Add border to the first table */
-        }
+    .no-print {
+      text-align: center;
+      margin-top: 20px;
+    }
 
-        .voucher-details th, .voucher-details td {
-            padding: 10px;
-            text-align: center;
-        }
+    .btn {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+    }
 
-        .voucher-details .field {
-            display: flex;
-            justify-content: space-between;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            padding: 8px;
-            border-radius: 5px;
-        }
+    .btn:hover {
+      background-color: #45a049;
+    }
 
-        /* New section below the table */
-        .no-border-table {
-            width: 100%;
-            margin-top: 20px;
-            text-align: center;
-            border: none;
-        }
+    @media print {
+      @page {
+        size: 8.5in 11in;
+        margin: 1in;
+      }
 
-        .no-border-table .label{
-            font-size: 12px;
-            border: none;
-        }
+      body {
+        margin: 0;
+        padding: 0;
+        font-size: 12px;
+      }
 
-        .no-border-table td {
-            padding: 10px;
-            border: none;
-        }
+      .container {
+        max-width: 100%;
+        padding: 10px;
+        box-shadow: none;
+        border: none;
+        page-break-inside: avoid;
+        page-break-after: always;
+      }
 
-        /* Button styles */
-        .no-print {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .btn {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            text-align: center;
-            border-radius: 5px;
-            font-size: 16px;
-            cursor: pointer;
-        }
-
-        .btn:hover {
-            background-color: #45a049;
-        }
-
-        /* Print specific styling */
-        @media print {
-            @page {
-                size: 8.5in 11in;
-                margin: 1in;
-            }
-
-            .voucher-details table,
-            .no-border-table {
-                page-break-inside: avoid;
-            }
-
-            .container {
-                page-break-inside: avoid;
-            }
-
-            body {
-                margin: 0;
-                padding: 0;
-                font-size: 12px;
-            }
-
-            .container {
-                max-width: 100%;
-                padding: 10px;
-                border: none;
-                box-sizing: border-box;
-            }
-
-            .header h1 {
-                font-size: 24px;
-                text-decoration: underline;
-            }
-
-            .voucher-details p {
-                font-size: 14px;
-            }
-
-            .voucher-details .label {
-                font-size: 14px;
-            }
-
-            .voucher-details .field .label {
-                font-size: 14px;
-            }
-
-            .voucher-details .field .value {
-                font-size: 14px;
-            }
-
-            .no-print {
-                display: none;
-            }
-        }
-    </style>
+      .no-print {
+        display: none;
+      }
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header with Series No and Date on the edges -->
-        <div class="header">
-            <div class="date">
-                <div class="label" style="font-size:12px">Date</div>
-                <div class="value" style="font-size:12px">{{ \Carbon\Carbon::now()->format('F j, Y') }}</div>
+@foreach ($allData as $data)
+    @php
+        $voucher = $data['cashVoucherRequest'] ?? null;
+        $approver = $data['approvers'] ?? null;
+        $amountInWords = $data['amountInWords'] ?? '';
+        $cv = $voucher->cashVoucher ?? null;
+
+        $descriptions = json_decode($cv->description ?? '[]', true);
+        $amounts = json_decode($cv->amount_details ?? '[]', true);
+        $remarks = json_decode($cv->remarks ?? '[]', true);
+
+        $totalAmount = collect($amounts)->filter(fn($amt) => is_numeric($amt))->sum();
+        $taxBase = $cv->tax_based_amount ?? 0;
+        $vat = $taxBase * 0.12;
+        $withholdingPercentage = $cv->withholdingTax->percentage ?? 0;
+        $withholding = $taxBase * $withholdingPercentage;
+        $final = $taxBase + $vat - $withholding;
+
+        $voucherType = $cv->voucher_type ?? 'regular';
+    @endphp
+
+
+   <div class="container" 
+         data-cvr-id="{{ $voucher->id }}" 
+         data-voucher-id="{{ $cv->id }}">
+    <div class="header">
+        <div class="date">
+            <div style="font-size:12px">Date</div>
+            <div style="font-size:12px">{{ \Carbon\Carbon::now()->format('F j, Y') }}</div>
+        </div>
+        <h1 style="font-size:22px">Cash Voucher Request</h1>
+        <div class="series-no">
+            <div style="font-size:12px">Series No</div>
+            <div style="font-size:12px">
+                @if(strtolower($cv->cvr_type ?? '') === 'admin')
+                    {{ preg_replace('/\/\d+$/', '', $voucher->cvr_number ?? 'N/A') }}-{{ $cv->company->company_code ?? 'N/A' }}{{ $cv->expenseTypes->expense_code ?? 'N/A' }}
+                @elseif(strtolower($cv->cvr_type ?? '') === 'rpm')
+                    {{ preg_replace('/\/\d+$/', '', $voucher->cvr_number ?? 'N/A') }}-{{ $cv->trucks->truck_name ?? 'N/A' }}-{{ $cv->company->company_code ?? 'N/A' }}{{ $cv->expenseTypes->expense_code ?? 'N/A' }}
+                @else
+                   N/A
+                @endif
             </div>
-            <h1 style="font-size:22px">Cash Voucher Request</h1>
-            <div class="series-no">
-                <div class="label" style="font-size:12px">Series No</div>
-                <div style="font-size:12px">
-                    @if(isset($vouchers->cvr_type) && strtolower($vouchers->cvr_type) === 'admin')
-                        <!-- When cvr_type is admin -->
-                        {{ $vouchers->cvr_number ?? 'N/A' }}-{{ $vouchers->company->company_code ?? 'N/A' }}{{ $vouchers->expenseTypes->expense_code ?? 'N/A' }}
-                    @elseif(isset($vouchers->cvr_type) && strtolower($vouchers->cvr_type) === 'rpm')
-                        <!-- When cvr_type is rpm -->
-                        {{ $vouchers->cvr_number ?? 'N/A' }}-{{ $vouchers->trucks->truck_name ?? 'N/A' }}-{{ $vouchers->company->company_code ?? 'N/A' }}{{ $vouchers->expenseTypes->expense_code ?? 'N/A' }}
-                    @else
-                        {{ $vouchers->cvr_number ?? 'N/A' }}
+        </div>
+    </div>
+
+    <div class="voucher-details">
+        <table>
+            <thead>
+            <tr>
+                <th colspan="2" style="text-align: left; font-size: 18px;">PAID TO: {{ $cv->suppliers->supplier_name ?? 'N/A' }}</th>
+            </tr>
+            <tr>
+                <th style="width: 70%;">Particulars</th>
+                <th style="width: 30%;">Amount</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                 <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
+                    @foreach ($descriptions as $desc)
+                      {{ $desc }}<br>
+                    @endforeach
+                </td>
+                <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 150px; vertical-align: top;">
+                    @foreach ($amounts as $amt)
+                      ₱ {{ number_format($amt, 2) }}<br>
+                    @endforeach
+                </td>
+            </tr>
+
+            <tr>
+                <td style="text-align: left; vertical-align: top; font-size: 12px; padding: 10px;">
+                    @if (!empty($remarks))
+                        <strong>Remarks:</strong><br>
+                        @foreach ($remarks as $remark)
+                            {{ $remark }}<br>
+                        @endforeach
                     @endif
-                </div>
-            </div>
-        </div>
 
-        <div class="voucher-details">
-            <!-- First table with borders -->
-            <table style="width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px;">
-                <colgroup>
-                    <col style="width: 70%;">
-                    <col style="width: 30%;">
-                </colgroup>
-                <thead>
-                    <tr>
-                        <th colspan="2" style="text-align: left; font-size: 18px; border: 1px solid #ccc;">
-                            PAID TO: {{ $vouchers->suppliers->supplier_name ?? 'N/A' }}
-                        </th>
-                    </tr>
-                    <tr>
-                        <th style="border: 1px solid #ccc;">Particulars</th>
-                        <th style="border: 1px solid #ccc;">Amount</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @php
-                        $descriptions = json_decode($vouchers->description ?? '[]');
-                        $amounts = json_decode($vouchers->amount_details ?? '[]');
-                    @endphp
-                    <tr>
-                        <td style="border: 1px solid #ccc; vertical-align: top; padding: 5px;">
-                            @foreach ($descriptions as $desc)
-                                {{ $desc }}<br>
-                            @endforeach
-                        </td>
-                        <td style="border: 1px solid #ccc; vertical-align: top; padding: 5px;">
-                            @foreach ($amounts as $amt)
-                                ₱ {{ number_format($amt, 2) }}<br>
-                            @endforeach
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="text-align: left; vertical-align: top; font-size: 12px; padding: 10px;">
-                        @php
-                            $remarks = json_decode($vouchers->remarks);
-                        @endphp
-                        @if (!empty($remarks))
-                            <strong>Remarks:</strong><br>
-                            @foreach($remarks as $remark)
-                                {{ $remark }}<br>
-                            @endforeach
-                        @endif
-                        @if(!empty($vouchers->charge) && $vouchers->charge != 0)
-                            <br><br><strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }}
-                         @endif
-                        </td>
-                        <td style="border: 1px solid #ccc; padding: 0;">
-                            <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
-                                <colgroup>
-                                    <col style="width: 60%;">
-                                    <col style="width: 40%;">
-                                </colgroup>
-                                <tr>
-                                    <td style="text-align: left; padding: 4px;">Net Amount</td>
+                    @if(!empty($voucher->charge) && $voucher->charge != 0)
+                        <br><strong>Transfer Charge:</strong> ₱ {{ number_format($voucher->charge, 2) }}
+                    @endif
+                </td>
+                <td style="padding: 0;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
+                        <tr>
+                            <td style="text-align: left; padding: 4px;">Subtotal</td>
+                            <td style="text-align: right; padding: 4px;">₱ {{ number_format($totalAmount, 2) }}</td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left; padding: 4px;">Net Amount</td>
+                            <td style="text-align: right; padding: 4px;">
+                                ₱ {{ number_format(($voucherType === 'with_tax') ? $taxBase : $totalAmount, 2) }}
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left; padding: 4px;">VAT (12%)</td>
+                            <td style="text-align: right; padding: 4px;">
+                                @if($voucherType === 'with_tax')
+                                    ₱ {{ number_format($vat, 2) }}
+                                @else
+                                    ₱ 0.00
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left; padding: 4px;">{{ $cv->withholdingTax->description ?? 'Less Withholding Tax' }}</td>
+                            <td style="text-align: right; padding: 4px;">
+                                @if($voucherType === 'with_tax')
+                                    ₱ {{ number_format($withholding, 2) }}
+                                @else
+                                    ₱ 0.00
+                                @endif
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="text-align: left; font-weight: bold; color: red; padding: 4px;">Total</td>
+                            <td style="text-align: right; font-weight: bold; color: red; padding: 4px;">
+                                ₱ {{ number_format(($voucherType === 'with_tax') ? $final : $totalAmount, 2) }}
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            </tbody>
+        </table>
 
-                                    @if($vouchers->voucher_type === 'with_tax')
-                                        <td style="text-align: right; padding: 4px;">₱ {{ number_format($vouchers->tax_based_amount, 2) }}</td>
+        <table class="no-border-table">
+            <tr>
+                <td>
+                    <div style="font-size: 10px;">_________________________</div>
+                    <div style="font-size: 10px;">{{ $approver->name ?? 'N/A' }}</div>
+                    <div style="font-size: 10px;">Approver</div>
+                </td>
+                <td style="text-align:left;">
+                    <div style="font-size: 10px;">RECEIVED from <strong>{{ $cv->company->company_name ?? 'N/A' }}</strong>, the amount of</div>
+                    <div style="font-size: 10px; text-transform: uppercase;"><strong><u>{{ $amountInWords }}</u></strong></div>
+                    <div style="font-size: 10px;">in full payment of amount described above</div>
+                </td>
+                <td>
+                    <div style="font-size: 10px;">_________________________</div>
+                    <div style="font-size: 10px;">{{ $cv->suppliers->supplier_name ?? 'N/A' }}</div>
+                    <div style="font-size: 10px;">Request By</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+  </div>
+@endforeach
 
-                                    @elseif($vouchers->voucher_type === 'regular')
-                                        @php
-                                            $totalAmount = 0;
-                                            $amountDetails = json_decode($vouchers->amount_details); // ✅ Corrected here
-
-                                            if (is_array($amountDetails)) {
-                                                foreach ($amountDetails as $item) {
-                                                    if (is_numeric($item)) {
-                                                        $totalAmount += $item;
-                                                    }
-                                                }
-                                            }
-                                        @endphp
-                                        <td style="text-align: right; padding: 4px;">₱ {{ number_format($totalAmount, 2) }}</td>
-                                    @endif
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; padding: 4px;">VAT (12%)</td>
-                                    <td style="text-align: right; padding: 4px;">
-                                        @if($vouchers->voucher_type === 'with_tax')
-                                            ₱ {{ number_format($vouchers->tax_based_amount * 0.12, 2) }}
-                                        @elseif($vouchers->voucher_type === 'regular')
-                                        @endif
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; padding: 4px;">Less Withholding Tax</td>
-                                    <td style="text-align: right; padding: 4px;">
-                                        @if($vouchers->voucher_type === 'with_tax')
-                                            ₱ {{ number_format($vouchers->tax_based_amount * $vouchers->withholdingTax->percentage, 2) }}
-                                         @elseif($vouchers->voucher_type === 'regular')
-                                        @endif
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="text-align: left; font-weight: bold; padding: 4px; color: red;">Total</td>
-                                    <td style="text-align: right; font-weight: bold; color: red; padding: 4px;">
-                                        @if($vouchers->voucher_type === 'with_tax')
-                                            @php
-                                                $taxAmount = $vouchers->tax_based_amount * 0.12;
-                                                $withholdingAmount = $vouchers->tax_based_amount * $vouchers->withholdingTax->percentage;
-                                                $finalAmount = $vouchers->tax_based_amount + $taxAmount - $withholdingAmount;
-                                            @endphp
-
-                                            ₱ {{ number_format($finalAmount, 2) }}
-
-                                        @elseif($vouchers->voucher_type === 'regular')
-                                            ₱ {{ number_format($totalAmount, 2) }}
-                                        @endif
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-            <!-- New section under the first table without borders -->
-            <table class="no-border-table">
-                <tr>
-                    <td>
-                        <div class="label" style="font-size: 10px;">_________________________</div>
-                        <div class="label" style="font-size: 10px;">Approver</div>
-                    </td>
-                    <td>
-                        <div class="label" style="font-size: 10px; text-align:left;">RECEIVED from the amount of</div>
-                        <div class="label" style="font-size: 10px; text-align: left; text-transform: uppercase;">
-                        
-                        </div>
-                        <div class="label" style="font-size: 10px; text-align:left;">in full payment of amount described above</div>
-                    </td>
-                    <td>
-                        <div class="label" style="font-size: 10px;">_________________________</div>
-                        <div style="font-size: 10px;">{{ $fullname ?? 'N/A' }}</div>
-                        <div class="label" style="font-size: 10px;">REQUEST BY:</div>
-                    </td>
-                </tr>
-            </table>
-        </div>
+<div class="no-print">
+    <button onclick="printAndUpdateAll()" class="btn">Print All</button>
+</div>
 </body>
 </html>
+<script>
+    function printAndUpdateAll() {
+        const containers = document.querySelectorAll('.container');
+        const cvrIds = [];
+        const voucherIds = [];
+
+        containers.forEach(container => {
+            const cvrId = container.getAttribute('data-cvr-id');
+            const voucherId = container.getAttribute('data-voucher-id');
+
+            if (cvrId && voucherId) {
+                cvrIds.push(cvrId);
+                voucherIds.push(voucherId);
+            }
+        });
+
+        fetch('/update-print-admin-status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+            },
+            body: JSON.stringify({
+                cvr_ids: cvrIds,
+                voucher_ids: voucherIds
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            console.log('Statuses updated:', data);
+            window.print();
+        })
+        .catch(err => {
+            console.error('Error updating print statuses:', err);
+            window.print();
+        });
+    }
+</script>

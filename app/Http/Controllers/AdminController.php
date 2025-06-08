@@ -249,9 +249,10 @@ class AdminController extends Controller
     public function viewPrint($id)
     {
         $voucher = CashVoucher::findOrFail($id);
+        $cvr_approval = cvr_approval::where('cvr_id', $id)->firstOrFail();
         
         // return a dedicated view for printing, e.g., print.blade.php
-        return view('admin.viewPrint', compact('voucher'));
+        return view('admin.viewPrint', compact('voucher','cvr_approval'));
     }
 
     public function editApproval($id)
@@ -439,10 +440,62 @@ class AdminController extends Controller
         return view('adminCV.printPreview', compact('vouchers', 'fullname', 'amountInWords')); 
     }
 
-    public function printMultiple()
+    public function printMultiple(Request $request)
     {
+        $user = Auth::user();
+        $fullname = $user->fname . ' ' . $user->lname;
 
+        $ids = $request->input('request_ids'); // This matches form input name
+        if (!$ids) {
+            return back()->with('error', 'No CVRs selected.');
+        }
+
+        $cashVoucherIds = $request->input('cash_voucher_ids', []);
+        $cvrTypes = $request->input('cvr_types', []);
+        // Fetch vouchers and related data
+        $vouchers = cvr_approval::with([
+            'cashVoucher.withholdingTax',
+            'cashVoucher.company',
+            'cashVoucher.suppliers',
+            'cashVoucher.expenseTypes',
+            'cashVoucher.trucks'
+        ])->whereIn('id', $ids)->get();
+
+        // Fetch approvers keyed by cvr_approval.id
+        $approvers = DB::table('cvr_approvals')
+            ->leftJoin('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
+            ->whereIn('cvr_approvals.id', $ids)
+            ->select('cvr_approvals.id', 'cvr_approver.name') // include only what's needed
+            ->get()
+            ->keyBy('id');
+
+        // Prepare the $allData array for the Blade view
+        $allData = $vouchers->map(function ($voucher) use ($approvers) {
+            // Calculate final amount
+            if ($voucher->cashVoucher->voucher_type === 'with_tax') {
+                $taxAmount = $voucher->cashVoucher->tax_based_amount * 0.12;
+                $withholdingAmount = $voucher->cashVoucher->tax_based_amount * $voucher->cashVoucher->withholdingTax->percentage;
+                $finalAmount = $voucher->cashVoucher->tax_based_amount + $taxAmount - $withholdingAmount;
+            } elseif ($voucher->cashVoucher->voucher_type === 'regular') {
+                $amountDetails = json_decode($voucher->cashVoucher->amount_details, true) ?? [];
+                $finalAmount = array_sum(array_filter($amountDetails, 'is_numeric'));
+            } else {
+                $finalAmount = 0;
+            }
+
+            return [
+                'cashVoucherRequest' => $voucher,
+                'amountInWords' => app()->make(Self::class)->convertAmountToWords($finalAmount),
+                'approvers' => $approvers[$voucher->id] ?? null,
+            ];
+        });
+
+        return view('AdminCV.printMultiple', [
+            'allData' => $allData,
+            'fullname' => $fullname
+        ]);
     }
+
 
     public function printCVR($id, $cvr_number)
     {
@@ -567,4 +620,17 @@ class AdminController extends Controller
             // Return the amount in words with currency (e.g., "five hundred pesos")
             return ucfirst($amountInWords) . ' ' . $currency;
         }
+
+    public function updatePrintStatus(Request $request)
+    {
+        // validate & extract ids
+        $cvrIds = $request->input('cvr_ids', []);
+        $voucherIds = $request->input('voucher_ids', []);
+ 
+        // update as needed
+        cvr_approval::whereIn('id', $cvrIds)->update(['print_status' => '1']);
+        CashVoucher::whereIn('id', $voucherIds)->update(['print_status' => '1']);
+
+        return response()->json(['message' => 'Print status updated']);
+    }
 }

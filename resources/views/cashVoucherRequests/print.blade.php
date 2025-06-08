@@ -189,7 +189,7 @@
             <div style="font-size:12px">Date</div>
             <div style="font-size:12px">{{ \Carbon\Carbon::now()->format('F j, Y') }}</div>
         </div>
-        <h1 style="font-size:15px">Cash Voucher Request</h1>
+        <h1 style="font-size:22px">Cash Voucher Request</h1>
         <div class="series-no">
             <div style="font-size:12px">Series No</div>
             <div style="font-size:12px">{{ preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number ?? 'N/A') }}-{{$allocations->truck->truck_name ?? ''}}-{{$deliveryRequest->company->company_code}}{{$deliveryRequest->expenseType->expense_code}}</div>
@@ -238,26 +238,6 @@
                     </tr>
                 @endif
 
-                <!-- {{-- Remarks --}}
-                @if (!empty($remarks))
-                    <tr>
-                        <td style="text-align: left; font-size: 12px; border-top: none; border-bottom: none;">
-                            <strong>Remarks:</strong><br>
-                            @foreach($remarks as $remark)
-                                {{ $remark }}<br>
-                            @endforeach
-                        </td>
-                        <td style="text-align: left; font-size: 12px; border-top: none; border-bottom: none;"></td>
-                    </tr>
-                @endif
-
-                @if(!empty($cvrApprovals->charge) && $cvrApprovals->charge != 0)
-                    <tr>
-                        <td style="text-align: left; font-size: 12px; border-top: none;">Transfer Charge</td>
-                        <td style="text-align: right; font-size: 12px; border-top: none;">₱ {{ number_format($cvrApprovals->charge, 2) }}</td>
-                    </tr>
-                @endif -->
-
                 {{-- Driver & Fleet Info and Tax Summary --}}
                 @if ($cashVoucherRequest->voucher_type === 'with_tax')
                     <tr>
@@ -294,7 +274,7 @@
                                 {{ $cvrApprovals->reference_number }}
                             @endif
                         </td>
-                         <td style="padding: 0;">
+                         <td style="border: 1px solid #ccc; padding: 0;">
                             <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
                                 <tr>
                                     <td style="text-align: left; padding: 4px;">Subtotal</td>
