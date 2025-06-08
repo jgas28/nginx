@@ -610,40 +610,51 @@ class CashVoucherController extends Controller
         }
     }
 
-
     public function cvrList(Request $request)
-    { 
-        // Get the search query from the request
+    {
         $search = $request->get('search');
-    
-        // Fetch related delivery line items by joining with the correct table name
-        $cashVoucherRequests = CashVoucher::with([
-            'deliveryRequest.deliveryAllocations',
-            'deliveryRequest.pulloutAllocations',
-            'deliveryRequest.accessorialAllocations',
-            'deliveryRequest.othersAllocations',
-            'deliveryRequest.freightAllocations',
-            'cvrTypes'
-        ])
-        ->when($search, function ($query, $search) {
-            return $query->whereHas('deliveryRequest', function ($q) use ($search) {
-                $q->where('mtm', 'like', '%' . $search . '%');
-            });
-        })
-        ->where('status', 2)
-        ->whereNotIn('cvr_type', ['admin', 'rpm'])
-        ->orderBy('print_status', 'asc')
-        ->paginate(10);
 
-    
-        // Check if the request expects an AJAX response
+        // Step 1: Get paginated IDs only (avoids duplicate rows from joins)
+        $baseQuery = CashVoucher::where('status', 2)
+            ->whereNotIn('cvr_type', ['admin', 'rpm'])
+            ->when($search, function ($query, $search) {
+                return $query->whereHas('deliveryRequest', function ($q) use ($search) {
+                    $q->where('mtm', 'like', '%' . $search . '%');
+                });
+            })
+            ->orderBy('print_status', 'asc');
+
+        // Step 2: Paginate only the IDs
+        $paginated = $baseQuery->select('id')->paginate(10);
+
+        // Step 3: Fetch full records using the IDs and eager load relationships
+        $cashVoucherRequests = CashVoucher::with([
+                'deliveryRequest.deliveryAllocations',
+                'deliveryRequest.pulloutAllocations',
+                'deliveryRequest.accessorialAllocations',
+                'deliveryRequest.othersAllocations',
+                'deliveryRequest.freightAllocations',
+                'deliveryRequest.company',
+                'deliveryRequest.expenseType',
+                'cvrTypes'
+            ])
+            ->whereIn('id', $paginated->pluck('id'))
+            ->get()
+            ->keyBy('id');
+
+        // Step 4: Attach fully loaded models to the paginator
+        $paginated->setCollection($cashVoucherRequests);
+
+        // Return appropriate view
         if ($request->ajax()) {
-            return view('cashVoucherRequests.cvrList_table', compact('cashVoucherRequests'))->render();
+            return view('cashVoucherRequests.cvrList_table', ['cashVoucherRequests' => $paginated])->render();
         }
-    
-        // For the normal view
-        return view('cashVoucherRequests.cvrList', compact('cashVoucherRequests', 'search'));
-    } 
+
+        return view('cashVoucherRequests.cvrList', [
+            'cashVoucherRequests' => $paginated,
+            'search' => $search,
+        ]);
+    }
 
     public function printMultiple(Request $request)
     {
