@@ -345,6 +345,43 @@
                     </td>
                 </tr>
             </table>
+            </div>
+        <!-- Button to trigger print -->
+        <div class="no-print">
+            <button 
+                onclick="printAndUpdateStatusSingle(this);" 
+                class="btn"
+                data-cvr-id="{{$vouchers->id}}" 
+                data-voucher-id="{{$vouchers->cashVoucher->id}}"> Print
+            </button>
         </div>
+    </div>
 </body>
 </html>
+ <script>
+function printAndUpdateStatusSingle(button) {
+    const cvrId = button.getAttribute('data-cvr-id');
+    const voucherId = button.getAttribute('data-voucher-id');
+
+    fetch('/update-print-status', { 
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+        },
+        body: JSON.stringify({
+            cvr_ids: [cvrId],
+            voucher_ids: [voucherId]
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Status updated:', data);
+        window.print();
+    })
+    .catch(error => {
+        console.error('Error updating status:', error);
+        window.print();
+    });
+}
+</script>

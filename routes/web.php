@@ -31,7 +31,7 @@ use App\Http\Controllers\CoordinatorsController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\LiquidationController;
 use App\Http\Controllers\RunningBalanceController;
-
+use App\Http\Controllers\EmployeeController;
 // Redirect to dashboard or login
 Route::get('/', function () {
     return Auth::check()
@@ -78,6 +78,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('deliveryRequestType', DeliveryRequestTypeController::class);
     Route::resource('deliveryRequest', DeliveryRequestController::class);
     Route::resource('cashVoucherRequests', CashVoucherController::class);
+    Route::resource('employees', EmployeeController::class);
     Route::resource('coordinators', CoordinatorsController::class)
         ->parameters(['coordinators' => 'deliveryRequest'])
         ->except(['show']);
@@ -160,7 +161,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/cash-voucher-list', [CashVoucherController::class, 'cvrList'])->name('cashVoucherRequests.cvrList');
     Route::get('/cash-voucher/{id}/{cvr_number}/{mtm}/print', [CashVoucherController::class, 'printCVR'])->name('cashVoucherRequests.print');
     Route::get('/cash-voucher-requests/print-multiple', [CashVoucherController::class, 'printMultiple'])->name('cashVoucherRequests.printMultiple');
-    
+    Route::post('/update-print-status', [CashVoucherController::class, 'updatePrintStatus']);
     //admin
     Route::post('/cvr/generate', [AdminController::class, 'generateCvrNumber'])->name('cvr.generate');
     Route::post('/admin/generate-cvr-number', [AdminController::class, 'generateCvrNumber'])->name('admin.generate-cvr-number');

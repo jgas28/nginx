@@ -470,23 +470,45 @@ class CashVoucherController extends Controller
 
     public function approvalRequestStore(Request $request)
     {
-        $cvr_id = $request->cvr_id;
-        $cashVouchers = CashVoucher::where('id', $cvr_id)->first();
+        // Step 1: Validate request
+        $validated = $request->validate([
+            'cvr_id' => 'required|exists:cash_vouchers,id',
+            'cvr_number' => 'required|string',
+            'payment_type' => 'required|in:cash,bank_transfer,outlet_transfer',
 
-        if ($cashVouchers) {
-            $cashVouchers->status = 2;
-            $cashVouchers->save();
-        }
+            // Cash fields
+            'cash_amount' => 'sometimes|required_if:payment_type,cash|numeric',
+            'cash_receiver' => 'sometimes|required_if:payment_type,cash|string',
+            'cash_fund_source' => 'sometimes|required_if:payment_type,cash|string',
+            'reference_number' => 'nullable|string',
+
+            // Bank fields
+            'bank_name' => 'sometimes|required_if:payment_type,bank_transfer|string',
+            'bank_reference_number' => 'sometimes|required_if:payment_type,bank_transfer|string',
+            'bank_amount' => 'sometimes|required_if:payment_type,bank_transfer|numeric',
+            'bank_receiver' => 'sometimes|required_if:payment_type,bank_transfer|string',
+            'bank_fund_source' => 'sometimes|required_if:payment_type,bank_transfer|string',
+            'bank_charge' => 'nullable|numeric',
+
+            // Outlet fields
+            'outlet_name' => 'sometimes|required_if:payment_type,outlet_transfer|string',
+            'outlet_reference_number' => 'sometimes|required_if:payment_type,outlet_transfer|string',
+            'outlet_amount' => 'sometimes|required_if:payment_type,outlet_transfer|numeric',
+            'outlet_receiver' => 'sometimes|required_if:payment_type,outlet_transfer|string',
+            'outlet_fund_source' => 'sometimes|required_if:payment_type,outlet_transfer|string',
+            'outlet_charge' => 'nullable|numeric',
+        ]);
+
 
         Log::info('Full Request Data', $request->all());
 
-        // Set payment_name based on payment type
+        // Step 2: Extract payment fields
         $paymentName = '';
         $reference_number = '';
-        $amount = '';
+        $amount = 0;
         $receiver = '';
         $fund_source = '';
-        $charge = null;
+        $charge = 0;
 
         switch ($request->payment_type) {
             case 'cash':
@@ -495,113 +517,99 @@ class CashVoucherController extends Controller
                 $amount = $request->cash_amount;
                 $receiver = $request->cash_receiver;
                 $fund_source = $request->cash_fund_source;
-                $charge = null;
+                $charge = 0;
                 break;
+
             case 'bank_transfer':
                 $paymentName = $request->bank_name;
                 $reference_number = $request->bank_reference_number;
                 $amount = $request->bank_amount;
                 $receiver = $request->bank_receiver;
                 $fund_source = $request->bank_fund_source;
-                $charge = $request->bank_charge;
+                $charge = $request->bank_charge ?? 0;
                 break;
+
             case 'outlet_transfer':
                 $paymentName = $request->outlet_name;
                 $reference_number = $request->outlet_reference_number;
                 $amount = $request->outlet_amount;
                 $receiver = $request->outlet_receiver;
                 $fund_source = $request->outlet_fund_source;
-                $charge = $request->outlet_charge;
+                $charge = $request->outlet_charge ?? 0;
                 break;
         }
-
-        // Wrap the saving logic in a try-catch block and use a transaction
-        DB::beginTransaction();
 
         $user = Auth::user();
         $employeeCode = $user->id;
 
-        try {
-            // Save cvr_approval
-            $cvrApproval = new cvr_approval();
-            $cvrApproval->payment_type = $request->payment_type;
-            $cvrApproval->payment_name = $paymentName;
-            $cvrApproval->reference_number = $reference_number;
-            $cvrApproval->amount = $amount;
-            $cvrApproval->receiver = $receiver;
-            $cvrApproval->source = $fund_source;
-            $cvrApproval->charge = $charge ?? null;
-            $cvrApproval->cvr_number = $request->cvr_number;
-            $cvrApproval->status = 1; // Set initial status
-            $cvrApproval->created_by = $employeeCode;
-            $cvrApproval->cvr_id = $request->cvr_id;
-            $cvrApproval->save();
+        // Step 3: Start transaction
+        DB::beginTransaction();
 
-            // Log success for cvr_approval
+        try {
+            // Step 4: Save cvr_approval
+            $cvrApproval = new cvr_approval();
+            $cvrApproval->fill([
+                'payment_type' => $request->payment_type,
+                'payment_name' => $paymentName,
+                'reference_number' => $reference_number,
+                'amount' => $amount,
+                'receiver' => $receiver,
+                'source' => $fund_source,
+                'charge' => $charge,
+                'cvr_number' => $request->cvr_number,
+                'status' => 1,
+                'created_by' => $employeeCode,
+                'cvr_id' => $request->cvr_id,
+            ]);
+            $cvrApproval->saveOrFail();
+
             Log::info('Cash Voucher Approval saved successfully', [
                 'cvr_approval_id' => $cvrApproval->id,
-                'amount' => $cvrApproval->amount,
-                'receiver' => $cvrApproval->receiver,
-            ]);
-
-            // Update the related CashVoucher status to 2 (approved)
-            $cashVoucher = CashVoucher::where('cvr_number', $request->cvr_number)->first(); // Assuming cvr_number is the identifier
-            if ($cashVoucher) {
-                $cashVoucher->status = 2; // Update status to 2 (approved)
-                $cashVoucher->save(); // Save the status change
-
-                Log::info('Cash Voucher status updated to 2', [
-                    'cash_voucher_id' => $cashVoucher->id,
-                    'new_status' => $cashVoucher->status,
-                ]);
-
-            $amount = floatval($cvrApproval->amount ?? 0);
-            $charge = floatval($cvrApproval->charge ?? 0);
-            $totalAmount = $amount + $charge;
-            RunningBalance::create([
-                'type' => 8, // CVR approval
-                'amount' => -1 * floatval($totalAmount), // It's a deduction
-                'description' => $cashVouchers->cvr_number,
-                'employee_id' => $receiver, // Or set this if linked to a user
-                'approver_id' => $fund_source,
-                'created_by' => $employeeCode,
-                'cvr_number' =>  $cashVouchers->cvr_number,
-            ]);
-
-            } else {
-                // Log a warning if CashVoucher is not found
-                Log::warning('Cash Voucher not found', [
-                    'cvr_number' => $request->cvr_number,
-                ]);
-
-                // If CashVoucher isn't found, throw an exception to trigger rollback
-                throw new \Exception('Cash Voucher not found.');
-            }
-
-            // Commit the transaction
-            DB::commit();
-
-            // Redirect to success page with success message
-            return redirect()->route('cashVoucherRequests.approval')->with('success', 'Cash Voucher Approval Saved Successfully');
-        } catch (\Exception $e) {
-            // Rollback the transaction if any part of the process fails
-            DB::rollBack();
-
-            // Log error if the save or update fails
-            Log::error('Failed to save Cash Voucher Approval or update Cash Voucher status', [
-                'error_message' => $e->getMessage(),
-                'error_code' => $e->getCode(),
-                'payment_type' => $request->payment_type,
-                'reference_number' => $reference_number,
                 'amount' => $amount,
                 'receiver' => $receiver,
             ]);
 
-            // Return an error message to the user
+            // Step 5: Update CashVoucher status
+            $cashVoucher = CashVoucher::where('cvr_number', $request->cvr_number)->firstOrFail();
+            $cashVoucher->status = 2;
+            $cashVoucher->saveOrFail();
+
+            Log::info('Cash Voucher status updated to 2', [
+                'cash_voucher_id' => $cashVoucher->id,
+                'new_status' => $cashVoucher->status,
+            ]);
+
+            // Step 6: Save running balance
+            $totalAmount = floatval($amount) + floatval($charge);
+            RunningBalance::create([
+                'type' => 8,
+                'amount' => -1 * $totalAmount,
+                'description' => $cashVoucher->cvr_number,
+                'employee_id' => $receiver,
+                'approver_id' => $fund_source,
+                'created_by' => $employeeCode,
+                'cvr_number' => $cashVoucher->cvr_number,
+            ]);
+
+            // Step 7: Commit transaction
+            DB::commit();
+
+            return redirect()->route('cashVoucherRequests.approval')
+                ->with('success', 'Cash Voucher Approval Saved Successfully');
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            Log::error('Failed to process Cash Voucher Approval', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return redirect()->route('cashVoucherRequests.approval')
                 ->with('error', 'DB Error: ' . $e->getMessage());
         }
     }
+
 
     public function cvrList(Request $request)
     { 

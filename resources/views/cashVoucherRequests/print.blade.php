@@ -407,14 +407,13 @@
             </tr>
         </table>
     </div>
-
         <!-- Button to trigger print -->
         <div class="no-print">
             <button 
                 onclick="printAndUpdateStatusSingle(this);" 
                 class="btn"
                 data-cvr-id="{{$cvrApprovals->id}}" 
-                data-voucher-id="{{$cashVoucherRequest->cash_vouchers_id}}"> Print
+                data-voucher-id="{{$cashVoucherRequest->id}}"> Print
             </button>
         </div>
     </div>
@@ -426,7 +425,7 @@ function printAndUpdateStatusSingle(button) {
     const cvrId = button.getAttribute('data-cvr-id');
     const voucherId = button.getAttribute('data-voucher-id');
 
-    fetch('/update-print-status', {
+    fetch('/update-print-status', { 
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

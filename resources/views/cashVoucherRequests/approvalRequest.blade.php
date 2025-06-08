@@ -283,15 +283,38 @@
             outlet_transfer: document.getElementById('storeTransferFields')
         };
 
+        const updateFieldNames = (selectedType) => {
+            Object.entries(paymentFields).forEach(([type, section]) => {
+                const inputs = section.querySelectorAll('input, select, textarea');
+                inputs.forEach(input => {
+                    if (type === selectedType) {
+                        // Restore original name from data-name
+                        if (input.dataset.name) {
+                            input.name = input.dataset.name;
+                        }
+                    } else {
+                        // Save original name and remove it from field
+                        input.dataset.name = input.name;
+                        input.removeAttribute('name');
+                    }
+                });
+            });
+        };
+
         document.querySelectorAll('input[name="payment_type"]').forEach(radio => {
             radio.addEventListener('change', () => {
-                Object.values(paymentFields).forEach(section => section.classList.add('hidden'));
                 const selected = radio.value;
+                // Hide all fields
+                Object.values(paymentFields).forEach(section => section.classList.add('hidden'));
+                // Show selected
                 if (paymentFields[selected]) {
                     paymentFields[selected].classList.remove('hidden');
                 }
+                // Update field names
+                updateFieldNames(selected);
             });
         });
     });
+
 </script>
 @endsection

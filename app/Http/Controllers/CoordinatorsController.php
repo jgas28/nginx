@@ -1147,6 +1147,7 @@ class CoordinatorsController extends Controller
             $fleetCardIds = $request->input('fleet_card_id', []);
             $truckIds = $request->input('truck_id');
             $driverIds = $request->input('driver_id');
+            $requestor_id =  $request->input('requestor_id', []);
             $helpers = $request->input('helper', []);
             // $tripTypes = $request->input('trip_type');
 
@@ -1173,6 +1174,7 @@ class CoordinatorsController extends Controller
                     $allocation->driver_id = $driverIds[$index] ?? null;
                     $allocation->helper = $helpers[$index] ?? [];
                     $allocation->created_by = $employeeCode;
+                    $allocation->requestor_id = $requestor_id[$index] ?? null;
                     $allocation->save();
 
                     Log::info('Allocation updated', [

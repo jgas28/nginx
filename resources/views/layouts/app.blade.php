@@ -67,7 +67,7 @@
 
                 <!-- Settings Submenu -->
                 <div x-show="open && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
-                    @if(auth()->user()->role_id != 1)
+                    @if(auth()->user()->role_id = 1)
                         <a href="{{ route('password.change') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Change Password
                         </a>
@@ -102,8 +102,8 @@
                             <a href="{{ route('customers.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Customer</a>
                             <a href="{{ route('trucks.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Trucks</a>
                             <a href="{{ route('trucksTypes.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Truck Type</a>
-                            <a href="{{ route('suppliers.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Suppliers</a>
-                            
+                            <a href="{{ route('suppliers.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Suppliers</a>  
+                            <a href="{{ route('employees.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Employees</a>
                         </div>
                     </div>
 

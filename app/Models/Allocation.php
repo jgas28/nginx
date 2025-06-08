@@ -37,4 +37,9 @@ class Allocation extends Model
     {
         return $this->belongsTo(Truck::class, 'truck_id', 'id');
     }
+
+    public function requestorNames()
+    {
+        return $this->belongsTo(User::class, 'requestor_id', 'id');
+    }
 }
