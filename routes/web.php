@@ -91,7 +91,7 @@ Route::middleware('auth')->group(function () {
     // 🟢 Put this first
     Route::get('/liquidations/{id}/liquidate', [LiquidationController::class, 'liquidate'])
         ->name('liquidations.liquidate');
-    Route::post('/liquidations/{id}/liquidate', [App\Http\Controllers\LiquidationController::class, 'storeSummary'])
+    Route::post('/liquidations/{id}/liquidate', [LiquidationController::class, 'storeSummary'])
     ->name('liquidations.storeSummary');
 
     Route::get('/liquidations/{id}/review', [LiquidationController::class, 'review'])->name('liquidations.review');

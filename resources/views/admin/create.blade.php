@@ -26,7 +26,7 @@
                     <legend class="text-blue-600 font-semibold text-sm px-2">Voucher Type</legend>
                     <div class="flex space-x-4 mt-2">
                         <label class="flex-1 cursor-pointer">
-                            <input type="radio" name="cvr_type" value="Admin" checked class="sr-only peer">
+                            <input type="radio" name="cvr_type" value="admin" checked class="sr-only peer">
                             <div class="w-full text-center px-4 py-2 rounded-lg border border-gray-300
                                         text-gray-700 font-medium
                                         peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600
