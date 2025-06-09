@@ -15,7 +15,7 @@
                 </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-                
+               {{$liquidations}}
             </tbody>
         </table>
     </div>

@@ -522,10 +522,42 @@ class LiquidationController extends Controller
 
     public function liquidationList()
     {
-        $liquidations = Liquidation::all();
+        $liquidations = Liquidation::with([
+            'cashVoucher.deliveryRequest',
+            'cashVoucher.withholdingTax',
+        ])->get();
+
+        // Attach the correct allocations based on cvr_type
+        $liquidations->each(function ($liquidation) {
+            $cashVoucher = $liquidation->cashVoucher;
+            $deliveryRequest = $cashVoucher?->deliveryRequest;
+
+            if ($cashVoucher && $deliveryRequest) {
+                $cvrType = $cashVoucher->cvr_type;
+
+                // Match to correct relationship method like deliveryAllocations, etc.
+                $allocationRelation = match ($cvrType) {
+                    'delivery'     => 'deliveryAllocations',
+                    'pullout'      => 'pulloutAllocations',
+                    'accessorial'  => 'accessorialAllocations',
+                    'freight'      => 'freightAllocations',
+                    'others'       => 'othersAllocations',
+                    default        => null,
+                };
+
+                if ($allocationRelation && method_exists($deliveryRequest, $allocationRelation)) {
+                    $liquidation->allocations = $deliveryRequest->$allocationRelation()->with('truck')->get();
+                } else {
+                    $liquidation->allocations = collect(); // fallback
+                }
+            } else {
+                $liquidation->allocations = collect(); // fallback
+            }
+        });
 
         return view('liquidations.liquidationList', compact('liquidations'));
     }
+
 
     /**
      * Show the form for creating a new resource.
