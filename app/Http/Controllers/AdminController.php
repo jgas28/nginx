@@ -490,7 +490,7 @@ class AdminController extends Controller
             ];
         });
 
-        return view('AdminCV.printMultiple', [
+        return view('adminCV.printMultiple', [
             'allData' => $allData,
             'fullname' => $fullname
         ]);
@@ -523,7 +523,7 @@ class AdminController extends Controller
         // Convert the calculated amount to words
         $amountInWords = $this->convertAmountToWords($finalAmount);
 
-        return view('AdminCV.print', compact('vouchers', 'fullname', 'approvers', 'amountInWords'));
+        return view('adminCV.print', compact('vouchers', 'fullname', 'approvers', 'amountInWords'));
     }
 
     public function cvrList(Request $request)
