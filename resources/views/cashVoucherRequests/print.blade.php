@@ -189,7 +189,7 @@
             <div style="font-size:12px">Date</div>
             <div style="font-size:12px">{{ \Carbon\Carbon::now()->format('F j, Y') }}</div>
         </div>
-        <h1 style="font-size:22px">Cash Voucher Request</h1>
+        <h1 style="font-size:22px">Cash Voucher Request</h1> 
         <div class="series-no">
             <div style="font-size:12px">Series No</div>
             <div style="font-size:12px">{{ preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number ?? 'N/A') }}-{{$allocations->truck->truck_name ?? ''}}-{{$deliveryRequest->company->company_code}}{{$deliveryRequest->expenseType->expense_code}}</div>

@@ -188,6 +188,7 @@
     $deliveryRequest = $data['deliveryRequest'] ?? null;
     $remarks = $data['remarks'] ?? [];
     $cvrApprovals = $data['cvrApprovals'] ?? null;
+    $allocations = $data['allocations'] ?? null;
     @endphp
   <div class="container" data-cvr-id="{{ $cashVoucherRequest->id }}" data-voucher-id="{{ $cvrApprovals->id }}">
     <div class="header">
@@ -198,7 +199,7 @@
       <h1 style="font-size:15px">Cash Voucher Request</h1>
       <div class="series-no">
         <div style="font-size:12px">Series No</div>
-        <div style="font-size:12px">{{ preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number ?? 'N/A') }}-{{$allocations->truck->truck_name ?? ''}}-{{$deliveryRequest->company->company_code}}{{$deliveryRequest->expenseType->expense_code}}</div>
+        <div style="font-size:12px">{{ preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number ?? 'N/A') }}-{{ $allocations->truck->truck_name ?? '' }}-{{$deliveryRequest->company->company_code}}{{$deliveryRequest->expenseType->expense_code}}</div>
       </div>
     </div>
 
