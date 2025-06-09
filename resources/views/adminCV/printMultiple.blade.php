@@ -8,7 +8,7 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 0;
+      margin: 1;
       padding: 0;
       background-color: #f7f7f7;
     }
@@ -34,7 +34,7 @@
     }
 
     .header h1 {
-      font-size: 22px;
+      font-size: 28px;
       font-weight: bold;
       text-decoration: underline;
       text-align: center;
@@ -49,45 +49,79 @@
       font-weight: bold;
     }
 
-    .header .date { left: 0; }
-    .header .series-no { right: 0; }
+    .header .date {
+      left: 0;
+    }
+
+    .header .series-no {
+      right: 0;
+      text-align: right;
+    }
+
+    .header .series-no .value {
+      max-width: 100%;
+    }
+
+    .voucher-details {
+      margin-top: 20px;
+    }
 
     .voucher-details table {
       width: 100%;
       text-align: center;
       border-collapse: collapse;
-      font-size: 12px;
+    }
+
+    .voucher-details table,
+    .voucher-details th,
+    .voucher-details td {
+      border: 1px solid #ccc;
     }
 
     .voucher-details th,
     .voucher-details td {
-      border: 1px solid #ccc;
       padding: 10px;
       text-align: center;
     }
 
+    .voucher-details .field {
+      display: flex;
+      justify-content: space-between;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      padding: 8px;
+      border-radius: 5px;
+    }
+
+    /* New section below the table */
     .no-border-table {
       width: 100%;
       margin-top: 20px;
-      border: none;
       text-align: center;
-      font-size: 10px;
+      border: none;
+    }
+
+    .no-border-table .label {
+      font-size: 12px;
+      border: none;
     }
 
     .no-border-table td {
-      border: none;
       padding: 10px;
+      border: none;
     }
 
+    /* Button styles */
     .no-print {
       text-align: center;
       margin-top: 20px;
     }
 
     .btn {
-      background-color: #4CAF50;
+      background-color: #4caf50;
       color: white;
       padding: 10px 20px;
+      text-align: center;
       border-radius: 5px;
       font-size: 16px;
       cursor: pointer;
@@ -97,27 +131,43 @@
       background-color: #45a049;
     }
 
+    /* Print specific styling */
     @media print {
       @page {
         size: 8.5in 11in;
-        margin: 1in;
+        margin: 0.5in 0.5in; /* tighter margins for fitting two per page */
       }
 
       body {
-        margin: 0;
+        margin: 1;
         padding: 0;
         font-size: 12px;
       }
 
       .container {
-        max-width: 100%;
-        padding: 10px;
+        height: 5.3in; /* half page */
+        margin-bottom: 0.4in; /* spacing between vouchers */
         box-shadow: none;
         border: none;
+        padding: 10px;
+        max-width: 100%;
         page-break-inside: avoid;
-        page-break-after: always;
+        page-break-after: auto;
       }
 
+      .header h1 {
+        font-size: 24px;
+        text-decoration: underline;
+      }
+
+      .voucher-details p,
+      .voucher-details .label,
+      .voucher-details .field .label,
+      .voucher-details .field .value {
+        font-size: 14px;
+      }
+
+      /* Hide print buttons */
       .no-print {
         display: none;
       }
