@@ -50,7 +50,7 @@
 
                     <div>
                         <label for="supplier_id" class="block text-sm font-medium text-gray-700">Supplier</label>
-                        <input type="text" name="supplier_id" id="supplier_id" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->suppliers->supplier_code }}" readonly>
+                        <input type="text" name="supplier_id" id="supplier_id" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->suppliers->supplier_name }}" readonly>
                     </div>
 
                     <div>
