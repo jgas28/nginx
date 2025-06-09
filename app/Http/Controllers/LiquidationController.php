@@ -52,9 +52,9 @@ class LiquidationController extends Controller
             'cvr_id' => 'required|integer',
             'cvr_number' => 'required|string',
             'cvr_approval_id' => 'nullable|integer',
-            'prepared_by' => 'nullable|integer',
+            'prepared_by' => 'required|integer',
             'noted_by' => 'nullable|integer',
-            'validated_by' => 'nullable|integer',
+            'validated_by' => 'required|integer',
             'collected_by' => 'nullable|integer',
             'approved_by' => 'nullable|integer',
         ]);
