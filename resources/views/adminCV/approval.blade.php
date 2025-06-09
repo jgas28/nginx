@@ -36,7 +36,7 @@
                             <a href="{{ route('admin.approvalRequest', $voucher->id) }}" class="btn bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600" title="Confirm Release">
                                 Confirm
                             </a>
-                            <a href="{{ route('admin.editApproval', $voucher->id) }}" class="btn bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600" title="Edit">
+                            <a href="{{ route('admin.edit', $voucher->id) }}" class="btn bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600" title="Edit">
                                 Edit
                             </a>
                         </td>
