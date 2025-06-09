@@ -341,7 +341,7 @@
                     </td>
                     <td>
                         <div class="label" style="font-size: 10px;">_________________________</div>
-                        <div style="font-size: 10px;">{{ $fullname ?? 'N/A' }}</div>
+                        <div style="font-size: 10px;"> {{ $vouchers->suppliers->supplier_name ?? 'N/A' }}</div>
                         <div class="label" style="font-size: 10px;">REQUEST BY:</div>
                     </td>
                 </tr>
