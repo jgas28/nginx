@@ -354,9 +354,7 @@
                         <a href="{{ route('liquidations.approvalList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Approved Liquidation
                         </a>
-                        <a href="{{ route('liquidations.liquidationList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            List
-                        </a>
+                       
                     </div>
                 </div>
             @endif
