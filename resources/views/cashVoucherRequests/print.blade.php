@@ -402,8 +402,8 @@
 </html>
 <script>
 function printAndUpdateStatusSingle(button) {
-    const cvrId = button.getAttribute('data-cvr-id');
-    const voucherId = button.getAttribute('data-voucher-id');
+    const  voucherId= button.getAttribute('data-cvr-id');
+    const  cvrId= button.getAttribute('data-voucher-id');
 
     fetch('/update-print-status', { 
         method: 'POST',

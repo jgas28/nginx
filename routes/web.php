@@ -104,6 +104,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/liquidations/approval-list', [LiquidationController::class, 'approvalList'])->name('liquidations.approvalList');
     Route::post('/liquidations/{id}/approved', [LiquidationController::class, 'approvedLiquidation'])->name('liquidations.approved');
 
+    Route::get('/liquidations/liquidationList', [LiquidationController::class, 'liquidationList'])
+    ->name('liquidations.liquidationList');
+
     Route::post('/running-balance/reimburse', [RunningBalanceController::class, 'storeReimbursement'])->name('running-balance.reimburse');
     Route::post('/running-balance/collected', [RunningBalanceController::class, 'storeCollected'])->name('running-balance.collected');
 

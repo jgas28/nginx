@@ -864,8 +864,8 @@ class CashVoucherController extends Controller
         $voucherIds = $request->input('voucher_ids', []);
  
         // update as needed
-        cvr_approval::whereIn('id', $cvrIds)->update(['print_status' => '1']);
-        CashVoucher::whereIn('id', $voucherIds)->update(['print_status' => '1']);
+        CashVoucher::whereIn('id', $cvrIds)->update(['print_status' => '1']);
+        cvr_approval::whereIn('id', $voucherIds)->update(['print_status' => '1']);
 
         return response()->json(['message' => 'Print status updated']);
     }

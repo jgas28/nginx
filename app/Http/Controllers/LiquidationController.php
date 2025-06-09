@@ -520,6 +520,13 @@ class LiquidationController extends Controller
         return redirect()->route('liquidations.approvalList')->with('success', 'Liquidation validated successfully.');
     }
 
+    public function liquidationList()
+    {
+        $liquidations = Liquidation::all();
+
+        return view('liquidations.liquidationList', compact('liquidations'));
+    }
+
     /**
      * Show the form for creating a new resource.
      */
