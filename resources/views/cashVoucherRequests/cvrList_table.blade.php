@@ -6,7 +6,7 @@
             <button type="submit" id="print-selected" class="hidden bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
                 Print Selected CVRs
             </button>
-        </div>
+        </div> 
 
         <!-- Data Table -->
         <table class="table-auto w-full text-sm text-left text-gray-700 border border-gray-200 rounded">
@@ -51,7 +51,11 @@
 
                             {{ preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number) }}-{{ $truckId }}-{{ $companyId }}{{ $expenseTypeId }}
                         </td>
-                        <td class="py-2 px-4 border-b">{{ $cashVoucherRequest->amount }}</td>
+                        <td class="py-2 px-4 border-b">
+                            @foreach($cashVoucherRequest->cvrApprovals as $approval)
+                                {{ $approval->amount }}<br>
+                            @endforeach
+                        </td>
                         <td class="py-2 px-4 border-b space-x-2">
                             <a href="{{ route('cashVoucherRequests.print', ['id' => $cashVoucherRequest->id, 'cvr_number' => $cashVoucherRequest->dr_id, 'mtm' => $cashVoucherRequest->cvr_type]) }}"
                             class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"

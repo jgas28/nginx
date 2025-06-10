@@ -39,7 +39,7 @@ class CashVoucher extends Model
 
     public function cvrApprovals()
     {
-        return $this->hasMany(cvr_approval::class, 'cvr_number'); // This assumes 'cvr_number' is the foreign key in the cvr_approvals table
+        return $this->hasMany(cvr_approval::class, 'cvr_id'); // This assumes 'cvr_number' is the foreign key in the cvr_approvals table
     }
 
     public function liquidations()

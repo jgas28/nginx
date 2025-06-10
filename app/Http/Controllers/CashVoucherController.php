@@ -623,7 +623,8 @@ class CashVoucherController extends Controller
             'deliveryRequest.accessorialAllocations',
             'deliveryRequest.othersAllocations',
             'deliveryRequest.freightAllocations',
-            'cvrTypes' 
+            'cvrTypes',
+            'cvrApprovals'  
         ])
         ->when($search, function ($query, $search) {
             return $query->whereHas('deliveryRequest', function ($q) use ($search) {
@@ -635,7 +636,6 @@ class CashVoucherController extends Controller
         ->orderBy('print_status', 'asc')
         ->orderBy('cvr_number')
         ->paginate(10);
-
     
         // Check if the request expects an AJAX response
         if ($request->ajax()) {
