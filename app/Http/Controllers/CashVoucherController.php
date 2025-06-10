@@ -1109,7 +1109,7 @@ class CashVoucherController extends Controller
             $user = Auth::user();
             $employeeCode = $user->id;
             $cashVouchers = CashVoucher::where('status', 3)
-            ->where('cvr_type', 'basic')
+            ->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial', 'freight', 'others'])
             ->where('created_by', $employeeCode)
             ->get();
             return view('cashVoucherRequests.rejectView', compact('cashVouchers'));

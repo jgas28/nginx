@@ -21,7 +21,7 @@ class LiquidationController extends Controller
        $data = cvr_approval::with('cashVoucher')
         ->where('status', '1')
         ->whereHas('cashVoucher', function ($query) {
-            $query->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial'])
+            $query->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial', 'freight', 'others'])
                 ->where('status', '2');
         })
         ->get();
@@ -31,13 +31,14 @@ class LiquidationController extends Controller
 
     public function indexAdmin()
     {
-        $data = cvr_approval::with('cashVoucher.deliveryRequest.allocations.truck.company')
+         $data = cvr_approval::with('cashVoucher')
         ->where('status', '1')
         ->whereHas('cashVoucher', function ($query) {
-            $query->where('cvr_type', '!=', 'basic')
+            $query->whereIn('cvr_type', ['admin', 'rpm'])
                 ->where('status', '2');
         })
         ->get();
+
 
         return view('liquidations.indexAdmin', compact('data'));
     }
@@ -522,36 +523,42 @@ class LiquidationController extends Controller
 
     public function liquidationList()
     {
-        $liquidations = Liquidation::with([
-            'cashVoucher.deliveryRequest',
-            'cashVoucher.withholdingTax',
-        ])->get();
+        // Fetch ALL liquidations with their immediate cashVoucher
+        $liquidations = Liquidation::with('cashVoucher')->get();
 
-        // Attach the correct allocations based on cvr_type
+        // Loop and load related models as needed
         $liquidations->each(function ($liquidation) {
             $cashVoucher = $liquidation->cashVoucher;
-            $deliveryRequest = $cashVoucher?->deliveryRequest;
 
-            if ($cashVoucher && $deliveryRequest) {
-                $cvrType = $cashVoucher->cvr_type;
+            if ($cashVoucher) {
+                // Load nested relationships conditionally
+                $cashVoucher->load([
+                    'deliveryRequest.company',
+                    'deliveryRequest.expenseType',
+                    'withholdingTax',
+                ]);
 
-                // Match to correct relationship method like deliveryAllocations, etc.
-                $allocationRelation = match ($cvrType) {
+                $deliveryRequest = $cashVoucher->deliveryRequest;
+
+                // Determine and load the correct allocation relation
+                $allocationRelation = match ($cashVoucher->cvr_type) {
                     'delivery'     => 'deliveryAllocations',
                     'pullout'      => 'pulloutAllocations',
                     'accessorial'  => 'accessorialAllocations',
                     'freight'      => 'freightAllocations',
                     'others'       => 'othersAllocations',
+                    'admin'        => 'othersAllocations',
+                    'rpm'          => 'othersAllocations',
                     default        => null,
                 };
 
-                if ($allocationRelation && method_exists($deliveryRequest, $allocationRelation)) {
+                if ($deliveryRequest && $allocationRelation && method_exists($deliveryRequest, $allocationRelation)) {
                     $liquidation->allocations = $deliveryRequest->$allocationRelation()->with('truck')->get();
                 } else {
-                    $liquidation->allocations = collect(); // fallback
+                    $liquidation->allocations = collect(); // empty fallback
                 }
             } else {
-                $liquidation->allocations = collect(); // fallback
+                $liquidation->allocations = collect(); // fallback for missing cash voucher
             }
         });
 

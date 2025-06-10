@@ -177,7 +177,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/adminCV/print-multiple', [AdminController::class, 'printMultiple'])->name('adminCV.printMultiple');
     Route::get('/adminCV/{id}/{cvr_number}/print', [AdminController::class, 'printCVR'])->name('adminCV.print');
     Route::get('/admin-cvr-list', [AdminController::class, 'cvrList'])->name('adminCV.cvrList');
-
+    Route::post('/adminCV/reject', [AdminController::class, 'reject'])->name('adminCV.reject');
+    Route::get('/adminCV/rejectView', [AdminController::class, 'rejectView'])->name('adminCV.rejectView');
+        Route::get('/adminCV/{id}/edit-cvr', [AdminController::class, 'editCVR'])
+        ->name('adminCV.editCVR');
+    Route::put('/adminCV/updateCVR/{id}', [AdminController::class, 'updateCVR'])->name('adminCV.updateCVR');
     // Edit Approval View
     Route::get('/admin/approval/edit/{id}', [AdminController::class, 'editApproval'])->name('admin.editApproval');
 

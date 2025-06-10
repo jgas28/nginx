@@ -312,6 +312,9 @@
                         <a href="{{ route('cashVoucherRequests.rejectView') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Reject - DR
                         </a>
+                        <a href="{{ route('adminCV.rejectView') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            Reject - Admin
+                        </a>
                         <a href="{{ route('admin.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Admin/RPM Request
                         </a>
@@ -343,7 +346,10 @@
 
                     <div x-show="openCoordinator && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
                         <a href="{{ route('liquidations.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            Liquidate
+                            Liquidate - DR
+                        </a>
+                        <a href="{{ route('liquidations.indexAdmin') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            Liquidate - Admin
                         </a>
                         <a href="{{ route('liquidations.reviewList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Validate Liquidation
@@ -355,13 +361,16 @@
                             Approved Liquidation
                         </a>
                         <a href="{{ route('liquidations.liquidationList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            List
+                            List -DR
+                        </a>
+                        <a href="{{ route('liquidations.liquidationList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            List -Admin
                         </a>
                     </div>
                 </div>
             @endif
 
-            @if(auth()->user()->role_id == 1 || auth()->user()->role_id == 4)
+            <!-- @if(auth()->user()->role_id == 1 || auth()->user()->role_id == 4)
                 <div x-data="{ openCoordinator: false }">
                     <button 
                         @click="openCoordinator = !openCoordinator" 
@@ -382,9 +391,7 @@
                     </button>
 
                     <div x-show="openCoordinator && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
-                        <a href="{{ route('liquidations.indexAdmin') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            Liquidate
-                        </a>
+                        
                         <a href="{{ route('liquidations.reviewList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Validate Liquidation
                         </a>
@@ -396,7 +403,7 @@
                         </a>
                     </div>
                 </div>
-            @endif
+            @endif -->
         </nav>
 
         <!-- Logout -->

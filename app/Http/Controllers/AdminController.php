@@ -406,17 +406,114 @@ class AdminController extends Controller
         }
     }
 
+    public function reject(Request $request)
+    {
+        $request->validate([
+            'cvr_id' => 'required|integer',
+            'reject_remarks' => 'nullable|string',
+        ]);
+
+        $cashVoucher = CashVoucher::find($request->cvr_id);
+
+        if ($cashVoucher) {
+            $cashVoucher->status = 3;
+
+            // Decode existing remarks and append new one
+            $existingRemarks = json_decode($cashVoucher->reject_remarks, true) ?? [];
+            $existingRemarks[] = $request->reject_remarks;
+
+            $cashVoucher->reject_remarks = json_encode($existingRemarks);
+            $cashVoucher->save();
+
+             return redirect()->route('adminCV.approval')->with('success', 'Cash Voucher Approval Rejected Successfully');
+        }
+
+        return redirect()->back()->with('error', 'Cash Voucher not found.');
+    }
+
     public function rejectView()
     {
         $user = Auth::user();
         $employeeCode = $user->id;
         $cashVouchers = CashVoucher::where('status', 3)
-            ->where('cvr_type', 'basic')
+            ->whereIn('cvr_type', ['admin','rpm'])
             ->where('created_by', $employeeCode)
             ->get();
 
         return view('adminCV.rejectView', compact('cashVouchers'));
     }
+
+    public function editCVR($id)
+    {
+        $cashVoucher = CashVoucher::findOrFail($id);
+
+        // Decode safely if not already an array
+        $cashVoucher->description = json_decode($cashVoucher->description, true) ?? [];
+        $cashVoucher->amount_details = json_decode($cashVoucher->amount_details, true) ?? [];
+        $cashVoucher->remarks = json_decode($cashVoucher->remarks, true) ?? [];
+
+        // Other required data
+        $employees     = User::all();
+        $approves      = Approver::all();
+        $taxes         = WithholdingTax::all();
+        $companies     = Company::all();
+        $expenseTypes  = Expense_Type::all();
+        $suppliers     = Supplier::all();
+        $trucks        = Truck::all();
+
+        return view('adminCV.editCVR', compact(
+            'cashVoucher',
+            'employees',
+            'approves',
+            'taxes',
+            'companies',
+            'suppliers',
+            'expenseTypes',
+            'trucks'
+        ));
+    }
+
+    
+    public function updateCVR(Request $request, $id)
+    {
+        $request->validate([
+            'cvr_type' => 'required|string|in:admin,RPM',
+            'company_id' => 'required|exists:companies,id',
+            'supplier_id' => 'required|exists:suppliers,id',
+            'expense_type_id' => 'required|exists:expense_types,id',
+            'cvr_number' => 'required|string',
+            'description' => 'required|array',
+            'description.*' => 'required|string',
+            'amount_details' => 'required|array',
+            'amount_details.*' => 'required|numeric|min:0',
+            'remarks' => 'nullable|array',
+            'remarks.*' => 'nullable|string',
+        ]);
+
+        $cashVoucher = CashVoucher::findOrFail($id);
+
+        $cashVoucher->cvr_type = $request->cvr_type;
+        $cashVoucher->company_id = $request->company_id;
+        $cashVoucher->supplier_id = $request->supplier_id;
+        $cashVoucher->expense_type_id = $request->expense_type_id;
+        // cvr_number is usually readonly, but just in case
+        $cashVoucher->cvr_number = $request->cvr_number;
+
+        // Store description and amount_details as JSON strings
+        $cashVoucher->description = $request->description;
+        $cashVoucher->amount_details = $request->amount_details;
+
+        // Store remarks as JSON string
+        // Filter out empty remarks (optional)
+        $remarks = array_filter($request->remarks ?? [], fn($r) => trim($r) !== '');
+        $cashVoucher->remarks = array_values($remarks);
+        $cashVoucher->status = 1;
+        $cashVoucher->save();
+
+        return redirect()->route('adminCV.rejectView', $cashVoucher->id)
+                        ->with('success', 'Cash Voucher Request updated successfully.');
+    }
+
 
     public function printPreview($id)
     {

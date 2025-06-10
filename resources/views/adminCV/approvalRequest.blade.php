@@ -245,7 +245,7 @@
 <div id="rejectModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
     <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
         <h2 class="text-xl font-semibold mb-4">Reject Cash Voucher</h2>
-        <form method="POST" action="">
+        <form method="POST" action="{{ route('adminCV.reject') }}">
             @csrf
             <input type="hidden" name="cvr_number" value="{{ $cashVouchers->cvr_number }}" />
             <div class="mb-4">
