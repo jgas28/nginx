@@ -15,7 +15,7 @@
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
-            
+             
             <tbody class="bg-white divide-y divide-gray-200">
                 @foreach ($data as $approval)
                     @php

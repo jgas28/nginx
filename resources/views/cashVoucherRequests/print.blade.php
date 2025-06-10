@@ -228,13 +228,14 @@
                 @else
                     <tr>
                        <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
-                            @foreach($deliveryLineItems as $item)
-                                {{ $requestTypes->request_type }} - {{ $item->site_name }}<br>
+                        
+                       @foreach($deliveryLineItems as $item)
+                                {{ $cashVoucherRequest->cvrTypes->request_type }} - {{ $item->site_name }}<br>
                                 {{ $item->delivery_address }}<br>
                                 {{ $item->mtm }} - {{ $item->delivery_number }}<br><br>
                             @endforeach
                         </td>   
-                        <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 150px; vertical-align: top;">₱ {{ $cashVoucherRequest->amount }}</td>
+                        <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 150px; vertical-align: top;">₱ {{ $cvrApprovals->amount }}</td>
                     </tr>
                 @endif
 
@@ -338,11 +339,11 @@
                             <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
                                 <tr>
                                     <td style="text-align: left; padding: 4px;">Subtotal</td>
-                                    <td style="text-align: right; padding: 4px;">₱ {{ number_format($cashVoucherRequest->amount, 2) }}</td>
+                                    <td style="text-align: right; padding: 4px;">₱ {{ number_format($cvrApprovals->amount, 2) }}</td>
                                 </tr>
                                 <tr>
                                     <td style="text-align: left; padding: 4px;">Net Amount</td>
-                                    <td style="text-align: right; padding: 4px;">₱ {{ number_format($cashVoucherRequest->amount, 2) }}</td>
+                                    <td style="text-align: right; padding: 4px;">₱ {{ number_format($cvrApprovals->amount, 2) }}</td>
                                 </tr>
                                 <tr>
                                     <td style="text-align: left; padding: 4px;">VAT (12%)</td>
@@ -354,7 +355,7 @@
                                 </tr>
                                 <tr>
                                     <td style="text-align: left; font-weight: bold; padding: 4px; color: red;">Total</td>
-                                    <td style="text-align: right; font-weight: bold; color: red; padding: 4px;">₱ {{ number_format($cashVoucherRequest->amount, 2) }}</td>
+                                    <td style="text-align: right; font-weight: bold; color: red; padding: 4px;">₱ {{ number_format($cvrApprovals->amount, 2) }}</td>
                                 </tr>
                             </table>
                         </td>

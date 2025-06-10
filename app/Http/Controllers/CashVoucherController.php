@@ -738,7 +738,7 @@ class CashVoucherController extends Controller
                 $taxDeduction = $baseAmount * $taxPercentage;
                 $finalAmount = $baseAmount + $vatAmount - $taxDeduction;
             } elseif ($cashVoucherRequest->voucher_type === 'regular') {
-                $baseAmount = $cashVoucherRequest->amount ?? 0;
+                $baseAmount = $cvrApprovals->amount ?? 0;
                 $vatAmount = 0;
                 $taxDeduction = 0;
                 $finalAmount = $baseAmount;
@@ -837,10 +837,10 @@ class CashVoucherController extends Controller
                 $taxDeduction = $baseAmount * $taxPercentage;
                 $finalAmount = $baseAmount + $vatAmount - $taxDeduction;
             } elseif ($cashVoucherRequest->voucher_type === 'regular') {
-                $baseAmount = $cashVoucherRequest->amount ?? 0;
+                $baseAmount = $cvrApprovals->amount ?? 0;
                 $vatAmount = 0;
                 $taxDeduction = 0;
-                $finalAmount = $cashVoucherRequest->amount ?? 0;
+                $finalAmount = $cvrApprovals->amount ?? 0;
             } else {
                 $baseAmount = 0;
                 $vatAmount = 0;
