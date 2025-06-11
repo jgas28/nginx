@@ -52,18 +52,22 @@
 
         <!-- People Involved -->
         <div class="space-y-4">
-            @foreach (['prepared_by' => 'Prepared By', 'noted_by' => 'Noted By'] as $field => $label)
+            @foreach ([
+                'prepared_by' => ['label' => 'Prepared By', 'list' => $preparers],
+                'noted_by' => ['label' => 'Noted By', 'list' => $employees]
+            ] as $field => $config)
                 <div>
-                    <label class="block font-medium text-gray-700 mb-1">{{ $label }}</label>
+                    <label class="block font-medium text-gray-700 mb-1">{{ $config['label'] }}</label>
                     <select name="{{ $field }}" class="w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="">Select {{ $label }}</option>
-                        @foreach ($preparers as $preparer)
-                            <option value="{{ $preparer->id }}">{{ $preparer->fname }} {{ $preparer->lname }}</option>
+                        <option value="">Select {{ $config['label'] }}</option>
+                        @foreach ($config['list'] as $person)
+                            <option value="{{ $person->id }}">{{ $person->fname }} {{ $person->lname }}</option>
                         @endforeach
                     </select>
                 </div>
             @endforeach
         </div>
+
 
         <!-- Submit -->
         <div class="text-right">
