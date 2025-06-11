@@ -190,6 +190,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/cashvoucher/print-preview/{id}', [AdminController::class, 'printPreview'])->name('adminCV.printPreview');
     Route::post('/admin-update', [AdminController::class, 'StoreApprovalRequest'])->name('admin.storeRequest');
 
+    Route::get('/reimbursements/print/{id}', [RunningBalanceController::class, 'print'])->name('reimbursements.print');
+    Route::get('/refund/print/{id}', [RunningBalanceController::class, 'printRefund'])->name('refunds.print');
+
+    Route::post('/liquidations/{id}/approvedEdit', [LiquidationController::class, 'approvedLiqUpdate'])->name('liquidations.approvedEdit');
 
 });
 

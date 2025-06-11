@@ -138,13 +138,44 @@ class RunningBalanceController extends Controller
             'created_by' => 'required|exists:users,id',
             'cvr_number' => 'required|string',
         ]);
-        
+
         $validated['type'] = 3;
         $validated['amount'] = -abs($validated['amount']);
 
-        RunningBalance::create($validated);
+        // Check for duplicate based on a unique combination
+        $existing = RunningBalance::where([
+            'employee_id' => $validated['employee_id'],
+            'amount' => $validated['amount'],
+            'description' => $validated['description'],
+            'approver_id' => $validated['approver_id'],
+            'created_by' => $validated['created_by'],
+            'cvr_number' => $validated['cvr_number'],
+            'type' => 3,
+        ])->first();
 
-        return redirect()->back()->with('success', 'Reimbursement recorded successfully.');
+        if ($existing) {
+            return redirect()->route('reimbursements.print', $existing->id)
+                ->with('info', 'Reimbursement already submitted.');
+        }
+
+        $reimbursement = RunningBalance::create($validated);
+
+        return redirect()->route('reimbursements.print', $reimbursement->id);
+    }
+
+
+    public function print($id)
+    {
+        $reimbursement = RunningBalance::with(['employee', 'approver'])->findOrFail($id);
+
+        return view('reimbursements.print', compact('reimbursement'));
+    }
+
+    public function printRefund($id)
+    {
+        $reimbursement = RunningBalance::with(['employee', 'approver'])->findOrFail($id);
+
+        return view('refunds.print', compact('reimbursement'));
     }
 
     public function storeCollected(Request $request)
@@ -161,7 +192,7 @@ class RunningBalanceController extends Controller
         ]);
 
         // 1. Returned Cash Record
-        RunningBalance::create([
+        $reimbursement=RunningBalance::create([
             'employee_id' => $validated['employee_id'],
             'amount' => abs($validated['amount_collected']), // positive value
             'description' => $validated['description'],
@@ -182,8 +213,6 @@ class RunningBalanceController extends Controller
             'type' => 4,
         ]);
 
-        return redirect()->back()->with('success', 'Returned and uncollected cash recorded successfully.');
+         return redirect()->route('refunds.print', $reimbursement->id);
     }
-
-
 }

@@ -100,7 +100,7 @@ class LiquidationController extends Controller
     public function liquidate($id)
     {
         $liquidation = cvr_approval::with('cashVoucher')->findOrFail($id);
-        $employees = User::all();
+        $employees = User::whereIn('id', [1, 41])->get();
         
         return view('liquidations.liquidate', compact('liquidation', 'employees'));
     }
@@ -117,7 +117,7 @@ class LiquidationController extends Controller
     public function review($id)
     {
         $liquidation = Liquidation::with('cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy')->findOrFail($id);
-        $employees = User::all();
+        $employees = User::whereIn('id', [1, 41])->get();
         $approvers = Approver::all();
 
         // Total Liquidated Cash (Only cash items)
@@ -175,7 +175,7 @@ class LiquidationController extends Controller
             $return = true;
             $nextStatus = 3; // needs collection
         }
-
+ 
         return view('liquidations.review', compact(
             'liquidation',
             'employees',
@@ -256,7 +256,7 @@ class LiquidationController extends Controller
     public function validate(Request $request, $id)
     {
         $liquidation = Liquidation::with('cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy')->findOrFail($id);
-        $employees = User::all();
+        $employees = User::whereIn('id', [1, 41])->get();
         $approvers = Approver::all();
 
         // Total Liquidated Cash (Only cash items)
@@ -371,32 +371,40 @@ class LiquidationController extends Controller
 
         $totalCash += floatval($liquidation->cash_charge ?? 0);
 
-        foreach ($liquidation->gasoline ?? [] as $item) {
+        // Decode and iterate over gasoline, if it's a string (JSON-encoded)
+        $gasoline = is_array($liquidation->gasoline) ? $liquidation->gasoline : json_decode($liquidation->gasoline, true) ?? [];
+        foreach ($gasoline as $item) {
             if (($item['type'] ?? '') === 'cash') {
                 $totalCash += floatval($item['amount'] ?? 0);
             }
         }
 
-        foreach ($liquidation->rfid ?? [] as $item) {
+        // Decode and iterate over RFID
+        $rfid = is_array($liquidation->rfid) ? $liquidation->rfid : json_decode($liquidation->rfid, true) ?? [];
+        foreach ($rfid as $item) {
             if (($item['type'] ?? '') === 'cash') {
                 $totalCash += floatval($item['amount'] ?? 0);
             }
         }
 
-        foreach ($liquidation->others ?? [] as $item) {
+        // Decode and iterate over others
+        $others = is_array($liquidation->others) ? $liquidation->others : json_decode($liquidation->others, true) ?? [];
+        foreach ($others as $item) {
             $totalCash += floatval($item['amount'] ?? 0);
         }
 
         // Total Card Expenses (non-cash)
         $totalCard = 0;
 
-        foreach ($liquidation->gasoline ?? [] as $item) {
+        // Decode and iterate over gasoline for card type
+        foreach ($gasoline as $item) {
             if (($item['type'] ?? '') === 'card') {
                 $totalCard += floatval($item['amount'] ?? 0);
             }
         }
 
-        foreach ($liquidation->rfid ?? [] as $item) {
+        // Decode and iterate over RFID for card type
+        foreach ($rfid as $item) {
             if (($item['type'] ?? '') === 'card') {
                 $totalCard += floatval($item['amount'] ?? 0);
             }
@@ -452,6 +460,7 @@ class LiquidationController extends Controller
             'runningUncollected'
         ));
     }
+
 
     public function approvedLiquidation(Request $request, $id)
     {
@@ -612,5 +621,49 @@ class LiquidationController extends Controller
     public function destroy(Liquidation $liquidation)
     {
         //
+    }
+
+     public function approvedLiqUpdate(Request $request, $id)
+    {
+        // Find the liquidation by ID
+        $liquidation = Liquidation::findOrFail($id);
+
+        // Validate the request data (e.g., approved_by and expenses)
+        $request->validate([
+            'allowance' => 'nullable|numeric',
+            'manpower' => 'nullable|numeric',
+            'hauling' => 'nullable|numeric',
+            'right_of_way' => 'nullable|numeric',
+            'roro_expense' => 'nullable|numeric',
+            'cash_charge' => 'nullable|numeric',
+            'gasoline' => 'nullable|array',
+            'gasoline.*.type' => 'nullable|string',
+            'gasoline.*.amount' => 'nullable|numeric',
+            'rfid' => 'nullable|array',
+            'rfid.*.tag' => 'nullable|string',
+            'rfid.*.type' => 'nullable|string',
+            'rfid.*.amount' => 'nullable|numeric',
+            'others' => 'nullable|array',
+            'others.*.description' => 'nullable|string',
+            'others.*.amount' => 'nullable|numeric',
+        ]);
+
+        // Update fields with the form data
+        $liquidation->update([
+            'approved_by' => $request->approved_by,
+            'allowance' => $request->allowance ?? 0,
+            'manpower' => $request->manpower ?? 0,
+            'hauling' => $request->hauling ?? 0,
+            'right_of_way' => $request->right_of_way ?? 0,
+            'roro_expense' => $request->roro_expense ?? 0,
+            'cash_charge' => $request->cash_charge ?? 0,
+            'gasoline' => $request->gasoline ?? [], // Encode array as JSON
+            'rfid' => $request->rfid ?? [], // Encode array as JSON
+            'others' => $request->others ?? [], // Encode array as JSON
+        ]);
+
+        // Redirect with success message
+        return redirect()->route('liquidations.approvalList') // Or wherever you want to redirect
+            ->with('success', 'Liquidation updated and approved successfully!');
     }
 }

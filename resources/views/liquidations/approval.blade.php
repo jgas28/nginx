@@ -24,80 +24,91 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {{-- Expenses --}}
-        <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
-            <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2">Expenses</h3>
-            <ul class="space-y-2">
-                @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
-                    <li class="flex justify-between">
-                        <span class="capitalize">{{ str_replace('_', ' ', $field) }}</span>
-                        <span class="font-semibold">₱{{ number_format($liquidation->$field ?? 0, 2) }}</span>
-                    </li>
+    <form action="{{ route('liquidations.approvedEdit', $liquidation->id) }}" method="POST">
+    @csrf
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
+                <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2">Expenses</h3>
+                @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense', 'cash_charge'] as $field)
+                    <div class="mb-3">
+                        <label class="block font-medium capitalize">{{ str_replace('_', ' ', $field) }}</label>
+                        <input type="number" step="0.01" name="{{ $field }}" value="{{ old($field, $liquidation->$field) }}" class="w-full px-3 py-2 border rounded" />
+                    </div>
                 @endforeach
-                <li class="flex justify-between">
-                    <span>Cash Charge</span>
-                    <span class="font-semibold text-indigo-600">₱{{ number_format($liquidation->cash_charge ?? 0, 2) }}</span>
-                </li>
-            </ul>
-        </div>
+            </div>
 
-        {{-- Gasoline --}}
-        <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
-            <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2">Gasoline</h3>
-            <ul class="space-y-2">
-                @forelse ($liquidation->gasoline ?? [] as $item)
-                    <li class="flex justify-between">
-                        <span>{{ ucfirst($item['type'] ?? '') }}</span>
-                        <span class="font-semibold">₱{{ number_format($item['amount'] ?? 0, 2) }}</span>
-                    </li>
-                @empty
-                    <li class="text-gray-400 italic">No gasoline entries.</li>
-                @endforelse
-            </ul>
-        </div>
-
-        {{-- RFID --}}
-        <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
-            <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2">RFID</h3>
-            <ul class="space-y-2">
-                @forelse ($liquidation->rfid ?? [] as $item)
-                    <li class="flex justify-between">
-                        <span>{{ ucfirst($item['tag'] ?? '') }} ({{ ucfirst($item['type'] ?? '') }})</span>
-                        <span class="font-semibold">₱{{ number_format($item['amount'] ?? 0, 2) }}</span>
-                    </li>
-                @empty
-                    <li class="text-gray-400 italic">No RFID entries.</li>
-                @endforelse
-            </ul>
-        </div>
-
-        {{-- Others --}}
-        <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
-            <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2">Others</h3>
-            <ul class="space-y-2">
-                @php
-                    $hasOthers = false;
-                @endphp
-
-                @forelse ($liquidation->others ?? [] as $item)
-                    @if (!empty($item['description']) || (isset($item['amount']) && floatval($item['amount']) > 0))
-                        @php $hasOthers = true; @endphp
-                        <li class="flex justify-between">
-                            <span>{{ $item['description'] ?? '' }}</span>
-                            <span class="font-semibold">₱{{ number_format($item['amount'] ?? 0, 2) }}</span>
-                        </li>
+            {{-- Gasoline --}}
+            <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
+                <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2 flex justify-between items-center">
+                    Gasoline
+                    <button type="button" onclick="addGasolineField()" class="bg-indigo-600 text-white text-sm px-3 py-1 rounded hover:bg-indigo-700">+ Add Gasoline</button>
+                </h3>
+                <div id="gasolineList">
+                   @if(is_array($liquidation->gasoline))
+                        @forelse ($liquidation->gasoline as $index => $item)
+                            <div class="flex gap-2 mb-2">
+                                <input type="text" name="gasoline[{{ $index }}][type]" value="{{ $item['type'] ?? '' }}" placeholder="Type" class="w-1/2 px-2 py-1 border rounded" />
+                                <input type="number" step="0.01" name="gasoline[{{ $index }}][amount]" value="{{ $item['amount'] ?? 0 }}" placeholder="Amount" class="w-1/2 px-2 py-1 border rounded" />
+                            </div>
+                        @empty
+                            <p class="text-sm text-gray-400">No gasoline entries.</p>
+                        @endforelse
+                    @else
+                        <p class="text-sm text-gray-400">Gasoline data is not available.</p>
                     @endif
-                @empty
-                    <li class="text-gray-400 italic">No other entries.</li>
-                @endforelse
+                </div>
+            </div>
 
-                @if (!$hasOthers)
-                    <li class="text-gray-400 italic">No other entries.</li>
-                @endif
-            </ul>
+            {{-- RFID --}}
+            <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
+                <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2 flex justify-between items-center">
+                    RFID
+                    <button type="button" onclick="addRFIDField()" class="bg-indigo-600 text-white text-sm px-3 py-1 rounded hover:bg-indigo-700">+ Add RFID</button>
+                </h3>
+                <div id="rfidList">
+                    @if(is_array($liquidation->rfid))
+                        @forelse ($liquidation->rfid as $index => $item)
+                            <div class="flex gap-2 mb-2">
+                            <input type="text" name="rfid[{{ $index }}][tag]" value="{{ $item['tag'] ?? '' }}" placeholder="Tag" class="w-1/2 px-2 py-1 border rounded" />
+                            <input type="text" name="rfid[{{ $index }}][type]" value="{{ $item['type'] ?? '' }}" placeholder="Type" class="w-1/4 px-2 py-1 border rounded" />
+                            <input type="number" step="0.01" name="rfid[{{ $index }}][amount]" value="{{ $item['amount'] ?? 0 }}" placeholder="Amount" class="w-1/4 px-2 py-1 border rounded" />
+                        </div>
+                        @empty
+                            <p class="text-sm text-gray-400">No gasoline entries.</p>
+                        @endforelse
+                    @else
+                        <p class="text-sm text-gray-400">No RFID entries.</p>
+                    @endif
+                </div>
+            </div>
+
+            {{-- Others --}}
+            <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
+                <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2 flex justify-between items-center">
+                    Others
+                    <button type="button" onclick="addOther()" class="bg-indigo-600 text-white text-sm px-3 py-1 rounded hover:bg-indigo-700">+ Add Other</button>
+                </h3>
+                <div id="othersList">
+                    @forelse ($liquidation->others ?? [] as $index => $item)
+                        @if (!is_null($item['description']) && !is_null($item['amount']))
+                            <div class="flex gap-2 mb-2">
+                                <input type="text" name="others[{{ $index }}][description]" value="{{ $item['description'] ?? '' }}" placeholder="Description" class="w-2/3 px-2 py-1 border rounded" />
+                                <input type="number" step="0.01" name="others[{{ $index }}][amount]" value="{{ $item['amount'] ?? 0 }}" placeholder="Amount" class="w-1/3 px-2 py-1 border rounded" />
+                            </div>
+                        @endif
+                    @empty
+                        <p class="text-sm text-gray-400">No other entries.</p>
+                    @endforelse
+                </div>
+            </div>
         </div>
-    </div>
+
+        <div class="mt-6">
+            <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">
+                Save Changes
+            </button>
+        </div>
+    </form>
 
     {{-- Liquidation Summary Totals --}}
     <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 font-medium text-lg">
@@ -112,22 +123,6 @@
             <p class="text-gray-800">Total Expense</p>
             <p class="text-green-700 text-right text-xl font-bold">₱{{ number_format($totalCash, 2) }}</p>
         </div>
-
-        <!-- {{-- Refund Cash --}}
-        <div class="p-4 rounded-lg shadow-inner 
-            {{ $difference > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-50 text-gray-700' }} 
-            font-semibold text-lg flex justify-between items-center">
-            <span>Refund Cash</span>
-            <span>₱{{ number_format($difference > 0 ? $difference : 0, 2) }}</span>
-        </div>
-
-        {{-- Returned Cash --}}
-        <div class="p-4 rounded-lg shadow-inner 
-            {{ $difference < 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-50 text-gray-700' }} 
-            font-semibold text-lg flex justify-between items-center">
-            <span>Returned Cash</span>
-            <span>₱{{ number_format($difference < 0 ? abs($difference) : 0, 2) }}</span>
-        </div> -->
 
         {{-- Start Here --}}
         @php
@@ -236,6 +231,58 @@
 </div>
 <!-- Modal JavaScript -->
 <script>
+    let gasolineIndex = 0;
+    let rfidIndex = 0;
+
+    function addGasolineField() {
+        const wrapper = document.getElementById('gasolineList'); // <-- corrected ID
+        wrapper.insertAdjacentHTML('beforeend', `
+            <div class="flex gap-2 items-center" data-index="${gasolineIndex}">
+                <select name="gasoline[${gasolineIndex}][type]" class="w-32 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">Type</option>
+                    <option value="cash">Cash</option>
+                    <option value="card">Card</option>
+                </select>
+                <input type="number" step="0.01" name="gasoline[${gasolineIndex}][amount]" placeholder="Amount" class="w-40 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
+            </div>
+        `);
+        gasolineIndex++;
+    }
+
+    function addRFIDField() {
+        const wrapper = document.getElementById('rfidList'); // <-- corrected ID
+        wrapper.insertAdjacentHTML('beforeend', `
+            <div class="flex flex-wrap gap-2 items-center" data-index="${rfidIndex}">
+                <select name="rfid[${rfidIndex}][tag]" class="w-32 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">Select Tag</option>
+                    <option value="autosweep">AutoSweep</option>
+                    <option value="easytrip">EasyTrip</option>
+                </select>
+                <select name="rfid[${rfidIndex}][type]" class="w-28 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500">
+                    <option value="">Type</option>
+                    <option value="cash">Cash</option>
+                    <option value="card">Card</option>
+                </select>
+                <input type="number" step="0.01" name="rfid[${rfidIndex}][amount]" placeholder="Amount" class="w-36 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
+            </div>
+        `);
+        rfidIndex++;
+    }
+
+    function addOther() {
+        const wrapper = document.getElementById('othersList'); // <-- corrected ID
+        const index = wrapper.children.length;
+        wrapper.insertAdjacentHTML('beforeend', `
+            <div class="flex space-x-3 other-item">
+                <input type="text" name="others[${index}][description]" placeholder="Description" class="flex-1 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                <input type="number" step="0.01" name="others[${index}][amount]" placeholder="Amount" class="w-24 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                <button type="button" class="text-white bg-red-600 hover:bg-red-700 rounded px-3" onclick="this.parentElement.remove()">×</button>
+            </div>
+        `);
+    }
+    
     document.addEventListener('DOMContentLoaded', function () {
         const openBtn = document.getElementById('openModalBtn');
         const modal = document.getElementById('reimbursementModal');
