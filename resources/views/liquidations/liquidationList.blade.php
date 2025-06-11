@@ -41,9 +41,6 @@
                         $statusText = $statusLabels[$item?->status] ?? 'Unknown';
                         $cvrType = $cashVoucher->cvr_type ?? null;
                         $allowedTypes = ['delivery', 'pullout', 'others', 'freight'];
-
-                        $amountDetails = json_decode($cashVoucher?->amount_details, true);
-                        $amountSum = is_array($amountDetails) ? array_sum($amountDetails) : 0;
                     @endphp 
 
                     <tr>
@@ -59,13 +56,7 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            @if (in_array($cvrType, $allowedTypes))
-                                ₱{{ number_format($cashVoucher?->amount ?? 0, 2) }}
-                            @elseif ($cvrType === 'admin')
-                                 ₱{{ number_format($amountSum, 2) }}    
-                            @elseif ($cvrType === 'rpm')
-                                 ₱{{ number_format($amountSum, 2) }}
-                            @endif
+                                {{ number_format($item->total_expense, 2) }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             @if (in_array($cvrType, $allowedTypes))

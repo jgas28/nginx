@@ -558,12 +558,14 @@ class LiquidationController extends Controller
         // Fetch ALL liquidations with their immediate cashVoucher
         $liquidations = Liquidation::with('cashVoucher')->get();
 
-        // Loop and load related models as needed
         $liquidations->each(function ($liquidation) {
             $cashVoucher = $liquidation->cashVoucher;
 
+            // Initialize total expenses
+            $totalExpenses = 0;
+
             if ($cashVoucher) {
-                // Load nested relationships conditionally
+                // Load nested relationships
                 $cashVoucher->load([
                     'deliveryRequest.company',
                     'deliveryRequest.expenseType',
@@ -572,30 +574,77 @@ class LiquidationController extends Controller
 
                 $deliveryRequest = $cashVoucher->deliveryRequest;
 
-                // Determine and load the correct allocation relation
+                // Load allocation relation dynamically
                 $allocationRelation = match ($cashVoucher->cvr_type) {
                     'delivery'     => 'deliveryAllocations',
                     'pullout'      => 'pulloutAllocations',
                     'accessorial'  => 'accessorialAllocations',
                     'freight'      => 'freightAllocations',
-                    'others'       => 'othersAllocations',
-                    'admin'        => 'othersAllocations',
-                    'rpm'          => 'othersAllocations',
+                    'others', 'admin', 'rpm' => 'othersAllocations',
                     default        => null,
                 };
 
                 if ($deliveryRequest && $allocationRelation && method_exists($deliveryRequest, $allocationRelation)) {
                     $liquidation->allocations = $deliveryRequest->$allocationRelation()->with('truck')->get();
                 } else {
-                    $liquidation->allocations = collect(); // empty fallback
+                    $liquidation->allocations = collect();
+                }
+
+                // Direct expense fields (numeric)
+                $totalExpenses += (float) $liquidation->allowance;
+                $totalExpenses += (float) $liquidation->manpower;
+                $totalExpenses += (float) $liquidation->hauling;
+                $totalExpenses += (float) $liquidation->right_of_way;
+                $totalExpenses += (float) $liquidation->roro_expense;
+                $totalExpenses += (float) $liquidation->cash_charge;
+
+                // Parse 'others' JSON
+                $others = $liquidation->others;
+                if (is_string($others)) {
+                    $others = json_decode($others, true);
+                }
+                if (is_array($others)) {
+                    foreach ($others as $item) {
+                        $totalExpenses += isset($item['amount']) ? (float) $item['amount'] : 0;
+                    }
+                }
+
+                // Parse 'gasoline' JSON - only type == 'cash'
+                $gasoline = $liquidation->gasoline;
+                if (is_string($gasoline)) {
+                    $gasoline = json_decode($gasoline, true);
+                }
+                if (is_array($gasoline)) {
+                    foreach ($gasoline as $item) {
+                        if (($item['type'] ?? '') === 'cash') {
+                            $totalExpenses += isset($item['amount']) ? (float) $item['amount'] : 0;
+                        }
+                    }
+                }
+
+                // Parse 'rf_id' JSON - only type == 'cash'
+                $rf_id = $liquidation->rf_id;
+                if (is_string($rf_id)) {
+                    $rf_id = json_decode($rf_id, true);
+                }
+                if (is_array($rf_id)) {
+                    foreach ($rf_id as $item) {
+                        if (($item['type'] ?? '') === 'cash') {
+                            $totalExpenses += isset($item['amount']) ? (float) $item['amount'] : 0;
+                        }
+                    }
                 }
             } else {
-                $liquidation->allocations = collect(); // fallback for missing cash voucher
+                $liquidation->allocations = collect(); // fallback
             }
+
+            // Attach total expense to the liquidation instance
+            $liquidation->total_expense = $totalExpenses;
         });
 
         return view('liquidations.liquidationList', compact('liquidations'));
     }
+
 
 
     /**
