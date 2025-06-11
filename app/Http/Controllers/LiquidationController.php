@@ -137,6 +137,7 @@ class LiquidationController extends Controller
     {
         $liquidation = Liquidation::with('cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy')->findOrFail($id);
         $employees = User::whereIn('id', [41])->get();
+        $staffs = User::all();
         $approvers = Approver::all();
 
         // Total Liquidated Cash (Only cash items)
@@ -179,7 +180,7 @@ class LiquidationController extends Controller
             }
         }
 
-        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0);
+        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
         $difference = $totalCash - $approvedAmount;
 
         // Logic for display and next step status
@@ -205,7 +206,8 @@ class LiquidationController extends Controller
             'difference',
             'refund',
             'return',
-            'nextStatus'
+            'nextStatus',
+            'staffs'
         ));
     }
 
@@ -218,7 +220,7 @@ class LiquidationController extends Controller
 
         $liquidation = Liquidation::findOrFail($id);
 
-        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0);
+        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
 
         // Recalculate the total like in your `validated` method
         $totalCash = 0;
@@ -276,6 +278,7 @@ class LiquidationController extends Controller
     {
         $liquidation = Liquidation::with('cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy')->findOrFail($id);
         $employees = User::whereIn('id', [54, 15])->get();
+        $staffs = User::all();
         $approvers = Approver::all();
 
         // Total Liquidated Cash (Only cash items)
@@ -318,7 +321,7 @@ class LiquidationController extends Controller
             }
         }
 
-        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0);
+        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
         $difference = $totalCash - $approvedAmount;
 
         // Logic for display and next step status
@@ -344,7 +347,8 @@ class LiquidationController extends Controller
             'difference',
             'refund',
             'return',
-            'nextStatus'
+            'nextStatus',
+            'staffs'
         ));
     }
 
@@ -433,7 +437,7 @@ class LiquidationController extends Controller
         $refundReturnTotal = $liquidation->runningBalances->sum('amount');
         $finalLiquidated = $totalCash + $refundReturnTotal;
 
-        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0);
+        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
         $difference = $finalLiquidated - $approvedAmount;
 
         // Determine next status
@@ -505,8 +509,8 @@ class LiquidationController extends Controller
 
         $liquidation = Liquidation::findOrFail($id);
 
-        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0);
-
+        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
+ 
         // Recalculate the total like in your `validated` method
         $totalCash = 0;
 

@@ -177,8 +177,8 @@
                     <select name="employee_id" id="employee_id" required
                             class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
                         <option value="" disabled selected>Select employee</option>
-                        @foreach ($employees as $employee)
-                            <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
+                        @foreach ($staffs as $staff)
+                            <option value="{{ $staff->id }}">{{ $staff->fname }} {{ $staff->lname }}</option>
                         @endforeach
                     </select>
                 </div>
