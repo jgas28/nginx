@@ -277,7 +277,7 @@ class LiquidationController extends Controller
     public function validate(Request $request, $id)
     {
         $liquidation = Liquidation::with('cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy')->findOrFail($id);
-        $employees = User::whereIn('id', [54, 15])->get();
+        $employees = User::whereIn('id', [54, 15, 35])->get();
         $staffs = User::all();
         $approvers = Approver::all();
 
