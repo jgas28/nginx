@@ -26,7 +26,24 @@ class LiquidationController extends Controller
         })
         ->get();
 
-        return view('liquidations.index', compact('data'));
+        foreach ($data as $item) {
+            $cashVoucher = $item->cashVoucher;
+            $drId = $cashVoucher->deliveryRequest->id ?? null;
+            $cvrType = $cashVoucher->cvr_type ?? null;
+
+            $allocation = null;
+
+            if ($drId && $cvrType) {
+                $allocation = \App\Models\Allocation::where('dr_id', $drId)
+                            ->where('trip_type', $cvrType)
+                            ->first();
+            }
+
+            // Attach to item so view can use it
+            $item->allocation = $allocation;
+        }
+
+        return view('liquidations.index', compact('data', 'allocation'));
     }
 
     public function indexAdmin()
