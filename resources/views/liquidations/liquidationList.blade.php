@@ -53,9 +53,9 @@
                             @elseif ($cvrType === 'admin')
                                 {{ $cvrNumber }}-{{ $cashVoucher->company->company_code }}{{ $cashVoucher->expenseTypes->expense_code }}
                             @elseif ($cvrType === 'rpm')
-                                {{ $cvrNumber }}-{{ $cashVoucher->truck->truck_name }}-{{ $cashVoucher->company->company_code }}{{ $cashVoucher->expenseTypes->expense_code }}
+                                {{ $cvrNumber }}-{{ $cashVoucher->truck?->truck_name }}-{{ $cashVoucher->company->company_code }}{{ $cashVoucher->expenseTypes->expense_code }}
                             @else
-                                {{ $cvrNumber }}
+                                {{ $cvrNumber }} 
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

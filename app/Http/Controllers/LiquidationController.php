@@ -6,6 +6,7 @@ use App\Models\Approver;
 use App\Models\Liquidation;
 use App\Models\cvr_approval;
 use App\Models\CashVoucher;
+use App\Models\Allocation;
 use App\Models\RunningBalance;
 use App\Models\DeliveryRequest;
 use App\Models\User;
@@ -34,7 +35,7 @@ class LiquidationController extends Controller
             $allocation = null;
 
             if ($drId && $cvrType) {
-                $allocation = \App\Models\Allocation::where('dr_id', $drId)
+                $allocation = Allocation::where('dr_id', $drId)
                             ->where('trip_type', $cvrType)
                             ->first();
             }
