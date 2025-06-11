@@ -118,7 +118,7 @@ class LiquidationController extends Controller
     public function liquidate($id)
     {
         $liquidation = cvr_approval::with('cashVoucher')->findOrFail($id);
-        $employees = User::whereIn('id', [1, 41])->get();
+        $employees = User::whereIn('id', [1, 41, 15, 5])->get();
         $preparers = User::all();
         
         return view('liquidations.liquidate', compact('liquidation', 'employees', 'preparers'));
@@ -136,7 +136,7 @@ class LiquidationController extends Controller
     public function review($id)
     {
         $liquidation = Liquidation::with('cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy')->findOrFail($id);
-        $employees = User::whereIn('id', [1, 41])->get();
+        $employees = User::whereIn('id', [41])->get();
         $approvers = Approver::all();
 
         // Total Liquidated Cash (Only cash items)
@@ -275,7 +275,7 @@ class LiquidationController extends Controller
     public function validate(Request $request, $id)
     {
         $liquidation = Liquidation::with('cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy')->findOrFail($id);
-        $employees = User::whereIn('id', [1, 41])->get();
+        $employees = User::whereIn('id', [54, 15])->get();
         $approvers = Approver::all();
 
         // Total Liquidated Cash (Only cash items)
@@ -378,7 +378,7 @@ class LiquidationController extends Controller
         $liquidation = Liquidation::with(['cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy', 'runningBalances'])
                         ->findOrFail($id);
 
-        $employees = User::all();
+       $employees = User::whereIn('id', [54])->get();
         $approvers = Approver::all();
 
         // Calculate total liquidated cash

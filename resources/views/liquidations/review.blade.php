@@ -216,7 +216,6 @@
             @csrf
             <label for="validated_by" class="block mb-2 font-medium text-gray-700">Validated By</label>
             <select id="validated_by" name="validated_by" required class="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="" disabled selected>Select employee</option>
                 @foreach ($employees as $employee)
                     <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
                 @endforeach
