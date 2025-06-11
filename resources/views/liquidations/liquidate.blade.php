@@ -57,8 +57,8 @@
                     <label class="block font-medium text-gray-700 mb-1">{{ $label }}</label>
                     <select name="{{ $field }}" class="w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
                         <option value="">Select {{ $label }}</option>
-                        @foreach ($employees as $employee)
-                            <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
+                        @foreach ($preparers as $preparer)
+                            <option value="{{ $preparer->id }}">{{ $preparer->fname }} {{ $preparer->lname }}</option>
                         @endforeach
                     </select>
                 </div>

@@ -119,8 +119,9 @@ class LiquidationController extends Controller
     {
         $liquidation = cvr_approval::with('cashVoucher')->findOrFail($id);
         $employees = User::whereIn('id', [1, 41])->get();
+        $preparers = User::all();
         
-        return view('liquidations.liquidate', compact('liquidation', 'employees'));
+        return view('liquidations.liquidate', compact('liquidation', 'employees', 'preparers'));
     }
 
     public function reviewList()
