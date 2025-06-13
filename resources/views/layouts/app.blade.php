@@ -318,9 +318,6 @@
                         <a href="{{ route('admin.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Admin/RPM Request
                         </a>
-                        <a href="" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            Liquidation R&R
-                        </a>
                     </div>
                 </div>
             @endif
@@ -365,6 +362,9 @@
                         </a>
                         <a href="{{ route('liquidations.liquidationList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             List -Admin
+                        </a>
+                        <a href="{{ route('liquidations.rejected') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            Rejected List
                         </a>
                     </div>
                 </div>

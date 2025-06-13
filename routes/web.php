@@ -107,9 +107,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/liquidations/liquidationList', [LiquidationController::class, 'liquidationList'])
     ->name('liquidations.liquidationList');
 
+    Route::post('/liquidations/{id}/reject', [LiquidationController::class, 'reject'])->name('liquidations.reject');
+
+
     Route::post('/running-balance/reimburse', [RunningBalanceController::class, 'storeReimbursement'])->name('running-balance.reimburse');
     Route::post('/running-balance/collected', [RunningBalanceController::class, 'storeCollected'])->name('running-balance.collected');
-
+    Route::post('/running-balance/reimburse-admin', [RunningBalanceController::class, 'storeReimbursementAdmin'])->name('running-balance.reimburseAdmin');
+    Route::post('/running-balance/collected-admin', [RunningBalanceController::class, 'storeCollectedAdmin'])->name('running-balance.collectedAdmin');
     // ⚠️ Put this after
     Route::resource('liquidations', LiquidationController::class);
     
@@ -192,9 +196,19 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/reimbursements/print/{id}', [RunningBalanceController::class, 'print'])->name('reimbursements.print');
     Route::get('/refund/print/{id}', [RunningBalanceController::class, 'printRefund'])->name('refunds.print');
+    Route::get('/return/print/{id}', [RunningBalanceController::class, 'printReturn'])->name('returns.print');
 
     Route::post('/liquidations/{id}/approvedEdit', [LiquidationController::class, 'approvedLiqUpdate'])->name('liquidations.approvedEdit');
+    // Route to show rejected liquidations
+    Route::get('/liquidations/rejected', [LiquidationController::class, 'rejectedList'])->name('liquidations.rejected');
 
+    Route::prefix('running-balance')->group(function () {
+        Route::get('refunds/{id}/edit', [RunningBalanceController::class, 'editRefund'])->name('refunds.edit');
+        Route::put('refunds/{id}', [RunningBalanceController::class, 'updateRefund'])->name('refunds.update');
+
+        Route::get('returns/{id}/edit', [RunningBalanceController::class, 'editReturn'])->name('returns.edit');
+        Route::put('returns/{id}', [RunningBalanceController::class, 'updateReturn'])->name('returns.update');
+    });
 });
 
 // Admin-only Routes (if needed separately)

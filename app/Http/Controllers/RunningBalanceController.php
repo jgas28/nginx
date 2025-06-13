@@ -130,6 +130,7 @@ class RunningBalanceController extends Controller
 
     public function storeReimbursement(Request $request)
     {
+        $liquidation_id = $request->liquidation_id;
         $validated = $request->validate([
             'employee_id' => 'required|exists:users,id',
             'amount' => 'required|numeric|min:0.01',
@@ -151,17 +152,54 @@ class RunningBalanceController extends Controller
             'created_by' => $validated['created_by'],
             'cvr_number' => $validated['cvr_number'],
             'type' => 3,
-        ])->first();
+        ])->first(); 
 
-        if ($existing) {
-            return redirect()->route('reimbursements.print', $existing->id)
+        if ($existing) {     
+            return redirect()->route('liquidations.review', $liquidation_id)
                 ->with('info', 'Reimbursement already submitted.');
         }
 
         $reimbursement = RunningBalance::create($validated);
 
-        return redirect()->route('reimbursements.print', $reimbursement->id);
+        return redirect()->route('liquidations.review', $liquidation_id);
     }
+
+    public function storeReimbursementAdmin(Request $request)
+    {
+        $liquidation_id = $request->liquidation_id;
+        $validated = $request->validate([
+            'employee_id' => 'required|exists:users,id',
+            'amount' => 'required|numeric|min:0.01',
+            'description' => 'required|string',
+            'approver_id' => 'required|exists:cvr_approver,id',
+            'created_by' => 'required|exists:users,id',
+            'cvr_number' => 'required|string',
+        ]);
+
+        $validated['type'] = 3;
+        $validated['amount'] = -abs($validated['amount']);
+
+        // Check for duplicate based on a unique combination
+        $existing = RunningBalance::where([
+            'employee_id' => $validated['employee_id'],
+            'amount' => $validated['amount'],
+            'description' => $validated['description'],
+            'approver_id' => $validated['approver_id'],
+            'created_by' => $validated['created_by'],
+            'cvr_number' => $validated['cvr_number'],
+            'type' => 3,
+        ])->first(); 
+
+        if ($existing) {     
+            return redirect()->route('liquidations.approval', $liquidation_id)
+                ->with('info', 'Reimbursement already submitted.');
+        }
+
+        $reimbursement = RunningBalance::create($validated);
+
+        return redirect()->route('liquidations.approval', $liquidation_id);
+    }
+
 
 
     public function print($id)
@@ -178,8 +216,16 @@ class RunningBalanceController extends Controller
         return view('refunds.print', compact('reimbursement'));
     }
 
+     public function printReturn($id)
+    {
+        $reimbursement = RunningBalance::with(['employee', 'approver'])->findOrFail($id);
+
+        return view('returns.print', compact('reimbursement'));
+    }
+
     public function storeCollected(Request $request)
     {
+        $liquidation_id = $request->liquidation_id;
         $validated = $request->validate([
             'employee_id' => 'required|exists:users,id',
             'amount_collected' => 'required|numeric|min:0',
@@ -213,6 +259,92 @@ class RunningBalanceController extends Controller
             'type' => 4,
         ]);
 
-         return redirect()->route('refunds.print', $reimbursement->id);
+         return redirect()->route('liquidations.validated', $liquidation_id);
+    }
+
+    public function storeCollectedAdmin(Request $request)
+    {
+        $liquidation_id = $request->liquidation_id;
+        $validated = $request->validate([
+            'employee_id' => 'required|exists:users,id',
+            'amount_collected' => 'required|numeric|min:0',
+            'amount_uncollected' => 'required|numeric|min:0',
+            'description' => 'required|string',
+            'description1' => 'required|string',
+            'approver_id' => 'required|exists:cvr_approver,id',
+            'created_by' => 'required|exists:users,id',
+            'cvr_number' => 'required|string',
+        ]);
+
+        // 1. Returned Cash Record
+        $reimbursement=RunningBalance::create([
+            'employee_id' => $validated['employee_id'],
+            'amount' => abs($validated['amount_collected']), // positive value
+            'description' => $validated['description'],
+            'approver_id' => $validated['approver_id'],
+            'created_by' => $validated['created_by'],
+            'cvr_number' => $validated['cvr_number'],
+            'type' => 2,
+        ]);
+
+        // 2. Uncollected Cash Record
+        RunningBalance::create([
+            'employee_id' => $validated['employee_id'],
+            'amount' => -abs($validated['amount_uncollected']), // negative value
+            'description' => $validated['description1'],
+            'approver_id' => $validated['approver_id'],
+            'created_by' => $validated['created_by'],
+            'cvr_number' => $validated['cvr_number'],
+            'type' => 4,
+        ]);
+
+         return redirect()->route('liquidations.approval', $liquidation_id);
+    }
+
+     // Edit Refund
+    public function editRefund($id)
+    {
+        $refund = RunningBalance::findOrFail($id);
+        return response()->json($refund);
+    }
+
+    // Update Refund
+    public function updateRefund(Request $request, $id)
+    {
+        $request->validate([
+            'description' => 'required|string|max:255',
+            'amount' => 'required|numeric',
+        ]);
+
+        $refund = RunningBalance::findOrFail($id);
+        $refund->update($request->only('description', 'amount'));
+
+        $liquidation_id = $request->input('liquidation_id');
+        return redirect()->route('liquidations.approval', ['id' => $liquidation_id])
+                 ->with('success', 'Refund updated successfully.');
+    }
+
+    // Edit Return
+    public function editReturn($id)
+    {
+        $return = RunningBalance::findOrFail($id);
+        return response()->json($return);
+    }
+
+    // Update Return
+    public function updateReturn(Request $request, $id)
+    {
+        $request->validate([
+            'description' => 'required|string|max:255',
+            'amount' => 'required|numeric',
+        ]);
+
+        $return = RunningBalance::findOrFail($id);
+        $return->update($request->only('description', 'amount'));
+       
+        $liquidation_id = $request->input('liquidation_id');
+
+        return redirect()->route('liquidations.approval', ['id' => $liquidation_id])
+                 ->with('success', 'Return updated successfully.');
     }
 }

@@ -79,12 +79,54 @@ class LiquidationController extends Controller
         ]);
 
         $expenses = $request->input('expenses', []);
+        $gasoline = $request->input('gasoline', []);
+        $rfid = $request->input('rfid', []);
+        $others = $request->input('others', []);
+
+        // Calculate total liquidated amount (CASH ONLY for gasoline & RFID)
+        $totalLiquidated = 0;
+        $totalLiquidated += floatval($expenses['allowance'] ?? 0);
+        $totalLiquidated += floatval($expenses['manpower'] ?? 0);
+        $totalLiquidated += floatval($expenses['hauling'] ?? 0);
+        $totalLiquidated += floatval($expenses['right_of_way'] ?? 0);
+        $totalLiquidated += floatval($expenses['roro_expense'] ?? 0);
+        $totalLiquidated += floatval($expenses['cash_charge'] ?? 0);
+
+        foreach ($gasoline as $item) {
+            if (($item['type'] ?? '') === 'cash') {
+                $totalLiquidated += floatval($item['amount'] ?? 0);
+            }
+        }
+
+        foreach ($rfid as $item) {
+            if (($item['type'] ?? '') === 'cash') {
+                $totalLiquidated += floatval($item['amount'] ?? 0);
+            }
+        }
+
+        foreach ($others as $item) {
+            $totalLiquidated += floatval($item['amount'] ?? 0);
+        }
+
+        // Get approved amount from CashVoucher
+        $cashVoucher = CashVoucher::find($request->input('cvr_id'));
+        $approvedAmount = floatval($cashVoucher->amount ?? 0);
+
+        // Determine Liquidation status
+        $status = 1; // default
+        if (
+            ($approvedAmount == 0 && $totalLiquidated == 0) ||
+            ($approvedAmount == $totalLiquidated)
+        ) {
+            $status = 4;
+        }
+
+        // Prepare data
         $data = [
             'cvr_id' => $request->input('cvr_id'),
             'cvr_number' => $request->input('cvr_number'),
             'cvr_approval_id' => $request->input('cvr_approval_id'),
 
-            // Direct fields from expenses
             'allowance' => $expenses['allowance'] ?? null,
             'manpower' => $expenses['manpower'] ?? null,
             'hauling' => $expenses['hauling'] ?? null,
@@ -92,13 +134,11 @@ class LiquidationController extends Controller
             'roro_expense' => $expenses['roro_expense'] ?? null,
             'cash_charge' => $expenses['cash_charge'] ?? null,
 
-            // JSON fields
-            'gasoline' => array_values($request->input('gasoline', [])),
-            'rfid' => array_values($request->input('rfid', [])),
-            'others' => array_values($request->input('others', [])),
+            'gasoline' => array_values($gasoline),
+            'rfid' => array_values($rfid),
+            'others' => array_values($others),
 
-            // Status + people
-            'status' => '1',
+            'status' => $status,
             'prepared_by' => $request->input('prepared_by'),
             'noted_by' => $request->input('noted_by'),
             'validated_by' => null,
@@ -106,6 +146,7 @@ class LiquidationController extends Controller
             'approved_by' => null,
         ];
 
+        // Create the Liquidation record
         Liquidation::create($data);
         $cvrId = $request->input('cvr_id');
         CashVoucher::where('id', $cvrId)->update(['status' => 4]);
@@ -135,12 +176,13 @@ class LiquidationController extends Controller
 
     public function review($id)
     {
+        // Load liquidation with related data
         $liquidation = Liquidation::with('cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy')->findOrFail($id);
-        $employees = User::whereIn('id', [41])->get();
+        $employees = User::whereIn('id', [41])->get(); // You can adjust this condition as needed
         $staffs = User::all();
         $approvers = Approver::all();
 
-        // Total Liquidated Cash (Only cash items)
+        // Calculate total liquidated cash (cash only)
         $totalCash = 0;
 
         foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field) {
@@ -165,7 +207,7 @@ class LiquidationController extends Controller
             $totalCash += floatval($item['amount'] ?? 0);
         }
 
-        // Total Card Expenses (non-cash)
+        // Calculate total non-cash (card) expenses
         $totalCard = 0;
 
         foreach ($liquidation->gasoline ?? [] as $item) {
@@ -180,22 +222,60 @@ class LiquidationController extends Controller
             }
         }
 
+        // Approved amount from CVR
         $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
+
+        // Raw difference (before adjustments)
         $difference = $totalCash - $approvedAmount;
 
-        // Logic for display and next step status
-        $nextStatus = 4; // default: approval
+        // Load running balances
+        $runningRefunds = RunningBalance::where('cvr_number', $liquidation->cvr_number)
+            ->where('type', '3') // Refund
+            ->get();
+
+        $runningReturns = RunningBalance::where('cvr_number', $liquidation->cvr_number)
+            ->where('type', '2') // Returned cash
+            ->get();
+
+        $runningUncollected = RunningBalance::where('cvr_number', $liquidation->cvr_number)
+            ->where('type', '4') // Uncollected
+            ->get();
+
+        // Sum of existing refunds
+        $refundTotal = $runningRefunds->sum(function ($item) {
+            return isset($item->amount) ? abs($item->amount) : 0;
+        });
+
+        // Combine returns and uncollected
+        $combinedReturns = collect();
+        if ($runningReturns) {
+            $combinedReturns = $combinedReturns->merge($runningReturns);
+        }
+        if ($runningUncollected) {
+            $combinedReturns = $combinedReturns->merge($runningUncollected);
+        }
+
+        $returnedTotal = $combinedReturns->sum(function ($item) {
+            return isset($item->amount) ? abs($item->amount) : 0;
+        });
+
+        // Adjusted difference
+        $adjustedDifference = round($difference + $refundTotal + $returnedTotal, 2);
+
+        // Decide next step
+        $nextStatus = 4; // default to "For Approval"
         $refund = false;
         $return = false;
 
-        if ($difference > 0) {
-            $refund = true;
-            $nextStatus = 4; // can still go to approval but shows refund button
-        } elseif ($difference < 0) {
-            $return = true;
-            $nextStatus = 3; // needs collection
+        if ($adjustedDifference > 0) {
+            $refund = true;        // Over-liquidated (user received more than needed)
+            $nextStatus = 4;       // Still can go to approval
+        } elseif ($adjustedDifference < 0) {
+            $return = true;        // Under-liquidated (user owes money)
+            $nextStatus = 3;       // Needs collection before approval
         }
- 
+
+        // Return view
         return view('liquidations.review', compact(
             'liquidation',
             'employees',
@@ -207,9 +287,13 @@ class LiquidationController extends Controller
             'refund',
             'return',
             'nextStatus',
-            'staffs'
+            'staffs',
+            'runningRefunds',
+            'runningReturns',
+            'runningUncollected'
         ));
     }
+
 
 
     public function validateLiquidation(Request $request, $id)
@@ -264,7 +348,7 @@ class LiquidationController extends Controller
         return redirect()->route('liquidations.reviewList')->with('success', 'Liquidation validated successfully.');
     }
 
-    // wag muna to
+
     public function validatedList()
     {
         $liquidations = Liquidation::with('preparedBy', 'notedBy', 'cashVoucher')
@@ -337,6 +421,18 @@ class LiquidationController extends Controller
             $nextStatus = 3; // needs collection
         }
 
+        $runningRefunds = RunningBalance::where('cvr_number', $liquidation->cvr_number)
+            ->where('type', '3')
+            ->get();
+
+        $runningReturns = RunningBalance::where('cvr_number', $liquidation->cvr_number)
+            ->where('type', '2')
+            ->get();
+
+        $runningUncollected = RunningBalance::where('cvr_number', $liquidation->cvr_number)
+            ->where('type', '4')
+            ->get();
+
         return view('liquidations.validated', compact(
             'liquidation',
             'employees',
@@ -348,8 +444,28 @@ class LiquidationController extends Controller
             'refund',
             'return',
             'nextStatus',
-            'staffs'
+            'staffs',
+            'runningRefunds',
+            'runningReturns',
+            'runningUncollected'
         ));
+    }
+
+    public function reject(Request $request, $id)
+    {
+        $request->validate([
+            'remarks' => 'required|string|max:1000',
+            'validated_by' => 'required|exists:users,id',
+        ]);
+
+        $liquidation = Liquidation::findOrFail($id);
+        $liquidation->status = 10; // Rejected
+        $liquidation->validated_by = $request->validated_by;
+        $liquidation->validated_at = now();
+        $liquidation->remarks = $request->remarks;
+        $liquidation->save();
+
+        return redirect()->route('liquidations.index')->with('error', 'Liquidation has been rejected.');
     }
 
     public function collectedLiquidation(Request $request, $id)
@@ -384,6 +500,7 @@ class LiquidationController extends Controller
 
         $employees = User::whereIn('id', [54])->get();
         $approvers = Approver::all();
+        $staffs = User::all();
 
         // Calculate total liquidated cash
         $totalCash = 0;
@@ -488,6 +605,7 @@ class LiquidationController extends Controller
             'gasoline',
             'rfid',
             'others',
+            'staffs'
         ));
     }
 
@@ -742,8 +860,8 @@ class LiquidationController extends Controller
         ]);
 
         // Redirect with success message
-        return redirect()->route('liquidations.approvalList') // Or wherever you want to redirect
-            ->with('success', 'Liquidation updated and approved successfully!');
+        return redirect()->route('liquidations.approval', $liquidation->id)
+        ->with('success', 'Liquidation details updated!');
     }
 
     public function approvedCollection(Request $request, $id)
@@ -832,5 +950,13 @@ class LiquidationController extends Controller
         // Redirect with success message
         return redirect()->route('liquidations.approvalList') // Or wherever you want to redirect
             ->with('success', 'Liquidation updated and approved successfully!');
+    }
+
+    public function rejectedList()
+    {
+        // Fetch all liquidations with status 10 (Rejected)
+        $rejectedLiquidations = Liquidation::where('status', 10)->get();
+        // Return view with the data (create this view below)
+        return view('liquidations.rejected', compact('rejectedLiquidations'));
     }
 }

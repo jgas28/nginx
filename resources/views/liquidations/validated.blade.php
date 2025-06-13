@@ -101,34 +101,120 @@
             <p class="text-gray-800">Total Expense</p>
             <p class="text-green-700 text-right text-xl font-bold">₱{{ number_format($totalCash, 2) }}</p>
         </div>
+    </div>
 
-        {{-- Refund Cash --}}
+    @php
+        // Calculate raw difference
+        $rawDifference = $totalCash - $approvedAmount;
+
+        // Calculate refund total (e.g., existing refund records)
+        $refundTotal = $runningRefunds->sum(function ($item) {
+            return isset($item->amount) ? abs($item->amount) : 0;
+        });
+
+        // Combine returns and uncollected
+        $combinedReturns = collect();
+        if (isset($runningReturns)) {
+            $combinedReturns = $combinedReturns->merge($runningReturns);
+        }
+        if (isset($runningUncollected)) {
+            $combinedReturns = $combinedReturns->merge($runningUncollected);
+        }
+
+        // Calculate total of returned/uncollected
+        $returnedTotal = $combinedReturns->sum(function ($item) {
+            return isset($item->amount) ? abs($item->amount) : 0;
+        });
+
+        // Final difference, adjusted by refund and returns
+        $difference = $rawDifference - $refundTotal + $returnedTotal;
+        $difference = round($difference, 2); // Optional rounding
+    @endphp
+    <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 font-medium text-lg">
         <div class="p-4 rounded-lg shadow-inner 
-            {{ $difference > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-50 text-gray-700' }} 
-            font-semibold text-lg flex justify-between items-center">
-            <span>Refund Cash</span>
-            <span>₱{{ number_format($difference > 0 ? $difference : 0, 2) }}</span>
+        {{ $difference > 0 ? 'bg-red-100 text-red-700' : 'bg-gray-50 text-gray-700' }}">
+            <div class="flex justify-between items-center mb-2">
+                <span>Refund Request</span>
+                <span>₱{{ number_format($refundTotal, 2) }}</span>
+            </div>
+            @if(isset($runningRefunds) && $runningRefunds->count() > 0)
+                <ul class="text-sm text-red-800 space-y-1 max-h-32 overflow-auto border border-red-300 p-2 rounded bg-red-50">
+                    @foreach ($runningRefunds as $refund)
+                        <li class="flex justify-between">
+                            <a href="{{ route('refunds.print', $refund['id']) }}" target="_blank" class="flex justify-between w-full">
+                                <span>{{ $refund->description ?? 'No description' }}</span>
+                                <span>₱{{ number_format(abs($refund->amount), 2) }}</span>
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            @else
+                <p class="text-xs italic text-red-700 mt-1">No refund details available.</p>
+            @endif
         </div>
 
-        {{-- Returned Cash --}}
         <div class="p-4 rounded-lg shadow-inner 
-            {{ $difference < 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-50 text-gray-700' }} 
-            font-semibold text-lg flex justify-between items-center">
-            <span>Returned Cash</span>
-            <span>₱{{ number_format($difference < 0 ? abs($difference) : 0, 2) }}</span>
-        </div>
+        {{ $difference < 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-50 text-gray-700' }}">
+        @php
+            // Combine returns and uncollected into one collection or array
+            $combinedReturns = collect();
 
-        {{-- Optional: Total Card Expenses --}}
-        <!--
-        <div class="bg-blue-50 p-4 rounded shadow">
-            <p class="text-gray-800">Total Card Expenses (RFID & Gasoline)</p>
-            <p class="text-blue-700 text-right text-xl font-bold">₱{{ number_format($totalCard, 2) }}</p>
+            if (isset($runningReturns)) {
+                $combinedReturns = $combinedReturns->merge($runningReturns);
+            }
+            if (isset($runningUncollected)) {
+                $combinedReturns = $combinedReturns->merge($runningUncollected);
+            }
+
+            // Calculate total amount from the combined list
+            // Use abs() for uncollected amounts if negative
+            $combinedTotal = $combinedReturns->sum(function ($item) {
+                return isset($item->amount) ? abs($item->amount) : 0;
+            });
+        @endphp
+
+        <div class="flex justify-between items-center mb-2">
+            <span>Returned Request</span>
+            <span>₱{{ number_format($combinedTotal, 2) }}</span>
         </div>
-        -->
+            @php
+                // Combine returns and uncollected into one collection or array
+                $combinedReturns = collect();
+
+                if(isset($runningReturns)) {
+                    $combinedReturns = $combinedReturns->merge($runningReturns);
+                }
+                if(isset($runningUncollected)) {
+                    $combinedReturns = $combinedReturns->merge($runningUncollected);
+                }
+            @endphp
+
+            @if($combinedReturns->count() > 0)
+                <ul class="text-sm text-yellow-800 space-y-1 max-h-32 overflow-auto border border-yellow-300 p-2 rounded bg-yellow-50">
+                @foreach ($combinedReturns as $item)
+                    <li class="flex justify-between">
+                        @if ($item->type == 4)
+                            <a href="{{ route('returns.print', $item->id) }}" target="_blank" class="flex justify-between w-full">
+                                <span>{{ $item->description ?? 'No description' }}</span>
+                                <span>₱{{ number_format($item->amount, 2) }}</span>
+                            </a>
+                        @else
+                            <div class="flex justify-between w-full">
+                                <span>{{ $item->description ?? 'No description' }}</span>
+                                <span>₱{{ number_format($item->amount, 2) }}</span>
+                            </div>
+                        @endif
+                    </li>
+                @endforeach
+            </ul>
+            @else
+                <p class="text-xs italic text-yellow-700 mt-1">No returned cash details available.</p>
+            @endif
+        </div>
     </div>
 
 
-    @if ($return)
+    @if ($return && $difference != 0)
         <button id="openModalBtn" 
             class="mt-6 bg-red-600 text-white px-5 py-2 rounded hover:bg-red-700 transition">
             Create Return
@@ -145,7 +231,7 @@
             <h3 class="text-xl font-semibold mb-4">Create Reimbursement</h3>
             <form action="{{ route('running-balance.collected') }}" method="POST" class="space-y-4">
                 @csrf
-
+                <input type="hidden" name="liquidation_id" value="{{ $liquidation->id }}" />
                 <div>
                     <label class="block mb-1 font-medium" for="amount_label">Amount Difference (₱)</label>
                     <input type="number" step="0.01" min="0" name="amount_label" id="amount_label" 
@@ -156,8 +242,8 @@
                 <div>
                     <label class="block mb-1 font-medium" for="amount_collected">Collected Amount (₱)</label>
                     <input type="number" step="0.01" min="0" name="amount_collected" id="amount_collected" 
-                        required
-                        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    required oninput="calculateUncollected()"
+                    class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                 </div>
 
                 <div>
@@ -169,14 +255,21 @@
                 <div>
                     <label class="block mb-1 font-medium" for="amount_uncollected">Uncollected Amount (₱)</label>
                     <input type="number" step="0.01" min="0" name="amount_uncollected" id="amount_uncollected" 
-                        required
+                    readonly required
+                    class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100" />
+                </div>
+
+                <div>
+                    <label class="block mb-1 font-medium" for="period">Period (e.g. May 2025)</label>
+                    <input type="text" id="period" placeholder="Enter payroll period"
                         class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
                 </div>
 
                 <div>
                     <label class="block mb-1 font-medium" for="description1">Description</label>
-                    <input type="text" name="description1" id="description1" placeholder="Description" required
-                        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input type="text" name="description1" id="description1" placeholder="Auto-filled"
+                    readonly required
+                    class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100" />
                 </div>
 
                 <div>
@@ -235,12 +328,52 @@
                 @endforeach
             </select>
 
-            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded transition duration-150">
-                Collected
-            </button>
+            <input type="hidden" name="action" id="form-action" value="">
+            <div class="flex gap-4">
+                <button type="button" id="validate-btn" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">Validate</button>
+                <button type="button" id="reject-btn" class="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700">Reject</button>
+            </div>
         </form>
     </div>
 </div>
+
+{{-- Reject Modal --}}
+<div id="rejectModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+        <form id="rejectForm" action="{{ route('liquidations.reject', $liquidation->id) }}" method="POST">
+            @csrf
+            <input type="hidden" name="validated_by" value="{{ auth()->user()->id }}">
+            <h3 class="text-xl font-semibold mb-4 text-red-600">Reject Liquidation</h3>
+            <p class="text-sm text-gray-600 mb-3">Please provide remarks for rejecting this liquidation:</p>
+            <textarea name="remarks" id="rejectRemarks" rows="3" required class="w-full border rounded px-3 py-2" placeholder="Enter reason..."></textarea>
+            <div class="flex justify-end space-x-2 mt-4">
+                <button type="button" id="cancelRejectBtn" class="px-4 py-2 rounded border hover:bg-gray-100">Cancel</button>
+                <button type="submit" class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Confirm Reject</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmValidationModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white p-6 rounded shadow-lg w-full max-w-md">
+        <h2 class="text-lg font-semibold mb-4 text-gray-800">Confirm Validation</h2>
+        
+        @if($difference != 0)
+            <p class="text-red-600 font-medium mb-4">There's still a difference between approved and liquidated amount.</p>
+        @else
+            <p class="text-gray-700 mb-4">Are you sure you want to confirm the validation?</p>
+        @endif
+
+        <div class="flex justify-end space-x-2">
+            <button id="cancelConfirmBtn" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
+            @if($difference == 0)
+                <button id="confirmSubmitBtn" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Confirm</button>
+            @endif
+        </div>
+    </div>
+</div>
+
 <!-- Modal JavaScript -->
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -248,27 +381,89 @@
         const modal = document.getElementById('reimbursementModal');
         const closeBtn = document.getElementById('closeModalBtn');
 
-        openBtn.addEventListener('click', () => {
-            modal.classList.remove('hidden');
-        });
+        const validateBtn = document.getElementById('validate-btn');
+        const rejectBtn = document.getElementById('reject-btn');
+        const confirmModal = document.getElementById('confirmValidationModal');
+        const cancelConfirm = document.getElementById('cancelConfirmBtn');
+        const confirmSubmit = document.getElementById('confirmSubmitBtn');
+        const collectForm = document.querySelector("form[action='{{ route('liquidations.collect', $liquidation->id) }}']");
+        const rejectModal = document.getElementById('rejectModal');
+        const cancelRejectBtn = document.getElementById('cancelRejectBtn');
 
-        closeBtn.addEventListener('click', () => {
-            modal.classList.add('hidden');
-        });
+        // Open reimbursement modal
+        if (openBtn && modal && closeBtn) {
+            openBtn.addEventListener('click', () => modal.classList.remove('hidden'));
+            closeBtn.addEventListener('click', () => modal.classList.add('hidden'));
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.classList.add('hidden');
+            });
+        }
 
-        // Close modal when clicking outside the panel
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.classList.add('hidden');
-            }
-        });
+        // Validate button logic
+        if (validateBtn && confirmModal) {
+            validateBtn.addEventListener('click', () => {
+                confirmModal.classList.remove('hidden');
+            });
+        }
 
-        // Escape key closes modal
+        if (cancelConfirm) {
+            cancelConfirm.addEventListener('click', () => {
+                confirmModal.classList.add('hidden');
+            });
+        }
+
+        if (confirmSubmit && collectForm) {
+            confirmSubmit.addEventListener('click', () => {
+                document.getElementById('form-action').value = 'validate';
+                collectForm.submit();
+            });
+        }
+
+        // Reject button logic
+        if (rejectBtn && rejectModal) {
+            rejectBtn.addEventListener('click', () => {
+                rejectModal.classList.remove('hidden');
+            });
+        }
+
+        if (cancelRejectBtn && rejectModal) {
+            cancelRejectBtn.addEventListener('click', () => {
+                rejectModal.classList.add('hidden');
+            });
+        }
+
+        // Escape key closes all modals
         document.addEventListener('keydown', function (e) {
             if (e.key === "Escape") {
-                modal.classList.add('hidden');
+                modal?.classList.add('hidden');
+                confirmModal?.classList.add('hidden');
+                rejectModal?.classList.add('hidden');
             }
         });
+
+        // Auto-fill description1 based on period input
+        const periodInput = document.getElementById('period');
+        const descriptionInput = document.getElementById('description1');
+
+        if (periodInput && descriptionInput) {
+            periodInput.addEventListener('input', function () {
+                const val = this.value.trim();
+                descriptionInput.value = val ? `SD - Payroll (${val})` : '';
+            });
+        }
     });
+
+    // Calculate uncollected amount
+    function calculateUncollected() {
+        const totalDiff = {{ abs($difference) }};
+        const collected = parseFloat(document.getElementById('amount_collected')?.value) || 0;
+        const uncollectedField = document.getElementById('amount_uncollected');
+        const result = totalDiff - collected;
+        if (uncollectedField) {
+            uncollectedField.value = result > 0 ? result.toFixed(2) : '0.00';
+        }
+    }
+
+    window.calculateUncollected = calculateUncollected;
 </script>
 @endsection

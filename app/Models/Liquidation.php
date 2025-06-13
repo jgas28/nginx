@@ -36,6 +36,7 @@ class Liquidation extends Model
         'cvr_number',
         'cvr_id',
         'mtm',
+        'remarks',
     ];
 
     protected $casts = [
