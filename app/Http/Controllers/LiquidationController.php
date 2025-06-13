@@ -372,7 +372,7 @@ class LiquidationController extends Controller
     {
         $liquidations = Liquidation::with('preparedBy', 'notedBy', 'cashVoucher')
             ->where('status', 4)
-            ->paginate(10);
+            ->paginate(10); 
 
         return view('liquidations.approvalList', compact('liquidations'));
     }
@@ -382,7 +382,7 @@ class LiquidationController extends Controller
         $liquidation = Liquidation::with(['cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy', 'runningBalances'])
                         ->findOrFail($id);
 
-       $employees = User::whereIn('id', [54])->get();
+        $employees = User::whereIn('id', [54])->get();
         $approvers = Approver::all();
 
         // Calculate total liquidated cash
@@ -465,6 +465,10 @@ class LiquidationController extends Controller
             ->where('type', '4')
             ->get();
 
+        $gasoline = is_array($liquidation->gasoline) ? $liquidation->gasoline : json_decode($liquidation->gasoline, true) ?? [];
+        $rfid = is_array($liquidation->rfid) ? $liquidation->rfid : json_decode($liquidation->rfid, true) ?? [];
+        $others = is_array($liquidation->others) ? $liquidation->others : json_decode($liquidation->others, true) ?? [];
+
         return view('liquidations.approval', compact(
             'liquidation',
             'employees',
@@ -480,7 +484,10 @@ class LiquidationController extends Controller
             'nextStatus',
             'runningRefunds',
             'runningReturns',
-            'runningUncollected'
+            'runningUncollected',
+            'gasoline',
+            'rfid',
+            'others',
         ));
     }
 
@@ -695,7 +702,7 @@ class LiquidationController extends Controller
         //
     }
 
-     public function approvedLiqUpdate(Request $request, $id)
+    public function approvedLiqUpdate(Request $request, $id)
     {
         // Find the liquidation by ID
         $liquidation = Liquidation::findOrFail($id);
@@ -729,9 +736,97 @@ class LiquidationController extends Controller
             'right_of_way' => $request->right_of_way ?? 0,
             'roro_expense' => $request->roro_expense ?? 0,
             'cash_charge' => $request->cash_charge ?? 0,
-            'gasoline' => $request->gasoline ?? [], // Encode array as JSON
-            'rfid' => $request->rfid ?? [], // Encode array as JSON
-            'others' => $request->others ?? [], // Encode array as JSON
+            'gasoline' => array_values($request->gasoline ?? []),
+            'rfid' => array_values($request->rfid ?? []),
+            'others' => array_values($request->others ?? []),
+        ]);
+
+        // Redirect with success message
+        return redirect()->route('liquidations.approvalList') // Or wherever you want to redirect
+            ->with('success', 'Liquidation updated and approved successfully!');
+    }
+
+    public function approvedCollection(Request $request, $id)
+    {
+        // Find the liquidation by ID
+        $liquidation = Liquidation::findOrFail($id);
+
+        // Validate the request data (e.g., approved_by and expenses)
+        $request->validate([
+            'allowance' => 'nullable|numeric',
+            'manpower' => 'nullable|numeric',
+            'hauling' => 'nullable|numeric',
+            'right_of_way' => 'nullable|numeric',
+            'roro_expense' => 'nullable|numeric',
+            'cash_charge' => 'nullable|numeric',
+            'gasoline' => 'nullable|array',
+            'gasoline.*.type' => 'nullable|string',
+            'gasoline.*.amount' => 'nullable|numeric',
+            'rfid' => 'nullable|array',
+            'rfid.*.tag' => 'nullable|string',
+            'rfid.*.type' => 'nullable|string',
+            'rfid.*.amount' => 'nullable|numeric',
+            'others' => 'nullable|array',
+            'others.*.description' => 'nullable|string',
+            'others.*.amount' => 'nullable|numeric',
+        ]);
+
+        // Update fields with the form data
+        $liquidation->update([
+            'approved_by' => $request->approved_by,
+            'allowance' => $request->allowance ?? 0,
+            'manpower' => $request->manpower ?? 0,
+            'hauling' => $request->hauling ?? 0,
+            'right_of_way' => $request->right_of_way ?? 0,
+            'roro_expense' => $request->roro_expense ?? 0,
+            'cash_charge' => $request->cash_charge ?? 0,
+            'gasoline' => array_values($request->gasoline ?? []),
+            'rfid' => array_values($request->rfid ?? []),
+            'others' => array_values($request->others ?? []),
+        ]);
+
+        // Redirect with success message
+        return redirect()->route('liquidations.approvalList') // Or wherever you want to redirect
+            ->with('success', 'Liquidation updated and approved successfully!');
+    }
+
+    public function approvedValidation(Request $request, $id)
+    {
+        // Find the liquidation by ID
+        $liquidation = Liquidation::findOrFail($id);
+
+        // Validate the request data (e.g., approved_by and expenses)
+        $request->validate([
+            'allowance' => 'nullable|numeric',
+            'manpower' => 'nullable|numeric',
+            'hauling' => 'nullable|numeric',
+            'right_of_way' => 'nullable|numeric',
+            'roro_expense' => 'nullable|numeric',
+            'cash_charge' => 'nullable|numeric',
+            'gasoline' => 'nullable|array',
+            'gasoline.*.type' => 'nullable|string',
+            'gasoline.*.amount' => 'nullable|numeric',
+            'rfid' => 'nullable|array',
+            'rfid.*.tag' => 'nullable|string',
+            'rfid.*.type' => 'nullable|string',
+            'rfid.*.amount' => 'nullable|numeric',
+            'others' => 'nullable|array',
+            'others.*.description' => 'nullable|string',
+            'others.*.amount' => 'nullable|numeric',
+        ]);
+
+        // Update fields with the form data
+        $liquidation->update([
+            'approved_by' => $request->approved_by,
+            'allowance' => $request->allowance ?? 0,
+            'manpower' => $request->manpower ?? 0,
+            'hauling' => $request->hauling ?? 0,
+            'right_of_way' => $request->right_of_way ?? 0,
+            'roro_expense' => $request->roro_expense ?? 0,
+            'cash_charge' => $request->cash_charge ?? 0,
+            'gasoline' => array_values($request->gasoline ?? []),
+            'rfid' => array_values($request->rfid ?? []),
+            'others' => array_values($request->others ?? []),
         ]);
 
         // Redirect with success message

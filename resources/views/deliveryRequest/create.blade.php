@@ -41,10 +41,16 @@
 
             <!-- Row 2 -->
             <div class="flex flex-wrap -mx-2">
-                <div class="w-full md:w-1/6 px-2 mb-4">
+               <div class="w-full md:w-1/6 px-2 mb-4">
                     <label for="delivery_rate" class="block text-sm font-medium text-gray-700 mb-1">Delivery Rate</label>
-                    <input type="text" name="delivery_rate" id="delivery_rate" required
-                        class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <input 
+                        type="number" 
+                        name="delivery_rate" 
+                        id="delivery_rate" 
+                        step="0.01" 
+                        required
+                        class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                    >
                     @error('delivery_rate')
                         <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                     @enderror
