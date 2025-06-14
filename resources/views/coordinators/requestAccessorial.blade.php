@@ -100,10 +100,9 @@
 
                     <!-- Tax Base Amount -->
                     <div id="tax_base_container" class="w-full md:w-1/3 hidden">
-                        <input type="number" name="tax_base_amount" class="input w-full" placeholder="Enter base amount">
+                        <input type="number" name="tax_base_amount" class="input w-full" placeholder="Enter base amount" step="0.01">
                         <label class="block text-sm text-gray-600 mt-1">Tax Base Amount</label>
                     </div>
-
                 </div>
             </fieldset>
 

@@ -79,7 +79,7 @@
                             <label class="block text-sm font-medium text-gray-700">Tax Base Amount</label>
                             <input type="number" name="tax_base_amount" id="tax_base_amount"
                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                                value="{{ old('tax_base_amount', $voucher->tax_based_amount) }}">
+                                value="{{ old('tax_base_amount', $voucher->tax_based_amount) }}" step="0.01">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Withholding Tax</label>
