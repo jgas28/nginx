@@ -13,7 +13,7 @@ class CashVoucher extends Model
     protected $fillable = [
         'cvr_type', 'cvr_number', 'amount', 'line_item_id', 'request_type', 'requestor', 'mtm', 'driver', 'fleet_card','helpers', 'status',
         'withholding_tax_id', 'voucher_type', 'remarks', 'tax_based_amount', 'company_id', 'expense_type_id', 'supplier_id', 'description', 
-        'amount_details', 'dr_id', 'created_by', 'reject_remarks', 'truck_id'
+        'amount_details', 'dr_id', 'created_by', 'reject_remarks', 'truck_id','sequence'
     ];
 
     // Conditional logic to store line_item_id only for accessorial CVRs

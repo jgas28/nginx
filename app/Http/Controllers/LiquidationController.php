@@ -11,6 +11,7 @@ use App\Models\RunningBalance;
 use App\Models\DeliveryRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class LiquidationController extends Controller
 {
@@ -954,9 +955,156 @@ class LiquidationController extends Controller
 
     public function rejectedList()
     {
-        // Fetch all liquidations with status 10 (Rejected)
-        $rejectedLiquidations = Liquidation::where('status', 10)->get();
-        // Return view with the data (create this view below)
-        return view('liquidations.rejected', compact('rejectedLiquidations'));
+        // Fetch ALL liquidations with their immediate cashVoucher
+        $liquidations = Liquidation::with('cashVoucher')
+        ->where('status', 10)
+        ->get();
+
+        $liquidations->each(function ($liquidation) {
+            $cashVoucher = $liquidation->cashVoucher;
+
+            // Initialize total expenses
+            $totalExpenses = 0;
+
+            if ($cashVoucher) {
+                // Load nested relationships
+                $cashVoucher->load([
+                    'deliveryRequest.company',
+                    'deliveryRequest.expenseType',
+                    'withholdingTax',
+                ]);
+
+                $deliveryRequest = $cashVoucher->deliveryRequest;
+
+                // Load allocation relation dynamically
+                $allocationRelation = match ($cashVoucher->cvr_type) {
+                    'delivery'     => 'deliveryAllocations',
+                    'pullout'      => 'pulloutAllocations',
+                    'accessorial'  => 'accessorialAllocations',
+                    'freight'      => 'freightAllocations',
+                    'others', 'admin', 'rpm' => 'othersAllocations',
+                    default        => null,
+                };
+
+                if ($deliveryRequest && $allocationRelation && method_exists($deliveryRequest, $allocationRelation)) {
+                    $liquidation->allocations = $deliveryRequest->$allocationRelation()->with('truck')->get();
+                } else {
+                    $liquidation->allocations = collect();
+                }
+
+                // Direct expense fields (numeric)
+                $totalExpenses += (float) $liquidation->allowance;
+                $totalExpenses += (float) $liquidation->manpower;
+                $totalExpenses += (float) $liquidation->hauling;
+                $totalExpenses += (float) $liquidation->right_of_way;
+                $totalExpenses += (float) $liquidation->roro_expense;
+                $totalExpenses += (float) $liquidation->cash_charge;
+
+                // Parse 'others' JSON
+                $others = $liquidation->others;
+                if (is_string($others)) {
+                    $others = json_decode($others, true);
+                }
+                if (is_array($others)) {
+                    foreach ($others as $item) {
+                        $totalExpenses += isset($item['amount']) ? (float) $item['amount'] : 0;
+                    }
+                }
+
+                // Parse 'gasoline' JSON - only type == 'cash'
+                $gasoline = $liquidation->gasoline;
+                if (is_string($gasoline)) {
+                    $gasoline = json_decode($gasoline, true);
+                }
+                if (is_array($gasoline)) {
+                    foreach ($gasoline as $item) {
+                        if (($item['type'] ?? '') === 'cash') {
+                            $totalExpenses += isset($item['amount']) ? (float) $item['amount'] : 0;
+                        }
+                    }
+                }
+
+                // Parse 'rf_id' JSON - only type == 'cash'
+                $rf_id = $liquidation->rf_id;
+                if (is_string($rf_id)) {
+                    $rf_id = json_decode($rf_id, true);
+                }
+                if (is_array($rf_id)) {
+                    foreach ($rf_id as $item) {
+                        if (($item['type'] ?? '') === 'cash') {
+                            $totalExpenses += isset($item['amount']) ? (float) $item['amount'] : 0;
+                        }
+                    }
+                }
+            } else {
+                $liquidation->allocations = collect(); // fallback
+            }
+
+            // Attach total expense to the liquidation instance
+            $liquidation->total_expense = $totalExpenses;
+        });
+
+          return view('liquidations.rejectList', compact('liquidations'));
+    }
+
+    public function rejectEdit($id)
+    {
+        $liquidation = Liquidation::with('cashVoucher')->findOrFail($id);
+
+        $employees = User::whereIn('id', [1, 41, 15, 5])->get();
+        $preparers = User::all();
+
+        return view('liquidations.rejectEdit', compact('liquidation', 'preparers', 'employees'));
+    }
+
+    public function rejectUpdate(Request $request, $id)
+    {
+        // Log the raw incoming request data
+        Log::info('Reject Update Request:', $request->all());
+
+        $liquidation = Liquidation::findOrFail($id);
+
+        $data = $request->validate([
+            'expenses.allowance' => 'nullable|numeric',
+            'expenses.manpower' => 'nullable|numeric',
+            'expenses.hauling' => 'nullable|numeric',
+            'expenses.right_of_way' => 'nullable|numeric',
+            'expenses.roro_expense' => 'nullable|numeric',
+            'expenses.cash_charge' => 'nullable|numeric',
+            'gasoline' => 'nullable|array',
+            'rfid' => 'nullable|array',
+            'others' => 'nullable|array',
+            'prepared_by' => 'required|exists:users,id',
+            'noted_by' => 'nullable|exists:users,id',
+        ]);
+
+        $expenses = $data['expenses'];
+
+        // Log extracted arrays individually
+        Log::info('Parsed Arrays:', [
+            'gasoline' => $request->gasoline,
+            'rfid' => $request->rfid,
+            'others' => $request->others,
+        ]);
+
+        $liquidation->update([
+            'approved_by' => $request->approved_by ?? null,
+            'allowance' => $expenses['allowance'] ?? 0,
+            'manpower' => $expenses['manpower'] ?? 0,
+            'hauling' => $expenses['hauling'] ?? 0,
+            'right_of_way' => $expenses['right_of_way'] ?? 0,
+            'roro_expense' => $expenses['roro_expense'] ?? 0,
+            'cash_charge' => $expenses['cash_charge'] ?? 0,
+            'gasoline' => array_values($request->gasoline ?? []),
+            'rfid' => array_values($request->rfid ?? []),
+            'others' => array_values($request->others ?? []),
+            'prepared_by' => $request->prepared_by,
+            'noted_by' => $request->noted_by,
+            'status' => 1,
+        ]);
+
+        Log::info('Liquidation Updated:', $liquidation->toArray());
+
+        return redirect()->route('liquidations.rejectedList')->with('success', 'Liquidation updated successfully.');
     }
 }

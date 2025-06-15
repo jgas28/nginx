@@ -56,7 +56,9 @@ class CashVoucherController extends Controller
     
         // Fetch related delivery line items by joining with the correct table name
         $deliveryRequests = CashVoucher::with([
-            'deliveryRequest.deliveryAllocations',
+            'deliveryRequest.deliveryAllocations' => function ($query) {
+                $query->orderBy('sequence');
+            },
             'deliveryRequest.pulloutAllocations',
             'deliveryRequest.accessorialAllocations',
             'deliveryRequest.othersAllocations',
@@ -69,15 +71,32 @@ class CashVoucherController extends Controller
             });
         })
         ->where('status', 1)
-        ->whereNotIn('cvr_type', ['admin', 'rpm']) // 👈 this is the fix
+        ->whereNotIn('cvr_type', ['admin', 'rpm'])
         ->paginate(10);
 
+        foreach ($deliveryRequests as $cashVoucher) {
+            $allAllocations = collect([
+                ...($cashVoucher->deliveryRequest->deliveryAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->pulloutAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->accessorialAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->othersAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->freightAllocations ?? []),
+            ]);
 
+            $matchedAllocation = $allAllocations->first(function ($allocation) use ($cashVoucher) {
+                return $allocation->dr_id == $cashVoucher->dr_id &&
+                    strtolower($allocation->trip_type) === strtolower($cashVoucher->cvr_type) &&
+                    $allocation->sequence == $cashVoucher->sequence;
+            });
+
+            // Add this to the model temporarily so you can access in the view
+            $cashVoucher->matched_allocation = $matchedAllocation;
+        }
         // Check if the request expects an AJAX response
         if ($request->ajax()) {
             return view('cashVoucherRequests.approval', compact('deliveryRequests'))->render();
         }
-    
+
         // For the normal view
         return view('cashVoucherRequests.approval', compact('deliveryRequests', 'search'));
     }    
@@ -183,7 +202,7 @@ class CashVoucherController extends Controller
             'employees',
             'fleetCards',
             'trucks',
-            'taxes',
+            'taxes', 
             'allocation'
         ));
     }
@@ -236,10 +255,12 @@ class CashVoucherController extends Controller
             return redirect()->back()->withErrors($e->errors())->withInput();
         }
 
-       
+        $sequence = CashVoucher::where('dr_id', $request->dr_id)
+        ->where('cvr_type', $request->cvr_type)
+        ->count() + 1;
 
         // Run everything in a DB transaction
-        DB::transaction(function () use ($company_id, $request) {
+        DB::transaction(function () use ($company_id, $request, $sequence) {
             // Handle potential rollover
             $currentDate = new DateTime(); // Always current date
             $yearMonth = $currentDate->format('Y-m');
@@ -298,9 +319,10 @@ class CashVoucherController extends Controller
                 'voucher_type' => $request->voucher_type,
                 'withholding_tax_id' => $request->voucher_type === 'with_tax' ? $request->withholding_tax : null,
                 'tax_based_amount' => $request->voucher_type === 'with_tax' ? $request->tax_base_amount : null,
-                'remarks' => $request->has('remarks') ? json_encode($request->remarks) : null,
+                'remarks' => $request->has('remarks') ? $request->remarks : null,
                 'created_by' => $employeeCode,
                 'dr_id' => $request->dr_id,
+                'sequence' => $sequence,
             ]);
 
             Log::info('Saving Cash Voucher:', ['cash_voucher' => $cashVoucher->toArray()]);

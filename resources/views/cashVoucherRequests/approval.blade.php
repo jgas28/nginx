@@ -29,21 +29,12 @@
                     <tr class="hover:bg-gray-50">
                         <td class="py-2 px-4 border-b">{{ $deliveryRequest->mtm }}</td>
                         <td class="py-2 px-4 border-b">
-                            @php
-                                $tripType = strtolower($deliveryRequest->cvr_type);
-                                $allocations = match($tripType) {
-                                    'delivery' => $deliveryRequest->deliveryRequest->deliveryAllocations ?? [],
-                                    'pullout' => $deliveryRequest->deliveryRequest->pulloutAllocations ?? [],
-                                    'accessorial' => $deliveryRequest->deliveryRequest->accessorialAllocations ?? [],
-                                    'others' => $deliveryRequest->deliveryRequest->othersAllocations ?? [],
-                                    'freight' => $deliveryRequest->deliveryRequest->freightAllocations ?? [],
-                                    default => [],
-                                };
-
-                                $truckName = $allocations[0]->truck->truck_name ?? 'N/A';
-                                $companyCode = $deliveryRequest->deliveryRequest->company->company_code ?? 'N/A';
-                                $expenseTypeCode = $deliveryRequest->deliveryRequest->expenseType->expense_code ?? 'N/A';
-                            @endphp
+                        @php
+                            $allocation = $deliveryRequest->matched_allocation ?? null;
+                            $truckName = $allocation->truck->truck_name ?? 'N/A';
+                            $companyCode = $deliveryRequest->deliveryRequest->company->company_code ?? 'N/A';
+                            $expenseTypeCode = $deliveryRequest->deliveryRequest->expenseType->expense_code ?? 'N/A';
+                        @endphp
                             {{ preg_replace('/\/\d+$/', '', $deliveryRequest->cvr_number) }}-{{ $truckName }}-{{ $companyCode }}-{{ $expenseTypeCode }}
                         </td>
                         <td class="py-2 px-4 border-b">{{ $deliveryRequest->amount }}</td>

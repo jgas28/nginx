@@ -26,10 +26,17 @@
                     CVR Information
                 </legend>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label for="cvr_number" class="block text-sm font-medium text-gray-700">CVR Number</label>
-                        <input type="text" name="cvr_number" id="cvr_number" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->cvr_number }}" readonly>
-                    </div>
+                    @if ($cashVouchers->cvr_type === 'admin')
+                        <div>
+                            <label for="cvr_number" class="block text-sm font-medium text-gray-700">CVR Number</label>
+                            <input type="text" name="cvr_number" id="cvr_number" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ preg_replace('/\/\d+$/', '',$cashVouchers->cvr_number) }}-{{ $cashVouchers->company->company_code }}{{ $cashVouchers->expenseTypes->expense_code }}" readonly>
+                        </div>
+                    @elseif ($cashVouchers->cvr_type === 'rpm')
+                        <div>
+                            <label for="cvr_number" class="block text-sm font-medium text-gray-700">CVR Number</label>
+                            <input type="text" name="cvr_number" id="cvr_number" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ preg_replace('/\/\d+$/', '',$cashVouchers->cvr_number) }}-{{ $cashVouchers->trucks->truck_name }}-{{ $cashVouchers->company->company_code }}{{ $cashVouchers->expenseTypes->expense_code }}  " readonly>
+                        </div>
+                    @endif
 
                    @php
                         $amounts = json_decode($cashVouchers->amount_details, true);

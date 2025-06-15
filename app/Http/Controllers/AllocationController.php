@@ -75,7 +75,6 @@ class AllocationController extends Controller
         $driverId = $request->driver_id;
         $requestorId = $request->requestor_id;
         $amount = $request->amount;
-        $tripType = $request->trip_type;
         $helpers = $request->helpers ?? [];
         $employeeCode = Auth::id();
 
@@ -87,11 +86,13 @@ class AllocationController extends Controller
             'amount' => $amount,
             'helpers' => $helpers,
             'delivery_request_ids' => $request->delivery_request_ids,
-            'trip_type' => $tripType,
+            'trip_type' => 'delivery',
         ]);
 
         $firstDr = true;
 
+         // ✅ Correct sequence calculation
+    
         foreach ($request->delivery_request_ids as $drId) {
             Log::info('Processing delivery request.', ['dr_id' => $drId]);
 
@@ -102,6 +103,11 @@ class AllocationController extends Controller
             $currentAmount = $firstDr ? $amount : 0;
             $firstDr = false;
 
+            // ✅ FIXED: Get sequence only for this drId and trip_type
+            $sequence = Allocation::where('dr_id', $drId)
+                ->where('trip_type', 'delivery')
+                ->count() + 1;
+
             Allocation::create([
                 'dr_id' => $drId,
                 'requestor_id' => $requestorId,
@@ -111,13 +117,12 @@ class AllocationController extends Controller
                 'amount' => $currentAmount,
                 'trip_type' => 'delivery',
                 'created_by' => $employeeCode,
+                'dr_stats' => 'Allocated',
+                'sequence' => $sequence,
             ]);
 
-            $deliveryRequest = DeliveryRequest::find($drId);
-            $deliveryRequest->update(['delivery_status' => 14]);
-
+            DeliveryRequest::where('id', $drId)->update(['delivery_status' => 14]);
         }
-
         Log::info('Cash voucher allocations processed successfully.', [
             'user_id' => $employeeCode,
             'delivery_request_ids' => $request->delivery_request_ids,

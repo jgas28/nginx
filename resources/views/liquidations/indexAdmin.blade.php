@@ -26,11 +26,11 @@
                     <tr class="hover:bg-gray-50 transition duration-150 ease-in-out">
                         @if($voucher->cvr_type === 'admin')
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {{ $voucher->cvr_number ?? '-' }}-{{ $voucher->company->company_code ?? '-' }}{{ ucfirst($voucher->expenseTypes->expense_code ?? '-') }}
+                                {{ preg_replace('/\/\d+$/', '',$voucher->cvr_number ?? '-') }}-{{ $voucher->company->company_code ?? '-' }}{{ ucfirst($voucher->expenseTypes->expense_code ?? '-') }}
                             </td>
                         @elseif($voucher->cvr_type === 'rpm')
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {{ $voucher->cvr_number ?? '-' }}-{{ ucfirst($voucher->trucks->truck_name ?? '-' ) }}-{{ $voucher->company->company_code ?? '-' }}{{ ucfirst($voucher->expenseTypes->expense_code ?? '-' ) }}
+                                {{ preg_replace('/\/\d+$/', '',$voucher->cvr_number ?? '-') }}-{{ ucfirst($voucher->trucks->truck_name ?? '-' ) }}-{{ $voucher->company->company_code ?? '-' }}{{ ucfirst($voucher->expenseTypes->expense_code ?? '-' ) }}
                             </td>
                         @endif
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-indigo-600 font-semibold">

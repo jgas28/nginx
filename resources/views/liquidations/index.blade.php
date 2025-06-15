@@ -20,8 +20,6 @@
                         <td class="px-6 py-4 text-sm text-gray-900">
                             {{ preg_replace('/\/\d+$/', '',$item->cashVoucher->cvr_number ?? 'N/A') }}-{{ $item->allocation?->truck?->truck_name }}-{{ $item->cashVoucher->deliveryRequest->company->company_code ?? 'N/A' }}{{ $item->cashVoucher->deliveryRequest->expenseType->expense_code ?? '' }}
                         </td>
-                        <td>{{$item->cashVoucher->deliveryRequest->allocations->first()
-                        ?->truck_id}}</td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {{ number_format($item->amount, 2) }}
                         </td>

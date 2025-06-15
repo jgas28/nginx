@@ -29,6 +29,7 @@ use App\Models\CashVoucher;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use DateTime;
 
 class CoordinatorsController extends Controller
@@ -837,8 +838,6 @@ class CoordinatorsController extends Controller
 
         $allocate = DeliveryRequest::with('allocations')->find($deliveryRequest->id);
 
-        // dd($deliveryLineItems);
-
         $companies = Company::all();
         $regions = Region::all();
         $deliveryTypes = DeliveryType::all();
@@ -874,9 +873,10 @@ class CoordinatorsController extends Controller
             })
         ->get();
 
-        $allocate = DeliveryRequest::with(['allocations' => function ($query) {
-            $query->where('trip_type', 'delivery');
-        }])->find($deliveryRequest->id);
+        $allocate = Allocation::where('dr_id', $deliveryRequest->id)
+        ->where('trip_type', 'delivery')
+        ->latest() // same as orderBy('created_at', 'desc')
+        ->first();
 
         // dd($deliveryLineItems);
 
@@ -1062,19 +1062,14 @@ class CoordinatorsController extends Controller
         try {
             $request->validate([
                 // Validation rules
-                'allocation_id' => 'nullable|array',
-                'allocation_id.*' => 'nullable|integer|exists:allocations,id',
-                'amount' => 'required|array',
-                'amount.*' => 'required|numeric|min:0',
-                'fleet_card_id' => 'nullable|array',
-                'fleet_card_id.*' => 'nullable|integer|exists:fleet_cards,id',
-                'truck_id' => 'required|array',
-                'truck_id.*' => 'required|integer|exists:trucks,id',
-                'driver_id' => 'required|array',
-                'driver_id.*' => 'required|integer|exists:users,id',
+                'allocation_id' => 'nullable|integer|exists:allocations,id',
+                'amount' => 'required|numeric|min:0',
+                'fleet_card_id' => 'nullable|integer|exists:fleet_cards,id',
+                'truck_id' => 'required|integer|exists:trucks,id',
+                'driver_id' => 'required|integer|exists:users,id',
+                'requestor_id' => 'nullable|integer|exists:users,id',
                 'helper' => 'nullable|array',
-                'helper.*' => 'nullable|array',
-                'helper.*.*' => 'nullable|string',
+                'helper.*' => 'nullable|string',
 
                 // DeliveryRequest fields
                 'delivery_date' => 'required|date',
@@ -1141,40 +1136,31 @@ class CoordinatorsController extends Controller
                 }
             }
 
-            // Handle allocations — update existing or create new
-            $allocationIds = $request->input('allocation_id', []);
-            $amounts = $request->input('amount');
-            $fleetCardIds = $request->input('fleet_card_id', []);
-            $truckIds = $request->input('truck_id');
-            $driverIds = $request->input('driver_id');
-            $requestor_id =  $request->input('requestor_id', []);
+            $allocationId = $request->input('allocation_id');
+            $amount = $request->input('amount');
+            $fleetCardId = $request->input('fleet_card_id');
+            $truckId = $request->input('truck_id');
+            $driverId = $request->input('driver_id');
+            $requestorId = $request->input('requestor_id');
             $helpers = $request->input('helper', []);
-            // $tripTypes = $request->input('trip_type');
 
-            foreach ($amounts as $index => $amount) {
-                $allocationId = $allocationIds[$index] ?? null;
+            if ($allocationId) {
+                $allocation = Allocation::where('id', $allocationId)
+                    ->where('trip_type', 'delivery')
+                    ->first();
 
-                if ($allocationId) {
-                    // Find only existing delivery-type allocations
-                    $allocation = Allocation::where('id', $allocationId)
-                        ->where('trip_type', 'delivery')
-                        ->first();
-
-                    if (!$allocation) {
-                        Log::warning('Allocation not found or not of trip_type "delivery"', [
-                            'allocationId' => $allocationId
-                        ]);
-                        continue; // Skip if not found or not delivery
-                    }
-
-                    // Update allocation (do NOT change the trip_type!)
+                if (!$allocation) {
+                    Log::warning('Allocation not found or not of trip_type "delivery"', [
+                        'allocationId' => $allocationId
+                    ]);
+                } else {
                     $allocation->amount = $amount;
-                    $allocation->fleet_card_id = $fleetCardIds[$index] ?? null;
-                    $allocation->truck_id = $truckIds[$index] ?? null;
-                    $allocation->driver_id = $driverIds[$index] ?? null;
-                    $allocation->helper = $helpers[$index] ?? [];
+                    $allocation->fleet_card_id = $fleetCardId;
+                    $allocation->truck_id = $truckId;
+                    $allocation->driver_id = $driverId;
+                    $allocation->helper = $helpers;
                     $allocation->created_by = $employeeCode;
-                    $allocation->requestor_id = $requestor_id[$index] ?? null;
+                    $allocation->requestor_id = $requestorId;
                     $allocation->save();
 
                     Log::info('Allocation updated', [
@@ -1183,12 +1169,27 @@ class CoordinatorsController extends Controller
                         'allocation' => $allocation->toArray()
                     ]);
                 }
+            } else {
+                Allocation::create([
+                    'dr_id' => $deliveryRequest->id,
+                    'amount' => $amount,
+                    'fleet_card_id' => $fleetCardId,
+                    'truck_id' => $truckId,
+                    'driver_id' => $driverId,
+                    'helper' => $helpers,
+                    'created_by' => $employeeCode,
+                    'requestor_id' => $requestorId,
+                    'trip_type' => 'delivery',
+                    'dr_stats' => 'Allocated',
+                ]);
+
+                Log::info('New allocation created for delivery request', ['dr_id' => $deliveryRequest->id]);
             }
 
             // Commit transaction if all succeed
             DB::commit();
 
-            return redirect()->route('coordinators.index', $deliveryRequest)
+            return redirect()->route('coordinators.index', ['tab' => 'status9'])
                 ->with('success', 'Delivery request, line items and allocations updated successfully.');
 
         } catch (\Exception $e) {
@@ -1239,7 +1240,7 @@ class CoordinatorsController extends Controller
         if ((int)$currentDate->format('j') === (int)$lastDayOfMonth) {
             $currentDate->modify('first day of next month');
         }
-
+ 
         $currentYear = $currentDate->format('Y');
         $currentMonth = $currentDate->format('m');
         $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber);
@@ -1281,15 +1282,19 @@ class CoordinatorsController extends Controller
             ]);
             Log::info('Validation Passed:', ['validated_data' => $validated]);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             Log::error('Validation Errors:', ['errors' => $e->errors()]);
             return redirect()->back()->withErrors($e->errors())->withInput();
         }
 
+        $sequence = CashVoucher::where('dr_id', $request->dr_id)
+        ->where('cvr_type', $request->cvr_type)
+        ->count() + 1;
+
         $company_id = $request->company_id;
 
         // Run everything in a DB transaction
-        DB::transaction(function () use ($company_id, $request) {
+        DB::transaction(function () use ($company_id, $request, $sequence) {
             // Handle potential rollover
             $currentDate = new DateTime(); // Always current date
             $yearMonth = $currentDate->format('Y-m');
@@ -1351,6 +1356,7 @@ class CoordinatorsController extends Controller
                 'remarks' => $request->has('remarks') ? json_encode($request->remarks) : null,
                 'created_by' => $employeeCode,
                 'dr_id' => $request->dr_id,
+                'sequence' => $sequence,
             ]);
 
             Log::info('Saving Cash Voucher:', ['cash_voucher' => $cashVoucher->toArray()]);
@@ -1366,6 +1372,7 @@ class CoordinatorsController extends Controller
                 'helper' => $request->has('helpers') ? $request->helpers : null,
                 'trip_type' => $request->trip_type,
                 'created_by' => $employeeCode,
+                'sequence' => $sequence,
             ]);
             $allocation->save();
 
@@ -1475,15 +1482,19 @@ class CoordinatorsController extends Controller
             ]);
             Log::info('Validation Passed:', ['validated_data' => $validated]);
 
-        } catch (\Illuminate\Validation\ValidationException $e) {
+        } catch (ValidationException $e) {
             Log::error('Validation Errors:', ['errors' => $e->errors()]);
             return redirect()->back()->withErrors($e->errors())->withInput();
         }
 
+        $sequence = CashVoucher::where('dr_id', $request->dr_id)
+        ->where('cvr_type', $request->trip_type)
+        ->count() + 1;
+
         $company_id = $request->company_id;
 
         // Run everything in a DB transaction
-        DB::transaction(function () use ($company_id, $request) {
+        DB::transaction(function () use ($company_id, $request, $sequence) {
             // Handle potential rollover
             $currentDate = new DateTime(); // Always current date
             $yearMonth = $currentDate->format('Y-m');
@@ -1542,9 +1553,10 @@ class CoordinatorsController extends Controller
                 'voucher_type' => $request->voucher_type,
                 'withholding_tax_id' => $request->voucher_type === 'with_tax' ? $request->withholding_tax : null,
                 'tax_based_amount' => $request->voucher_type === 'with_tax' ? $request->tax_base_amount : null,
-                'remarks' => $request->has('remarks') ? json_encode($request->remarks) : null,
+                'remarks' => $request->has('remarks') ? $request->remarks : null,
                 'created_by' => $employeeCode,
                 'dr_id' => $request->dr_id,
+                'sequence' => $sequence,
             ]);
 
             Log::info('Saving Cash Voucher:', ['cash_voucher' => $cashVoucher->toArray()]);
@@ -1560,6 +1572,7 @@ class CoordinatorsController extends Controller
                 'helper' => $request->has('helpers') ? $request->helpers : null,
                 'trip_type' => $request->trip_type,
                 'created_by' => $employeeCode,
+                'sequence' => $sequence,
             ]);
             $allocation->save();
 

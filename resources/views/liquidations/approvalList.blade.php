@@ -26,7 +26,7 @@
                         <a href="{{ route('liquidations.approval', $liquidation->id) }}" class="text-indigo-600 hover:text-indigo-900 underline">Review</a>
                     </td>
                 </tr>
-            @empty
+            @empty 
                 <tr> 
                     <td colspan="5" class="p-3 text-center text-gray-500">No liquidations found.</td>
                 </tr>

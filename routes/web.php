@@ -106,7 +106,11 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/liquidations/liquidationList', [LiquidationController::class, 'liquidationList'])
     ->name('liquidations.liquidationList');
+    Route::get('/liquidations/{id}/reject-edit', [LiquidationController::class, 'rejectEdit'])->name('liquidations.rejectEdit');
+    Route::put('/liquidations/{id}/reject-update', [LiquidationController::class, 'rejectUpdate'])->name('liquidations.rejectUpdate');
 
+        // Route to show rejected liquidations
+    Route::get('/liquidations/rejectedList', [LiquidationController::class, 'rejectedList'])->name('liquidations.rejectedList');
     Route::post('/liquidations/{id}/reject', [LiquidationController::class, 'reject'])->name('liquidations.reject');
 
 
@@ -199,8 +203,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/return/print/{id}', [RunningBalanceController::class, 'printReturn'])->name('returns.print');
 
     Route::post('/liquidations/{id}/approvedEdit', [LiquidationController::class, 'approvedLiqUpdate'])->name('liquidations.approvedEdit');
-    // Route to show rejected liquidations
-    Route::get('/liquidations/rejected', [LiquidationController::class, 'rejectedList'])->name('liquidations.rejected');
+
 
     Route::prefix('running-balance')->group(function () {
         Route::get('refunds/{id}/edit', [RunningBalanceController::class, 'editRefund'])->name('refunds.edit');
