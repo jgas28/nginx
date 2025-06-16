@@ -1553,7 +1553,7 @@ class CoordinatorsController extends Controller
                 'voucher_type' => $request->voucher_type,
                 'withholding_tax_id' => $request->voucher_type === 'with_tax' ? $request->withholding_tax : null,
                 'tax_based_amount' => $request->voucher_type === 'with_tax' ? $request->tax_base_amount : null,
-                'remarks' => $request->has('remarks') ? $request->remarks : null,
+                'remarks' => $request->has('remarks') ? json_encode($request->remarks) : null,
                 'created_by' => $employeeCode,
                 'dr_id' => $request->dr_id,
                 'sequence' => $sequence,
