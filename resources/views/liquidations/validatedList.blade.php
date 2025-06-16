@@ -18,7 +18,38 @@
         <tbody>
             @forelse ($liquidations as $liquidation)
                 <tr class="hover:bg-gray-50">
-                    <td class="p-3 border">{{ $liquidation->cvr_number ?? 'N/A' }}</td>
+                    @php
+                        $cashVoucher = optional($liquidation->cashVoucher);
+                        $cvrType = $cashVoucher->cvr_type ?? null;
+
+                        $cvrNumber =  preg_replace('/\/\d+$/', '', $cashVoucher->cvr_number ?? 'N/A');
+                        $details = ''; // This will hold the appended details based on cvr_type
+
+                        if ($cvrType === 'rpm') {
+                            $truckName = optional($cashVoucher->truck)->truck_name ?? 'N/A';
+                            $companyCode = optional($cashVoucher->company)->company_code ?? 'N/A';
+                            $expenseCodeVal = optional($cashVoucher->expenseTypes)->expense_code ?? 'N/A';
+
+                            $details = "-$truckName-$companyCode$expenseCodeVal";
+
+                        } elseif ($cvrType === 'admin') {
+                            $companyId = $cashVoucher->company->company_code ?? 'N/A';
+                            $expenseCodeVal = $cashVoucher->expenseTypes->expense_code ?? 'N/A';
+
+                            $details = "-$companyId$expenseCodeVal";
+
+                        } elseif (in_array($cvrType, ['delivery', 'pullout', 'accessorial', 'freight', 'others'])) {
+                            $truckId = optional($liquidation->allocation->truck)->truck_name ?? 'N/A';
+                            $companyId = optional($liquidation->deliveryRequest->company)->company_code ?? 'N/A';
+                            $expenseCodeVal = optional($liquidation->deliveryRequest->expenseType)->expense_code ?? 'N/A';
+
+                            $details = "-$truckId-$companyId$expenseCodeVal";
+                        }
+                    @endphp
+
+                    <td class="p-3 border">
+                        {{ $cvrNumber }}{!! $details !!}
+                    </td>
                     <td class="p-3 border">{{ $liquidation->preparedBy->fname ?? '' }} {{ $liquidation->preparedBy->lname ?? '' }}</td>
                     <td class="p-3 border">{{ $liquidation->notedBy->fname ?? '' }} {{ $liquidation->notedBy->lname ?? '' }}</td>
                     <td class="p-3 border">{{ $liquidation->created_at->format('Y-m-d') }}</td>

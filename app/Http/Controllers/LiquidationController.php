@@ -38,6 +38,7 @@ class LiquidationController extends Controller
             if ($drId && $cvrType) {
                 $allocation = Allocation::where('dr_id', $drId)
                             ->where('trip_type', $cvrType)
+                            ->where('sequence', $cashVoucher->sequence) // <-- Added filter here
                             ->first();
             }
 
@@ -45,7 +46,7 @@ class LiquidationController extends Controller
             $item->allocation = $allocation;
         }
 
-        return view('liquidations.index', compact('data', 'allocation'));
+        return view('liquidations.index', compact('data'));
     }
 
     public function indexAdmin()
@@ -162,9 +163,31 @@ class LiquidationController extends Controller
 
     public function reviewList()
     {
-        $liquidations = Liquidation::with('preparedBy', 'notedBy', 'cashVoucher')
+        $liquidations = Liquidation::with(['preparedBy', 'notedBy', 'cashVoucher'])
             ->where('status', 1)
             ->paginate(10);
+
+        foreach ($liquidations as $liquidation) {
+            $cashVoucher = $liquidation->cashVoucher;
+
+            if (!$cashVoucher) {
+                continue; // Skip if no associated CashVoucher
+            }
+
+            $cvrType = $cashVoucher->cvr_type;
+            $dr = $cashVoucher->deliveryRequest ?? null;
+
+            // Only get allocation for these CVR types
+            if (in_array($cvrType, ['delivery', 'others', 'rpm', 'freight', 'accessorial', 'pullout']) && $dr) {
+                $allocation = Allocation::where('dr_id', $dr->id)
+                    ->where('trip_type', $cvrType)
+                    ->where('sequence', $cashVoucher->sequence)
+                    ->first();
+
+                $liquidation->allocation = $allocation;
+                $liquidation->deliveryRequest = $dr;
+            }
+        }
 
         return view('liquidations.reviewList', compact('liquidations'));
     }
@@ -280,7 +303,7 @@ class LiquidationController extends Controller
 
         // Return view
         return view('liquidations.review', compact(
-            'liquidation',
+            'liquidation', 
             'employees',
             'approvers',
             'totalCash',
@@ -296,8 +319,6 @@ class LiquidationController extends Controller
             'runningUncollected'
         ));
     }
-
-
 
     public function validateLiquidation(Request $request, $id)
     {
@@ -357,6 +378,28 @@ class LiquidationController extends Controller
         $liquidations = Liquidation::with('preparedBy', 'notedBy', 'cashVoucher')
             ->where('status', 3)
             ->paginate(10);
+
+        foreach ($liquidations as $liquidation) {
+            $cashVoucher = $liquidation->cashVoucher;
+
+            if (!$cashVoucher) {
+                continue; // Skip if no associated CashVoucher
+            }
+
+            $cvrType = $cashVoucher->cvr_type;
+            $dr = $cashVoucher->deliveryRequest ?? null;
+
+            // Only get allocation for these CVR types
+            if (in_array($cvrType, ['delivery', 'others', 'rpm', 'freight', 'accessorial', 'pullout']) && $dr) {
+                $allocation = Allocation::where('dr_id', $dr->id)
+                    ->where('trip_type', $cvrType)
+                    ->where('sequence', $cashVoucher->sequence)
+                    ->first();
+
+                $liquidation->allocation = $allocation;
+                $liquidation->deliveryRequest = $dr;
+            }
+        }
 
         return view('liquidations.validatedList', compact('liquidations'));
     }
@@ -492,6 +535,28 @@ class LiquidationController extends Controller
         $liquidations = Liquidation::with('preparedBy', 'notedBy', 'cashVoucher')
             ->where('status', 4)
             ->paginate(10); 
+        
+        foreach ($liquidations as $liquidation) {
+            $cashVoucher = $liquidation->cashVoucher;
+
+            if (!$cashVoucher) {
+                continue; // Skip if no associated CashVoucher
+            }
+
+            $cvrType = $cashVoucher->cvr_type;
+            $dr = $cashVoucher->deliveryRequest ?? null;
+
+            // Only get allocation for these CVR types
+            if (in_array($cvrType, ['delivery', 'others', 'rpm', 'freight', 'accessorial', 'pullout']) && $dr) {
+                $allocation = Allocation::where('dr_id', $dr->id)
+                    ->where('trip_type', $cvrType)
+                    ->where('sequence', $cashVoucher->sequence)
+                    ->first();
+
+                $liquidation->allocation = $allocation;
+                $liquidation->deliveryRequest = $dr;
+            }
+        }
 
         return view('liquidations.approvalList', compact('liquidations'));
     }
@@ -701,7 +766,7 @@ class LiquidationController extends Controller
                 ]);
 
                 $deliveryRequest = $cashVoucher->deliveryRequest;
-
+                
                 // Load allocation relation dynamically
                 $allocationRelation = match ($cashVoucher->cvr_type) {
                     'delivery'     => 'deliveryAllocations',
