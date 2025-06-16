@@ -115,12 +115,6 @@ class LiquidationController extends Controller
 
         // Determine Liquidation status
         $status = 1; // default
-        if (
-            ($approvedAmount == 0 && $totalLiquidated == 0) ||
-            ($approvedAmount == $totalLiquidated)
-        ) {
-            $status = 4;
-        }
 
         // Prepare data
         $data = [
@@ -228,7 +222,7 @@ class LiquidationController extends Controller
 
         // Raw difference (before adjustments)
         $difference = $totalCash - $approvedAmount;
-
+        $totalLiquidated = $totalCash;
         // Load running balances
         $runningRefunds = RunningBalance::where('cvr_number', $liquidation->cvr_number)
             ->where('type', '3') // Refund
@@ -268,12 +262,20 @@ class LiquidationController extends Controller
         $refund = false;
         $return = false;
 
-        if ($adjustedDifference > 0) {
-            $refund = true;        // Over-liquidated (user received more than needed)
-            $nextStatus = 4;       // Still can go to approval
+        if (
+            ($approvedAmount == 0 && $totalLiquidated == 0) ||
+            ($approvedAmount == $totalLiquidated)
+        ) {
+            // Perfect match or no transaction
+            $nextStatus = 4;
+        } elseif ($adjustedDifference > 0) {
+            // Over-liquidated: user returned excess cash
+            $refund = true;
+            $nextStatus = 4;
         } elseif ($adjustedDifference < 0) {
-            $return = true;        // Under-liquidated (user owes money)
-            $nextStatus = 3;       // Needs collection before approval
+            // Under-liquidated: user owes money
+            $return = true;
+            $nextStatus = 3;
         }
 
         // Return view

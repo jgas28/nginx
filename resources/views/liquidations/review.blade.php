@@ -171,7 +171,7 @@
     </div>
 
     {{-- Refund Modal Trigger --}}
-    @if ($difference < 0 && abs($difference) > 0.009)
+    @if ($difference > 0 && abs($difference) > 0.009)
         <button id="openModalBtn" class="mt-6 bg-red-600 text-white px-5 py-2 rounded hover:bg-red-700 transition">
             Create Refund
         </button>
