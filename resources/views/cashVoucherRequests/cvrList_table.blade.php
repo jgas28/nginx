@@ -33,23 +33,20 @@
                         <td class="py-2 px-4 border-b">{{ $cashVoucherRequest->mtm }}</td>
                         <td class="py-2 px-4 border-b">
                             @php
-                                $tripType = strtolower($cashVoucherRequest->cvr_type);
+                                $matched = $cashVoucherRequest->matched_allocation ?? null;
 
-                                $allocations = match($tripType) {
-                                    'delivery' => $cashVoucherRequest->deliveryRequest->deliveryAllocations ?? [],
-                                    'pullout' => $cashVoucherRequest->deliveryRequest->pulloutAllocations ?? [],
-                                    'accessorial' => $cashVoucherRequest->deliveryRequest->accessorialAllocations ?? [],
-                                    'others' => $cashVoucherRequest->deliveryRequest->othersAllocations ?? [],
-                                    'freight' => $cashVoucherRequest->deliveryRequest->freightAllocations ?? [],
-                                    default => [],
-                                };
+                                // Safely access truck name via matched allocation
+                                $truckId = optional(optional($matched)->truck)->truck_name ?? 'N/A';
 
-                                $truckId = $allocations[0]->truck->truck_name ?? 'N/A';
-                                $companyId = $cashVoucherRequest->deliveryRequest->company->company_code ?? 'N/A';
-                                $expenseTypeId = $cashVoucherRequest->deliveryRequest->expenseType->expense_code ?? 'N/A';
+                                // Fallbacks for company and expense code
+                                $companyId = optional($cashVoucherRequest->deliveryRequest->company)->company_code ?? 'N/A';
+                                $expenseTypeId = optional($cashVoucherRequest->deliveryRequest->expenseType)->expense_code ?? 'N/A';
+
+                                // Strip trailing "/number" from CVR number
+                                $formattedCvrNumber = preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number);
                             @endphp
 
-                            {{ preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number) }}-{{ $truckId }}-{{ $companyId }}{{ $expenseTypeId }}
+                            {{ $formattedCvrNumber }}-{{ $truckId }}-{{ $companyId }}{{ $expenseTypeId }}
                         </td>
                         <td class="py-2 px-4 border-b">
                             @foreach($cashVoucherRequest->cvrApprovals as $approval)

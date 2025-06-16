@@ -457,6 +457,7 @@ class CashVoucherController extends Controller
         $deliveryRequests = DeliveryRequest::where('id', $cashVouchers->dr_id)->first();
         $allocations = Allocation::where('dr_id', $cashVouchers->dr_id)
             ->where('trip_type', $cashVouchers->cvr_type)
+            ->where('sequence', $cashVouchers->sequence)
             ->first();
 
         $employees = User::all();
@@ -634,11 +635,9 @@ class CashVoucherController extends Controller
 
 
     public function cvrList(Request $request)
-    { 
-        // Get the search query from the request
+    {
         $search = $request->get('search');
-    
-        // Fetch related delivery line items by joining with the correct table name
+
         $cashVoucherRequests = CashVoucher::with([
             'deliveryRequest.deliveryAllocations',
             'deliveryRequest.pulloutAllocations',
@@ -658,15 +657,33 @@ class CashVoucherController extends Controller
         ->orderBy('print_status', 'asc')
         ->orderBy('cvr_number')
         ->paginate(10);
-    
-        // Check if the request expects an AJAX response
+
+        // Add matched_allocation to each cash voucher
+        foreach ($cashVoucherRequests as $cashVoucher) {
+            $allAllocations = collect([
+                ...($cashVoucher->deliveryRequest->deliveryAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->pulloutAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->accessorialAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->othersAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->freightAllocations ?? []),
+            ]);
+
+            $matchedAllocation = $allAllocations->first(function ($allocation) use ($cashVoucher) {
+                return $allocation->dr_id == $cashVoucher->dr_id &&
+                    strtolower($allocation->trip_type) === strtolower($cashVoucher->cvr_type) &&
+                    $allocation->sequence == $cashVoucher->sequence;
+            });
+
+            // Temporarily attach the matched allocation to the model
+            $cashVoucher->matched_allocation = $matchedAllocation;
+        }
+
         if ($request->ajax()) {
             return view('cashVoucherRequests.cvrList_table', compact('cashVoucherRequests'))->render();
         }
-    
-        // For the normal view
+
         return view('cashVoucherRequests.cvrList', compact('cashVoucherRequests', 'search'));
-    } 
+    }
 
     public function printMultiple(Request $request)
     {
@@ -728,6 +745,7 @@ class CashVoucherController extends Controller
             $allocations = Allocation::with('truck')
                 ->where('dr_id', $cashVoucherRequest->dr_id)
                 ->where('trip_type', $mtm)
+                ->where('sequence', $cashVoucherRequest->sequence)
                 ->first();
 
             // Fleet card info
@@ -829,6 +847,7 @@ class CashVoucherController extends Controller
             $allocations = Allocation::with('truck')
             ->where('dr_id', $cashVoucherRequest->dr_id)
             ->where('allocations.trip_type', $mtm) 
+            ->where('sequence', $cashVoucherRequest->sequence)
             ->first();
     
             $fleets = DB::table('allocations')
@@ -1007,6 +1026,7 @@ class CashVoucherController extends Controller
             $allocations = Allocation::with('truck')
             ->where('dr_id', $cashVoucherRequest->dr_id)
             ->where('trip_type', $cvr_type)
+            ->where('sequence', $cashVoucherRequest->sequence)
             ->first();
     
             $fleets = DB::table('allocations')
@@ -1130,10 +1150,40 @@ class CashVoucherController extends Controller
         {
             $user = Auth::user();
             $employeeCode = $user->id;
-            $cashVouchers = CashVoucher::where('status', 3)
+
+            $cashVouchers = CashVoucher::with([
+                'deliveryRequest.deliveryAllocations',
+                'deliveryRequest.pulloutAllocations',
+                'deliveryRequest.accessorialAllocations',
+                'deliveryRequest.freightAllocations',
+                'deliveryRequest.othersAllocations',
+                'deliveryRequest.company',
+                'deliveryRequest.expenseType',
+            ])
+            ->where('status', 3)
             ->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial', 'freight', 'others'])
             ->where('created_by', $employeeCode)
             ->get();
+
+            // Attach matched allocation dynamically
+            foreach ($cashVouchers as $cashVoucher) {
+                $allAllocations = collect([
+                    ...($cashVoucher->deliveryRequest->deliveryAllocations ?? []),
+                    ...($cashVoucher->deliveryRequest->pulloutAllocations ?? []),
+                    ...($cashVoucher->deliveryRequest->accessorialAllocations ?? []),
+                    ...($cashVoucher->deliveryRequest->othersAllocations ?? []),
+                    ...($cashVoucher->deliveryRequest->freightAllocations ?? []),
+                ]);
+
+                $matchedAllocation = $allAllocations->first(function ($allocation) use ($cashVoucher) {
+                    return $allocation->dr_id == $cashVoucher->dr_id &&
+                        strtolower($allocation->trip_type) === strtolower($cashVoucher->cvr_type) &&
+                        $allocation->sequence == $cashVoucher->sequence;
+                });
+
+                $cashVoucher->matched_allocation = $matchedAllocation;
+            }
+
             return view('cashVoucherRequests.rejectView', compact('cashVouchers'));
         }
 
