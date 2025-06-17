@@ -605,7 +605,7 @@
         validateBtn?.addEventListener('click', function () {
             confirmValidationModal?.classList.remove('hidden');
 
-            if (difference > 0.009) {
+            if (difference < 0.009) {
                 // Show warning and disable the button
                 warningSpan?.classList.remove('hidden');
                 differenceAmount.textContent = difference.toFixed(2);
