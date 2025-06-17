@@ -572,87 +572,85 @@ class LiquidationController extends Controller
 
         // Calculate total liquidated cash
         $totalCash = 0;
-
         foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field) {
             $totalCash += floatval($liquidation->$field ?? 0);
         }
-
         $totalCash += floatval($liquidation->cash_charge ?? 0);
 
-        // Decode and iterate over gasoline, if it's a string (JSON-encoded)
+        // Decode JSON fields
         $gasoline = is_array($liquidation->gasoline) ? $liquidation->gasoline : json_decode($liquidation->gasoline, true) ?? [];
+        $rfid = is_array($liquidation->rfid) ? $liquidation->rfid : json_decode($liquidation->rfid, true) ?? [];
+        $others = is_array($liquidation->others) ? $liquidation->others : json_decode($liquidation->others, true) ?? [];
+
+        // Add cash-based gasoline
         foreach ($gasoline as $item) {
             if (($item['type'] ?? '') === 'cash') {
                 $totalCash += floatval($item['amount'] ?? 0);
             }
         }
 
-        // Decode and iterate over RFID
-        $rfid = is_array($liquidation->rfid) ? $liquidation->rfid : json_decode($liquidation->rfid, true) ?? [];
+        // Add cash-based RFID
         foreach ($rfid as $item) {
             if (($item['type'] ?? '') === 'cash') {
                 $totalCash += floatval($item['amount'] ?? 0);
             }
         }
 
-        // Decode and iterate over others
-        $others = is_array($liquidation->others) ? $liquidation->others : json_decode($liquidation->others, true) ?? [];
+        // Add all "others" amounts
         foreach ($others as $item) {
             $totalCash += floatval($item['amount'] ?? 0);
         }
 
-        // Total Card Expenses (non-cash)
+        // Total Card Expenses
         $totalCard = 0;
-
-        // Decode and iterate over gasoline for card type
         foreach ($gasoline as $item) {
             if (($item['type'] ?? '') === 'card') {
                 $totalCard += floatval($item['amount'] ?? 0);
             }
         }
 
-        // Decode and iterate over RFID for card type
         foreach ($rfid as $item) {
             if (($item['type'] ?? '') === 'card') {
                 $totalCard += floatval($item['amount'] ?? 0);
             }
         }
 
-        // Add refund/return from running balances
-        $refundReturnTotal = $liquidation->runningBalances->sum('amount');
-        $finalLiquidated = $totalCash + $refundReturnTotal;
+        // Properly calculate each running balance type
+        $refundTotal = $liquidation->runningBalances
+            ->where('type', '3') // Refund
+            ->sum(fn($item) => abs($item->amount));
 
+        $returnTotal = $liquidation->runningBalances
+            ->where('type', '2') // Return
+            ->sum(fn($item) => abs($item->amount));
+
+        $uncollectedTotal = $liquidation->runningBalances
+            ->where('type', '4') // Uncollected
+            ->sum(fn($item) => abs($item->amount));
+
+        // Calculate final liquidated (Cash spent + Returned + Uncollected)
+        $finalLiquidated = $totalCash + $returnTotal + $uncollectedTotal;
+
+        // Approved amount
         $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
-        $difference = $finalLiquidated - $approvedAmount;
 
-        // Determine next status
-        $nextStatus = 4; // default: approval
-        $refund = false;
-        $return = false;
+        // Final difference
+        $difference = $approvedAmount - $finalLiquidated;
 
-        if ($difference > 0) {
-            $refund = true;
-            $nextStatus = 4;
-        } elseif ($difference < 0) {
-            $return = true;
-            $nextStatus = 3;
-        }
+        // Determine status
+        $refund = $difference < 0;
+        $return = $difference > 0;
+        $nextStatus = $refund ? 3 : 4;
 
+        // Separate running balances for display
         $runningRefunds = RunningBalance::where('cvr_number', $liquidation->cvr_number)
-            ->where('type', '3')
-            ->get();
+            ->where('type', '3')->get();
 
         $runningReturns = RunningBalance::where('cvr_number', $liquidation->cvr_number)
-            ->where('type', '2')
-            ->get();
+            ->where('type', '2')->get();
 
         $runningUncollected = RunningBalance::where('cvr_number', $liquidation->cvr_number)
-            ->where('type', '4')
-            ->get();
-
-        $gasoline = is_array($liquidation->gasoline) ? $liquidation->gasoline : json_decode($liquidation->gasoline, true) ?? [];
-        $rfid = is_array($liquidation->rfid) ? $liquidation->rfid : json_decode($liquidation->rfid, true) ?? [];
-        $others = is_array($liquidation->others) ? $liquidation->others : json_decode($liquidation->others, true) ?? [];
+            ->where('type', '4')->get();
 
         return view('liquidations.approval', compact(
             'liquidation',
@@ -660,7 +658,9 @@ class LiquidationController extends Controller
             'approvers',
             'totalCash',
             'totalCard',
-            'refundReturnTotal',
+            'refundTotal',
+            'returnTotal',
+            'uncollectedTotal',
             'finalLiquidated',
             'approvedAmount',
             'difference',
@@ -676,7 +676,6 @@ class LiquidationController extends Controller
             'staffs'
         ));
     }
-
 
     public function approvedLiquidation(Request $request, $id)
     {
