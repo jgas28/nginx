@@ -639,9 +639,8 @@ class LiquidationController extends Controller
         $runningUncollected = RunningBalance::where('cvr_number', $liquidation->cvr_number)
             ->where('type', '4')->get();
 
-        // Approved amount
-        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
 
+        // Approved amount
         $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
 
         $finalLiquidated = $totalCash;
@@ -652,7 +651,7 @@ class LiquidationController extends Controller
         // Adjust based on actual return/refund made
         if ($rawDifference > 0) {
             // Underspent — Return expected
-            $difference = $rawDifference - $returnTotal;
+            $difference = $rawDifference - ($returnTotal + $uncollectedTotal);
         } elseif ($rawDifference < 0) {
             // Overspent — Refund expected
             $difference = $rawDifference + $refundTotal; // Refunds are money already returned
@@ -1197,7 +1196,7 @@ class LiquidationController extends Controller
 
     public function Overall()
     {
-        $results = DB::select("
+        $cashVouchers = DB::select("
             SELECT 
                 cv.id AS cash_voucher_id,
                 cv.cvr_type,

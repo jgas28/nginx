@@ -360,8 +360,8 @@
                         <a href="{{ route('liquidations.liquidationList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             List -DR
                         </a>
-                        <a href="{{ route('liquidations.liquidationList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            List -Admin
+                        <a href="{{ route('liquidations.overall') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            Overall
                         </a>
                         <a href="{{ route('liquidations.rejectedList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Rejected List
