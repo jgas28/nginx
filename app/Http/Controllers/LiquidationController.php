@@ -1224,6 +1224,11 @@ class LiquidationController extends Controller
                     ELSE NULL
                 END AS expense_type_id,
 
+                -- Get names from related tables
+                t.truck_name AS truck_name,
+                c.company_code,
+                et.expense_code,
+
                 -- Requested Amount
                 CASE
                     WHEN cv.cvr_type IN ('admin', 'rpm') THEN (
@@ -1305,7 +1310,27 @@ class LiquidationController extends Controller
             LEFT JOIN fczcnyx.liquidations l 
                 ON l.cvr_approval_id = ca.id
 
-            ORDER BY cv.id DESC
+            -- New joins for truck, company, and expense type
+            LEFT JOIN fczcnyx.trucks t 
+                ON t.id = CASE
+                    WHEN cv.cvr_type IN ('admin', 'rpm') THEN cv.truck_id
+                    ELSE a.truck_id
+                END
+
+            LEFT JOIN fczcnyx.companies c 
+                ON c.id = CASE
+                    WHEN cv.cvr_type IN ('admin', 'rpm') THEN cv.company_id
+                    ELSE dr.company_id
+                END
+
+            LEFT JOIN fczcnyx.expense_types et 
+                ON et.id = CASE
+                    WHEN cv.cvr_type IN ('admin', 'rpm') THEN cv.expense_type_id
+                    ELSE dr.expense_type_id
+                END
+
+            ORDER BY company_id ASC, cvr_number ASC;
+
         ");
         
         return view('liquidations.overall', ['cashVouchers' => $cashVouchers]);
