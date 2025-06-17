@@ -222,6 +222,7 @@
             <tr>
                 <td>
                     <div style="font-size: 10px;">_________________________</div>
+                    <div style="font-size: 10px;"> {{ $reimbursement->approver->name }}</div>
                     <div style="font-size: 10px;">Approver</div>
                 </td>
                 <td>

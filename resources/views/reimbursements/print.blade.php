@@ -11,7 +11,7 @@
             margin: 0;
             padding: 0;
             background-color: #f7f7f7;
-        }
+        } 
 
         .container { 
             width: 8.5in;   /* 8.5 inches width */
@@ -222,6 +222,7 @@
             <tr>
                 <td>
                     <div style="font-size: 10px;">_________________________</div>
+                    <div style="font-size: 10px;"> {{ $reimbursement->approver->name }}</div>
                     <div style="font-size: 10px;">Approver</div>
                 </td>
                 <td>
