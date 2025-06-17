@@ -1162,7 +1162,7 @@ class CashVoucherController extends Controller
             ])
             ->where('status', 3)
             ->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial', 'freight', 'others'])
-            ->where('created_by', $employeeCode)
+            // ->where('created_by', $employeeCode)
             ->get();
 
             // Attach matched allocation dynamically

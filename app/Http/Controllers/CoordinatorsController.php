@@ -62,7 +62,7 @@ class CoordinatorsController extends Controller
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
         $tab = $request->input('tab', 'list');
-
+        $privilegedUserIds = [53, 54];
         $tabs = [
             'list' => [2, 5, 6],
             'status4' => [4, 7],
@@ -80,8 +80,10 @@ class CoordinatorsController extends Controller
 
             $query = DeliveryRequest::with(['lineItems', 'truckType', 'area', 'region', 'company'])
                 ->where('status', '!=', 0)
-                ->whereIn('delivery_status', $statuses)
-                ->where('created_by', $employee_id ); // Filter by user
+                ->whereIn('delivery_status', $statuses);
+                if (!in_array($user->id, $privilegedUserIds)) {
+                    $query->where('created_by', $employee_id);
+                }
 
             if ($search) {
                 $query->where(function ($q) use ($search) {
