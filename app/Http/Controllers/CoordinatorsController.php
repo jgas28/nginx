@@ -30,11 +30,12 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+
 use DateTime;
 
 class CoordinatorsController extends Controller
 {
-   public function index(Request $request)
+    public function index(Request $request)
     {
         $activeTab = $request->input('tab', 'list');
 
@@ -54,6 +55,8 @@ class CoordinatorsController extends Controller
 
     private function getFilteredQuery(Request $request, bool $singleTab = false)
     {
+        $user = Auth::user();
+        $employee_id = $user->id;
         $search = $request->input('search');
         $mtm = $request->input('mtm');
         $dateFrom = $request->input('date_from');
@@ -77,7 +80,8 @@ class CoordinatorsController extends Controller
 
             $query = DeliveryRequest::with(['lineItems', 'truckType', 'area', 'region', 'company'])
                 ->where('status', '!=', 0)
-                ->whereIn('delivery_status', $statuses);
+                ->whereIn('delivery_status', $statuses)
+                ->where('created_by', $employee_id ); // Filter by user
 
             if ($search) {
                 $query->where(function ($q) use ($search) {
