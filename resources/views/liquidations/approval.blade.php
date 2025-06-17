@@ -229,10 +229,19 @@
     </div>
 
     @if ($difference != 0)
-        <button id="openModalBtn"
-            class="mt-6 {{ $difference < 0 ? 'bg-red-600' : 'bg-yellow-500' }} text-white px-5 py-2 rounded hover:{{ $difference < 0 ? 'bg-red-700' : 'bg-yellow-600' }} transition">
-            {{ $difference < 0 ? 'Create Refund' : 'Create Return' }}
-        </button>
+        <div class="flex gap-4 mt-6">
+            @if ($difference < 0)
+                <button id="createRefundBtn"
+                    class="bg-red-600 text-white px-5 py-2 rounded hover:bg-red-700 transition">
+                    Create Refund
+                </button>
+            @elseif ($difference > 0)
+                <button id="createReturnBtn"
+                    class="bg-yellow-500 text-white px-5 py-2 rounded hover:bg-yellow-600 transition">
+                    Create Return
+                </button>
+            @endif
+        </div>
     @endif
 
     <div id="reimbursementModal"
@@ -605,19 +614,31 @@
         validateBtn?.addEventListener('click', function () {
             confirmValidationModal?.classList.remove('hidden');
 
-            if (difference < 0.009) {
-                // Show warning and disable the button
+            if (Math.abs(difference) < 0.009) {
+                // Very small difference, treat as zero
                 warningSpan?.classList.remove('hidden');
                 differenceAmount.textContent = difference.toFixed(2);
                 confirmValidationBtn.disabled = true;
                 confirmValidationBtn.classList.add('opacity-50', 'cursor-not-allowed');
             } else {
-                // No warning, enable the button
                 warningSpan?.classList.add('hidden');
                 confirmValidationBtn.disabled = false;
                 confirmValidationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
+
+            // Control button visibility dynamically (optional enhancement)
+            if (difference < 0) {
+                document.getElementById('createRefundBtn')?.classList.remove('hidden');
+                document.getElementById('createReturnBtn')?.classList.add('hidden');
+            } else if (difference > 0) {
+                document.getElementById('createReturnBtn')?.classList.remove('hidden');
+                document.getElementById('createRefundBtn')?.classList.add('hidden');
+            } else {
+                document.getElementById('createRefundBtn')?.classList.add('hidden');
+                document.getElementById('createReturnBtn')?.classList.add('hidden');
+            }
         });
+
 
         confirmValidationBtn?.addEventListener('click', function () {
             document.getElementById('form-action').value = 'validate';
