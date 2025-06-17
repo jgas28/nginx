@@ -229,29 +229,20 @@
     </div>
 
     @if ($difference != 0)
-        <div class="flex gap-4 mt-6">
-            @if ($difference < 0)
-                <button id="createRefundBtn"
-                    class="bg-red-600 text-white px-5 py-2 rounded hover:bg-red-700 transition">
-                    Create Refund
-                </button>
-            @elseif ($difference > 0)
-                <button id="createReturnBtn"
-                    class="bg-yellow-500 text-white px-5 py-2 rounded hover:bg-yellow-600 transition">
-                    Create Return
-                </button>
-            @endif
-        </div>
+        <button id="openModalBtn"
+            class="mt-6 {{ $difference > 0 ? 'bg-yellow-500' : 'bg-red-600' }} text-white px-5 py-2 rounded hover:{{ $difference > 0 ? 'bg-yellow-600' : 'bg-red-700' }} transition">
+            {{ $difference > 0 ? 'Create Return' : 'Create Refund' }}
+        </button>
     @endif
 
     <div id="reimbursementModal"
         class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-y-auto p-4">
         <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto" id="modalPanel">
             <h3 class="text-xl font-semibold mb-4">
-                {{ $difference > 0 ? 'Create Refund' : 'Create Return' }}
+                  {{ $difference > 0 ? 'Create Return' : 'Create Refund' }}
             </h3>
 
-            <form action="{{ $difference > 0 ? route('running-balance.reimburseAdmin') : route('running-balance.collectedAdmin') }}"
+            <form action="{{ $difference > 0 ? route('running-balance.collectedAdmin') : route('running-balance.reimburseAdmin') }}"
                 method="POST" class="space-y-4">
                 @csrf
 
@@ -268,7 +259,7 @@
                 </div>
 
                 {{-- Refund-specific --}}
-                @if ($difference > 0)
+                @if ($difference < 0)
                     <div>
                         <label class="block mb-1 font-medium">Amount (₱)</label>
                         <input type="number" step="0.01" min="0" name="amount" required
@@ -614,8 +605,7 @@
         validateBtn?.addEventListener('click', function () {
             confirmValidationModal?.classList.remove('hidden');
 
-            if (Math.abs(difference) < 0.009) {
-                // Very small difference, treat as zero
+            if (difference !== 0) {
                 warningSpan?.classList.remove('hidden');
                 differenceAmount.textContent = difference.toFixed(2);
                 confirmValidationBtn.disabled = true;
@@ -625,20 +615,7 @@
                 confirmValidationBtn.disabled = false;
                 confirmValidationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
-
-            // Control button visibility dynamically (optional enhancement)
-            if (difference < 0) {
-                document.getElementById('createRefundBtn')?.classList.remove('hidden');
-                document.getElementById('createReturnBtn')?.classList.add('hidden');
-            } else if (difference > 0) {
-                document.getElementById('createReturnBtn')?.classList.remove('hidden');
-                document.getElementById('createRefundBtn')?.classList.add('hidden');
-            } else {
-                document.getElementById('createRefundBtn')?.classList.add('hidden');
-                document.getElementById('createReturnBtn')?.classList.add('hidden');
-            }
         });
-
 
         confirmValidationBtn?.addEventListener('click', function () {
             document.getElementById('form-action').value = 'validate';
