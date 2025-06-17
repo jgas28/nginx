@@ -645,7 +645,7 @@ class LiquidationController extends Controller
         $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
 
         $finalLiquidated = $totalCash;
-        
+
         // Calculate raw cash difference
         $rawDifference = $approvedAmount - $totalCash;
 
@@ -703,13 +703,10 @@ class LiquidationController extends Controller
 
     public function approvedLiquidation(Request $request, $id)
     {
-        $request->validate([
-            'approved_by' => 'required|exists:users,id',  // adjust table name accordingly
-        ]);
 
         $liquidation = Liquidation::findOrFail($id);
 
-        $liquidation->approved_by = $request->approved_by;
+        $liquidation->approved_by = 54;
         $liquidation->approved_at = now();
         $liquidation->status = 5;
         $liquidation->save();

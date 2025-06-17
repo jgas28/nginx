@@ -24,7 +24,7 @@
         </div>
     </div>
 
-    <form action="{{ route('liquidations.approvedEdit', $liquidation->id) }}" method="POST">
+    <form id="approvalForm" action="{{ route('liquidations.approvedEdit', $liquidation->id) }}" method="POST" class="bg-gray-50 p-4 rounded-lg shadow-sm">
         @csrf
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {{-- Expenses --}}
@@ -335,7 +335,7 @@
     </div>
 
     <div class="mt-8 pt-6 border-t border-gray-200">
-        <form action="{{ route('liquidations.approved', $liquidation->id) }}" method="POST" class="bg-gray-50 p-4 rounded-lg shadow-sm">
+        <form id="approvalFormOK" action="{{ route('liquidations.approved', $liquidation->id) }}" method="POST" class="bg-gray-50 p-4 rounded-lg shadow-sm">
             @csrf
             <label for="approved_by" class="block mb-2 font-medium text-gray-700">Approved By</label>
             <select id="approved_by" name="approved_by" required class="w-full border border-gray-300 rounded px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-500">
@@ -564,7 +564,7 @@
         const confirmValidationModal = document.getElementById('confirmValidationModal');
         const confirmValidationBtn = document.getElementById('confirmValidationBtn');
         const cancelConfirmValidationBtn = document.getElementById('cancelConfirmValidationBtn');
-        const validationForm = document.querySelector('form[action*="liquidations.approved"]');
+        const validationForm = document.getElementById('approvalForm');
         const difference = parseFloat({{ abs($difference) }});
         const warningSpan = confirmValidationModal.querySelector('.text-red-600');
         const differenceAmount = document.getElementById('differenceAmount');
@@ -618,8 +618,17 @@
         });
 
         confirmValidationBtn?.addEventListener('click', function () {
+            const validationForm = document.getElementById('approvalFormOK');
+            if (!validationForm) {
+                console.error('Approval form not found.');
+                return;
+            }
+
             document.getElementById('form-action').value = 'validate';
-            validationForm?.submit();
+
+            if (validationForm.reportValidity()) {
+                validationForm.submit();
+            }
         });
 
         cancelConfirmValidationBtn?.addEventListener('click', function () {
