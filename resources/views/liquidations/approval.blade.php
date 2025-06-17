@@ -230,8 +230,8 @@
 
     @if ($difference != 0)
         <button id="openModalBtn"
-            class="mt-6 {{ $difference > 0 ? 'bg-red-600' : 'bg-yellow-500' }} text-white px-5 py-2 rounded hover:{{ $difference > 0 ? 'bg-red-700' : 'bg-yellow-600' }} transition">
-            {{ $difference > 0 ? 'Create Refund' : 'Create Return' }}
+            class="mt-6 {{ $difference < 0 ? 'bg-red-600' : 'bg-yellow-500' }} text-white px-5 py-2 rounded hover:{{ $difference < 0 ? 'bg-red-700' : 'bg-yellow-600' }} transition">
+            {{ $difference < 0 ? 'Create Refund' : 'Create Return' }}
         </button>
     @endif
 
@@ -345,7 +345,7 @@
             </select>
             <input type="hidden" name="action" id="form-action" value="">
             <div class="flex gap-4">
-                <button type="button" id="validate-btn" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">Validate</button>
+                <button type="button" id="validate-btn" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">Approved</button>
                 <button type="button" id="reject-btn" class="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700">Reject</button>
             </div>
         </form>

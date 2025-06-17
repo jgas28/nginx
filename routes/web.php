@@ -32,6 +32,8 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\LiquidationController;
 use App\Http\Controllers\RunningBalanceController;
 use App\Http\Controllers\EmployeeController;
+use App\Models\Liquidation;
+
 // Redirect to dashboard or login
 Route::get('/', function () {
     return Auth::check()
@@ -204,6 +206,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/liquidations/{id}/approvedEdit', [LiquidationController::class, 'approvedLiqUpdate'])->name('liquidations.approvedEdit');
 
+    Route::get('/cash-vouchers-status', [LiquidationController::class, 'Overall'])->name('liquidations.overall');
 
     Route::prefix('running-balance')->group(function () {
         Route::get('refunds/{id}/edit', [RunningBalanceController::class, 'editRefund'])->name('refunds.edit');
