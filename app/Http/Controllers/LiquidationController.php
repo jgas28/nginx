@@ -12,6 +12,7 @@ use App\Models\DeliveryRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class LiquidationController extends Controller
 {
@@ -628,21 +629,7 @@ class LiquidationController extends Controller
             ->where('type', '4') // Uncollected
             ->sum(fn($item) => abs($item->amount));
 
-        // Calculate final liquidated (Cash spent + Returned + Uncollected)
-        $finalLiquidated = $totalCash + $returnTotal + $uncollectedTotal;
-
-        // Approved amount
-        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
-
-        // Final difference
-        $difference = $approvedAmount - $finalLiquidated;
-
-        // Determine status
-        $refund = $difference < 0;
-        $return = $difference > 0;
-        $nextStatus = $refund ? 3 : 4;
-
-        // Separate running balances for display
+         // Separate running balances for display
         $runningRefunds = RunningBalance::where('cvr_number', $liquidation->cvr_number)
             ->where('type', '3')->get();
 
@@ -652,6 +639,42 @@ class LiquidationController extends Controller
         $runningUncollected = RunningBalance::where('cvr_number', $liquidation->cvr_number)
             ->where('type', '4')->get();
 
+        // Approved amount
+        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
+
+        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
+
+        $finalLiquidated = $totalCash;
+        
+        // Calculate raw cash difference
+        $rawDifference = $approvedAmount - $totalCash;
+
+        // Adjust based on actual return/refund made
+        if ($rawDifference > 0) {
+            // Underspent — Return expected
+            $difference = $rawDifference - $returnTotal;
+        } elseif ($rawDifference < 0) {
+            // Overspent — Refund expected
+            $difference = $rawDifference + $refundTotal; // Refunds are money already returned
+        } else {
+            $difference = 0;
+        }
+
+        // Use epsilon for floating point tolerance
+        $epsilon = 0.01; // 1 cent tolerance
+
+        if (abs($difference) < $epsilon) {
+            $difference = 0;
+            $refund = false;
+            $return = false;
+        } else {
+            $refund = $difference < 0;
+            $return = $difference > 0;
+        }
+
+        $nextStatus = $refund ? 3 : ($return ? 4 : null);
+
+       
         return view('liquidations.approval', compact(
             'liquidation',
             'employees',
@@ -676,6 +699,7 @@ class LiquidationController extends Controller
             'staffs'
         ));
     }
+
 
     public function approvedLiquidation(Request $request, $id)
     {
@@ -1172,5 +1196,122 @@ class LiquidationController extends Controller
         Log::info('Liquidation Updated:', $liquidation->toArray());
 
         return redirect()->route('liquidations.rejectedList')->with('success', 'Liquidation updated successfully.');
+    }
+
+    public function Overall()
+    {
+        $results = DB::select("
+            SELECT 
+                cv.id AS cash_voucher_id,
+                cv.cvr_type,
+                cv.sequence,
+                cv.cvr_number,
+
+                -- Truck ID resolution
+                CASE
+                    WHEN cv.cvr_type IN ('admin', 'rpm') THEN cv.truck_id
+                    WHEN cv.cvr_type IN ('delivery', 'pullout', 'accessorial', 'freight', 'others') THEN a.truck_id
+                    ELSE NULL
+                END AS truck_id,
+
+                -- Company ID resolution
+                CASE
+                    WHEN cv.cvr_type IN ('admin', 'rpm') THEN cv.company_id
+                    WHEN cv.cvr_type IN ('delivery', 'pullout', 'accessorial', 'freight', 'others') THEN dr.company_id
+                    ELSE NULL
+                END AS company_id,
+
+                -- Expense Type ID resolution
+                CASE
+                    WHEN cv.cvr_type IN ('admin', 'rpm') THEN cv.expense_type_id
+                    WHEN cv.cvr_type IN ('delivery', 'pullout', 'accessorial', 'freight', 'others') THEN dr.expense_type_id
+                    ELSE NULL
+                END AS expense_type_id,
+
+                -- Requested Amount
+                CASE
+                    WHEN cv.cvr_type IN ('admin', 'rpm') THEN (
+                        SELECT SUM(CAST(JSON_UNQUOTE(value) AS DECIMAL(10,2)))
+                        FROM JSON_TABLE(cv.amount_details, '$[*]' COLUMNS(value JSON PATH '$')) AS jt
+                    )
+                    ELSE cv.amount
+                END AS requested_amount,
+
+                -- Approved Amount
+                COALESCE((
+                    SELECT SUM(amount)
+                    FROM fczcnyx.cvr_approvals ca
+                    WHERE ca.cvr_id = cv.id
+                ), 0) AS approved_amount,
+
+                -- Liquidated Amount (Cash)
+                (
+                    COALESCE(l.allowance, 0) +
+                    COALESCE(l.manpower, 0) +
+                    COALESCE(l.hauling, 0) +
+                    COALESCE(l.right_of_way, 0) +
+                    COALESCE(l.roro_expense, 0) +
+                    COALESCE((
+                        SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
+                        FROM JSON_TABLE(l.gasoline, '$[*]' COLUMNS (value JSON PATH '$')) j
+                        WHERE j.value->>'$.type' = 'cash'
+                    ), 0) +
+                    COALESCE((
+                        SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
+                        FROM JSON_TABLE(l.rfid, '$[*]' COLUMNS (value JSON PATH '$')) j
+                        WHERE j.value->>'$.type' = 'cash'
+                    ), 0) +
+                    COALESCE((
+                        SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
+                        FROM JSON_TABLE(l.others, '$[*]' COLUMNS (value JSON PATH '$')) j
+                    ), 0)
+                ) AS liquidated_amount_cash,
+
+                -- Liquidated Amount (Card)
+                (
+                    COALESCE((
+                        SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
+                        FROM JSON_TABLE(l.gasoline, '$[*]' COLUMNS (value JSON PATH '$')) j
+                        WHERE j.value->>'$.type' = 'card'
+                    ), 0) +
+                    COALESCE((
+                        SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
+                        FROM JSON_TABLE(l.rfid, '$[*]' COLUMNS (value JSON PATH '$')) j
+                        WHERE j.value->>'$.type' = 'card'
+                    ), 0)
+                ) AS liquidated_amount_card,
+
+                -- Status summary
+                cv.status AS cash_voucher_status,
+                ca.status AS approval_status,
+                l.status AS liquidation_status,
+
+                -- Unified human-readable status
+                CASE
+                    WHEN l.id IS NOT NULL THEN 'liquidated'
+                    WHEN ca.id IS NOT NULL THEN 'for_approval'
+                    ELSE 'for_liquidation'
+                END AS overall_status
+
+            FROM fczcnyx.cash_vouchers cv
+
+            LEFT JOIN fczcnyx.delivery_request dr 
+                ON dr.id = cv.dr_id
+
+            LEFT JOIN fczcnyx.allocations a 
+                ON a.dr_id = cv.dr_id 
+                AND a.trip_type = cv.cvr_type 
+                AND a.sequence = cv.sequence
+
+            LEFT JOIN fczcnyx.cvr_approvals ca 
+                ON ca.cvr_id = cv.id
+
+            LEFT JOIN fczcnyx.liquidations l 
+                ON l.cvr_approval_id = ca.id
+
+            ORDER BY cv.id DESC
+        ");
+        
+        return view('liquidations.overall', ['cashVouchers' => $cashVouchers]);
     }
 }
