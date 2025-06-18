@@ -51,9 +51,10 @@
                                class="inline-block bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs transition">
                                 Edit
                             </a>
-                            <a href="{{ route('cashVoucherRequests.rejectPrintView', ['id' => $voucher->id, 'cvr_number' => $voucher->dr_id, 'mtm' => $voucher->cvr_type]) }}"
-                            class="inline-block bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs transition">
-                                Print
+                            <a href="{{ route('cashVoucherRequests.rejectPrintView', ['id' => $voucher->id, 'cvr_number' => $voucher->dr_id, 'cvr_type' => $voucher->cvr_type]) }}"
+                                target="_blank"
+                                class="inline-block bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs transition">
+                            Print
                             </a>
                         </td>
                     </tr>

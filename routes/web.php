@@ -175,7 +175,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/cash-voucher/{id}/{cvr_number}/{mtm}/print', [CashVoucherController::class, 'printCVR'])->name('cashVoucherRequests.print');
     Route::post('/cash-voucher/print-multiple', [CashVoucherController::class, 'printMultiple'])
     ->name('cashVoucherRequests.printMultiple');
-    Route::get('/cash-voucher/reject-print/{id}/{cvr_number}/{mtm}', [CashVoucherController::class, 'rejectPrintView'])->name('cashVoucherRequests.rejectPrintView');
+    Route::get('/cash-voucher/reject-print/{id}/{cvr_number}/{cvr_type}', [CashVoucherController::class, 'rejectPrintView'])->name('cashVoucherRequests.rejectPrintView');
 
 
     Route::post('/update-print-status', [CashVoucherController::class, 'updatePrintStatus']);
