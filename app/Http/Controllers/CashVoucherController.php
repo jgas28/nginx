@@ -1355,4 +1355,103 @@ class CashVoucherController extends Controller
             'deliveryLineItems', 'employees', 'drivers', 'fleets', 'requestTypes', 'deliveryRequest', 'remarks', 'allocations', 'cvrApprovals','rejectRemarks'
         ));       
     }
+
+    public function rejectPrintViewMultiple(Request $request)
+    {
+        $ids = $request->input('ids'); // already an array from the form
+
+        if (empty($ids) || !is_array($ids)) {
+            abort(400, 'No voucher IDs provided.');
+        }
+
+        $vouchers = [];
+
+        foreach ($ids as $id) {
+            $cashVoucherRequest = CashVoucher::with([
+                'deliveryRequest',
+                'withholdingTax:id,description,percentage'
+            ])->find($id);
+
+            if (!$cashVoucherRequest) continue;
+
+            $remarks = [];
+            if (is_string($cashVoucherRequest->remarks) && $this->isJson($cashVoucherRequest->remarks)) {
+                $remarks = json_decode($cashVoucherRequest->remarks, true);
+            } else {
+                $remarks = is_string($cashVoucherRequest->remarks) 
+                    ? explode(',', $cashVoucherRequest->remarks) 
+                    : [];
+            }
+            $remarks = array_map('trim', $remarks);
+
+            $deliveryRequest = DeliveryRequest::with('company', 'customer')->find($cashVoucherRequest->dr_id);
+
+            $requestTypes = DB::table('cash_vouchers')
+                ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
+                ->where('cash_vouchers.id', $id)
+                ->first();
+
+            $drivers = DB::table('allocations')
+                ->join('users', 'allocations.driver_id', '=', 'users.id')
+                ->where('allocations.dr_id', $cashVoucherRequest->dr_id)
+                ->where('allocations.trip_type', $cashVoucherRequest->cvr_type)
+                ->where('allocations.sequence', $cashVoucherRequest->sequence)
+                ->first();
+
+            $allocations = Allocation::with('truck')
+                ->where('dr_id', $cashVoucherRequest->dr_id)
+                ->where('trip_type', $cashVoucherRequest->cvr_type)
+                ->where('sequence', $cashVoucherRequest->sequence)
+                ->first();
+
+            $fleets = DB::table('allocations')
+                ->join('fleet_cards', 'allocations.fleet_card_id', '=', 'fleet_cards.id')
+                ->where('allocations.dr_id', $cashVoucherRequest->dr_id)
+                ->where('trip_type', $cashVoucherRequest->cvr_type)
+                ->where('sequence', $cashVoucherRequest->sequence)
+                ->first();
+
+            $employees = DB::table('allocations')
+                ->join('users', 'allocations.requestor_id', '=', 'users.id')
+                ->select('users.*', 'allocations.*')
+                ->where('allocations.dr_id', $cashVoucherRequest->dr_id)
+                ->where('trip_type', $cashVoucherRequest->cvr_type)
+                ->where('sequence', $cashVoucherRequest->sequence)
+                ->first();
+
+            $deliveryLineItems = DB::table('delivery_request_line_items')
+                ->where('mtm', $cashVoucherRequest->mtm)
+                ->get();
+
+            $cvrApprovals = cvr_approval::where('cvr_id', $id)->first();
+
+            // Recalculate the amount
+            if ($cashVoucherRequest->voucher_type === 'with_tax') {
+                $baseAmount = $cashVoucherRequest->tax_based_amount ?? 0;
+                $vatAmount = $baseAmount * 0.12;
+                $taxPercentage = $cashVoucherRequest->withholdingTax->percentage ?? 0;
+                $taxDeduction = $baseAmount * $taxPercentage;
+                $finalAmount = $baseAmount + $vatAmount - $taxDeduction;
+            } else {
+                $finalAmount = $cashVoucherRequest->amount ?? 0;
+            }
+
+            $amountInWords = $finalAmount > 0 ? $this->convertAmountToWordsPreview($finalAmount) : 'N/A';
+
+            $rejectRemarks = [];
+            if (!empty($cashVoucherRequest->reject_remarks) && $this->isJson($cashVoucherRequest->reject_remarks)) {
+                $rejectRemarks = json_decode($cashVoucherRequest->reject_remarks, true);
+            }
+
+            $vouchers[] = compact(
+                'cashVoucherRequest', 'amountInWords', 'deliveryLineItems', 'employees',
+                'drivers', 'fleets', 'requestTypes', 'deliveryRequest', 'remarks', 'allocations',
+                'cvrApprovals', 'rejectRemarks'
+            );
+        }
+
+        return view('cashVoucherRequests.reject_print_multiple', compact('vouchers'));
+    }
+
+
 }
