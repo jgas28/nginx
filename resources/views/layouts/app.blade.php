@@ -62,8 +62,8 @@
                     </svg>
                 </button>
                 <div x-show="open && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
-                    @if($user->hasAnyRoleId([34]))<a href="{{ route('password.change') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Change Password</a>@endif
-                     @if($user->hasAnyRoleId([35]))<a href="{{ route('running_balance.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Running Balance</a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 34]))<a href="{{ route('password.change') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Change Password</a>@endif
+                     @if($user->hasAnyRoleId([1, 2, 3, 35]))<a href="{{ route('running_balance.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Running Balance</a>@endif
 
                     {{-- Basic Settings (role_id = 3) --}}
                     @if($user->hasAnyRoleId([1, 2, 3, 28]))
