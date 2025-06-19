@@ -177,7 +177,7 @@
                 <select nambere="bank_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
                     <option value="">Select Receiver</option>
                     @foreach($employees as $employee)
-                        <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
+                        <option value="{{ $employee->id }}">{{ $employee->supplier_name }}</option>
                     @endforeach
                 </select>
             </div>
@@ -217,7 +217,7 @@
                 <select name="outlet_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
                     <option value="">Select Receiver</option>
                     @foreach($employees as $employee)
-                        <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
+                        <option value="{{ $employee->id }}">{{ $employee->supplier_name }}</option>
                     @endforeach
                 </select>
             </div>
