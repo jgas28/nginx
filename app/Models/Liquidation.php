@@ -28,6 +28,7 @@ class Liquidation extends Model
         'validated_by',
         'collected_by',
         'approved_by',
+        'collector_id',
 
         // Metadata
         'others',
@@ -73,6 +74,11 @@ class Liquidation extends Model
     public function collectedBy()
     {
         return $this->belongsTo(User::class, 'collected_by');
+    }
+
+     public function collector()
+    {
+        return $this->belongsTo(User::class, 'collector_id');
     }
 
     public function approvedBy()

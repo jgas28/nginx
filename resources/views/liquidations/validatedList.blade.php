@@ -11,6 +11,7 @@
                 <th class="p-3 border">CVR Number</th>
                 <th class="p-3 border">Prepared By</th>
                 <th class="p-3 border">Noted By</th>
+                <th class="p-3 border">Collector</th>
                 <th class="p-3 border">Date Created</th>
                 <th class="p-3 border">Actions</th>
             </tr>
@@ -52,6 +53,7 @@
                     </td>
                     <td class="p-3 border">{{ $liquidation->preparedBy->fname ?? '' }} {{ $liquidation->preparedBy->lname ?? '' }}</td>
                     <td class="p-3 border">{{ $liquidation->notedBy->fname ?? '' }} {{ $liquidation->notedBy->lname ?? '' }}</td>
+                     <td class="p-3 border">{{ $liquidation->collector->fname ?? '' }} {{ $liquidation->collector->lname ?? '' }}</td>
                     <td class="p-3 border">{{ $liquidation->created_at->format('Y-m-d') }}</td>
                     <td class="p-3 border">
                         <a href="{{ route('liquidations.validated', $liquidation->id) }}" class="text-indigo-600 hover:text-indigo-900 underline">Review</a>

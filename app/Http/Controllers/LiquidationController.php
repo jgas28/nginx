@@ -200,6 +200,7 @@ class LiquidationController extends Controller
         $employees = User::whereIn('id', [41])->get(); // You can adjust this condition as needed
         $staffs = User::all();
         $approvers = Approver::all();
+        $collectors = User::whereIn('id', [15,35,54])->get();
 
         // Calculate total liquidated cash (cash only)
         $totalCash = 0;
@@ -246,6 +247,7 @@ class LiquidationController extends Controller
 
         // Raw difference (before adjustments)
         $difference = $totalCash - $approvedAmount;
+
         $totalLiquidated = $totalCash;
         // Load running balances
         $runningRefunds = RunningBalance::where('cvr_number', $liquidation->cvr_number)
@@ -286,18 +288,15 @@ class LiquidationController extends Controller
         $refund = false;
         $return = false;
 
-        if (
-            ($approvedAmount == 0 && $totalLiquidated == 0) ||
-            ($approvedAmount == $totalLiquidated)
-        ) {
-            // Perfect match or no transaction
+        if (round($adjustedDifference, 2) == 0) {
+            // Fully reconciled: either no transaction, or liquidated + refund/return balances match the CVR
             $nextStatus = 4;
         } elseif ($adjustedDifference > 0) {
-            // Over-liquidated: user returned excess cash
+            // User is owed money (over-liquidated)
             $refund = true;
             $nextStatus = 4;
         } elseif ($adjustedDifference < 0) {
-            // Under-liquidated: user owes money
+            // User owes money (under-liquidated)
             $return = true;
             $nextStatus = 3;
         }
@@ -317,27 +316,22 @@ class LiquidationController extends Controller
             'staffs',
             'runningRefunds',
             'runningReturns',
-            'runningUncollected'
+            'runningUncollected',
+            'collectors'
         ));
     }
 
     public function validateLiquidation(Request $request, $id)
     {
-        $request->validate([
-            'validated_by' => 'required|exists:users,id',  // adjust table name accordingly
-        ]);
-
         $liquidation = Liquidation::findOrFail($id);
 
         $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
 
         // Recalculate the total like in your `validated` method
         $totalCash = 0;
-
         foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field) {
             $totalCash += floatval($liquidation->$field ?? 0);
         }
-
         $totalCash += floatval($liquidation->cash_charge ?? 0);
 
         foreach ($liquidation->gasoline ?? [] as $item) {
@@ -356,18 +350,30 @@ class LiquidationController extends Controller
             $totalCash += floatval($item['amount'] ?? 0);
         }
 
+        $difference = round($totalCash - $approvedAmount, 2);
 
-        $difference = $totalCash - $approvedAmount;
+        // Base validation (always needed)
+        $rules = [
+            'validated_by' => 'required|exists:users,id',
+        ];
 
-        // Assign status based on difference
-        if ($difference > 0) {
-            $liquidation->status = 4; // Refund, go to approval
-        } else {
-            $liquidation->status = 3; // Returned cash, go to collection
+        // If under-liquidated (needs return), require collector
+        if ($difference < 0) {
+            $rules['collector_id'] = 'required|exists:users,id';
         }
 
-        $liquidation->validated_by = $request->validated_by;
+        $validated = $request->validate($rules);
+
+        // Assign next status
+        $liquidation->status = $difference < 0 ? 3 : 4;
+        $liquidation->validated_by = $validated['validated_by'];
         $liquidation->validated_at = now();
+
+        // Optional: store collector
+        if ($difference < 0 && isset($validated['collector_id'])) {
+            $liquidation->collector_id = $validated['collector_id']; // only if this field exists in the table
+        }
+
         $liquidation->save();
 
         return redirect()->route('liquidations.reviewList')->with('success', 'Liquidation validated successfully.');

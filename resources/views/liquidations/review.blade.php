@@ -204,6 +204,15 @@
     <div class="mt-8 pt-6 border-t border-gray-200">
         <form id="liquidation-form" action="{{ route('liquidations.validate', $liquidation->id) }}" method="POST" class="bg-gray-50 p-4 rounded-lg shadow-sm">
             @csrf
+            {{-- Show collector if there's a return (user owes money) --}}
+            @if ($difference < 0 && abs($difference) > 0.009)
+                <label for="collector_id" class="block mb-2 font-medium text-gray-700">Collector</label>
+                <select id="collector_id" name="collector_id" required class="w-full border rounded px-3 py-2 mb-4">
+                    @foreach ($collectors as $employee)
+                        <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
+                    @endforeach
+                </select>
+            @endif
             <label for="validated_by" class="block mb-2 font-medium text-gray-700">Validated By</label>
             <select id="validated_by" name="validated_by" required class="w-full border rounded px-3 py-2 mb-4">
                 @foreach ($employees as $employee)<option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>@endforeach
