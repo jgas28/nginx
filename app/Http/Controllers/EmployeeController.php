@@ -50,27 +50,27 @@ class EmployeeController extends Controller
      */
     public function store(Request $request)
     {
-        // Validate the request data
         $request->validate([
             'employee_code' => 'required|unique:users,employee_code',
             'first_name' => 'required',
             'last_name' => 'required',
             'position' => 'required',
-            'role_id' => 'required',
-            'password' => 'required|min:6|confirmed', // Ensure password is confirmed
+            'roles' => 'required|array',
+            'roles.*' => 'exists:roles,id',
+            'password' => 'required|min:6|confirmed',
         ]);
 
-        // Create new employee
-        $employee = new User([
+        $employee = User::create([
             'employee_code' => $request->employee_code,
             'fname' => $request->first_name,
             'lname' => $request->last_name,
             'position' => $request->position,
-            'role_id' => $request->role_id,
-            'password' => Hash::make($request->password), // Hash password before storing
+            'email' => $request->email, // if you use email
+            'password' => Hash::make($request->password),
         ]);
 
-        $employee->save();
+        // Attach selected roles
+        $employee->roles()->attach($request->roles);
 
         return redirect()->route('employees.index')->with('success', 'Employee created successfully.');
     }
@@ -97,28 +97,29 @@ class EmployeeController extends Controller
      */
     public function update(Request $request, User $employee)
     {
-        // Validate the request data
         $request->validate([
             'employee_code' => 'required|unique:users,employee_code,' . $employee->id,
             'first_name' => 'required',
             'last_name' => 'required',
             'position' => 'required',
-            'role_id' => 'required',
-            'password' => 'nullable|min:6|confirmed', // Password is optional in update
+            'roles' => 'required|array',
+            'roles.*' => 'exists:roles,id',
+            'password' => 'nullable|min:6|confirmed',
         ]);
 
-        // Update the employee details
         $employee->employee_code = $request->employee_code;
         $employee->fname = $request->first_name;
         $employee->lname = $request->last_name;
         $employee->position = $request->position;
-        $employee->role_id = $request->role_id;
 
-        if ($request->password) {
-            $employee->password = Hash::make($request->password); // Hash password if provided
+        if ($request->filled('password')) {
+            $employee->password = Hash::make($request->password);
         }
 
         $employee->save();
+
+        // Sync roles (replaces old ones with the new selection)
+        $employee->roles()->sync($request->roles);
 
         return redirect()->route('employees.index')->with('success', 'Employee updated successfully.');
     }

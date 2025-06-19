@@ -739,6 +739,7 @@ class CashVoucherController extends Controller
                 ->join('users', 'allocations.driver_id', '=', 'users.id')
                 ->where('allocations.dr_id', $cashVoucherRequest->dr_id)
                 ->where('allocations.trip_type', $mtm)
+                 ->where('sequence', $cashVoucherRequest->sequence)
                 ->first();
                 
             // Allocation + Truck
@@ -753,6 +754,7 @@ class CashVoucherController extends Controller
                 ->join('fleet_cards', 'allocations.fleet_card_id', '=', 'fleet_cards.id')
                 ->where('allocations.dr_id', $cashVoucherRequest->dr_id)
                 ->where('trip_type', $mtm)
+                ->where('sequence', $cashVoucherRequest->sequence)
                 ->first();
 
             // Employee info (requestor)
@@ -841,7 +843,8 @@ class CashVoucherController extends Controller
             $drivers = DB::table('allocations')
             ->join('users', 'allocations.driver_id', '=', 'users.id')
             ->where('allocations.dr_id', $cvr_number) 
-             ->where('allocations.trip_type', $mtm) 
+            ->where('allocations.trip_type', $mtm) 
+            ->where('sequence', $cashVoucherRequest->sequence)
             ->first();
 
             $allocations = Allocation::with('truck')
@@ -854,6 +857,7 @@ class CashVoucherController extends Controller
             ->join('fleet_cards', 'allocations.fleet_card_id', '=', 'fleet_cards.id')
             ->where('allocations.dr_id', $cvr_number) 
             ->where('allocations.trip_type', $mtm) 
+            ->where('sequence', $cashVoucherRequest->sequence)
             ->first();
     
             $employees = DB::table('cash_vouchers')

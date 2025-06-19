@@ -17,7 +17,13 @@
                 <td class="py-2 px-4 border-b">{{ $employee->fname }}</td>
                 <td class="py-2 px-4 border-b">{{ $employee->lname }}</td>
                 <td class="py-2 px-4 border-b">{{ $employee->position }}</td>
-                <td class="py-2 px-4 border-b">{{ $employee->role->name }}</td>
+                <td class="py-2 px-4 border-b">
+                    @if($employee->roles->isNotEmpty())
+                        {{ $employee->roles->pluck('name')->join(', ') }}
+                    @else
+                        <span class="text-gray-400 italic">No role assigned</span>
+                    @endif
+                </td>
                 <td class="py-2 px-4 border-b">
                     <a href="{{ route('employees.edit', $employee) }}" class="btn btn-warning bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">
                         Edit
