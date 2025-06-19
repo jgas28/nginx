@@ -265,7 +265,7 @@ class AdminController extends Controller
         $cashVouchers = CashVoucher::with(['company', 'suppliers', 'expenseTypes', 'employee'])
             ->findOrFail($id);
         
-        $employees = User::all();
+        $employees = Supplier::all();
         $approves = Approver::all();
         $taxes = WithholdingTax::all();
         $requestType = cvr_request_type::all();

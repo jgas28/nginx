@@ -59,6 +59,18 @@ class User extends Authenticatable
     {
         return $this->roles->contains('name', $roleName);
     }
+
+    // Check if user has a role by ID
+    public function hasRoleId(int $roleId): bool
+    {
+        return $this->roles->contains('id', $roleId);
+    }
+
+    // Check if user has any role in array of IDs
+    public function hasAnyRoleId(array $roleIds): bool
+    {
+        return $this->roles->whereIn('id', $roleIds)->isNotEmpty();
+    }
     
 }
 
