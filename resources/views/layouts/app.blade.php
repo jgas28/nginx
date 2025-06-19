@@ -66,7 +66,7 @@
                      @if($user->hasAnyRoleId([1, 2, 3, 35]))<a href="{{ route('running_balance.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Running Balance</a>@endif
 
                     {{-- Basic Settings (role_id = 3) --}}
-                    @if($user->hasAnyRoleId([1, 2, 3]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 36]))
                     <div>
                         <button @click="basicOpen = !basicOpen" class="w-full flex items-center justify-between px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             <span>Delivery Request</span>
