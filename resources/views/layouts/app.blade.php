@@ -50,7 +50,7 @@
             </a>
 
             {{-- Settings nav (role_id = 28) --}}
-            @if($user->hasAnyRoleId([1, 2, 3]))
+            @if($user->hasAnyRoleId([1, 2, 3, 28]))
             <div x-data="{ open: false, basicOpen: false, cvOpen: false, dliOpen: false, allocationOpen: false }">
                 <button @click="open = !open; if (!open) { basicOpen = false; cvOpen = false; dliOpen = false; allocationOpen = false; }" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
                     <div class="flex items-center space-x-3">
@@ -66,7 +66,7 @@
                      @if($user->hasAnyRoleId([1, 2, 3, 35]))<a href="{{ route('running_balance.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Running Balance</a>@endif
 
                     {{-- Basic Settings (role_id = 3) --}}
-                    @if($user->hasAnyRoleId([1, 2, 3, 28]))
+                    @if($user->hasAnyRoleId([1, 2, 3]))
                     <div>
                         <button @click="basicOpen = !basicOpen" class="w-full flex items-center justify-between px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             <span>Delivery Request</span>
@@ -232,12 +232,12 @@
                 </button>
                 <div x-show="openCVR && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
                     {{-- Add CV List Admin links here --}}
-                    @if($user->hasAnyRoleId([1, 2, 3, 12]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 13]))
                         <a href="{{ route('cashVoucherRequests.approval') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             DR Approval
                         </a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 13]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 12]))
                         <a href="{{ route('adminCV.approval') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Admin/RPM Approval
                         </a>
