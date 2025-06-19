@@ -62,11 +62,11 @@
                     </svg>
                 </button>
                 <div x-show="open && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
-                    <a href="{{ route('password.change') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Change Password</a>
-                    <a href="{{ route('running_balance.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Running Balance</a>
+                    @if($user->hasAnyRoleId([34]))<a href="{{ route('password.change') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Change Password</a>@endif
+                     @if($user->hasAnyRoleId([35]))<a href="{{ route('running_balance.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Running Balance</a>@endif
 
                     {{-- Basic Settings (role_id = 3) --}}
-                    @if($user->hasAnyRoleId([1, 2, 3]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 28]))
                     <div>
                         <button @click="basicOpen = !basicOpen" class="w-full flex items-center justify-between px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             <span>Delivery Request</span>
@@ -75,14 +75,30 @@
                             </svg>
                         </button>
                         <div x-show="basicOpen" x-transition class="ml-6 mt-1 space-y-1">
-                            <a href="{{ route('companies.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Companies</a>
-                            <a href="{{ route('regions.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Region</a>
-                            <a href="{{ route('areas.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Areas</a>
-                            <a href="{{ route('customers.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Customer</a>
-                            <a href="{{ route('trucks.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Trucks</a>
-                            <a href="{{ route('trucksTypes.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Truck Type</a>
-                            <a href="{{ route('suppliers.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Suppliers</a>
-                            <a href="{{ route('employees.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Employees</a>
+                            @if($user->hasAnyRoleId([1, 2, 3]))
+                                <a href="{{ route('companies.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Companies</a>
+                            @endif
+                            @if($user->hasAnyRoleId([1, 2, 3]))
+                                <a href="{{ route('regions.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Region</a>
+                            @endif
+                            @if($user->hasAnyRoleId([1, 2, 3]))
+                                <a href="{{ route('areas.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Areas</a>
+                            @endif
+                            @if($user->hasAnyRoleId([1, 2, 3]))
+                                <a href="{{ route('customers.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Customer</a>
+                            @endif
+                            @if($user->hasAnyRoleId([1, 2, 3, 5]))
+                                <a href="{{ route('trucks.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Trucks</a>
+                            @endif
+                            @if($user->hasAnyRoleId([1, 2, 3]))
+                                <a href="{{ route('trucksTypes.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Truck Type</a>
+                            @endif
+                            @if($user->hasAnyRoleId([1, 2, 3]))
+                                <a href="{{ route('suppliers.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Suppliers</a>
+                            @endif
+                            @if($user->hasAnyRoleId([1, 2, 3, 4]))
+                                <a href="{{ route('employees.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Employees</a>
+                            @endif
                         </div>
                     </div>
                     @endif
@@ -147,7 +163,7 @@
             @endif
 
             {{-- Delivery Request nav (role_id = 6 or 7) --}}
-            @if($user->hasAnyRoleId([29]))
+            @if($user->hasAnyRoleId([1, 2, 3,29]))
             <div x-data="{ openDR: false }">
                 <button @click="openDR = !openDR" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
                     <div class="flex items-center space-x-3">
@@ -159,14 +175,14 @@
                     </svg>
                 </button>
                 <div x-show="openDR && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
-                    @if($user->hasAnyRoleId([6]))<a href="{{ route('deliveryRequest.create') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Create</a>@endif
-                    @if($user->hasAnyRoleId([7]))<a href="{{ route('deliveryRequest.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">List</a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 6]))<a href="{{ route('deliveryRequest.create') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Create</a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 7]))<a href="{{ route('deliveryRequest.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">List</a>@endif
                 </div>
             </div>
             @endif
 
             {{-- Allocation List nav (role_id = 9) --}}
-            @if($user->hasAnyRoleId([30]))
+            @if($user->hasAnyRoleId([1, 2, 3, 30]))
             <div x-data="{ openAllocate: false }">
                 <button @click="openAllocate = !openAllocate" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
                     <div class="flex items-center space-x-3">
@@ -184,7 +200,7 @@
             @endif
 
             {{-- Coordinator nav (role_id = 10 or 11) --}}
-            @if($user->hasAnyRoleId([31]))
+            @if($user->hasAnyRoleId([1, 2, 3, 31]))
             <div x-data="{ openCoordinator: false }">
                 <button @click="openCoordinator = !openCoordinator" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
                     <div class="flex items-center space-x-3">
@@ -196,14 +212,14 @@
                     </svg>
                 </button>
                 <div x-show="openCoordinator && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
-                    @if($user->hasAnyRoleId([10]))<a href="{{ route('coordinators.create') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Create Request</a>@endif
-                    @if($user->hasAnyRoleId([11]))<a href="{{ route('coordinators.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">List</a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 10]))<a href="{{ route('coordinators.create') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Create Request</a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 11]))<a href="{{ route('coordinators.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">List</a>@endif
                 </div>
             </div>
             @endif
 
             {{-- Cash Voucher List Admin (role_id = 14) --}}
-            @if($user->hasAnyRoleId([32]))
+            @if($user->hasAnyRoleId([1, 2, 3, 32]))
             <div x-data="{ openCVR: false }">
                 <button @click="openCVR = !openCVR" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
                     <div class="flex items-center space-x-3">
@@ -216,37 +232,37 @@
                 </button>
                 <div x-show="openCVR && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
                     {{-- Add CV List Admin links here --}}
-                    @if($user->hasAnyRoleId([12]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 12]))
                         <a href="{{ route('cashVoucherRequests.approval') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             DR Approval
                         </a>
                     @endif
-                    @if($user->hasAnyRoleId([13]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 13]))
                         <a href="{{ route('adminCV.approval') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Admin/RPM Approval
                         </a>
                     @endif
-                    @if($user->hasAnyRoleId([14]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 14]))
                         <a href="{{ route('adminCV.cvrList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             List - Admin
                         </a>
                     @endif
-                    @if($user->hasAnyRoleId([15]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 15]))
                         <a href="{{ route('cashVoucherRequests.cvrList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             List - DR
                         </a>
                     @endif
-                    @if($user->hasAnyRoleId([16]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 16]))
                         <a href="{{ route('cashVoucherRequests.rejectView') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Reject - DR
                         </a>
                     @endif
-                    @if($user->hasAnyRoleId([17]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 17]))
                         <a href="{{ route('adminCV.rejectView') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Reject - Admin
                         </a>
                     @endif
-                    @if($user->hasAnyRoleId([18]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 18]))
                         <a href="{{ route('admin.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Admin/RPM Request
                         </a>
@@ -256,7 +272,7 @@
             @endif
 
             {{-- Liquidation nav (roles 20 to 27) --}}
-            @if($user->hasAnyRoleId([33]))
+            @if($user->hasAnyRoleId([1, 2, 3, 33]))
             <div x-data="{ openLiquidation: false }">
                 <button @click="openLiquidation = !openLiquidation" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
                     <div class="flex items-center space-x-3">
@@ -268,42 +284,42 @@
                     </svg>
                 </button>
                 <div x-show="openLiquidation && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
-                    @if($user->hasAnyRoleId([20]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 20]))
                         <a href="{{ route('liquidations.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Liquidate - DR
                         </a>
                     @endif
-                    @if($user->hasAnyRoleId([21]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 21]))
                         <a href="{{ route('liquidations.indexAdmin') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Liquidate - Admin
                         </a>
                     @endif
-                    @if($user->hasAnyRoleId([22]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 22]))
                         <a href="{{ route('liquidations.reviewList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Validate Liquidation
                         </a>
                     @endif
-                    @if($user->hasAnyRoleId([23]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 23]))
                         <a href="{{ route('liquidations.validatedList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Collect Liquidation
                         </a>
                     @endif
-                    @if($user->hasAnyRoleId([24]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 24]))
                         <a href="{{ route('liquidations.approvalList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Approved Liquidation
                         </a>
                     @endif
-                    @if($user->hasAnyRoleId([25]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 25]))
                         <a href="{{ route('liquidations.liquidationList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             List -DR
                         </a>
                     @endif
-                    @if($user->hasAnyRoleId([26]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 26]))
                         <a href="{{ route('liquidations.overall') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Overall
                         </a>
                     @endif
-                    @if($user->hasAnyRoleId([27]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 27]))
                         <a href="{{ route('liquidations.rejectedList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Rejected List
                         </a>
