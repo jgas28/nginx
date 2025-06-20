@@ -8,6 +8,7 @@ use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
@@ -28,22 +29,25 @@ class AuthController extends Controller
 
             $user = User::where('employee_code', $request->employee_code)->first();
 
-            if ($user && Hash::check($request->password, $user->password)) {
-                Auth::login($user);
-
-                $roleIds = $user->roles->pluck('id')->toArray();
-
-                if (array_intersect($roleIds, [37, 38, 39, 40, 41])) {
-                    return redirect()->route('dashboard');
-                } else {
-                    return redirect()->route('no.dashboard'); // or return a view
-                }
-
-                Auth::logout();
-                return back()->withErrors(['employee_code' => 'Unauthorized access.']);
+            if (!$user || !Hash::check($request->password, $user->password)) {
+                return back()->withErrors(['employee_code' => 'Invalid credentials']);
             }
 
-            return back()->withErrors(['employee_code' => 'Invalid credentials']);
+            Auth::login($user);
+
+            $roleIds = $user->roles->pluck('id')->toArray();
+
+            // Check if user has one of the authorized dashboard roles
+            if (array_intersect($roleIds, [37, 38, 39, 40, 41, 42])) {
+                return redirect()->route('dashboard');
+            }
+
+            Log::info('User Role IDs on login: ', $roleIds);
+
+            // Unauthorized role: log out and show error
+            Auth::logout();
+            return back()->withErrors(['employee_code' => 'You do not have access to a dashboard.']);
+
         } catch (\Exception $e) {
             return back()->withInput()->withErrors(['error' => $e->getMessage()]);
         }

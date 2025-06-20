@@ -35,7 +35,7 @@
         <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded">
             + New Transaction
         </button>
-    </div>
+    </div> 
 
     <!-- Running Balances Per Source -->
     <div class="mb-6">

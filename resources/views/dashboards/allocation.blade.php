@@ -3,16 +3,27 @@
 @section('title', 'Dashboard')
 
 @section('content')
-    @auth
-        <h1 class="text-2xl font-bold mb-2">Welcome</h1> 
-        <p class="mb-4">
-            {{ auth()->user()->id }} {{ auth()->user()->fname }} {{ auth()->user()->lname }} 
-            ({{ auth()->user()->employee_code }}) – Role: {{ auth()->user()->role_id }}
-        </p>
-    @endauth
-
-    <form action="{{ route('logout') }}" method="POST" class="mb-4">
-        @csrf
-        <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded">Logout</button>
-    </form>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        @foreach ($approvers as $approver)
+            <div class="bg-white shadow-md rounded-lg border border-blue-300">
+                <div class="bg-blue-500 text-white px-4 py-2 rounded-t-lg">
+                    <h2 class="text-lg font-semibold">{{ $approver->name }}</h2>
+                </div>
+                <div class="px-6 py-4 space-y-2">
+                    <div>
+                        <p class="text-gray-600 text-sm">Running Total</p>
+                        <p class="text-xl font-bold text-green-600">
+                            ₱ {{ number_format($runningTotalsByApprover[$approver->id] ?? 0, 2) }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600 text-sm">Uncollected Amount</p>
+                        <p class="text-xl font-bold text-red-500">
+                            ₱ {{ number_format($uncollectedByApprover[$approver->id] ?? 0, 2) }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+    </div>
 @endsection
