@@ -756,17 +756,39 @@ class AdminController extends Controller
 
     public function rejectPrintMultiple(Request $request)
     {
+        $user = Auth::user();
+        $fullname = $user->fname . ' ' . $user->lname;
+
         $voucherIds = $request->input('voucher_ids', []);
 
         if (empty($voucherIds)) {
-            return back()->withErrors(['No vouchers selected.']);
+            return back()->withErrors(['message' => 'No vouchers selected for printing.']);
         }
 
-        $vouchers = CashVoucher::with(['withholdingTax'])
+        $vouchers = CashVoucher::with('withholdingTax')
             ->whereIn('id', $voucherIds)
             ->get();
 
-        // You can create a dedicated Blade view like 'adminCV.multiplePrint'
-        return view('adminCV.reject_print_multiple', compact('vouchers'));
+        $voucherData = [];
+
+        foreach ($vouchers as $voucher) {
+            if ($voucher->voucher_type === 'with_tax') {
+                $taxAmount = $voucher->tax_based_amount * 0.12;
+                $withholdingAmount = $voucher->tax_based_amount * $voucher->withholdingTax->percentage;
+                $finalAmount = $voucher->tax_based_amount + $taxAmount - $withholdingAmount;
+            } elseif ($voucher->voucher_type === 'regular') {
+                $finalAmount = $voucher->amount;
+            } else {
+                $finalAmount = 0;
+            }
+
+            $voucherData[] = [
+                'voucher' => $voucher,
+                'finalAmount' => $finalAmount,
+                'amountInWords' => $this->convertAmountToWordsPreview($finalAmount),
+            ];
+        }
+
+        return view('adminCV.reject_print_multiple', compact('voucherData', 'fullname'));
     }
 }

@@ -3,26 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Cash Voucher Request</title>
-    <style>
+    <title>Multiple Cash Voucher Prints</title>
+        <style>
+        /* Your existing styles here */
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
             background-color: #f7f7f7;
         }
+        
+        .no-print {
+            text-align: center;
+            margin-top: 20px;
+        }
 
-        .container { 
-            width: 8.5in;   /* 8.5 inches width */
-            /* height: 11in;   11 inches height */
-            margin: 0 auto; /* Center the container horizontally */
+        .container {
+            width: 8.5in; /* full page width */
+            height: 5.3in; /* half page height minus margin */
+            margin: 0 auto 0.4in; /* center + spacing below */
             padding: 20px;
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            position: relative; /* For absolute positioning inside container */
-            box-sizing: border-box; /* Ensure padding doesn't affect the overall size */
+            position: relative;
+            box-sizing: border-box;
+            page-break-inside: avoid;
         }
 
         .header {
@@ -56,10 +62,6 @@
             text-align: right;
         }
 
-        .header .series-no .value {
-            max-width: 100%;
-        }
-
         .voucher-details {
             margin-top: 20px;
         }
@@ -71,7 +73,7 @@
         }
 
         .voucher-details table, .voucher-details th, .voucher-details td {
-            border: 1px solid #ccc; /* Add border to the first table */
+            border: 1px solid #ccc;
         }
 
         .voucher-details th, .voucher-details td {
@@ -79,16 +81,6 @@
             text-align: center;
         }
 
-        .voucher-details .field {
-            display: flex;
-            justify-content: space-between;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            padding: 8px;
-            border-radius: 5px;
-        }
-
-        /* New section below the table */
         .no-border-table {
             width: 100%;
             margin-top: 20px;
@@ -96,20 +88,9 @@
             border: none;
         }
 
-        .no-border-table .label{
-            font-size: 12px;
-            border: none;
-        }
-
         .no-border-table td {
             padding: 10px;
             border: none;
-        }
-
-        /* Button styles */
-        .no-print {
-            text-align: center;
-            margin-top: 20px;
         }
 
         .btn {
@@ -133,75 +114,58 @@
             left: 50%;
             transform: translate(-50%, -50%) rotate(-45deg);
             font-size: 80px;
-            color: rgba(255, 0, 0, 0.15); /* Light red, transparent */
+            color: rgba(255, 0, 0, 0.15);
             white-space: nowrap;
             pointer-events: none;
             z-index: 999;
             font-weight: bold;
         }
 
-        /* Print specific styling */
         @media print {
             @page {
                 size: 8.5in 11in;
                 margin: 1in;
             }
 
-            .voucher-details table,
-            .no-border-table {
-                page-break-inside: avoid;
-            }
-
-            .container {
-                page-break-inside: avoid;
-            }
-
-            body {
-                margin: 0;
-                padding: 0;
-                font-size: 12px;
-            }
-
-            .container {
-                max-width: 100%;
-                padding: 10px;
-                border: none;
-                box-sizing: border-box;
-            }
-
-            .header h1 {
-                font-size: 24px;
-                text-decoration: underline;
-            }
-
-            .voucher-details p {
-                font-size: 14px;
-            }
-
-            .voucher-details .label {
-                font-size: 14px;
-            }
-
-            .voucher-details .field .label {
-                font-size: 14px;
-            }
-
-            .voucher-details .field .value {
-                font-size: 14px;
-            }
-
             .no-print {
                 display: none;
             }
 
+            .container {
+                height: 5.3in; /* half page */
+                margin-bottom: 0.4in; /* spacing between vouchers */
+                box-shadow: none;
+                border: none;
+                padding: 10px;
+                max-width: 100%;
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+
+            .voucher-details table {
+                page-break-inside: avoid;
+            }
+
             .container::before {
                 content: "CANCELLED";
-                -webkit-print-color-adjust: exact; /* Ensure it appears in print */
+                -webkit-print-color-adjust: exact;
             }
         }
     </style>
 </head>
 <body>
+
+@foreach ($voucherData as $data)
+    @php
+        $vouchers = $data['voucher'];
+        $amountInWords = $data['amountInWords'];
+        $finalAmount = $data['finalAmount'];
+        $descriptions = json_decode($vouchers->description ?? '[]');
+        $amounts = json_decode($vouchers->amount_details ?? '[]');
+        $remarks = json_decode($vouchers->remarks ?? '[]');
+        $rejectRemarks = json_decode($vouchers->reject_remarks ?? '[]');
+    @endphp
+
     <div class="container">
         <!-- Header with Series No and Date on the edges -->
         <div class="header">
@@ -375,8 +339,12 @@
                 </tr>
             </table>
         </div>
-    <div class="no-print">
-        <button class="btn" onclick="window.print()">Print</button>
     </div>
+@endforeach
+
+<div class="no-print">
+    <button class="btn" onclick="window.print()">Print All</button>
+</div>
+
 </body>
 </html>

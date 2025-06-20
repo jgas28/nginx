@@ -375,6 +375,7 @@
                 </tr>
             </table>
         </div>
+    </div>
     <div class="no-print">
         <button class="btn" onclick="window.print()">Print</button>
     </div>
