@@ -118,7 +118,7 @@ class EmployeeController extends Controller
 
         $employee->save();
 
-        // Sync roles (replaces old ones with the new selection)
+        // Sync roles (replaces old ones with the new selection) 
         $employee->roles()->sync($request->roles);
 
         return redirect()->route('employees.index')->with('success', 'Employee updated successfully.');

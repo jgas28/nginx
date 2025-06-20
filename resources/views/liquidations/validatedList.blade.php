@@ -45,7 +45,7 @@
                             $expenseCodeVal = optional($liquidation->deliveryRequest->expenseType)->expense_code ?? 'N/A';
 
                             $details = "-$truckId-$companyId$expenseCodeVal";
-                        }
+                        } 
                     @endphp
 
                     <td class="p-3 border">

@@ -33,26 +33,30 @@ use App\Http\Controllers\LiquidationController;
 use App\Http\Controllers\RunningBalanceController;
 use App\Http\Controllers\EmployeeController;
 use App\Models\Liquidation;
+use App\Http\Controllers\DashboardController;
 
-// Redirect to dashboard or login
+// 🏠 Root route — redirect based on auth status
 Route::get('/', function () {
     return Auth::check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
+        ? redirect()->action([DashboardController::class, 'index']) // Role-based redirection
+        : redirect()->route('login'); // If not logged in, go to login
 });
+
+// 🧭 This route handles role-based dashboard rendering
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
 
 // Public Auth Routes
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+Route::get('/no-dashboard', function () {
+    return view('no_dashboard');
+})->name('no.dashboard');
 
 // Authenticated Routes
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
-
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
     Route::post('/register', [AuthController::class, 'register']);
     Route::get('/password/change', [PasswordController::class, 'showChangeForm'])->name('password.change');
@@ -196,6 +200,10 @@ Route::middleware('auth')->group(function () {
     Route::put('/adminCV/updateCVR/{id}', [AdminController::class, 'updateCVR'])->name('adminCV.updateCVR');
     // Edit Approval View
     Route::get('/admin/approval/edit/{id}', [AdminController::class, 'editApproval'])->name('admin.editApproval');
+    Route::get('/adminCV/reject-print/{id}', [AdminController::class, 'rejectPrintView'])
+    ->name('adminCV.rejectPrintView');
+    Route::post('/adminCV/reject-print-multiple', [AdminController::class, 'rejectPrintMultiple'])->name('adminCV.rejectPrintMultiple');
+
 
     // Confirm/Release Request
     Route::get('/admin/approval-request/{id}', [AdminController::class, 'approvalRequest'])->name('admin.approvalRequest');

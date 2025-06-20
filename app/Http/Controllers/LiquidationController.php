@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class LiquidationController extends Controller
 {
@@ -382,9 +383,14 @@ class LiquidationController extends Controller
 
     public function validatedList()
     {
-        $liquidations = Liquidation::with('preparedBy', 'notedBy', 'cashVoucher')
-            ->where('status', 3)
-            ->paginate(10);
+        $user = Auth::user();
+
+        $liquidations = Liquidation::with(['preparedBy', 'notedBy', 'cashVoucher.deliveryRequest'])
+        ->where('status', 3)
+        ->whereHas('cashVoucher', function ($query) use ($user) {
+            $query->where('collector_id', $user->id);
+        })
+        ->paginate(10);
 
         foreach ($liquidations as $liquidation) {
             $cashVoucher = $liquidation->cashVoucher;

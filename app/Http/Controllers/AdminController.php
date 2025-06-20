@@ -435,9 +435,9 @@ class AdminController extends Controller
     {
         $user = Auth::user();
         $employeeCode = $user->id;
-        $cashVouchers = CashVoucher::where('status', 3)
+        $cashVouchers = CashVoucher::where('status', 3) 
             ->whereIn('cvr_type', ['admin','rpm'])
-            ->where('created_by', $employeeCode)
+            // ->where('created_by', $employeeCode)
             ->get();
 
         return view('adminCV.rejectView', compact('cashVouchers'));
@@ -535,7 +535,7 @@ class AdminController extends Controller
         // Convert the calculated amount to words
         $amountInWords = $this->convertAmountToWordsPreview($finalAmount);
         return view('adminCV.printPreview', compact('vouchers', 'fullname', 'amountInWords')); 
-    }
+    } 
 
     public function printMultiple(Request $request)
     {
@@ -729,5 +729,44 @@ class AdminController extends Controller
         CashVoucher::whereIn('id', $voucherIds)->update(['print_status' => '1']);
 
         return response()->json(['message' => 'Print status updated']);
+    }
+
+    public function rejectPrintView($id)
+    {
+        $user = Auth::user();
+        $fullname = $user->fname . ' ' . $user->lname;
+
+        $vouchers = CashVoucher::findOrFail($id);
+        // Compute the amount that will be shown on the Blade
+        if ($vouchers->voucher_type === 'with_tax') {
+            $taxAmount = $vouchers->tax_based_amount * 0.12;
+            $withholdingAmount = $vouchers->tax_based_amount * $vouchers->withholdingTax->percentage;
+            $finalAmount = $vouchers->tax_based_amount + $taxAmount - $withholdingAmount;
+        } elseif ($vouchers->voucher_type === 'regular') {
+            $finalAmount = $vouchers->amount;
+        } else {
+            $finalAmount = 0; // fallback
+        }
+
+        // Convert the calculated amount to words
+        $amountInWords = $this->convertAmountToWordsPreview($finalAmount);
+
+         return view('adminCV.reject_print', compact('vouchers', 'fullname', 'amountInWords')); 
+    }
+
+    public function rejectPrintMultiple(Request $request)
+    {
+        $voucherIds = $request->input('voucher_ids', []);
+
+        if (empty($voucherIds)) {
+            return back()->withErrors(['No vouchers selected.']);
+        }
+
+        $vouchers = CashVoucher::with(['withholdingTax'])
+            ->whereIn('id', $voucherIds)
+            ->get();
+
+        // You can create a dedicated Blade view like 'adminCV.multiplePrint'
+        return view('adminCV.reject_print_multiple', compact('vouchers'));
     }
 }

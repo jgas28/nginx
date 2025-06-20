@@ -30,7 +30,17 @@ class AuthController extends Controller
 
             if ($user && Hash::check($request->password, $user->password)) {
                 Auth::login($user);
-                return redirect()->route('dashboard');
+
+                $roleIds = $user->roles->pluck('id')->toArray();
+
+                if (array_intersect($roleIds, [37, 38, 39, 40, 41])) {
+                    return redirect()->route('dashboard');
+                } else {
+                    return redirect()->route('no.dashboard'); // or return a view
+                }
+
+                Auth::logout();
+                return back()->withErrors(['employee_code' => 'Unauthorized access.']);
             }
 
             return back()->withErrors(['employee_code' => 'Invalid credentials']);
@@ -38,6 +48,7 @@ class AuthController extends Controller
             return back()->withInput()->withErrors(['error' => $e->getMessage()]);
         }
     }
+
 
 
     // Show register form
@@ -61,15 +72,16 @@ class AuthController extends Controller
                 'role_id' => 'required|exists:roles,id',
             ]);
 
-            User::create([
+            $user = User::create([
                 'employee_code' => $request->employee_code,
                 'fname' => $request->fname,
                 'lname' => $request->lname,
                 'position' => $request->position,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
-                'role_id' => $request->role_id,
             ]);
+
+            $user->roles()->attach($request->role_id);
 
             return redirect()->route('login')->with('success', 'Registration successful.');
         } catch (\Exception $e) {

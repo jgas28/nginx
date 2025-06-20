@@ -43,11 +43,22 @@
         <!-- Navigation -->
         <nav class="flex-1 px-2 py-4 overflow-y-auto space-y-1">
 
-            {{-- Dashboard always visible --}}
-            <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
-                <i class="fas fa-tachometer-alt"></i>
-                <span x-show="sidebarOpen" x-transition>Dashboard</span>
-            </a>
+            {{-- Show Dashboard or No Access --}}
+            @php
+                $hasDashboardRole = $user->hasAnyRoleId([37, 38, 39, 40, 41]);
+            @endphp
+
+            @if($hasDashboardRole)
+                <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span x-show="sidebarOpen" x-transition>Dashboard</span>
+                </a>
+            @else
+                <a href="{{ route('no.dashboard') }}" class="flex items-center space-x-3 px-3 py-2 rounded text-red-400 hover:bg-gray-700">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span x-show="sidebarOpen" x-transition>No Dashboard Assigned</span>
+                </a>
+            @endif
 
             {{-- Settings nav (role_id = 28) --}}
             @if($user->hasAnyRoleId([1, 2, 3, 28]))
