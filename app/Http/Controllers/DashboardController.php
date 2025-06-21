@@ -18,33 +18,50 @@ class DashboardController extends Controller
 
         $roleIds = $user->roles->pluck('id')->toArray();
 
-        // Shared running balance data (only if needed by dashboard)
-        $approvers = Approver::all();
+        // Only these roles need global balance data
+        $needsBalanceData = in_array(37, $roleIds) || in_array(38, $roleIds);
 
-        $runningTotalsByApprover = RunningBalance::whereIn('type', [1, 2, 3, 5, 8, 10])
-            ->selectRaw('approver_id, SUM(amount) as total')
-            ->groupBy('approver_id')
-            ->pluck('total', 'approver_id');
+        $approvers = [];
+        $runningTotalsByApprover = [];
+        $uncollectedByApprover = [];
 
-        $uncollectedByApprover = RunningBalance::whereIn('type', [4, 5])
-            ->selectRaw('approver_id, SUM(amount) as total')
-            ->groupBy('approver_id')
-            ->pluck('total', 'approver_id')
-            ->map(fn($amount) => abs($amount));
+        if ($needsBalanceData) {
+            $approvers = Approver::all();
 
-        // You can pass the balance data only to roles who need it:
+            $runningTotalsByApprover = RunningBalance::whereIn('type', [1, 2, 3, 5, 8, 10])
+                ->selectRaw('approver_id, SUM(amount) as total')
+                ->groupBy('approver_id')
+                ->pluck('total', 'approver_id');
+
+            $uncollectedByApprover = RunningBalance::whereIn('type', [4, 5])
+                ->selectRaw('approver_id, SUM(amount) as total')
+                ->groupBy('approver_id')
+                ->pluck('total', 'approver_id')
+                ->map(fn($amount) => abs($amount));
+        }
+
+        // Render appropriate view
         if (in_array(37, $roleIds)) {
             return view('dashboards.coordinator', compact('approvers', 'runningTotalsByApprover', 'uncollectedByApprover'));
-        } elseif (in_array(38, $roleIds)) {
+        }
+
+        if (in_array(38, $roleIds)) {
             return view('dashboards.admin', compact('approvers', 'runningTotalsByApprover', 'uncollectedByApprover'));
-        } elseif (in_array(39, $roleIds)) {
-            return view('dashboards.allocation');
-        } elseif (in_array(40, $roleIds)) {
-            return view('dashboards.owner1');
-        } elseif (in_array(41, $roleIds)) {
-            return view('dashboards.owner2');
+        }
+
+        if (in_array(39, $roleIds)) {
+            return view('dashboards.allocation', compact('approvers', 'runningTotalsByApprover', 'uncollectedByApprover'));
+        }
+
+        if (in_array(40, $roleIds)) {
+            return view('dashboards.owner1', compact('approvers', 'runningTotalsByApprover', 'uncollectedByApprover'));
+        }
+
+        if (in_array(41, $roleIds)) {
+            return view('dashboards.owner2', compact('approvers', 'runningTotalsByApprover', 'uncollectedByApprover'));
         }
 
         abort(403, 'Unauthorized dashboard access.');
     }
+
 }
