@@ -37,21 +37,22 @@ class AuthController extends Controller
 
             $roleIds = $user->roles->pluck('id')->toArray();
 
-            // Check if user has one of the authorized dashboard roles
+            // Log user role IDs for debugging (optional)
+            Log::info('User Role IDs on login: ', $roleIds);
+
+            // If user has dashboard access
             if (array_intersect($roleIds, [37, 38, 39, 40, 41, 42])) {
                 return redirect()->route('dashboard');
             }
 
-            Log::info('User Role IDs on login: ', $roleIds);
-
-            // Unauthorized role: log out and show error
-            Auth::logout();
-            return back()->withErrors(['employee_code' => 'You do not have access to a dashboard.']);
+            // User logged in successfully but has no dashboard access
+            return redirect()->route('no.dashboard'); // Define this route in your web.php
 
         } catch (\Exception $e) {
             return back()->withInput()->withErrors(['error' => $e->getMessage()]);
         }
     }
+
 
 
 
