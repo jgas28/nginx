@@ -206,6 +206,7 @@
                 </button>
                 <div x-show="openAllocate && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
                     @if($user->hasAnyRoleId([8]))<a href="{{ route('allocations.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Allocate</a>@endif
+                    @if($user->hasAnyRoleId([9]))<a href="{{ route('allocation.drlist') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">List</a>@endif
                 </div>
             </div>
             @endif

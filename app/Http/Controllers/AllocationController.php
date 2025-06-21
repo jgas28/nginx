@@ -11,6 +11,8 @@ use App\Models\Company;
 use App\Models\cvr_request_type;
 use App\Models\Expense_Type;
 use App\Models\CashVoucher;
+use App\Models\Area;
+use App\Models\Region;
 use App\Models\DeliveryRequestLineItem;
 use App\Models\MonthlySeriesNumber;
 use App\Models\DeliveryRequest;
@@ -172,5 +174,69 @@ class AllocationController extends Controller
             'requestType',
         ));
     }
+
+    public function DRList(Request $request)
+    {
+        $query = DeliveryRequest::with(['lineItems', 'creator'])
+            ->select('id', 'mtm', 'delivery_rate', 'delivery_date', 'created_at', 'created_by', 'company_id', 'area_id', 'region_id');
+
+        // Apply filters conditionally
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $query->whereBetween('created_at', [
+                Carbon::parse($request->date_from)->startOfDay(),
+                Carbon::parse($request->date_to)->endOfDay(),
+            ]);
+        }
+
+        if ($request->filled('month')) {
+            $query->whereMonth('created_at', $request->month);
+        }
+
+        if ($request->filled('company_id')) {
+            $query->where('company_id', $request->company_id);
+        }
+
+        if ($request->filled('area_id')) {
+            $query->where('area_id', $request->area_id);
+        }
+
+        if ($request->filled('region_id')) {
+            $query->where('region_id', $request->region_id);
+        }
+
+        if ($request->filled('created_by')) {
+            $query->where('created_by', $request->created_by);
+        }
+
+        $drList = $query->paginate(20)->appends($request->query());
+
+        // Add computed fields
+        $drList->getCollection()->transform(function ($dr) {
+            $accessorialTotal = $dr->lineItems->sum(function ($item) {
+                return is_array($item->accessorial_rate)
+                    ? collect($item->accessorial_rate)->sum()
+                    : (is_numeric($item->accessorial_rate) ? $item->accessorial_rate : 0);
+            });
+
+            $dr->accessorial_total = $accessorialTotal;
+            $dr->creator_name = $dr->creator ? "{$dr->creator->fname} {$dr->creator->lname}" : 'N/A';
+
+            return $dr;
+        });
+
+        // For dropdown filters
+        $companies = Company::all();
+        $areas = Area::all();
+        $regions = Region::all();
+        $users = User::whereIn('id', function ($query) {
+            $query->select('created_by')
+                ->from('delivery_request')
+                ->distinct()
+                ->whereNotNull('created_by');
+        })->get();
+
+        return view('allocations.drlist', compact('drList', 'companies', 'areas', 'regions', 'users'));
+    }
+
 
 }

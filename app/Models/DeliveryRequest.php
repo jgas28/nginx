@@ -99,4 +99,9 @@ class DeliveryRequest extends Model
         return $this->belongsTo(DeliveryStatus::class, 'delivery_status');
     }
 
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
 }

@@ -138,7 +138,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/allocations/allocate', [AllocationController::class, 'allocate'])
     ->name('allocations.allocate');
     Route::resource('allocations', AllocationController::class)->except(['show']);
-
+    Route::get('/allocation/dr-list', [AllocationController::class, 'DRList'])->name('allocation.drlist');
     Route::post('/generate-multiple-cvr', [AllocationController::class, 'generateMultipleCvrNumbers'])->name('cvr.generateMultiple');
 
     Route::get('/coordinators/splitView/{deliveryRequest}', [CoordinatorsController::class, 'splitView'])->name('coordinators.splitView');
