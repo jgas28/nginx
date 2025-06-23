@@ -13,7 +13,8 @@ class RunningBalance extends Model
         'description',
         'approver_id',
         'created_by',
-        'cvr_number'
+        'cvr_number',
+        'adjustment_type'
     ];
 
     public function company()

@@ -281,6 +281,9 @@
                     @if(!empty($vouchers->charge) && $vouchers->charge != 0)
                         <br><strong>Transfer Charge:</strong> ₱ {{ number_format($vouchers->charge, 2) }}
                     @endif
+                     @if(!empty($vouchers->reference_number))
+                        <br><strong>Reference:</strong> {{$vouchers->reference_number}}
+                    @endif
                 </td>
                 <td style="padding: 0;">
                     <table style="width: 100%; border-collapse: collapse; font-size: 10px;">

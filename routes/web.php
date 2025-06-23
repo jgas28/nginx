@@ -213,7 +213,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/reimbursements/print/{id}', [RunningBalanceController::class, 'print'])->name('reimbursements.print');
     Route::get('/refund/print/{id}', [RunningBalanceController::class, 'printRefund'])->name('refunds.print');
     Route::get('/return/print/{id}', [RunningBalanceController::class, 'printReturn'])->name('returns.print');
-
+    Route::get('/running-balance/laguna', [RunningBalanceController::class, 'adminFunds'])->name('running_balance.adminFunds');
+    Route::get('/running-balance/davao', [RunningBalanceController::class, 'davaoFunds'])->name('running_balance.davaoFunds');
+    
     Route::post('/liquidations/{id}/approvedEdit', [LiquidationController::class, 'approvedLiqUpdate'])->name('liquidations.approvedEdit');
 
     Route::get('/cash-vouchers-status', [LiquidationController::class, 'Overall'])->name('liquidations.overall');

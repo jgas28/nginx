@@ -29,6 +29,10 @@ class RunningBalanceController extends Controller
             $query->where('approver_id', $request->approver_id);
         }
 
+        if ($request->filled('adjustment_type')) {
+            $query->where('adjustment_type', $request->adjustment_type);
+        }
+
         // Sorting
         $sort = $request->get('sort', 'created_at');
         $direction = $request->get('direction', 'desc');
@@ -39,7 +43,7 @@ class RunningBalanceController extends Controller
         $employees = User::all();
 
         // ✅ Include transfer (type 10) in running balance
-        $runningTotalsByApprover = RunningBalance::whereIn('type', [1, 2, 3, 5, 8, 10])
+        $runningTotalsByApprover = RunningBalance::whereIn('type', [1, 2, 3, 5, 8, 9, 10, 11])
             ->selectRaw('approver_id, SUM(amount) as total')
             ->groupBy('approver_id')
             ->pluck('total', 'approver_id');
@@ -51,11 +55,10 @@ class RunningBalanceController extends Controller
             ->pluck('total', 'approver_id');
 
         // ✅ Uncollected + deductions (type 4 + 5) for display (absolute value)
-        $uncollectedByApprover = RunningBalance::whereIn('type', [4, 5])
-            ->selectRaw('approver_id, SUM(amount) as total')
-            ->groupBy('approver_id')
-            ->pluck('total', 'approver_id')
-            ->map(fn($amount) => abs($amount));
+        $uncollectedByApprover = RunningBalance::whereIn('type', [4, 5, 12]) // ✅ include 12 if applicable
+        ->selectRaw('approver_id, SUM(amount) as total')
+        ->groupBy('approver_id')
+        ->pluck('total', 'approver_id');
 
         return view('running_balance.index', compact(
             'balances',
@@ -67,60 +70,161 @@ class RunningBalanceController extends Controller
         ));
     }
 
+    // For Approver ID 2 (Laguna)
+    public function adminFunds(Request $request)
+    {
+        $request->merge(['approver_id' => 2]);
+        return $this->filteredFunds($request, 'adminFunds');
+    }
 
+    // For Approver ID 3 (Davao)
+    public function davaoFunds(Request $request)
+    {
+        $request->merge(['approver_id' => 3]);
+        return $this->filteredFunds($request, 'davaoFunds');
+    }
+
+    // Shared logic
+    protected function filteredFunds(Request $request, $viewName)
+    {
+        // Determine the correct approver_id from the route logic
+        $approverId = $request->approver_id;
+
+        $query = RunningBalance::with(['approver', 'employee', 'creator'])
+            ->where('approver_id', $approverId); // Always filter by fixed approver
+
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('created_at', [
+                $request->start_date . ' 00:00:00',
+                $request->end_date . ' 23:59:59'
+            ]);
+        }
+
+        if ($request->filled('adjustment_type')) {
+            $query->where('adjustment_type', $request->adjustment_type);
+        }
+
+        $sort = $request->get('sort', 'created_at');
+        $direction = $request->get('direction', 'desc');
+
+        $balances = $query->orderBy($sort, $direction)->get();
+
+        $approvers = Approver::all();
+        $employees = User::all();
+
+        $runningTotalsByApprover = RunningBalance::where('approver_id', $approverId)
+            ->whereIn('type', [1, 2, 3, 5, 8, 9, 10, 11])
+            ->selectRaw('approver_id, SUM(amount) as total')
+            ->groupBy('approver_id')
+            ->pluck('total', 'approver_id');
+
+        $salaryDeductions = RunningBalance::where('approver_id', $approverId)
+            ->where('type', 5)
+            ->selectRaw('approver_id, SUM(amount) as total')
+            ->groupBy('approver_id')
+            ->pluck('total', 'approver_id');
+
+        $uncollectedByApprover = RunningBalance::where('approver_id', $approverId)
+            ->whereIn('type', [4, 5, 12])
+            ->selectRaw('approver_id, SUM(amount) as total')
+            ->groupBy('approver_id')
+            ->pluck('total', 'approver_id');
+
+        return view("running_balance.{$viewName}", compact(
+            'balances',
+            'approvers',
+            'employees',
+            'runningTotalsByApprover',
+            'salaryDeductions',
+            'uncollectedByApprover'
+        ));
+    }
     
     public function store(Request $request)
     {
         $user = Auth::user();
 
         $request->validate([
-            'type'             => 'required|in:1,2,3,4,5,6,8,10',
-            'approver_id'      => 'required|exists:cvr_approver,id', // destination
-            'amount'           => 'required|numeric|min:0.01',
+            'type'             => 'required|in:1,2,3,4,5,6,8,9,10,11,12',
+            'approver_id'      => 'required|exists:cvr_approver,id',
+            'amount' => [
+                'required',
+                'numeric',
+                function ($attribute, $value, $fail) use ($request) {
+                    $type = (int) $request->input('type');
+
+                    if (in_array($type, [11, 12])) {
+                        if ((float)$value === 0.0) {
+                            $fail('The amount cannot be zero for adjustment types.');
+                        }
+                    } else {
+                        if ((float)$value < 0.01) {
+                            $fail('The amount must be at least 0.01.');
+                        }
+                    }
+                },
+            ],
             'description'      => 'nullable|string',
             'employee_id'      => 'nullable|exists:users,id',
-            'from_approver_id' => 'required_if:type,10|nullable|exists:cvr_approver,id', // source (only for transfer)
+            'from_approver_id' => 'required_if:type,10|nullable|exists:cvr_approver,id',
         ]);
 
         $amount = $request->amount;
 
-        // Handle Reimbursement, Uncollected, Release Approved Amount (negatives)
         if (in_array($request->type, [3, 4, 8])) {
-            $amount *= -1;
+            $amount = -abs($amount); // Always negative
+        } elseif (in_array($request->type, [11, 12])) {
+            $amount = $amount; // Manual +/- allowed
         }
 
-        // Handle Transfer (type 10)
+        // Determine adjustment type
+        $adjustmentType = $amount > 0 ? 'In' : 'Out';
+
+        // ✅ Handle Transfer separately
         if ($request->type == 10) {
-            // Deduct from source approver
+            // Transfer out (deduction from source)
             RunningBalance::create([
                 'approver_id' => $request->from_approver_id,
                 'type'        => 10,
                 'amount'      => -$request->amount,
-                'description' => 'Transfer to ' . optional(\App\Models\Approver::find($request->approver_id))->name . 
+                'description' => 'Transfer to ' . optional(Approver::find($request->approver_id))->name .
                                 ($request->description ? ' - ' . $request->description : ''),
                 'employee_id' => $request->employee_id,
                 'created_by'  => $user->id,
+                'adjustment_type' => 'Out',
             ]);
 
-            // Credit to destination approver
+            // Transfer in (credit to destination)
             RunningBalance::create([
                 'approver_id' => $request->approver_id,
                 'type'        => 10,
                 'amount'      => $request->amount,
-                'description' => 'Transfer from ' . optional(\App\Models\Approver::find($request->from_approver_id))->name . 
+                'description' => 'Transfer from ' . optional(Approver::find($request->from_approver_id))->name .
                                 ($request->description ? ' - ' . $request->description : ''),
                 'employee_id' => $request->employee_id,
                 'created_by'  => $user->id,
+                'adjustment_type' => 'In',
             ]);
         } else {
-            // All other transaction types
+            $description = $request->description;
+
+            if ($request->type == 9) {
+                $description = 'Admin Adjustment: ' . $description;
+            } elseif ($request->type == 11) {
+                $description = 'Admin Adjustment: ' . $description;
+            } elseif ($request->type == 12) {
+                $description = 'Admin Adjustment for Uncollected: ' . $description;
+            }
+
+            // All other types
             RunningBalance::create([
                 'approver_id' => $request->approver_id,
                 'type'        => $request->type,
                 'amount'      => $amount,
-                'description' => $request->description,
+                'description' => $description,
                 'employee_id' => $request->employee_id,
                 'created_by'  => $user->id,
+                'adjustment_type' => $adjustmentType,
             ]);
         }
 
@@ -151,6 +255,7 @@ class RunningBalanceController extends Controller
             'approver_id' => $validated['approver_id'],
             'created_by' => $validated['created_by'],
             'cvr_number' => $validated['cvr_number'],
+            'adjustment_type' => 'In',
             'type' => 3,
         ])->first(); 
 
@@ -187,6 +292,7 @@ class RunningBalanceController extends Controller
             'approver_id' => $validated['approver_id'],
             'created_by' => $validated['created_by'],
             'cvr_number' => $validated['cvr_number'],
+            'adjustment_type' => 'Out',
             'type' => 3,
         ])->first(); 
 
@@ -245,6 +351,7 @@ class RunningBalanceController extends Controller
             'approver_id' => $validated['approver_id'],
             'created_by' => $validated['created_by'],
             'cvr_number' => $validated['cvr_number'],
+            'adjustment_type' => 'In',
             'type' => 2,
         ]);
 
@@ -256,6 +363,7 @@ class RunningBalanceController extends Controller
             'approver_id' => $validated['approver_id'],
             'created_by' => $validated['created_by'],
             'cvr_number' => $validated['cvr_number'],
+            'adjustment_type' => 'Float',
             'type' => 4,
         ]);
 
@@ -285,6 +393,7 @@ class RunningBalanceController extends Controller
             'created_by' => $validated['created_by'],
             'cvr_number' => $validated['cvr_number'],
             'type' => 2,
+            'adjustment_type' => 'In',
         ]);
 
         // 2. Uncollected Cash Record
@@ -296,6 +405,7 @@ class RunningBalanceController extends Controller
             'created_by' => $validated['created_by'],
             'cvr_number' => $validated['cvr_number'],
             'type' => 4,
+            'adjustment_type' => 'Float',
         ]);
 
          return redirect()->route('liquidations.approval', $liquidation_id);
@@ -347,4 +457,49 @@ class RunningBalanceController extends Controller
         return redirect()->route('liquidations.approval', ['id' => $liquidation_id])
                  ->with('success', 'Return updated successfully.');
     }
+
+    public function storeAdminAdjustment(Request $request)
+    {
+        $request->validate([
+            'approver_id' => 'required|exists:cvr_approver,id',
+            'employee_id' => 'nullable|exists:users,id',
+            'amount' => 'required|numeric|not_in:0', // Allow both positive and negative
+            'description' => 'required|string|max:255',
+        ]);
+
+        RunningBalance::create([
+            'approver_id' => $request->approver_id,
+            'employee_id' => $request->employee_id,
+            'amount' => $request->amount,
+            'description' => 'Admin Adjustment: ' . $request->description,
+            'type' => 9, // Admin adjustment type
+            'created_by' => Auth::id(),
+        ]);
+
+        return redirect()->route('running_balance.index')->with('success', 'Admin adjustment recorded.');
+    }
+
+    public function storeUncollectedAdjustment(Request $request)
+    {
+        $request->validate([
+            'approver_id' => 'required|exists:cvr_approver,id',
+            'employee_id' => 'required|exists:users,id',
+            'amount' => 'required|numeric|not_in:0',
+            'description' => 'required|string|max:255',
+        ]);
+
+        $adjustedAmount = $request->amount; // ✅ Keep raw amount (+ or -)
+
+        RunningBalance::create([
+            'approver_id' => $request->approver_id,
+            'employee_id' => $request->employee_id,
+            'amount' => $adjustedAmount,
+            'description' => 'Uncollected Adjustment: ' . $request->description,
+            'type' => 11,
+            'created_by' => Auth::id(),
+        ]);
+
+        return redirect()->route('running_balance.index')->with('success', 'Uncollected adjustment recorded.');
+    }
+
 }

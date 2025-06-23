@@ -612,6 +612,7 @@ class CashVoucherController extends Controller
                 'approver_id' => $fund_source,
                 'created_by' => $employeeCode,
                 'cvr_number' => $cashVoucher->cvr_number,
+                'adjustment_type' => 'Out',
             ]);
 
             // Step 7: Commit transaction

@@ -17,6 +17,13 @@
                 @endforeach
             </select>
 
+            <select name="adjustment_type" class="border rounded px-4 py-2 w-full">
+                <option value="">All Movement Types</option>
+                <option value="In" {{ request('adjustment_type') == 'In' ? 'selected' : '' }}>In</option>
+                <option value="Out" {{ request('adjustment_type') == 'Out' ? 'selected' : '' }}>Out</option>
+                <option value="Float" {{ request('adjustment_type') == 'Float' ? 'selected' : '' }}>Float</option>
+            </select>
+
             <select name="sort" class="border rounded px-4 py-2 w-full">
                 <option value="created_at" {{ request('sort') == 'created_at' ? 'selected' : '' }}>Sort by Date</option>
                 <option value="amount" {{ request('sort') == 'amount' ? 'selected' : '' }}>Sort by Amount</option>
@@ -65,6 +72,7 @@
                     <th class="border px-4 py-2">Date</th>
                     <th class="border px-4 py-2">Source</th>
                     <th class="border px-4 py-2">Type</th>
+                    <th class="border px-4 py-2">Movement Type</th>
                     <th class="border px-4 py-2">Amount</th>
                     <th class="border px-4 py-2">Description</th>
                     <th class="border px-4 py-2">Employee</th>
@@ -95,10 +103,15 @@
                             Release Approved Amount
                         @elseif($balance->type == 10)
                             Transfer
+                        @elseif($balance->type == 11)
+                            Adjustment
+                        @elseif($balance->type == 12)
+                            Adjustment for Uncollected
                         @else
                             Reimbursement
                         @endif
                     </td>
+                    <td class="px-4 py-2">{{ $balance->adjustment_type }}</td>
                     <td class="px-4 py-2 font-semibold {{ $balance->amount < 0 ? 'text-red-600' : 'text-green-600' }}">
                         {{ number_format($balance->amount, 2) }}
                     </td>
@@ -128,6 +141,8 @@
                         <option value="1">Top-up</option>
                         <option value="5">Salary Deduction</option>
                         <option value="10">Transfer</option>
+                        <option value="11">Adjustment</option>
+                        <option value="12">Adjustment for Uncollected</option>
                     </select>
                 </div>
 

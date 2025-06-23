@@ -352,6 +352,7 @@ class AdminController extends Controller
                 'approver_id' => $fund_source,
                 'created_by' => $employeeCode,
                 'cvr_number' =>  $cashVouchers->cvr_number,
+                'adjustment_type' =>  'Out',
             ]);
 
             // Log success for cvr_approval

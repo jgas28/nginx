@@ -74,8 +74,6 @@
                 </button>
                 <div x-show="open && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
                     @if($user->hasAnyRoleId([1, 2, 3, 34]))<a href="{{ route('password.change') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Change Password</a>@endif
-                     @if($user->hasAnyRoleId([1, 2, 3, 35]))<a href="{{ route('running_balance.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Running Balance</a>@endif
-
                     {{-- Basic Settings (role_id = 3) --}}
                     @if($user->hasAnyRoleId([1, 2, 3, 36]))
                     <div>
@@ -169,6 +167,45 @@
                     </div>
                     @endif
 
+                </div>
+            </div>
+            @endif
+
+            {{-- Delivery Request nav (role_id = 6 or 7) --}}
+            @if($user->hasAnyRoleId([1, 2, 3, 35]))
+            <div x-data="{ openBalance: false }">
+                <button @click="openBalance = !openBalance" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-scale-balanced"></i>
+                        <span x-show="sidebarOpen" x-transition>Running Balance</span>
+                    </div>
+                    <svg x-show="sidebarOpen" :class="openBalance ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <div x-show="openBalance && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+                      @if($user->hasAnyRoleId([1, 2, 3, 43]))<a href="{{ route('running_balance.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Running Balance</a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 44]))<a href="{{ route('running_balance.adminFunds') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Running Balance - Laguna</a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 45]))<a href="{{ route('running_balance.davaoFunds') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Running Balance - Davao</a>@endif
+                </div>
+            </div>
+            @endif
+
+            {{-- Allocation List nav (role_id = 9) --}}
+            @if($user->hasAnyRoleId([1, 2, 3]))
+            <div x-data="{ openAllocate: false }">
+                <button @click="openAllocate = !openAllocate" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-truck"></i>
+                        <span x-show="sidebarOpen" x-transition>Allocation</span>
+                    </div>
+                    <svg x-show="sidebarOpen" :class="openAllocate ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <div x-show="openAllocate && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+                    @if($user->hasAnyRoleId([8]))<a href="{{ route('allocations.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Allocate</a>@endif
+                    @if($user->hasAnyRoleId([9]))<a href="{{ route('allocation.drlist') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">List</a>@endif
                 </div>
             </div>
             @endif
