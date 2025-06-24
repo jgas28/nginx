@@ -146,7 +146,7 @@
                     <p class="font-semibold text-gray-800 mb-2">Settings:</p>
                     <div class="grid grid-cols-2 gap-4">
                         @foreach($roles as $role)
-                            @if(in_array($role->id, [3, 4, 5, 28, 33, 34, 35]))
+                            @if(in_array($role->id, [3, 4, 5, 28, 33, 34]))
                                 <label class="inline-flex items-center space-x-2">
                                     <input 
                                         type="checkbox" 
@@ -181,6 +181,26 @@
                     </div>
                 </div>
 
+                {{-- Running Balance Group --}}
+                <div>
+                    <p class="font-semibold text-gray-800 mb-2">Running Balance:</p>
+                    <div class="grid grid-cols-2 gap-4">
+                        @foreach($roles as $role)
+                            @if(in_array($role->id, [35, 43, 44, 45]))
+                                <label class="inline-flex items-center space-x-2">
+                                    <input 
+                                        type="checkbox" 
+                                        name="roles[]" 
+                                        value="{{ $role->id }}" 
+                                        class="form-checkbox h-5 w-5 text-indigo-600 rounded role-checkbox"
+                                        {{ in_array($role->id, old('roles', $employee->roles->pluck('id')->toArray())) ? 'checked' : '' }}>
+                                    <span class="text-gray-700">{{ $role->name }}</span>
+                                </label>
+                            @endif
+                        @endforeach
+                    </div>
+                </div>
+
             </div>
 
             <p class="text-sm text-gray-500 mt-1">Select one or more roles for the employee.</p>
@@ -201,7 +221,8 @@
             { main: '31', triggers: ['10', '11'] },  // Coordinator
             { main: '32', triggers: ['12','13','14','15','16','17','18'] }, // Cash Voucher
             { main: '33', triggers: ['20','21','22','23','24','25','26','27'] }, // Liquidation
-            { main: '28', triggers: ['3','4','5', '33', '34', '35'] }, // Settings
+            { main: '28', triggers: ['3','4','5', '33', '34'] }, // Settings
+            { main: '35', triggers: ['43','44','45'] },
         ];
 
         const dashboardMasterId = '42';
