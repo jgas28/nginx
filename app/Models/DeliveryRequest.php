@@ -43,6 +43,87 @@ class DeliveryRequest extends Model
         return $this->hasMany(CashVoucher::class, 'mtm', 'mtm');
     }
 
+    public function cashVouchers()
+    {
+        return $this->hasMany(CashVoucher::class, 'dr_id', 'id');
+    }
+
+    public function cvrApprovals()
+    {
+        return $this->hasManyThrough(
+            cvr_approval::class,
+            CashVoucher::class,
+            'dr_id',     // CashVoucher.dr_id
+            'cvr_id',    // cvr_approval.cvr_id
+            'id',        // DeliveryRequest.id
+            'id'         // CashVoucher.id
+        );
+    }
+
+    public function liquidations()
+    {
+        return $this->hasManyThrough(
+            Liquidation::class,
+            cvr_approval::class,
+            'cvr_id',           // cvr_approval.cvr_id
+            'cvr_approval_id',  // liquidation.cvr_approval_id
+            'id',               // delivery_request.id
+            'id'                // cvr_approval.id
+        );
+    }
+
+    public function getLiquidationsTotalsAttribute()
+    {
+        $this->loadMissing('cashVoucher.cvrApprovals.liquidations');
+
+        $totalCash = 0;
+        $totalCard = 0;
+
+        foreach ($this->cashVoucher as $cv) {
+            foreach ($cv->cvrApprovals as $approval) {
+                foreach ($approval->liquidations as $liq) {
+                    $totalCash += ($liq->allowance ?? 0)
+                        + ($liq->manpower ?? 0)
+                        + ($liq->hauling ?? 0)
+                        + ($liq->right_of_way ?? 0)
+                        + ($liq->roro_expense ?? 0)
+                        + ($liq->cash_charge ?? 0);
+
+                    if (is_array($liq->gasoline)) {
+                        foreach ($liq->gasoline as $gas) {
+                            if (($gas['type'] ?? '') === 'cash') {
+                                $totalCash += (float)($gas['amount'] ?? 0);
+                            } elseif (($gas['type'] ?? '') === 'card') {
+                                $totalCard += (float)($gas['amount'] ?? 0);
+                            }
+                        }
+                    }
+
+                    if (is_array($liq->rfid)) {
+                        foreach ($liq->rfid as $rfid) {
+                            if (($rfid['type'] ?? '') === 'cash') {
+                                $totalCash += (float)($rfid['amount'] ?? 0);
+                            } elseif (($rfid['type'] ?? '') === 'card') {
+                                $totalCard += (float)($rfid['amount'] ?? 0);
+                            }
+                        }
+                    }
+
+                    if (is_array($liq->others)) {
+                        foreach ($liq->others as $other) {
+                            $totalCash += (float)($other['amount'] ?? 0);
+                        }
+                    }
+                }
+            }
+        }
+
+        return [
+            'cash' => $totalCash,
+            'card' => $totalCard,
+        ];
+    }
+
     public function customer()
     {
         return $this->belongsTo(Customer::class, 'customer_id');

@@ -60,6 +60,13 @@
                 </a>
             @endif
 
+
+            @if(in_array($user->id, [1, 97]))
+                <a href="{{ route('delivery.details') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
+                    <span x-show="sidebarOpen" x-transition>Delivery Details</span>
+                </a>
+            @endif
+
             {{-- Settings nav (role_id = 28) --}}
             @if($user->hasAnyRoleId([1, 2, 3, 28]))
             <div x-data="{ open: false, basicOpen: false, cvOpen: false, dliOpen: false, allocationOpen: false }">

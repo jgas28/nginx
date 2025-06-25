@@ -34,6 +34,7 @@ use App\Http\Controllers\RunningBalanceController;
 use App\Http\Controllers\EmployeeController;
 use App\Models\Liquidation;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DetailsController;
 
 // 🏠 Root route — redirect based on auth status
 Route::get('/', function () {
@@ -227,6 +228,8 @@ Route::middleware('auth')->group(function () {
         Route::get('returns/{id}/edit', [RunningBalanceController::class, 'editReturn'])->name('returns.edit');
         Route::put('returns/{id}', [RunningBalanceController::class, 'updateReturn'])->name('returns.update');
     });
+    
+    Route::get('/delivery-details', [DetailsController::class, 'index'])->name('delivery.details');
 });
 
 // Admin-only Routes (if needed separately)
