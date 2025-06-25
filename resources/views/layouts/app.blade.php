@@ -192,7 +192,7 @@
             @endif
 
             {{-- Allocation List nav (role_id = 9) --}}
-            @if($user->hasAnyRoleId([1, 2, 3]))
+            @if($user->hasAnyRoleId([1, 2, 3, 30]))
             <div x-data="{ openAllocate: false }">
                 <button @click="openAllocate = !openAllocate" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
                     <div class="flex items-center space-x-3">
@@ -225,25 +225,6 @@
                 <div x-show="openDR && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
                     @if($user->hasAnyRoleId([1, 2, 3, 6]))<a href="{{ route('deliveryRequest.create') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Create</a>@endif
                     @if($user->hasAnyRoleId([1, 2, 3, 7]))<a href="{{ route('deliveryRequest.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">List</a>@endif
-                </div>
-            </div>
-            @endif
-
-            {{-- Allocation List nav (role_id = 9) --}}
-            @if($user->hasAnyRoleId([1, 2, 3, 30]))
-            <div x-data="{ openAllocate: false }">
-                <button @click="openAllocate = !openAllocate" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
-                    <div class="flex items-center space-x-3">
-                        <i class="fas fa-truck"></i>
-                        <span x-show="sidebarOpen" x-transition>Allocation</span>
-                    </div>
-                    <svg x-show="sidebarOpen" :class="openAllocate ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                    </svg>
-                </button>
-                <div x-show="openAllocate && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
-                    @if($user->hasAnyRoleId([8]))<a href="{{ route('allocations.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Allocate</a>@endif
-                    @if($user->hasAnyRoleId([9]))<a href="{{ route('allocation.drlist') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">List</a>@endif
                 </div>
             </div>
             @endif
