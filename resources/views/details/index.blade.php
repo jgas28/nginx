@@ -56,7 +56,11 @@
                         <td class="border p-2 text-right">₱{{ number_format($dr->liquidations_totals['cash'] ?? 0, 2) }}</td>
                         <td class="border p-2 text-right">₱{{ number_format($dr->liquidations_totals['card'] ?? 0, 2) }}</td>
                         <td class="border p-2 text-center">
-                            <a href="#" class="text-blue-600 hover:underline">View</a>
+                            <button 
+                                @click="selectedModal = '{{ $dr->id }}'" 
+                                class="text-blue-600 hover:underline">
+                                View
+                            </button>
                         </td>
                     </tr>
                 @endforeach

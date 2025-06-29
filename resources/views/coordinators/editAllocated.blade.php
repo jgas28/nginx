@@ -375,12 +375,12 @@
                         <!-- Accessorial Rate -->
                         <div class="w-full md:w-2/12 px-2 mb-4">
                             <label for="regular_accessorial_rate_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Rate</label>
-                            <input type="text" name="regular[{{ $index }}][accessorial_rate]" id="regular_accessorial_rate_{{ $index }}" 
+                            <input type="number" name="regular[{{ $index }}][accessorial_rate]" id="regular_accessorial_rate_{{ $index }}"
                                 value="{{ old('regular.' . $index . '.accessorial_rate', $lineItem->accessorial_rate) }}"
-                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
-                        focus:outline-none focus:ring-0">
+                                step="0.01"  
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-0">
                             @error('regular.' . $index . '.accessorial_rate')
-                            <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                                <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                             @enderror
                         </div>
 
@@ -526,10 +526,12 @@
                                                 <!-- Accessorial Rate -->
                                                 <div class="w-full md:w-1/12 px-2 mb-4">
                                                     <label for="accessorial_rate_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Rate</label>
-                                                    <input type="text" name="multi_drop[{{ $index }}][accessorial_rate]" id="accessorial_rate_{{ $index }}" 
-                                                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
-                        focus:outline-none focus:ring-0" 
-                                                    value="{{ old('multi_drop.' . $index . '.accessorial_rate', $lineItem->accessorial_rate) }}" >
+                                                    <input type="number" 
+                                                        name="multi_drop[{{ $index }}][accessorial_rate]" 
+                                                        id="accessorial_rate_{{ $index }}" 
+                                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-0" 
+                                                        value="{{ old('multi_drop.' . $index . '.accessorial_rate', $lineItem->accessorial_rate) }}" 
+                                                        step="0.01" min="0">
                                                     @error('multi_drop.' . $index . '.accessorial_rate')
                                                         <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                                                     @enderror
@@ -650,10 +652,12 @@
                                                 <!-- Accessorial Rate -->
                                                 <div class="col-span-12 md:col-span-1">
                                                     <label for="accessorial_rate_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Rate</label>
-                                                    <input type="text" name="multi_pickup[{{ $index }}][accessorial_rate]" id="accessorial_rate_{{ $index }}" 
+                                                    <input type="number" 
+                                                        name="multi_pickup[{{ $index }}][accessorial_rate]" 
+                                                        id="accessorial_rate_{{ $index }}" 
                                                         value="{{ old('multi_pickup.' . $index . '.accessorial_rate', $lineItem->accessorial_rate) }}" 
-                                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
-                        focus:outline-none focus:ring-0" >
+                                                        class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-0"
+                                                        step="0.01" min="0">
                                                     @error('multi_pickup.' . $index . '.accessorial_rate')
                                                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                                     @enderror
@@ -760,12 +764,10 @@
 
                                 <!-- Accessorial Rate -->
                                 <div class="col-span-12 md:col-span-1">
-                                <label for="accessorial_rate_${multiDropIndex}" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Rate</label>
-                                <input type="text" name="multi_drop[${multiDropIndex}][accessorial_rate]" id="accessorial_rate_${multiDropIndex}" 
-                                    class="block w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 @error('multi_drop.${multiDropIndex}.accessorial_rate') border-red-500 @enderror">
-                                @error('multi_drop.${multiDropIndex}.accessorial_rate')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
+                                    <label for="multi_pickup_${multiDropIndex}_accessorial_rate" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Rate</label>
+                                    <input type="number" name="multi_pickup[${multiDropIndex}][accessorial_rate]" id="multi_pickup_${multiDropIndex}_accessorial_rate" 
+                                        class="block w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        value="" step="0.01" min="0">
                                 </div>
 
                                 <!-- Delete Button -->
@@ -842,14 +844,12 @@
                                 @enderror
                                 </div>
 
-                                <!-- Accessorial Rate (1 column) -->
+                                 <!-- Accessorial Rate -->
                                 <div class="col-span-12 md:col-span-1">
-                                <label for="multi_pickup_${currentIndex}_accessorial_rate" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Rate</label>
-                                <input type="text" name="multi_pickup[${currentIndex}][accessorial_rate]" id="multi_pickup_${currentIndex}_accessorial_rate" 
-                                    class="block w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 @error('multi_pickup.${currentIndex}.accessorial_rate') border-red-500 @enderror">
-                                @error('multi_pickup.${currentIndex}.accessorial_rate')
-                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                                @enderror
+                                    <label for="multi_pickup_${currentIndex}_accessorial_rate" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Rate</label>
+                                    <input type="number" name="multi_pickup[${currentIndex}][accessorial_rate]" id="multi_pickup_${currentIndex}_accessorial_rate" 
+                                        class="block w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        value="" step="0.01" min="0">
                                 </div>
 
                                 <!-- Delete Button (1 column) -->

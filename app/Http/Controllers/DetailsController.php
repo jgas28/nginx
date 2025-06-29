@@ -13,7 +13,7 @@ class DetailsController extends Controller
         $deliveryRequests = \App\Models\DeliveryRequest::with([
             'lineItems',
             'cashVouchers',
-            'cvrApprovals',
+            'cvrApprovals', 
             'liquidations',
         ])->get();
 
