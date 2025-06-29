@@ -14,7 +14,8 @@ class RunningBalance extends Model
         'approver_id',
         'created_by',
         'cvr_number',
-        'adjustment_type'
+        'adjustment_type',
+        'supplier_id',
     ];
 
     public function company()
@@ -36,4 +37,10 @@ class RunningBalance extends Model
     {
         return $this->belongsTo(User::class, 'employee_id');
     }
+
+      public function suppliers()
+    {
+        return $this->belongsTo(Supplier::class, 'supplier_id');
+    }
+
 }

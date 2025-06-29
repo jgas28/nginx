@@ -116,7 +116,9 @@
                         {{ number_format($balance->amount, 2) }}
                     </td>
                     <td class="px-4 py-2">{{ $balance->description }}</td>
-                    <td class="px-4 py-2">{{ $balance->employee->fname ?? 'N/A' }}</td>
+                    <td class="px-4 py-2">
+                        {{ $balance->employee->fname ?? $balance->suppliers->supplier_name ?? 'N/A' }}
+                    </td>
                     <td class="px-4 py-2">{{ $balance->creator->fname ?? 'N/A' }}</td>
                 </tr>
                 @endforeach

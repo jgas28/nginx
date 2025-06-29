@@ -292,7 +292,7 @@ class AdminController extends Controller
         $receiver = '';
         $fund_source = '';
         $charge = null;
-
+ 
         switch ($request->payment_type) {
             case 'cash':
                 $paymentName = 'Cash';
@@ -348,7 +348,7 @@ class AdminController extends Controller
                 'type' => 8, // CVR approval
                 'amount' => -1 * floatval($totalAmount), // It's a deduction
                 'description' => $cashVouchers->cvr_number,
-                'employee_id' => $receiver, // Or set this if linked to a user
+                'supplier_id' => $receiver, // Or set this if linked to a user
                 'approver_id' => $fund_source,
                 'created_by' => $employeeCode,
                 'cvr_number' =>  $cashVouchers->cvr_number,

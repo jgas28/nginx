@@ -6,6 +6,7 @@ use App\Models\RunningBalance;
 use App\Models\Company;
 use App\Models\User;
 use App\Models\Approver;
+use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -41,6 +42,7 @@ class RunningBalanceController extends Controller
 
         $approvers = Approver::all();
         $employees = User::all();
+        $suppliers = Supplier::all();
 
         // ✅ Include transfer (type 10) in running balance
         $runningTotalsByApprover = RunningBalance::whereIn('type', [1, 2, 3, 5, 8, 9, 10, 11])
@@ -66,7 +68,8 @@ class RunningBalanceController extends Controller
             'employees',
             'runningTotalsByApprover',
             'salaryDeductions',
-            'uncollectedByApprover'
+            'uncollectedByApprover',
+            'suppliers'
         ));
     }
 
