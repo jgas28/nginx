@@ -59,8 +59,10 @@ class DashboardController extends Controller
 
             // Sum admin/rpm vs operational expenses based on selected date range
             $liquidations = Liquidation::with('cashVoucher')
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->get();
+            ->whereHas('cashVoucher', function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('created_at', [$startDate, $endDate]);
+            })
+            ->get();
 
             $adminRpmTotal = 0;
             $operationTotal = 0;

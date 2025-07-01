@@ -157,7 +157,7 @@ Route::middleware('auth')->group(function () {
     Route::post('coordinators/store-pullout', [CoordinatorsController::class, 'storePullout'])->name('coordinators.storePullout');
     Route::get('/coordinators/load-tab-data', [CoordinatorsController::class, 'loadTabData'])->name('coordinators.loadTabData');
     Route::get('coordinators/{id}/requestAccessorial', [CoordinatorsController::class, 'requestAccessorial'])->name('coordinators.requestAccessorial');
-     Route::post('coordinators/store-accessorial', [CoordinatorsController::class, 'storeAccessorial'])->name('coordinators.storeAccessorial');
+    Route::post('coordinators/store-accessorial', [CoordinatorsController::class, 'storeAccessorial'])->name('coordinators.storeAccessorial');
 
     Route::get('cashVoucherRequests/{id}/request', [CashVoucherController::class, 'request'])->name('cashVoucherRequests.request');
     Route::get('/cash-voucher-accessorial', [CashVoucherController::class, 'accessorial'])->name('cashVoucherRequests.accessorial');

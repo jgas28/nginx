@@ -1271,6 +1271,7 @@ class CoordinatorsController extends Controller
     public function storePullout(Request $request)
     {
         Log::info('Request Data:', ['data' => $request->all()]);
+
         try {
             $validated = $request->validate([
                 'amount' => 'required|numeric',
@@ -1291,8 +1292,8 @@ class CoordinatorsController extends Controller
         }
 
         $sequence = CashVoucher::where('dr_id', $request->dr_id)
-        ->where('cvr_type', $request->cvr_type)
-        ->count() + 1;
+            ->where('cvr_type', $request->cvr_type)
+            ->count() + 1;
 
         $company_id = $request->company_id;
 
@@ -1303,7 +1304,6 @@ class CoordinatorsController extends Controller
             $yearMonth = $currentDate->format('Y-m');
             $year = $currentDate->format('Y');
             $month = $currentDate->format('m');
-            $isFirstDayOfMonth = $currentDate->format('j') === '1';
 
             // Lock and fetch the row for this company
             $monthlySeries = MonthlySeriesNumber::where('company_id', $company_id)
@@ -1320,8 +1320,10 @@ class CoordinatorsController extends Controller
                 $nextCvrNumber = 1;
                 Log::info("Created MonthlySeriesNumber: company_id = $company_id, month = $yearMonth, series = 1");
             } else {
-                if ($isFirstDayOfMonth || $monthlySeries->month !== $yearMonth) {
-                    // Reset series if it's first day OR stored month is outdated
+                // Check if the month has changed, and reset series number if true
+                $isNewMonth = $monthlySeries->month !== $yearMonth;
+                if ($isNewMonth) {
+                    // Reset the series number for the new month
                     $monthlySeries->update([
                         'month' => $yearMonth,
                         'series_number' => 1,
@@ -1337,10 +1339,10 @@ class CoordinatorsController extends Controller
             }
 
             // Construct the final CVR number
-            $currentYear = $currentDate->format('Y');
-            $currentMonth = $currentDate->format('m');
-            $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber);
-            $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}/{$company_id}";
+            $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber); // Ensure it’s always 3 digits
+            $formattedCvrNumber = "CVR-{$year}-{$month}-{$nextCvrNumberFormatted}/{$company_id}";
+
+            // Fetch the user who created the record
             $user = Auth::user();
             $employeeCode = $user->id;
 
@@ -1351,7 +1353,7 @@ class CoordinatorsController extends Controller
                 'amount' => $request->amount,
                 'request_type' => $request->request_type,
                 'requestor' => $request->requestor,
-                'mtm' => $request->mtm,    
+                'mtm' => $request->mtm,
                 'status' => '1',
                 'voucher_type' => $request->voucher_type,
                 'withholding_tax_id' => $request->voucher_type === 'with_tax' ? $request->withholding_tax : null,
@@ -1365,13 +1367,14 @@ class CoordinatorsController extends Controller
             Log::info('Saving Cash Voucher:', ['cash_voucher' => $cashVoucher->toArray()]);
             $cashVoucher->save();
 
+            // Create and save the allocation
             $allocation = new Allocation([
                 'dr_id' => $request->dr_id,
                 'truck_id' => $request->truck_id,
                 'requestor_id' => $request->requestor,
                 'amount' => $request->amount,
                 'fleet_card_id' => $request->fleet_card_id,
-                'driver_id' => $request->driver_id, 
+                'driver_id' => $request->driver_id,
                 'helper' => $request->has('helpers') ? $request->helpers : null,
                 'trip_type' => $request->trip_type,
                 'created_by' => $employeeCode,
@@ -1383,7 +1386,7 @@ class CoordinatorsController extends Controller
             $deliveryRequest = DeliveryRequest::where('id', $request->dr_id)->first();
             if ($deliveryRequest && $deliveryRequest->status != 0) {
                 $deliveryRequest->status = '1';
-                $deliveryRequest->delivery_status = '3';
+                $deliveryRequest->delivery_status = '3'; // Updated to status 3
                 $deliveryRequest->save();
                 Log::info('Updated DeliveryRequest status to 1.');
             }
@@ -1404,6 +1407,7 @@ class CoordinatorsController extends Controller
         return redirect()->route('coordinators.index')
             ->with('success', 'Cash Voucher created successfully and statuses updated.');
     }
+
 
     public function requestAccessorial($id)
     {
@@ -1471,6 +1475,7 @@ class CoordinatorsController extends Controller
     public function storeAccessorial(Request $request)
     {
         Log::info('Request Data:', ['data' => $request->all()]);
+
         try {
             $validated = $request->validate([
                 'amount' => 'required|numeric',
@@ -1491,8 +1496,8 @@ class CoordinatorsController extends Controller
         }
 
         $sequence = CashVoucher::where('dr_id', $request->dr_id)
-        ->where('cvr_type', $request->trip_type)
-        ->count() + 1;
+            ->where('cvr_type', $request->trip_type)
+            ->count() + 1;
 
         $company_id = $request->company_id;
 
@@ -1520,8 +1525,10 @@ class CoordinatorsController extends Controller
                 $nextCvrNumber = 1;
                 Log::info("Created MonthlySeriesNumber: company_id = $company_id, month = $yearMonth, series = 1");
             } else {
-                if ($isFirstDayOfMonth || $monthlySeries->month !== $yearMonth) {
-                    // Reset series if it's first day OR stored month is outdated
+                // Check if the month has changed, and reset series number if true
+                $isNewMonth = $monthlySeries->month !== $yearMonth;
+                if ($isNewMonth) {
+                    // Reset the series number for the new month
                     $monthlySeries->update([
                         'month' => $yearMonth,
                         'series_number' => 1,
@@ -1537,10 +1544,10 @@ class CoordinatorsController extends Controller
             }
 
             // Construct the final CVR number
-            $currentYear = $currentDate->format('Y');
-            $currentMonth = $currentDate->format('m');
-            $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber);
-            $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}/{$company_id}";
+            $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber); // Ensure it’s always 3 digits
+            $formattedCvrNumber = "CVR-{$year}-{$month}-{$nextCvrNumberFormatted}/{$company_id}";
+
+            // Fetch the user who created the record
             $user = Auth::user();
             $employeeCode = $user->id;
 
@@ -1551,7 +1558,7 @@ class CoordinatorsController extends Controller
                 'amount' => $request->amount,
                 'request_type' => $request->request_type,
                 'requestor' => $request->requestor,
-                'mtm' => $request->mtm,    
+                'mtm' => $request->mtm,
                 'status' => '1',
                 'voucher_type' => $request->voucher_type,
                 'withholding_tax_id' => $request->voucher_type === 'with_tax' ? $request->withholding_tax : null,
@@ -1565,13 +1572,14 @@ class CoordinatorsController extends Controller
             Log::info('Saving Cash Voucher:', ['cash_voucher' => $cashVoucher->toArray()]);
             $cashVoucher->save();
 
+            // Create and save the allocation
             $allocation = new Allocation([
                 'dr_id' => $request->dr_id,
                 'truck_id' => $request->truck_id,
                 'requestor_id' => $request->requestor,
                 'amount' => $request->amount,
                 'fleet_card_id' => $request->fleet_card_id,
-                'driver_id' => $request->driver_id, 
+                'driver_id' => $request->driver_id,
                 'helper' => $request->has('helpers') ? $request->helpers : null,
                 'trip_type' => $request->trip_type,
                 'created_by' => $employeeCode,
@@ -1583,7 +1591,7 @@ class CoordinatorsController extends Controller
             $deliveryRequest = DeliveryRequest::where('id', $request->dr_id)->first();
             if ($deliveryRequest && $deliveryRequest->status != 0) {
                 $deliveryRequest->status = '1';
-                $deliveryRequest->delivery_status = '2';
+                $deliveryRequest->delivery_status = '2'; // Updated to status 2
                 $deliveryRequest->save();
                 Log::info('Updated DeliveryRequest status to 1.');
             }
@@ -1604,4 +1612,5 @@ class CoordinatorsController extends Controller
         return redirect()->route('coordinators.index')
             ->with('success', 'Cash Voucher created successfully and statuses updated.');
     }
+
 }
