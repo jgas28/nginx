@@ -7,7 +7,9 @@ use App\Models\Liquidation;
 use App\Models\cvr_approval;
 use App\Models\CashVoucher;
 use App\Models\Allocation;
+use App\Models\Company;
 use App\Models\RunningBalance;
+use App\Models\Supplier;
 use App\Models\DeliveryRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -20,16 +22,18 @@ class LiquidationController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-       $data = cvr_approval::with('cashVoucher')
-        ->where('status', '1')
-        ->whereHas('cashVoucher', function ($query) {
-            $query->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial', 'freight', 'others'])
-                ->where('status', '2');
-        })
-        ->get();
+        // Load data first
+        $data = cvr_approval::with('cashVoucher')
+            ->where('status', '1')
+            ->whereHas('cashVoucher', function ($query) {
+                $query->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial', 'freight', 'others'])
+                    ->where('status', '2');
+            })
+            ->get();
 
+        // Add allocation information to each item
         foreach ($data as $item) {
             $cashVoucher = $item->cashVoucher;
             $drId = $cashVoucher->deliveryRequest->id ?? null;
@@ -39,31 +43,56 @@ class LiquidationController extends Controller
 
             if ($drId && $cvrType) {
                 $allocation = Allocation::where('dr_id', $drId)
-                            ->where('trip_type', $cvrType)
-                            ->where('sequence', $cashVoucher->sequence) // <-- Added filter here
-                            ->first();
+                    ->where('trip_type', $cvrType)
+                    ->where('sequence', $cashVoucher->sequence)
+                    ->first();
             }
 
-            // Attach to item so view can use it
+            // Attach allocation to item
             $item->allocation = $allocation;
         }
 
-        return view('liquidations.index', compact('data'));
+        if ($request->has('requestor') && $request->requestor != '') {
+            $data = $data->filter(function ($item) use ($request) {
+                return $item->cashVoucher->requestor == $request->requestor;
+            });
+        }
+
+        $employees = User::all();
+        $companies = Company::all();
+
+        // Return the view with the filtered data
+        return view('liquidations.index', compact('data', 'employees', 'companies'));
     }
 
-    public function indexAdmin()
+
+    public function indexAdmin(Request $request)
     {
-         $data = cvr_approval::with('cashVoucher')
-        ->where('status', '1')
-        ->whereHas('cashVoucher', function ($query) {
-            $query->whereIn('cvr_type', ['admin', 'rpm'])
-                ->where('status', '2');
-        })
-        ->get();
+        // Initialize the query builder for cvr_approval
+        $query = cvr_approval::with('cashVoucher')
+            ->where('status', '1')
+            ->whereHas('cashVoucher', function ($query) {
+                $query->whereIn('cvr_type', ['admin', 'rpm'])
+                    ->where('status', '2');
+            });
 
+        // Apply Supplier filter if exists
+        if ($request->has('supplier_id') && $request->supplier_id != '') {
+            $query->whereHas('cashVoucher.suppliers', function ($query) use ($request) {
+                $query->where('suppliers.id', $request->supplier_id);
+            });
+        }
 
-        return view('liquidations.indexAdmin', compact('data'));
+        // Fetch the filtered data
+        $data = $query->get();
+
+        // Fetch all suppliers for the select filter
+        $suppliers = Supplier::all();
+
+        // Return view with filtered data and suppliers
+        return view('liquidations.indexAdmin', compact('data', 'suppliers'));
     }
+
 
     public function storeSummary(Request $request, $id)
     {
@@ -163,12 +192,22 @@ class LiquidationController extends Controller
         return view('liquidations.liquidate', compact('liquidation', 'employees', 'preparers'));
     }
 
-    public function reviewList()
+    public function reviewList(Request $request)
     {
-        $liquidations = Liquidation::with(['preparedBy', 'notedBy', 'cashVoucher'])
-            ->where('status', 1)
-            ->paginate(10);
+        $query = Liquidation::with(['preparedBy', 'notedBy', 'cashVoucher'])
+            ->where('status', 1);
 
+        // Apply the cvr_number filter if it's present in the request
+        if ($request->has('cvr_number') && $request->cvr_number != '') {
+            $query->whereHas('cashVoucher', function ($query) use ($request) {
+                $query->where('cvr_number', 'like', '%' . $request->cvr_number . '%');
+            });
+        }
+
+        // Paginate the result
+        $liquidations = $query->paginate(10);
+
+        // Iterate through liquidations to attach allocation and deliveryRequest
         foreach ($liquidations as $liquidation) {
             $cashVoucher = $liquidation->cashVoucher;
 
@@ -193,6 +232,7 @@ class LiquidationController extends Controller
 
         return view('liquidations.reviewList', compact('liquidations'));
     }
+
 
     public function review($id)
     {

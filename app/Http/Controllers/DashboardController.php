@@ -7,13 +7,15 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Models\RunningBalance;
 use App\Models\Approver;
+use App\Models\CashVoucher;
 use App\Models\DeliveryRequest;
 use App\Models\Liquidation;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         /** @var User $user */
         $user = Auth::user();
@@ -29,9 +31,24 @@ class DashboardController extends Controller
         $totalAccessorialRates = 0;
         $totals = null;
 
+        // Get the selected month and date range
+        $selectedMonth = $request->input('month', now()->format('Y-m'));
+        $startDate = $request->input('start_date', now()->startOfMonth()->toDateString());
+        $endDate = $request->input('end_date', now()->toDateString());
+
+        $currentYear = Carbon::now()->year;
+        $currentMonth = Carbon::now()->month;
+
         if ($PnLData) {
-            // Sum all delivery & accessorial rates
-            $deliveryRequests = DeliveryRequest::with('lineItems')->get();
+            // Check if month is selected, if yes, use that month, otherwise use the current month
+            $month = Carbon::createFromFormat('Y-m', $selectedMonth);
+            $startDate = $month->startOfMonth()->toDateString();
+            $endDate = $month->endOfMonth()->toDateString();
+
+            // Filter Delivery Requests by selected month or date range
+            $deliveryRequests = DeliveryRequest::with('lineItems')
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->get();
 
             foreach ($deliveryRequests as $dr) {
                 $totalDeliveryRates += floatval($dr->delivery_rate);
@@ -40,8 +57,10 @@ class DashboardController extends Controller
                 }
             }
 
-            // Sum admin/rpm vs operational expenses using Laravel logic
-            $liquidations = Liquidation::with('cashVoucher')->get();
+            // Sum admin/rpm vs operational expenses based on selected date range
+            $liquidations = Liquidation::with('cashVoucher')
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->get();
 
             $adminRpmTotal = 0;
             $operationTotal = 0;
@@ -82,17 +101,41 @@ class DashboardController extends Controller
         if ($needsBalanceData) {
             $approvers = Approver::all();
 
+            // Monthly running balance for the selected range
             $runningTotalsByApprover = RunningBalance::whereIn('type', [1, 2, 3, 5, 8, 10])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->selectRaw('approver_id, SUM(amount) as total')
                 ->groupBy('approver_id')
                 ->pluck('total', 'approver_id');
 
+            // Monthly uncollected balance for the selected range
             $uncollectedByApprover = RunningBalance::whereIn('type', [4, 5])
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->selectRaw('approver_id, SUM(amount) as total')
                 ->groupBy('approver_id')
                 ->pluck('total', 'approver_id')
                 ->map(fn($amount) => abs($amount));
         }
+
+        $totalPendingDeliveries = DeliveryRequest::where('delivery_status', '!=', 1)
+            ->whereDate('created_at', Carbon::today())
+            ->count();
+
+        $totalDelivered = DeliveryRequest::where('delivery_status', 1)
+            ->whereDate('created_at', Carbon::today())
+            ->count();
+
+        $totalTruckAllocated = DeliveryRequest::where('delivery_status', 8)
+            ->whereDate('created_at', Carbon::today())
+            ->count();
+
+        $totalCVRapproval = CashVoucher::where('status', 1)
+            ->whereDate('created_at', Carbon::today())
+            ->count();
+
+        $totalLiquidation = Liquidation::where('status', 4)
+            ->whereDate('created_at', Carbon::today())
+            ->count();
 
         // Role-based dashboard view rendering
         if (in_array(37, $roleIds)) {
@@ -121,7 +164,12 @@ class DashboardController extends Controller
                 'profits',
                 'totalDeliveryRates',
                 'totalAccessorialRates',
-                'totals'
+                'totals',
+                'totalPendingDeliveries',
+                'totalDelivered',
+                'totalTruckAllocated',
+                'totalLiquidation',
+                'totalCVRapproval'
             ));
         }
 
@@ -133,7 +181,10 @@ class DashboardController extends Controller
                 'profits',
                 'totalDeliveryRates',
                 'totalAccessorialRates',
-                'totals'
+                'totals',
+                'totalPendingDeliveries',
+                'totalDelivered',
+                'totalTruckAllocated'
             ));
         }
 

@@ -2,8 +2,32 @@
 
 @section('content')
 <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 py-8">
-    <div class="overflow-x-auto">
-        <table id="sortableTable" class="min-w-full divide-y divide-gray-200 shadow rounded-lg">
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+        <form action="{{ route('liquidations.index') }}" method="GET" class="flex space-x-4">
+            <!-- Requestor Filter -->
+            <div class="flex-1">
+                <label for="requestor" class="block text-sm font-medium text-gray-700">Requestor</label>
+                <select name="requestor" id="requestor" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="">All Requestors</option>
+                    @foreach ($employees as $employee)
+                        <option value="{{ $employee->id }}" {{ request('requestor') == $employee->id ? 'selected' : '' }}>
+                            {{ $employee->fname }} {{ $employee->lname }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Filter Button -->
+            <div class="flex items-end">
+                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                    Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+        <table id="sortableTable" class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 cursor-pointer text-left text-xs font-medium text-gray-500 uppercase tracking-wider" onclick="sortTable(0)">CVR Number</th>
