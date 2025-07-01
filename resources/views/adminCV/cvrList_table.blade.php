@@ -59,7 +59,7 @@
                             <!-- View Button -->
                             <a href="{{ route('adminCV.printView', ['id' => $cashVoucherRequest->id, 'cvr_number' => $cashVoucherRequest->cashVoucher->id]) }}"
                             title="View Cash Voucher"
-                            target="_blank">>
+                            target="_blank">
                                 <i class="fas fa-eye mr-2 text-sm"></i> <!-- View Icon -->
                             </a>
                         </td>
