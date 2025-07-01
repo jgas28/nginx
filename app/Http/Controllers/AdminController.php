@@ -624,6 +624,35 @@ class AdminController extends Controller
         return view('adminCV.print', compact('vouchers', 'fullname', 'approvers', 'amountInWords'));
     }
 
+    public function printViewCVR($id, $cvr_number)
+    {
+        $user = Auth::user();
+        $fullname = $user->fname . ' ' . $user->lname;
+
+        $vouchers = cvr_approval::with('cashVoucher')->find($id);
+        $fullname = $user->fname . ' ' . $user->lname;
+        $approvers = DB::table('cvr_approvals')
+                ->leftjoin('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
+                ->where('cvr_approvals.id', $id)
+                ->first();
+
+        // Compute the amount that will be shown on the Blade
+        if ($vouchers->cashVoucher->voucher_type === 'with_tax') {
+            $taxAmount = $vouchers->cashVoucher->tax_based_amount * 0.12;
+            $withholdingAmount = $vouchers->cashVoucher->tax_based_amount * $vouchers->cashVoucher->withholdingTax->percentage;
+            $finalAmount = $vouchers->cashVoucher->tax_based_amount + $taxAmount - $withholdingAmount;
+        } elseif ($vouchers->cashVoucher->voucher_type === 'regular') {
+            $finalAmount = $vouchers->amount;
+        } else {
+            $finalAmount = 0; // fallback
+        }
+
+        // Convert the calculated amount to words
+        $amountInWords = $this->convertAmountToWords($finalAmount);
+
+        return view('adminCV.printView', compact('vouchers', 'fullname', 'approvers', 'amountInWords'));
+    }
+
     public function cvrList(Request $request)
     { 
         // Get the search query from the request

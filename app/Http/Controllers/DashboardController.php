@@ -8,9 +8,8 @@ use App\Models\User;
 use App\Models\RunningBalance;
 use App\Models\Approver;
 use App\Models\DeliveryRequest;
-use App\Models\CashVoucher;
+use App\Models\Liquidation;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class DashboardController extends Controller
 {
@@ -22,33 +21,60 @@ class DashboardController extends Controller
 
         $roleIds = $user->roles->pluck('id')->toArray();
 
-        // Flags for which data to load
         $needsBalanceData = count(array_intersect($roleIds, [37, 38, 39, 40, 41])) > 0;
         $PnLData = in_array(40, $roleIds) || in_array(41, $roleIds);
 
         $profits = [];
-        $totalDeliveryRates = 0;  // Total Delivery Rate
-        $totalAccessorialRates = 0;  // Total Accessorial Rate
+        $totalDeliveryRates = 0;
+        $totalAccessorialRates = 0;
+        $totals = null;
 
         if ($PnLData) {
-            // Load all delivery requests and their related data
-            $deliveryRequests = DeliveryRequest::with([
-                'lineItems',
-            ])->get();
+            // Sum all delivery & accessorial rates
+            $deliveryRequests = DeliveryRequest::with('lineItems')->get();
 
-            // Calculate total delivery and accessorial rates
             foreach ($deliveryRequests as $dr) {
-                // Sum up the total delivery rate for all requests
-                $totalDeliveryRates += $dr->delivery_rate;
-
-                // Sum up the accessorial rate for each line item
+                $totalDeliveryRates += floatval($dr->delivery_rate);
                 foreach ($dr->lineItems as $item) {
-                    $totalAccessorialRates += $item->accessorial_rate;
+                    $totalAccessorialRates += floatval($item->accessorial_rate);
                 }
             }
+
+            // Sum admin/rpm vs operational expenses using Laravel logic
+            $liquidations = Liquidation::with('cashVoucher')->get();
+
+            $adminRpmTotal = 0;
+            $operationTotal = 0;
+
+            foreach ($liquidations as $l) {
+                $total = 
+                    floatval($l->allowance) +
+                    floatval($l->manpower) +
+                    floatval($l->hauling) +
+                    floatval($l->right_of_way) +
+                    floatval($l->roro_expense) +
+                    floatval($l->cash_charge);
+
+                // JSON field totals
+                $total += collect($l->gasoline ?? [])->sum('amount');
+                $total += collect($l->rfid ?? [])->sum('amount');
+                $total += collect($l->others ?? [])->sum('amount');
+
+                $type = optional($l->cashVoucher)->cvr_type;
+
+                if (in_array($type, ['admin', 'rpm'])) {
+                    $adminRpmTotal += $total;
+                } else {
+                    $operationTotal += $total;
+                }
+            }
+
+            $totals = (object) [
+                'admin_rpm_total' => $adminRpmTotal,
+                'operation_total' => $operationTotal,
+            ];
         }
 
-        // Approver-related data (balance-related)
         $approvers = [];
         $runningTotalsByApprover = [];
         $uncollectedByApprover = [];
@@ -56,13 +82,11 @@ class DashboardController extends Controller
         if ($needsBalanceData) {
             $approvers = Approver::all();
 
-            // Get the running total balance for each approver (for types: 1, 2, 3, 5, 8, 10)
             $runningTotalsByApprover = RunningBalance::whereIn('type', [1, 2, 3, 5, 8, 10])
                 ->selectRaw('approver_id, SUM(amount) as total')
                 ->groupBy('approver_id')
                 ->pluck('total', 'approver_id');
 
-            // Get the uncollected amounts for each approver (for types: 4, 5)
             $uncollectedByApprover = RunningBalance::whereIn('type', [4, 5])
                 ->selectRaw('approver_id, SUM(amount) as total')
                 ->groupBy('approver_id')
@@ -70,38 +94,46 @@ class DashboardController extends Controller
                 ->map(fn($amount) => abs($amount));
         }
 
-        // Render views based on roles
+        // Role-based dashboard view rendering
         if (in_array(37, $roleIds)) {
-            return view('dashboards.coordinator', compact('approvers', 'runningTotalsByApprover', 'uncollectedByApprover'));
+            return view('dashboards.coordinator', compact(
+                'approvers', 'runningTotalsByApprover', 'uncollectedByApprover'
+            ));
         }
 
         if (in_array(38, $roleIds)) {
-            return view('dashboards.admin', compact('approvers', 'runningTotalsByApprover', 'uncollectedByApprover'));
+            return view('dashboards.admin', compact(
+                'approvers', 'runningTotalsByApprover', 'uncollectedByApprover'
+            ));
         }
 
         if (in_array(39, $roleIds)) {
-            return view('dashboards.allocation', compact('approvers', 'runningTotalsByApprover', 'uncollectedByApprover'));
+            return view('dashboards.allocation', compact(
+                'approvers', 'runningTotalsByApprover', 'uncollectedByApprover'
+            ));
         }
 
         if (in_array(40, $roleIds)) {
             return view('dashboards.owner1', compact(
-                'approvers', 
-                'runningTotalsByApprover', 
-                'uncollectedByApprover', 
+                'approvers',
+                'runningTotalsByApprover',
+                'uncollectedByApprover',
                 'profits',
-                'totalDeliveryRates', // Pass the total delivery rates across all requests
-                'totalAccessorialRates' // Pass the total accessorial rates across all line items
+                'totalDeliveryRates',
+                'totalAccessorialRates',
+                'totals'
             ));
         }
 
         if (in_array(41, $roleIds)) {
             return view('dashboards.owner2', compact(
-                'approvers', 
-                'runningTotalsByApprover', 
-                'uncollectedByApprover', 
+                'approvers',
+                'runningTotalsByApprover',
+                'uncollectedByApprover',
                 'profits',
-                'totalDeliveryRates', // Pass the total delivery rates across all requests
-                'totalAccessorialRates' // Pass the total accessorial rates across all line items
+                'totalDeliveryRates',
+                'totalAccessorialRates',
+                'totals'
             ));
         }
 

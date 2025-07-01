@@ -178,6 +178,7 @@ Route::middleware('auth')->group(function () {
     ->name('cashVoucherRequests.updateCVR');
     Route::get('/cash-voucher-list', [CashVoucherController::class, 'cvrList'])->name('cashVoucherRequests.cvrList');
     Route::get('/cash-voucher/{id}/{cvr_number}/{mtm}/print', [CashVoucherController::class, 'printCVR'])->name('cashVoucherRequests.print');
+    Route::get('/cash-voucher/{id}/{cvr_number}/{mtm}/printView', [CashVoucherController::class, 'printViewCVR'])->name('cashVoucherRequests.printView');
     Route::post('/cash-voucher/print-multiple', [CashVoucherController::class, 'printMultiple'])
     ->name('cashVoucherRequests.printMultiple');
     Route::get('/cash-voucher/reject-print/{id}/{cvr_number}/{cvr_type}', [CashVoucherController::class, 'rejectPrintView'])->name('cashVoucherRequests.rejectPrintView');
@@ -193,6 +194,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/{id}/viewPrint', [AdminController::class, 'viewPrint'])->name('admin.viewPrint');
     Route::post('/adminCV/print-multiple', [AdminController::class, 'printMultiple'])->name('adminCV.printMultiple');
     Route::get('/adminCV/{id}/{cvr_number}/print', [AdminController::class, 'printCVR'])->name('adminCV.print');
+    Route::get('/adminCV/{id}/{cvr_number}/printView', [AdminController::class, 'printViewCVR'])->name('adminCV.printView');
     Route::get('/admin-cvr-list', [AdminController::class, 'cvrList'])->name('adminCV.cvrList');
     Route::post('/adminCV/reject', [AdminController::class, 'reject'])->name('adminCV.reject');
     Route::get('/adminCV/rejectView', [AdminController::class, 'rejectView'])->name('adminCV.rejectView');
