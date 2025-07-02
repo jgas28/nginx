@@ -36,7 +36,7 @@
                         </label>
 
                         <label class="flex-1 cursor-pointer">
-                            <input type="radio" name="cvr_type" value="RPM" class="sr-only peer">
+                            <input type="radio" name="cvr_type" value="rpm" class="sr-only peer">
                             <div class="w-full text-center px-4 py-2 rounded-lg border border-gray-300
                                         text-gray-700 font-medium
                                         peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600
@@ -286,7 +286,7 @@
         function toggleTruckField() {
             const selectedType = document.querySelector('input[name="cvr_type"]:checked').value;
 
-            if (selectedType === 'RPM') {
+            if (selectedType === 'rpm') {
                 truckField.style.display = 'block';
             } else {
                 truckField.style.display = 'none';

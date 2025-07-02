@@ -19,7 +19,7 @@
                     <th class="py-2 px-4 border-b">Type</th>
                     <th class="py-2 px-4 border-b">Actions</th>
                 </tr>
-            </thead>
+            </thead> 
             <tbody>
                 @forelse($cashVouchers as $voucher)
                     <tr class="hover:bg-gray-50">

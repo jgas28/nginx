@@ -181,7 +181,7 @@ class AdminController extends Controller
             ->whereIn('cvr_type', ['admin', 'rpm'])
             ->where('status', 1)
             ->paginate(10);
-
+ 
         return view('adminCV.approval', compact('cashVouchers'));
     }
 
@@ -480,7 +480,7 @@ class AdminController extends Controller
     public function updateCVR(Request $request, $id)
     {
         $request->validate([
-            'cvr_type' => 'required|string|in:admin,RPM',
+            'cvr_type' => 'required|string|in:admin,rpm',
             'company_id' => 'required|exists:companies,id',
             'supplier_id' => 'required|exists:suppliers,id',
             'expense_type_id' => 'required|exists:expense_types,id',
