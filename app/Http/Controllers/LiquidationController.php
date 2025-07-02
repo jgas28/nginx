@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class LiquidationController extends Controller
 {
@@ -229,7 +230,7 @@ class LiquidationController extends Controller
                 $liquidation->deliveryRequest = $dr;
             }
         }
-
+ 
         return view('liquidations.reviewList', compact('liquidations'));
     }
 
@@ -421,16 +422,23 @@ class LiquidationController extends Controller
     }
 
 
-    public function validatedList()
+    public function validatedList(Request $request)
     {
         $user = Auth::user();
 
-        $liquidations = Liquidation::with(['preparedBy', 'notedBy', 'cashVoucher.deliveryRequest'])
-        ->where('status', 3)
-        ->whereHas('cashVoucher', function ($query) use ($user) {
-            $query->where('collector_id', $user->id);
-        })
-        ->paginate(10);
+        $query = Liquidation::with(['preparedBy', 'notedBy', 'cashVoucher'])
+            ->where('status', 3);
+
+        // Apply the cvr_number filter if it's present in the request
+        if ($request->has('cvr_number') && $request->cvr_number != '') {
+            $query->whereHas('cashVoucher', function ($query) use ($request) {
+                $query->where('cvr_number', 'like', '%' . $request->cvr_number . '%');
+            });
+        }
+
+        // Paginate the result
+        $liquidations = $query->paginate(10);
+
 
         foreach ($liquidations as $liquidation) {
             $cashVoucher = $liquidation->cashVoucher;
@@ -583,11 +591,20 @@ class LiquidationController extends Controller
         return redirect()->route('liquidations.reviewList')->with('success', 'Liquidation validated successfully.');
     }
 
-    public function approvalList()
+    public function approvalList(Request $request)
     {
-        $liquidations = Liquidation::with('preparedBy', 'notedBy', 'cashVoucher')
-            ->where('status', 4)
-            ->paginate(10); 
+        $query = Liquidation::with(['preparedBy', 'notedBy', 'cashVoucher'])
+            ->where('status', 4);
+            
+        // Apply the cvr_number filter if it's present in the request
+        if ($request->has('cvr_number') && $request->cvr_number != '') {
+            $query->whereHas('cashVoucher', function ($query) use ($request) {
+                $query->where('cvr_number', 'like', '%' . $request->cvr_number . '%');
+            });
+        }
+
+        // Paginate the result
+        $liquidations = $query->paginate(10);
         
         foreach ($liquidations as $liquidation) {
             $cashVoucher = $liquidation->cashVoucher;
@@ -817,19 +834,40 @@ class LiquidationController extends Controller
         return redirect()->route('liquidations.approvalList')->with('success', 'Liquidation validated successfully.');
     }
 
-    public function liquidationList()
+    public function liquidationList(Request $request)
     {
-        // Fetch ALL liquidations with their immediate cashVoucher
-        $liquidations = Liquidation::with('cashVoucher')->get();
+        $startDate = $request->input('start_date');
+        $endDate   = $request->input('end_date');
+        $cvrNumber = $request->input('cvr_number');
 
-        $liquidations->each(function ($liquidation) {
+        if ($startDate && $endDate) {
+            $start = Carbon::parse($startDate)->startOfDay();
+            $end   = Carbon::parse($endDate)->endOfDay();
+        } else {
+            $start = Carbon::today();
+            $end   = Carbon::today()->endOfDay();
+        }
+
+        // Base query
+        $query = Liquidation::with('cashVoucher')
+            ->whereBetween('created_at', [$start, $end]);
+
+        // Add CVR filter if present
+        if ($cvrNumber) {
+            $query->whereHas('cashVoucher', function ($q) use ($cvrNumber) {
+                $q->where('cvr_number', 'like', '%' . $cvrNumber . '%');
+            });
+        }
+
+        // Paginate results (10 per page)
+        $liquidations = $query->paginate(10)->withQueryString();
+
+        // Compute total expenses for each item
+        $liquidations->getCollection()->transform(function ($liquidation) {
             $cashVoucher = $liquidation->cashVoucher;
-
-            // Initialize total expenses
             $totalExpenses = 0;
 
             if ($cashVoucher) {
-                // Load nested relationships
                 $cashVoucher->load([
                     'deliveryRequest.company',
                     'deliveryRequest.expenseType',
@@ -837,8 +875,7 @@ class LiquidationController extends Controller
                 ]);
 
                 $deliveryRequest = $cashVoucher->deliveryRequest;
-                
-                // Load allocation relation dynamically
+
                 $allocationRelation = match ($cashVoucher->cvr_type) {
                     'delivery'     => 'deliveryAllocations',
                     'pullout'      => 'pulloutAllocations',
@@ -848,13 +885,11 @@ class LiquidationController extends Controller
                     default        => null,
                 };
 
-                if ($deliveryRequest && $allocationRelation && method_exists($deliveryRequest, $allocationRelation)) {
-                    $liquidation->allocations = $deliveryRequest->$allocationRelation()->with('truck')->get();
-                } else {
-                    $liquidation->allocations = collect();
-                }
+                $liquidation->allocations = ($deliveryRequest && $allocationRelation && method_exists($deliveryRequest, $allocationRelation))
+                    ? $deliveryRequest->$allocationRelation()->with('truck')->get()
+                    : collect();
 
-                // Direct expense fields (numeric)
+                // Add direct expense fields
                 $totalExpenses += (float) $liquidation->allowance;
                 $totalExpenses += (float) $liquidation->manpower;
                 $totalExpenses += (float) $liquidation->hauling;
@@ -862,22 +897,20 @@ class LiquidationController extends Controller
                 $totalExpenses += (float) $liquidation->roro_expense;
                 $totalExpenses += (float) $liquidation->cash_charge;
 
-                // Parse 'others' JSON
-                $others = $liquidation->others;
-                if (is_string($others)) {
-                    $others = json_decode($others, true);
-                }
+                // 'others' field
+                $others = is_string($liquidation->others)
+                    ? json_decode($liquidation->others, true)
+                    : $liquidation->others;
                 if (is_array($others)) {
                     foreach ($others as $item) {
                         $totalExpenses += isset($item['amount']) ? (float) $item['amount'] : 0;
                     }
                 }
 
-                // Parse 'gasoline' JSON - only type == 'cash'
-                $gasoline = $liquidation->gasoline;
-                if (is_string($gasoline)) {
-                    $gasoline = json_decode($gasoline, true);
-                }
+                // 'gasoline' field (cash only)
+                $gasoline = is_string($liquidation->gasoline)
+                    ? json_decode($liquidation->gasoline, true)
+                    : $liquidation->gasoline;
                 if (is_array($gasoline)) {
                     foreach ($gasoline as $item) {
                         if (($item['type'] ?? '') === 'cash') {
@@ -886,11 +919,10 @@ class LiquidationController extends Controller
                     }
                 }
 
-                // Parse 'rf_id' JSON - only type == 'cash'
-                $rf_id = $liquidation->rf_id;
-                if (is_string($rf_id)) {
-                    $rf_id = json_decode($rf_id, true);
-                }
+                // 'rf_id' field (cash only)
+                $rf_id = is_string($liquidation->rf_id)
+                    ? json_decode($liquidation->rf_id, true)
+                    : $liquidation->rf_id;
                 if (is_array($rf_id)) {
                     foreach ($rf_id as $item) {
                         if (($item['type'] ?? '') === 'cash') {
@@ -899,15 +931,16 @@ class LiquidationController extends Controller
                     }
                 }
             } else {
-                $liquidation->allocations = collect(); // fallback
+                $liquidation->allocations = collect();
             }
 
-            // Attach total expense to the liquidation instance
             $liquidation->total_expense = $totalExpenses;
+            return $liquidation;
         });
 
-        return view('liquidations.liquidationList', compact('liquidations'));
+        return view('liquidations.liquidationList', compact('liquidations', 'startDate', 'endDate', 'cvrNumber'));
     }
+
 
 
 
