@@ -53,11 +53,7 @@
             </td> -->
 
             <!-- Status -->
-            <td class="py-2 px-4 border-b">
-                @foreach($deliveryRequest->lineItems as $lineItem)
-                    {{ $lineItem->deliveryStatus->status_name ?? 'N/A' }}@if(!$loop->last)  @endif
-                @endforeach
-            </td>
+            <td class="py-2 px-4 border-b">{{ $deliveryRequest->deliveryStatus->status_name ?? 'N/A' }}</td>
 
             <!-- Actions (if needed) -->
             <td class="py-2 px-4 border-b">
