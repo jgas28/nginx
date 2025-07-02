@@ -64,7 +64,7 @@
         <h4 class="text-lg font-bold">Cash Voucher Request</h4>
     </div>
 
-    <div class="p-6">
+    <div class="p-6"> 
         <form action="{{ route('coordinators.storeAccessorial') }}" method="POST" class="space-y-6">
             @csrf
             <input type="hidden" name="dr_id" value="{{ $deliveryLineItems->first()->dr_id }}">

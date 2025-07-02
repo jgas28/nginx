@@ -191,15 +191,6 @@
                 </select>
             </div>
             <div>
-                <label class="block text-gray-700">Receiver</label>
-                <select nambere="bank_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
-                    <option value="">Select Receiver</option>
-                    @foreach($employees as $employee)
-                        <option value="{{ $employee->id }}">{{ $employee->supplier_name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div>
                 <label class="block text-gray-700">Fund Source</label>
                 <select name="bank_fund_source" class="w-full border border-gray-300 rounded px-3 py-2">
                     <option value="">Select Funds</option>

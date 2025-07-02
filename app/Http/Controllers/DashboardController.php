@@ -105,14 +105,12 @@ class DashboardController extends Controller
 
             // Monthly running balance for the selected range
             $runningTotalsByApprover = RunningBalance::whereIn('type', [1, 2, 3, 5, 8, 10])
-                ->whereBetween('created_at', [$startDate, $endDate])
                 ->selectRaw('approver_id, SUM(amount) as total')
                 ->groupBy('approver_id')
                 ->pluck('total', 'approver_id');
 
             // Monthly uncollected balance for the selected range
             $uncollectedByApprover = RunningBalance::whereIn('type', [4, 5])
-                ->whereBetween('created_at', [$startDate, $endDate])
                 ->selectRaw('approver_id, SUM(amount) as total')
                 ->groupBy('approver_id')
                 ->pluck('total', 'approver_id')
@@ -120,7 +118,6 @@ class DashboardController extends Controller
         }
 
         $totalPendingDeliveries = DeliveryRequest::where('delivery_status', '!=', 1)
-            ->whereDate('created_at', Carbon::today())
             ->count();
 
         $totalDelivered = DeliveryRequest::where('delivery_status', 1)
@@ -128,15 +125,12 @@ class DashboardController extends Controller
             ->count();
 
         $totalTruckAllocated = DeliveryRequest::where('delivery_status', 8)
-            ->whereDate('created_at', Carbon::today())
             ->count();
 
         $totalCVRapproval = CashVoucher::where('status', 1)
-            ->whereDate('created_at', Carbon::today())
             ->count();
 
         $totalLiquidation = Liquidation::where('status', 4)
-            ->whereDate('created_at', Carbon::today())
             ->count();
 
         // Role-based dashboard view rendering
