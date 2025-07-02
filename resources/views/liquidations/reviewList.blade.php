@@ -47,7 +47,7 @@
                             $details = ''; // This will hold the appended details based on cvr_type
 
                             if ($cvrType === 'rpm') {
-                                $truckName = optional($cashVoucher->truck)->truck_name ?? 'N/A';
+                                $truckName = optional($cashVoucher->trucks)->truck_name ?? 'N/A'; 
                                 $companyCode = optional($cashVoucher->company)->company_code ?? 'N/A';
                                 $expenseCodeVal = optional($cashVoucher->expenseTypes)->expense_code ?? 'N/A';
 
