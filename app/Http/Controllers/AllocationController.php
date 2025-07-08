@@ -184,8 +184,8 @@ class AllocationController extends Controller
         $query = DeliveryRequest::with(['lineItems', 'creator'])
             ->select('id', 'mtm', 'delivery_rate', 'delivery_date', 'created_at', 'created_by', 'company_id', 'area_id', 'region_id');
 
-        // Default filter: show current month if no date or month filter is set
-        if (!$request->filled('date_from') && !$request->filled('date_to') && !$request->filled('month')) {
+        // Default filter: show current month ONLY if no filters at all are applied
+        if (!$request->hasAny(['date_from', 'date_to', 'month', 'mtm', 'company_id', 'area_id', 'region_id', 'created_by'])) {
             $query->whereMonth('created_at', Carbon::now()->month)
                 ->whereYear('created_at', Carbon::now()->year);
         }
@@ -247,7 +247,7 @@ class AllocationController extends Controller
                 ->from('delivery_request')
                 ->distinct()
                 ->whereNotNull('created_by');
-        })->orderBy('fname')->orderBy('lname')->get(); // alphabetically sorted
+        })->orderBy('fname')->orderBy('lname')->get();
 
         return view('allocations.drlist', compact('drList', 'companies', 'areas', 'regions', 'users'));
     }
