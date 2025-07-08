@@ -10,19 +10,24 @@
         <input type="hidden" name="cvr_number" value="{{ $liquidation->cashVoucher->cvr_number ?? '' }}">
 
         <!-- Expenses -->
-        <div class="space-y-4">
-            <label class="font-semibold">Expenses</label>
-            @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1 capitalize">{{ str_replace('_', ' ', $field) }}</label>
-                    <input type="number" step="0.01" name="expenses[{{ $field }}]" value="{{ old('expenses.' . $field, $liquidation->$field) }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
-                </div>
-            @endforeach
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Cash Charge</label>
-                <input type="number" step="0.01" name="expenses[cash_charge]" value="{{ $liquidation->cash_charge ?? '' }}" readonly class="block w-full bg-gray-100 cursor-not-allowed rounded-md border-gray-300 shadow-sm" />
-            </div>
+        <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
+            <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2">Expenses</h3>
+            <ul class="space-y-2">
+                @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
+                    <li class="flex justify-between">
+                        <span class="capitalize">
+                            {{ $field === 'roro_expense' ? 'Freight' : str_replace('_', ' ', $field) }}
+                        </span>
+                        <span class="font-semibold">₱{{ number_format($liquidation->$field ?? 0, 2) }}</span>
+                    </li>
+                @endforeach
+                <li class="flex justify-between">
+                    <span>Cash Charge</span>
+                    <span class="font-semibold text-indigo-600">₱{{ number_format($liquidation->cash_charge ?? 0, 2) }}</span>
+                </li>
+            </ul>
         </div>
+
 
         <!-- Gasoline -->
         <div>

@@ -75,7 +75,7 @@
                      <td class="p-3 border">{{ $liquidation->collector->fname ?? '' }} {{ $liquidation->collector->lname ?? '' }}</td>
                     <td class="p-3 border">{{ $liquidation->created_at->format('Y-m-d') }}</td>
                     <td class="p-3 border">
-                        <a href="{{ route('liquidations.validated', $liquidation->id) }}" class="text-indigo-600 hover:text-indigo-900 underline">Review</a>
+                        <a href="{{ route('liquidations.validated', $liquidation->id) }}" class="text-indigo-600 hover:text-indigo-900 underline">Collect</a>
                     </td>
                 </tr>
             @empty

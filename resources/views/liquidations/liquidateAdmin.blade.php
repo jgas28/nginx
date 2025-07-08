@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="mx-auto bg-white border border-gray-300 rounded-lg p-6">
+<div class="w-full bg-white border border-gray-300 rounded-lg p-6 px-4 sm:px-6 md:px-10 lg:px-16 mt-6 mb-10">
     <form action="{{ route('liquidations.storeSummary', ['id' => $liquidation->id]) }}" method="POST" class="space-y-8">
         @csrf
         <input type="hidden" name="cvr_id" value="{{ $liquidation->cashVoucher->id ?? '' }}">

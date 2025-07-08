@@ -43,7 +43,10 @@
                        {{ $deliveryRequest->deliveryStatus->status_name ?? 'N/A' }}
                     </td>
                     <td class="px-4 py-2 border-b space-x-2">
-                        <a href="{{ route('coordinators.edit', $deliveryRequest) }}" class="text-yellow-600 hover:underline">Edit</a>
+                        <a href="{{ route('coordinators.edit', ['deliveryRequest' => $deliveryRequest->id, 'tab' => request('tab')]) }}"
+                            class="text-yellow-600 hover:underline">
+                            Edit
+                        </a>
                         @if($deliveryRequest->delivery_type != 'Regular')
                             <a href="{{ route('coordinators.splitView', $deliveryRequest) }}" class="text-green-600 hover:underline">Split</a>
                         @endif

@@ -12,6 +12,7 @@
     <form action="{{ route('coordinators.updateAllocation', $deliveryRequest) }}" method="POST">
         @csrf
         @method('PUT')
+        <input type="hidden" name="tab" value="{{ request('tab', 'status4') }}">
         <!-- <div class="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow-md space-y-6">
             @foreach ($allocate->allocations as $index => $allocation)
                 <div class="border border-gray-300 rounded-md p-4">

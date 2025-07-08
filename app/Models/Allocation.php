@@ -17,6 +17,7 @@ class Allocation extends Model
         'fleet_card_id',
         'driver_id',
         'helper',
+        'remarks',
         'created_by',
         'requestor_id',
         'trip_type',
@@ -27,6 +28,7 @@ class Allocation extends Model
     // Automatically casts the `helper` column to an array
     protected $casts = [
         'helper' => 'array',
+        'remarks' => 'array',
     ];
 
     public function deliveryRequest()

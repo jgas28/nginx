@@ -92,7 +92,6 @@ class ExpenseTypeController extends Controller
         $request->validate([
             'expense_code' => 'required',
             'expense_name' => 'required',
-            'type' => 'required',
         ]);
 
         // Update the region details

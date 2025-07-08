@@ -69,6 +69,7 @@ class AllocationController extends Controller
             'driver_id' => 'required|exists:users,id',
             'amount' => 'required|numeric|min:0',
             'helpers' => 'nullable|array',
+            'remarks' => 'nullable|array',
             'delivery_request_ids' => 'required|array',
             'requestor_id' => 'required',
         ]);
@@ -78,6 +79,7 @@ class AllocationController extends Controller
         $requestorId = $request->requestor_id;
         $amount = $request->amount;
         $helpers = $request->helpers ?? [];
+        $remarks = $request->remarks ?? [];
         $employeeCode = Auth::id();
 
         Log::info('Starting the allocation process.', [
@@ -87,6 +89,7 @@ class AllocationController extends Controller
             'driver_id' => $driverId,
             'amount' => $amount,
             'helpers' => $helpers,
+            'remarks' => $remarks,
             'delivery_request_ids' => $request->delivery_request_ids,
             'trip_type' => 'delivery',
         ]);
@@ -116,6 +119,7 @@ class AllocationController extends Controller
                 'truck_id' => $truckId,
                 'driver_id' => $driverId,
                 'helper' => $helpers,
+                'remarks' => $remarks,
                 'amount' => $currentAmount,
                 'trip_type' => 'delivery',
                 'created_by' => $employeeCode,
@@ -180,6 +184,12 @@ class AllocationController extends Controller
         $query = DeliveryRequest::with(['lineItems', 'creator'])
             ->select('id', 'mtm', 'delivery_rate', 'delivery_date', 'created_at', 'created_by', 'company_id', 'area_id', 'region_id');
 
+        // Default filter: show current month if no date or month filter is set
+        if (!$request->filled('date_from') && !$request->filled('date_to') && !$request->filled('month')) {
+            $query->whereMonth('created_at', Carbon::now()->month)
+                ->whereYear('created_at', Carbon::now()->year);
+        }
+
         // Apply filters conditionally
         if ($request->filled('date_from') && $request->filled('date_to')) {
             $query->whereBetween('created_at', [
@@ -233,10 +243,21 @@ class AllocationController extends Controller
                 ->from('delivery_request')
                 ->distinct()
                 ->whereNotNull('created_by');
-        })->get();
+        })->orderBy('fname')->orderBy('lname')->get(); // alphabetically sorted
 
         return view('allocations.drlist', compact('drList', 'companies', 'areas', 'regions', 'users'));
     }
 
+
+    public function show($id)
+    {
+        $deliveryRequest = DeliveryRequest::with([
+            'cashVouchers.employee',
+            'cashVouchers.cvrApprovals',
+            'cashVouchers.liquidations',
+        ])->findOrFail($id);
+
+        return view('allocations.partials.dr_modal', compact('deliveryRequest'));
+    }
 
 }

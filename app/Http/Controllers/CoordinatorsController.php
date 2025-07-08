@@ -579,12 +579,16 @@ class CoordinatorsController extends Controller
             // Commit the transaction if everything is successful
             DB::commit();
 
-            return redirect()->route('coordinators.index')->with('success', 'Delivery Request updated successfully.');
+            return redirect()->route('coordinators.index', [
+                'tab' => $request->input('tab', 'list') // default to list if not provided
+            ])->with('success', 'Delivery Request updated successfully.');
         } catch (\Exception $e) {
             // Rollback if there is an error
             DB::rollBack();
             Log::error('Error updating delivery request and line items: ' . $e->getMessage());
-            return redirect()->route('coordinators.index')->with('error', 'Failed to update Delivery Request.');
+            return redirect()->route('coordinators.index', [
+                'tab' => $request->input('tab', 'list') // default to list if not provided
+            ])->with('error', 'Failed to update Delivery Request.');
         }
     }
 
@@ -890,15 +894,15 @@ class CoordinatorsController extends Controller
         $AddOnRates_multiDrops = AddOnRate::where('delivery_type', 'Multi-Drop')->get();
         $AddOnRates_multiPickUps = AddOnRate::where('delivery_type', 'Multi Pick-Up')->get();
         $deliveryStatuses = DeliveryStatus::all();
-        $trucks = Truck::all();
+        $trucks = Truck::orderBy('truck_name')->get();
         $distances = DistanceType::all();
         $accessorialTypes = AccessorialType::all();
         $customers = Customer::all();
         $truckTypes = TruckType::all();
         $areas = Area::all();
         $expenseTypes = Expense_Type::all();
-        $fleetCards = FleetCard::all(); 
-        $drivers = User::all();
+        $fleetCards = FleetCard::orderBy('account_name')->get();
+        $drivers = User::orderBy('fname')->get();
 
         return view('coordinators.editAllocated', compact(
             'companies', 'regions', 'warehouses', 'AddOnRates_multiDrops', 
@@ -1041,9 +1045,8 @@ class CoordinatorsController extends Controller
             // Commit transaction if all succeed
             DB::commit();
 
-            return redirect()->route('coordinators.index', $deliveryRequest)
+            return redirect()->route('coordinators.index', ['tab' => $request->input('tab', 'status4')])
                 ->with('success', 'Delivery request, line items and allocations updated successfully.');
-
         } catch (\Exception $e) {
             // Rollback on error
             DB::rollBack();
@@ -1404,7 +1407,7 @@ class CoordinatorsController extends Controller
             Log::info('Updated DeliveryRequestLineItems status to 1.');
         });
 
-        return redirect()->route('coordinators.index')
+        return redirect()->route('coordinators.index', ['tab' => 'status4'])
             ->with('success', 'Cash Voucher created successfully and statuses updated.');
     }
 
@@ -1609,8 +1612,9 @@ class CoordinatorsController extends Controller
             Log::info('Updated DeliveryRequestLineItems status to 1.');
         });
 
-        return redirect()->route('coordinators.index')
+        return redirect()->route('coordinators.index', ['tab' => 'accessorial'])
             ->with('success', 'Cash Voucher created successfully and statuses updated.');
+
     }
 
 }

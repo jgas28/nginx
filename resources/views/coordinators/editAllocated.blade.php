@@ -12,102 +12,124 @@
     <form action="{{ route('coordinators.updateAllocated', $deliveryRequest) }}" method="POST">
         @csrf
         @method('PUT')
-        <div class="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow-md space-y-6">
-           <div class="border border-gray-300 rounded-md p-4">
-            @if(isset($allocate))
-                <input type="hidden" name="allocation_id" value="{{ old('allocation_id', $allocate->id) }}">
-            @endif
-
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                {{-- Amount --}}
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
-                    <input type="number" name="amount"
-                        value="{{ old('amount', $allocate->amount) }}"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-                </div>
-
-                {{-- Fleet Card --}}
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Fleet Card</label>
-                    <select name="fleet_card_id" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                        <option value="">Select Fleet Card</option>
-                        @foreach ($fleetCards as $card)
-                            <option value="{{ $card->id }}"
-                                {{ old('fleet_card_id', $allocate->fleet_card_id) == $card->id ? 'selected' : '' }}>
-                                {{ $card->account_name . ' - ' . $card->account_number }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Requestor --}}
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Requestor</label>
-                    <select name="requestor_id" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                        <option value="">Select Requestor</option>
-                        @foreach ($drivers as $driver)
-                            <option value="{{ $driver->id }}"
-                                {{ old('requestor_id', $allocate->requestor_id) == $driver->id ? 'selected' : '' }}>
-                                {{ $driver->fname . ' - ' . $driver->lname }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Truck --}}
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Truck</label>
-                    <select name="truck_id" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                        <option value="">Select Truck</option>
-                        @foreach ($trucks as $truck)
-                            <option value="{{ $truck->id }}"
-                                {{ old('truck_id', $allocate->truck_id) == $truck->id ? 'selected' : '' }}>
-                                {{ $truck->truck_name . ' - ' . $truck->plate_number }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                {{-- Driver --}}
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Driver</label>
-                    <select name="driver_id" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                        <option value="">Select Driver</option>
-                        @foreach ($drivers as $driver)
-                            <option value="{{ $driver->id }}"
-                                {{ old('driver_id', $allocate->driver_id) == $driver->id ? 'selected' : '' }}>
-                                {{ $driver->fname . ' ' . $driver->lname }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-
-            {{-- Helpers --}}
-            <div x-data="{ helpers: {{ json_encode(old('helper', $allocate->helper ?? [])) }} }" class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Helpers</label>
-                <template x-for="(helper, i) in helpers" :key="i">
-                    <div class="flex items-center mb-2 space-x-2">
-                        <input type="text"
-                            :name="'helper[' + i + ']'"
-                            x-model="helpers[i]"
-                            class="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
-                        <button type="button"
-                                @click="helpers.splice(i, 1)"
-                                class="inline-flex items-center px-3 py-1.5 border border-red-500 text-red-600 rounded-md hover:bg-red-600 hover:text-white transition duration-150">
-                            Remove
-                        </button>
+        <div class="max-w mx-auto p-6 bg-white rounded-lg shadow-md space-y-6 mb-6">
+            <div class="border border-gray-300 rounded-md p-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <div class="md:col-span-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Remarks</label>
+                        <div id="remarks-container" class="space-y-2">
+                            @if(!empty($allocate->remarks) && is_array($allocate->remarks))
+                                @foreach($allocate->remarks as $remark)
+                                    <div class="text-gray-800 bg-gray-100 px-4 py-2 rounded-lg shadow-sm w-full">
+                                        {{ $remark }}
+                                    </div>
+                                @endforeach
+                            @else
+                                <div class="text-gray-500 italic">No remarks available.</div>
+                            @endif
+                        </div>
                     </div>
-                </template>
-                <button type="button"
-                        @click="helpers.push('')"
-                        class="mt-2 text-blue-600 hover:underline text-sm">
-                    + Add Helper
-                </button>
+                </div>
             </div>
         </div>
+
+        <div class="max-w mx-auto p-6 bg-white rounded-lg shadow-md space-y-6">
+           <div class="border border-gray-300 rounded-md p-4">
+                @if(isset($allocate))
+                    <input type="hidden" name="allocation_id" value="{{ old('allocation_id', $allocate->id) }}">
+                @endif
+
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    {{-- Amount --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                        <input type="number" name="amount"
+                            value="{{ old('amount', $allocate->amount) }}"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                    </div>
+
+                    {{-- Fleet Card --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Fleet Card</label>
+                        <select name="fleet_card_id" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                            <option value="">Select Fleet Card</option>
+                            @foreach ($fleetCards as $card)
+                                <option value="{{ $card->id }}"
+                                    {{ old('fleet_card_id', $allocate->fleet_card_id) == $card->id ? 'selected' : '' }}>
+                                    {{ $card->account_name . ' - ' . $card->account_number }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Requestor --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Requestor</label>
+                        <select name="requestor_id" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                            <option value="">Select Requestor</option>
+                            @foreach ($drivers as $driver)
+                                <option value="{{ $driver->id }}"
+                                    {{ old('requestor_id', $allocate->requestor_id) == $driver->id ? 'selected' : '' }}>
+                                    {{ $driver->fname . ' - ' . $driver->lname }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Truck --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Truck</label>
+                        <select name="truck_id" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                            <option value="">Select Truck</option>
+                            @foreach ($trucks as $truck)
+                                <option value="{{ $truck->id }}"
+                                    {{ old('truck_id', $allocate->truck_id) == $truck->id ? 'selected' : '' }}>
+                                    {{ $truck->truck_name}}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Driver --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Driver</label>
+                        <select name="driver_id" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                            <option value="">Select Driver</option>
+                            @foreach ($drivers as $driver)
+                                <option value="{{ $driver->id }}"
+                                    {{ old('driver_id', $allocate->driver_id) == $driver->id ? 'selected' : '' }}>
+                                    {{ $driver->fname . ' ' . $driver->lname }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                {{-- Helpers --}}
+                <div x-data="{ helpers: {{ json_encode(old('helper', $allocate->helper ?? [])) }} }" class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Helpers</label>
+                    <template x-for="(helper, i) in helpers" :key="i">
+                        <div class="flex items-center mb-2 space-x-2">
+                            <input type="text"
+                                :name="'helper[' + i + ']'"
+                                x-model="helpers[i]"
+                                class="flex-grow px-3 py-2 border border-gray-300 rounded-md shadow-sm" />
+                            <button type="button"
+                                    @click="helpers.splice(i, 1)"
+                                    class="inline-flex items-center px-3 py-1.5 border border-red-500 text-red-600 rounded-md hover:bg-red-600 hover:text-white transition duration-150">
+                                Remove
+                            </button>
+                        </div>
+                    </template>
+                    <button type="button"
+                            @click="helpers.push('')"
+                            class="mt-2 text-blue-600 hover:underline text-sm">
+                        + Add Helper
+                    </button>
+                </div>
+            </div>
         </div>
+        
         <div class="border bg-white p-4 space-y-6 mt-6">
             <!-- First row -->
             <div class="flex flex-wrap -mx-2">

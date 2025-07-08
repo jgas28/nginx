@@ -233,124 +233,124 @@ class CashVoucherController extends Controller
     }
 
     public function store(Request $request)
-{
-    Log::info('Request Data:', ['data' => $request->all()]);
-    $company_id = $request->company_id;
+    {
+        Log::info('Request Data:', ['data' => $request->all()]);
+        $company_id = $request->company_id;
 
-    try {
-        $validated = $request->validate([
-            'amount' => 'required|numeric',
-            'request_type' => 'required',
-            'requestor' => 'required',
-            'mtm' => 'required',
-            'remarks' => 'nullable|array',
-            'remarks.*' => 'nullable|string',
-            'voucher_type' => 'required|in:regular,with_tax',
-            'withholding_tax' => 'nullable|exists:withholding_taxes,id',
-            'tax_base_amount' => 'nullable|numeric|min:0',
-        ]);
-        Log::info('Validation Passed:', ['validated_data' => $validated]);
-    } catch (\Illuminate\Validation\ValidationException $e) {
-        Log::error('Validation Errors:', ['errors' => $e->errors()]);
-        return redirect()->back()->withErrors($e->errors())->withInput();
-    }
+        try {
+            $validated = $request->validate([
+                'amount' => 'required|numeric',
+                'request_type' => 'required',
+                'requestor' => 'required',
+                'mtm' => 'required',
+                'remarks' => 'nullable|array',
+                'remarks.*' => 'nullable|string',
+                'voucher_type' => 'required|in:regular,with_tax',
+                'withholding_tax' => 'nullable|exists:withholding_taxes,id',
+                'tax_base_amount' => 'nullable|numeric|min:0',
+            ]);
+            Log::info('Validation Passed:', ['validated_data' => $validated]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation Errors:', ['errors' => $e->errors()]);
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        }
 
-    $sequence = CashVoucher::where('dr_id', $request->dr_id)
-        ->where('cvr_type', $request->cvr_type)
-        ->count() + 1;
+        $sequence = CashVoucher::where('dr_id', $request->dr_id)
+            ->where('cvr_type', $request->cvr_type)
+            ->count() + 1;
 
-    // Run everything in a DB transaction
-    DB::transaction(function () use ($company_id, $request, $sequence) {
-        // Handle potential rollover
-        $currentDate = new DateTime(); // Always current date
-        $yearMonth = $currentDate->format('Y-m');
-        $isFirstDayOfMonth = (int) $currentDate->format('d') === 1;
+        // Run everything in a DB transaction
+        DB::transaction(function () use ($company_id, $request, $sequence) {
+            // Handle potential rollover
+            $currentDate = new DateTime(); // Always current date
+            $yearMonth = $currentDate->format('Y-m');
+            $isFirstDayOfMonth = (int) $currentDate->format('d') === 1;
 
-        $monthlySeries = MonthlySeriesNumber::where('company_id', $company_id)
-            ->lockForUpdate()
-            ->first();
+            $monthlySeries = MonthlySeriesNumber::where('company_id', $company_id)
+                ->lockForUpdate()
+                ->first();
 
-        if (!$monthlySeries) {
-                // Create if not exists
-                $monthlySeries = MonthlySeriesNumber::create([
-                    'company_id' => $company_id,
-                    'month' => $yearMonth,
-                    'series_number' => 1,
-                ]);
-                $nextCvrNumber = 1;
-                Log::info("Created MonthlySeriesNumber: company_id = $company_id, month = $yearMonth, series = 1");
-        } else {
-                // Check if the month has changed, and reset series number if true
-                $isNewMonth = $monthlySeries->month !== $yearMonth;
-            if ($isNewMonth) {
-                    // Reset the series number for the new month
-                    $monthlySeries->update([
+            if (!$monthlySeries) {
+                    // Create if not exists
+                    $monthlySeries = MonthlySeriesNumber::create([
+                        'company_id' => $company_id,
                         'month' => $yearMonth,
                         'series_number' => 1,
                     ]);
                     $nextCvrNumber = 1;
-                    Log::info("Reset MonthlySeriesNumber: company_id = $company_id, new month = $yearMonth, series = 1");
+                    Log::info("Created MonthlySeriesNumber: company_id = $company_id, month = $yearMonth, series = 1");
             } else {
-                    // Normal increment
-                    $monthlySeries->increment('series_number');
-                    $nextCvrNumber = $monthlySeries->series_number;
-                    Log::info("Incremented MonthlySeriesNumber: company_id = $company_id, series = $nextCvrNumber");
+                    // Check if the month has changed, and reset series number if true
+                    $isNewMonth = $monthlySeries->month !== $yearMonth;
+                if ($isNewMonth) {
+                        // Reset the series number for the new month
+                        $monthlySeries->update([
+                            'month' => $yearMonth,
+                            'series_number' => 1,
+                        ]);
+                        $nextCvrNumber = 1;
+                        Log::info("Reset MonthlySeriesNumber: company_id = $company_id, new month = $yearMonth, series = 1");
+                } else {
+                        // Normal increment
+                        $monthlySeries->increment('series_number');
+                        $nextCvrNumber = $monthlySeries->series_number;
+                        Log::info("Incremented MonthlySeriesNumber: company_id = $company_id, series = $nextCvrNumber");
+                }
             }
-        }
 
-        // Construct the final CVR number
-        $currentYear = $currentDate->format('Y');
-        $currentMonth = $currentDate->format('m');
-        $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber);
-        $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}/{$company_id}";
-        $user = Auth::user();
-        $employeeCode = $user->id;
+            // Construct the final CVR number
+            $currentYear = $currentDate->format('Y');
+            $currentMonth = $currentDate->format('m');
+            $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber);
+            $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}/{$company_id}";
+            $user = Auth::user();
+            $employeeCode = $user->id;
 
-        // Save the actual cash voucher
-        $cashVoucher = new CashVoucher([
-            'cvr_number' => $formattedCvrNumber,
-            'cvr_type' => $request->cvr_type,
-            'amount' => $request->amount,
-            'request_type' => $request->request_type,
-            'requestor' => $request->requestor,
-            'mtm' => $request->mtm,
-            'status' => '1',
-            'voucher_type' => $request->voucher_type,
-            'withholding_tax_id' => $request->voucher_type === 'with_tax' ? $request->withholding_tax : null,
-            'tax_based_amount' => $request->voucher_type === 'with_tax' ? $request->tax_base_amount : null,
-            'remarks' => $request->has('remarks') ? $request->remarks : null,
-            'created_by' => $employeeCode,
-            'dr_id' => $request->dr_id,
-            'sequence' => $sequence,
-        ]);
+            // Save the actual cash voucher
+            $cashVoucher = new CashVoucher([
+                'cvr_number' => $formattedCvrNumber,
+                'cvr_type' => $request->cvr_type,
+                'amount' => $request->amount,
+                'request_type' => $request->request_type,
+                'requestor' => $request->requestor,
+                'mtm' => $request->mtm,
+                'status' => '1',
+                'voucher_type' => $request->voucher_type,
+                'withholding_tax_id' => $request->voucher_type === 'with_tax' ? $request->withholding_tax : null,
+                'tax_based_amount' => $request->voucher_type === 'with_tax' ? $request->tax_base_amount : null,
+                'remarks' => $request->has('remarks') ? $request->remarks : null,
+                'created_by' => $employeeCode,
+                'dr_id' => $request->dr_id,
+                'sequence' => $sequence,
+            ]);
 
-        Log::info('Saving Cash Voucher:', ['cash_voucher' => $cashVoucher->toArray()]);
-        $cashVoucher->save();
+            Log::info('Saving Cash Voucher:', ['cash_voucher' => $cashVoucher->toArray()]);
+            $cashVoucher->save();
 
-        // Update DeliveryRequest status
-        $deliveryRequest = DeliveryRequest::where('id', $request->dr_id)->first();
-        if ($deliveryRequest && $deliveryRequest->status != 0) {
-            Log::info("Updating DeliveryRequest status: dr_id = {$request->dr_id}, old_status = {$deliveryRequest->status}, new_status = 1");
-            $deliveryRequest->status = '1';
-            $deliveryRequest->delivery_status = 2;
-            $deliveryRequest->save();
-        }
+            // Update DeliveryRequest status
+            $deliveryRequest = DeliveryRequest::where('id', $request->dr_id)->first();
+            if ($deliveryRequest && $deliveryRequest->status != 0) {
+                Log::info("Updating DeliveryRequest status: dr_id = {$request->dr_id}, old_status = {$deliveryRequest->status}, new_status = 1");
+                $deliveryRequest->status = '1';
+                $deliveryRequest->delivery_status = 2;
+                $deliveryRequest->save();
+            }
 
-        // Update Line Items
-        $lineItems = DeliveryRequestLineItem::where('mtm', $request->mtm)
-            ->where('status', '!=', 0)
-            ->get();
+            // Update Line Items
+            $lineItems = DeliveryRequestLineItem::where('mtm', $request->mtm)
+                ->where('status', '!=', 0)
+                ->get();
 
-        foreach ($lineItems as $lineItem) {
-            Log::info("Updating LineItem status: line_item_id = {$lineItem->id}, old_status = {$lineItem->status}, new_status = 1");
-            $lineItem->status = '1';
-            $lineItem->save();
-        }
-    });
+            foreach ($lineItems as $lineItem) {
+                Log::info("Updating LineItem status: line_item_id = {$lineItem->id}, old_status = {$lineItem->status}, new_status = 1");
+                $lineItem->status = '1';
+                $lineItem->save();
+            }
+        });
 
-    return redirect()->route('coordinators.index')
-        ->with('success', 'Cash Voucher created successfully and statuses updated.');
-}
+            return redirect()->route('coordinators.index', ['tab' => 'status9'])
+                ->with('success', 'Cash Voucher created successfully and statuses updated.');
+    }
 
 
 
@@ -474,6 +474,12 @@ class CashVoucherController extends Controller
         ]);
 
         $cashVoucher = CashVoucher::find($request->cvr_id);
+        // $cashVoucher_approval = cvr_approval::where('cvr_id', $request->cvr_id)->first();
+
+        // if ($cashVoucher_approval) {
+        //     $cashVoucher_approval->status =3;
+        //     $cashVoucher_approval->save();
+        // }
 
         if ($cashVoucher) {
             $cashVoucher->status = 3;

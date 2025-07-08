@@ -13,6 +13,8 @@
         @csrf
         @method('PUT')
 
+        <input type="hidden" name="tab" value="{{ request('tab', 'list') }}">
+
         <div class="border bg-white p-4 space-y-6">
             <!-- First row -->
             <div class="flex flex-wrap -mx-2">

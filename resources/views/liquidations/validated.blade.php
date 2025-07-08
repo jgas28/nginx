@@ -31,7 +31,9 @@
             <ul class="space-y-2">
                 @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
                     <li class="flex justify-between">
-                        <span class="capitalize">{{ str_replace('_', ' ', $field) }}</span>
+                        <span class="capitalize">
+                            {{ $field === 'roro_expense' ? 'Freight' : str_replace('_', ' ', $field) }}
+                        </span>
                         <span class="font-semibold">₱{{ number_format($liquidation->$field ?? 0, 2) }}</span>
                     </li>
                 @endforeach
@@ -330,7 +332,7 @@
 
             <input type="hidden" name="action" id="form-action" value="">
             <div class="flex gap-4">
-                <button type="button" id="validate-btn" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">Validate</button>
+                <button type="button" id="validate-btn" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">Collect</button>
                 <button type="button" id="reject-btn" class="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700">Reject</button>
             </div>
         </form>

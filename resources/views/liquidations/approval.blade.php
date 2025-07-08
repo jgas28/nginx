@@ -30,13 +30,23 @@
             {{-- Expenses --}}
             <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
                 <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2">Expenses</h3>
-                @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense', 'cash_charge'] as $field)
-                    <div class="mb-3">
-                        <label class="block font-medium capitalize">{{ str_replace('_', ' ', $field) }}</label>
-                        <input type="number" step="0.01" name="{{ $field }}" value="{{ old($field, $liquidation->$field) }}" class="w-full px-3 py-2 border rounded" />
-                    </div>
-                @endforeach
+                <ul class="space-y-2">
+                    @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
+                        <li class="flex justify-between">
+                            <span class="capitalize">
+                                {{ $field === 'roro_expense' ? 'Freight' : str_replace('_', ' ', $field) }}
+                            </span>
+                            <span class="font-semibold">₱{{ number_format($liquidation->$field ?? 0, 2) }}</span>
+                        </li>
+                    @endforeach
+                    <li class="flex justify-between">
+                        <span>Cash Charge</span>
+                        <span class="font-semibold text-indigo-600">₱{{ number_format($liquidation->cash_charge ?? 0, 2) }}</span>
+                    </li>
+                </ul>
             </div>
+        </div>
+
 
             {{-- Gasoline --}}
             <div id="gasolineList" class="flex flex-col gap-2 p-4 rounded-lg bg-gray-50 shadow-sm">

@@ -35,6 +35,8 @@ use App\Http\Controllers\EmployeeController;
 use App\Models\Liquidation;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DetailsController;
+use App\Http\Controllers\UsersViewController;
+use App\Models\Allocation;
 
 // 🏠 Root route — redirect based on auth status
 Route::get('/', function () {
@@ -86,6 +88,7 @@ Route::middleware('auth')->group(function () {
     Route::resource('deliveryRequest', DeliveryRequestController::class);
     Route::resource('cashVoucherRequests', CashVoucherController::class);
     Route::resource('employees', EmployeeController::class);
+    Route::get('/user-view/coordinator-1', [UsersViewController::class, 'Coordinator1View'])->name('user.coordinator-1');
     Route::resource('coordinators', CoordinatorsController::class)
         ->parameters(['coordinators' => 'deliveryRequest'])
         ->except(['show']);
@@ -232,6 +235,7 @@ Route::middleware('auth')->group(function () {
     });
     
     Route::get('/delivery-details', [DetailsController::class, 'index'])->name('delivery.details');
+    Route::get('/allocation/show/{id}', [AllocationController::class, 'show'])->name('allocation.show');
 });
 
 // Admin-only Routes (if needed separately)

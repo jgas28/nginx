@@ -76,7 +76,7 @@
                         <td class="p-3 border">{{ $liquidation->notedBy->fname ?? '' }} {{ $liquidation->notedBy->lname ?? '' }}</td>
                         <td class="p-3 border">{{ $liquidation->created_at->format('Y-m-d') }}</td>
                         <td class="p-3 border">
-                            <a href="{{ route('liquidations.review', $liquidation->id) }}" class="text-indigo-600 hover:text-indigo-900 underline">{{ $liquidation->id }}</a>
+                            <a href="{{ route('liquidations.review', $liquidation->id) }}" class="text-indigo-600 hover:text-indigo-900 underline">Validate</a>
                         </td>
                     </tr>
                 @empty
