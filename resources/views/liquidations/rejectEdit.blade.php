@@ -9,78 +9,91 @@
         <input type="hidden" name="cvr_id" value="{{ $liquidation->cashVoucher->id ?? '' }}">
         <input type="hidden" name="cvr_number" value="{{ $liquidation->cashVoucher->cvr_number ?? '' }}">
 
-        <!-- Expenses -->
+        <!-- Editable Expenses (except Cash Charge) -->
         <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
             <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2">Expenses</h3>
-            <ul class="space-y-2">
-                @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
-                    <li class="flex justify-between">
-                        <span class="capitalize">
-                            {{ $field === 'roro_expense' ? 'Freight' : str_replace('_', ' ', $field) }}
-                        </span>
-                        <span class="font-semibold">₱{{ number_format($liquidation->$field ?? 0, 2) }}</span>
-                    </li>
-                @endforeach
-                <li class="flex justify-between">
-                    <span>Cash Charge</span>
-                    <span class="font-semibold text-indigo-600">₱{{ number_format($liquidation->cash_charge ?? 0, 2) }}</span>
-                </li>
-            </ul>
-        </div>
-
-
-        <!-- Gasoline -->
-        <div>
-            <label class="block font-semibold mb-2">Gasoline</label>
-            <div id="gasoline-wrapper" class="space-y-3">
-                @php
-                    $gasoline = is_array($liquidation->gasoline) ? $liquidation->gasoline : json_decode($liquidation->gasoline, true) ?? [];
-                @endphp
-                @foreach ($gasoline as $index => $item)
-                    <div class="flex gap-2 items-center" data-index="{{ $index }}">
-                        <select name="gasoline[{{ $index }}][type]" class="w-32 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">Type</option>
-                            <option value="cash" {{ $item['type'] == 'cash' ? 'selected' : '' }}>Cash</option>
-                            <option value="card" {{ $item['type'] == 'card' ? 'selected' : '' }}>Card</option>
-                        </select>
-                        <input type="number" step="0.01" name="gasoline[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}" placeholder="Amount" class="w-40 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
-                        <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                @foreach ([
+                    'allowance' => 'Allowance',
+                    'manpower' => 'Manpower',
+                    'hauling' => 'Hauling',
+                    'right_of_way' => 'Right of Way',
+                    'roro_expense' => 'Freight'
+                ] as $field => $label)
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">{{ $label }}</label>
+                        <input type="number" step="0.01" name="{{ $field }}"
+                            value="{{ old($field, $liquidation->$field ?? 0) }}"
+                            class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
                     </div>
                 @endforeach
+
+                <!-- Cash Charge (read-only) -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Cash Charge</label>
+                    <input type="text" value="₱{{ number_format($liquidation->cash_charge ?? 0, 2) }}"
+                        class="mt-1 w-full bg-gray-100 text-indigo-600 font-semibold rounded-md border border-gray-300 px-3 py-2 cursor-not-allowed" readonly />
+                </div>
             </div>
-            <button type="button" onclick="addGasolineField()" class="bg-indigo-600 text-white text-sm px-3 py-1 rounded hover:bg-indigo-700">+ Add Gasoline</button>
         </div>
 
-        <!-- RFID -->
-        <div>
-            <label class="block font-semibold mb-2">RFID</label>
-            <div id="rfid-wrapper" class="space-y-3">
-                @php
-                    $rfids = is_array($liquidation->rfid) ? $liquidation->rfid : json_decode($liquidation->rfid, true) ?? [];
-                @endphp
-                @foreach ($rfids as $index => $item)
-                    <div class="flex flex-wrap gap-2 items-center" data-index="{{ $index }}">
-                        <select name="rfid[{{ $index }}][tag]" class="w-32 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">Select Tag</option>
-                            <option value="autosweep" {{ $item['tag'] == 'autosweep' ? 'selected' : '' }}>AutoSweep</option>
-                            <option value="easytrip" {{ $item['tag'] == 'easytrip' ? 'selected' : '' }}>EasyTrip</option>
-                        </select>
-                        <select name="rfid[{{ $index }}][type]" class="w-28 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">Type</option>
-                            <option value="cash" {{ $item['type'] == 'cash' ? 'selected' : '' }}>Cash</option>
-                            <option value="card" {{ $item['type'] == 'card' ? 'selected' : '' }}>Card</option>
-                        </select>
-                        <input type="number" step="0.01" name="rfid[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}" placeholder="Amount" class="w-36 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
-                        <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
-                    </div>
-                @endforeach
+        <!-- Gasoline & RFID as Separate Sections -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Gasoline Section -->
+            <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
+                <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2 text-gray-800">Gasoline</h3>
+                <div id="gasoline-wrapper" class="space-y-3">
+                    @php
+                        $gasoline = is_array($liquidation->gasoline) ? $liquidation->gasoline : json_decode($liquidation->gasoline, true) ?? [];
+                    @endphp
+                    @foreach ($gasoline as $index => $item)
+                        <div class="flex gap-2 items-center" data-index="{{ $index }}">
+                            <select name="gasoline[{{ $index }}][type]" class="w-28 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Type</option>
+                                <option value="cash" {{ $item['type'] == 'cash' ? 'selected' : '' }}>Cash</option>
+                                <option value="card" {{ $item['type'] == 'card' ? 'selected' : '' }}>Card</option>
+                            </select>
+                            <input type="number" step="0.01" name="gasoline[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}" placeholder="Amount" class="w-36 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                            <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
+                        </div>
+                    @endforeach
+                </div>
+                <button type="button" onclick="addGasolineField()" class="mt-3 bg-indigo-600 text-white text-sm px-3 py-1 rounded hover:bg-indigo-700">+ Add Gasoline</button>
             </div>
-            <button type="button" onclick="addRFIDField()" class="bg-indigo-600 text-white text-sm px-3 py-1 rounded hover:bg-indigo-700">+ Add RFID</button>
+
+            <!-- RFID Section -->
+            <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
+                <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2 text-gray-800">RFID</h3>
+                <div id="rfid-wrapper" class="space-y-3">
+                    @php
+                        $rfids = is_array($liquidation->rfid) ? $liquidation->rfid : json_decode($liquidation->rfid, true) ?? [];
+                    @endphp
+                    @foreach ($rfids as $index => $item)
+                        <div class="flex flex-wrap gap-2 items-center" data-index="{{ $index }}">
+                            <select name="rfid[{{ $index }}][tag]" class="w-28 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Tag</option>
+                                <option value="autosweep" {{ $item['tag'] == 'autosweep' ? 'selected' : '' }}>AutoSweep</option>
+                                <option value="easytrip" {{ $item['tag'] == 'easytrip' ? 'selected' : '' }}>EasyTrip</option>
+                            </select>
+                            <select name="rfid[{{ $index }}][type]" class="w-24 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Type</option>
+                                <option value="cash" {{ $item['type'] == 'cash' ? 'selected' : '' }}>Cash</option>
+                                <option value="card" {{ $item['type'] == 'card' ? 'selected' : '' }}>Card</option>
+                            </select>
+                            <input type="number" step="0.01" name="rfid[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}" placeholder="Amount" class="w-32 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                            <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
+                        </div>
+                    @endforeach
+                </div>
+                <button type="button" onclick="addRFIDField()" class="mt-3 bg-indigo-600 text-white text-sm px-3 py-1 rounded hover:bg-indigo-700">+ Add RFID</button>
+            </div>
+
         </div>
 
         <!-- Others -->
-        <div>
-            <label class="block font-semibold mb-2">Others</label>
+        <div class="p-4 rounded-lg bg-gray-50 shadow-sm mb-6">
+            <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2 text-gray-800">Others</h3>
             <div id="others-wrapper" class="space-y-3">
                 @php
                     $others = is_array($liquidation->others) ? $liquidation->others : json_decode($liquidation->others, true) ?? [];
@@ -93,28 +106,32 @@
                     </div>
                 @endforeach
             </div>
-            <button type="button" class="mt-2 text-indigo-600 hover:text-indigo-800 underline" onclick="addOther()">Add Another</button>
+            <button type="button" class="mt-3 text-indigo-600 hover:text-indigo-800 underline" onclick="addOther()">+ Add Another</button>
         </div>
 
         <!-- People Involved -->
-        <div class="space-y-4">
-            @foreach ([
-                'prepared_by' => ['label' => 'Prepared By', 'list' => $preparers],
-                'noted_by' => ['label' => 'Noted By', 'list' => $employees]
-            ] as $field => $config)
-                <div>
-                    <label class="block font-medium text-gray-700 mb-1">{{ $config['label'] }}</label>
-                    <select name="{{ $field }}" class="w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="">Select {{ $config['label'] }}</option>
-                        @foreach ($config['list'] as $person)
-                            <option value="{{ $person->id }}" {{ $liquidation->$field == $person->id ? 'selected' : '' }}>
-                                {{ $person->fname }} {{ $person->lname }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-            @endforeach
+        <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
+            <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2 text-gray-800">People Involved</h3>
+            <div class="space-y-4">
+                @foreach ([
+                    'prepared_by' => ['label' => 'Prepared By', 'list' => $preparers],
+                    'noted_by' => ['label' => 'Noted By', 'list' => $employees]
+                ] as $field => $config)
+                    <div>
+                        <label class="block font-medium text-gray-700 mb-1">{{ $config['label'] }}</label>
+                        <select name="{{ $field }}" class="w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select {{ $config['label'] }}</option>
+                            @foreach ($config['list'] as $person)
+                                <option value="{{ $person->id }}" {{ $liquidation->$field == $person->id ? 'selected' : '' }}>
+                                    {{ $person->fname }} {{ $person->lname }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endforeach
+            </div>
         </div>
+
 
         <!-- Submit -->
         <div class="text-right">

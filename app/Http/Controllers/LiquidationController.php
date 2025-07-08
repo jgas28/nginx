@@ -1231,7 +1231,7 @@ class LiquidationController extends Controller
 
         return view('liquidations.rejectEdit', compact('liquidation', 'preparers', 'employees'));
     }
-
+ 
     public function rejectUpdate(Request $request, $id)
     {
         // Log the raw incoming request data
@@ -1240,20 +1240,18 @@ class LiquidationController extends Controller
         $liquidation = Liquidation::findOrFail($id);
 
         $data = $request->validate([
-            'expenses.allowance' => 'nullable|numeric',
-            'expenses.manpower' => 'nullable|numeric',
-            'expenses.hauling' => 'nullable|numeric',
-            'expenses.right_of_way' => 'nullable|numeric',
-            'expenses.roro_expense' => 'nullable|numeric',
-            'expenses.cash_charge' => 'nullable|numeric',
+            'allowance' => 'nullable|numeric',
+            'manpower' => 'nullable|numeric',
+            'hauling' => 'nullable|numeric',
+            'right_of_way' => 'nullable|numeric',
+            'roro_expense' => 'nullable|numeric',
+            'cash_charge' => 'nullable|numeric',
             'gasoline' => 'nullable|array',
             'rfid' => 'nullable|array',
             'others' => 'nullable|array',
             'prepared_by' => 'required|exists:users,id',
             'noted_by' => 'nullable|exists:users,id',
         ]);
-
-        $expenses = $data['expenses'];
 
         // Log extracted arrays individually
         Log::info('Parsed Arrays:', [
@@ -1264,12 +1262,12 @@ class LiquidationController extends Controller
 
         $liquidation->update([
             'approved_by' => $request->approved_by ?? null,
-            'allowance' => $expenses['allowance'] ?? 0,
-            'manpower' => $expenses['manpower'] ?? 0,
-            'hauling' => $expenses['hauling'] ?? 0,
-            'right_of_way' => $expenses['right_of_way'] ?? 0,
-            'roro_expense' => $expenses['roro_expense'] ?? 0,
-            'cash_charge' => $expenses['cash_charge'] ?? 0,
+            'allowance' => $request->allowance ?? 0,
+            'manpower' => $request->manpower ?? 0,
+            'hauling' => $request->hauling ?? 0,
+            'right_of_way' => $request->right_of_way ?? 0,
+            'roro_expense' => $request->roro_expense ?? 0,
+            'cash_charge' => $request->cash_charge ?? 0,
             'gasoline' => array_values($request->gasoline ?? []),
             'rfid' => array_values($request->rfid ?? []),
             'others' => array_values($request->others ?? []),
