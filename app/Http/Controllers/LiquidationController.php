@@ -1320,7 +1320,7 @@ class LiquidationController extends Controller
                 CASE 
                     WHEN cv.cvr_type IN ('admin','rpm') THEN cv.company_id 
                     ELSE dr.company_id 
-                END AS company_id,
+                END AS company_id, 
                 CASE 
                     WHEN cv.cvr_type IN ('admin','rpm') THEN cv.expense_type_id 
                     ELSE dr.expense_type_id 
@@ -1441,11 +1441,7 @@ class LiquidationController extends Controller
                                                             WHEN cv.cvr_type IN ('admin','rpm') THEN cv.expense_type_id 
                                                             ELSE dr.expense_type_id 
                                                         END
-            LEFT JOIN fczcnyx.cvr_request_type crt 
-                ON crt.id = CASE 
-                    WHEN cv.cvr_type IN ('admin', 'rpm') THEN cv.expense_type_id
-                    ELSE cv.request_type
-                END
+            LEFT JOIN fczcnyx.cvr_request_type crt ON crt.id = cv.request_type
 
             $conditions
             ORDER BY company_id ASC, cvr_number ASC

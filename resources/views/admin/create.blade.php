@@ -132,6 +132,16 @@
                             </select>
                         </div>
 
+                         <div>
+                            <label class="block text-sm font-medium text-gray-700">Request Type</label>
+                            <select name="request_type" id="request_type" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                                <option value="" disabled selected>Select Request Type</option>
+                                @foreach($cvrTypes as $cvrType)
+                                    <option value="{{ $cvrType->id }}">{{ $cvrType->request_type }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
                         <div id="truck_field_container" class="hidden">
                             <label class="block text-sm font-medium text-gray-700">Truck</label>
                             <select name="truck_id" id="truck_id" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">

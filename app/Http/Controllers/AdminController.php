@@ -49,8 +49,9 @@ class AdminController extends Controller
         $suppliers=Supplier::all();
         $trucks=Truck::all();
         $taxes=WithholdingTax::all();
+        $cvrTypes = cvr_request_type::all();
 
-        return view('admin.create', compact('companies', 'expenseTypes', 'suppliers', 'trucks', 'taxes'));
+        return view('admin.create', compact('companies', 'expenseTypes', 'suppliers', 'trucks', 'taxes', 'cvrTypes'));
     }
 
     public function store(Request $request)
@@ -73,6 +74,7 @@ class AdminController extends Controller
             'tax_base_amount' => 'nullable|numeric',
             'remarks' => 'nullable|array',
             'remarks.*' => 'nullable|string',
+            'request_type' => 'required|exists:cvr_request_type,id',
         ]);
 
         DB::transaction(function () use ($request, $employeeCode, $company_id) {
@@ -126,6 +128,7 @@ class AdminController extends Controller
             $voucher->company_id = $company_id;
             $voucher->supplier_id = $request->supplier_id;
             $voucher->expense_type_id = $request->expense_type_id;
+            $voucher->request_type = $request->request_type;
             $voucher->withholding_tax_id = $request->voucher_type === 'with_tax' ? $request->withholding_tax : null;
             $voucher->tax_based_amount = $request->voucher_type === 'with_tax' ? $request->tax_base_amount : null;
             $voucher->description = json_encode($request->description);
@@ -194,8 +197,9 @@ class AdminController extends Controller
         $suppliers = Supplier::all();
         $trucks = Truck::all();
         $taxes = WithholdingTax::all();
+        $cvrTypes = cvr_request_type::all();
 
-        return view('admin.edit', compact('voucher', 'companies', 'expenseTypes', 'suppliers', 'trucks', 'taxes'));
+        return view('admin.edit', compact('voucher', 'companies', 'expenseTypes', 'suppliers', 'trucks', 'taxes', 'cvrTypes'));
     }
 
     public function update(Request $request, $id)
@@ -208,6 +212,7 @@ class AdminController extends Controller
             'company_id' => 'required|integer|exists:companies,id',
             'supplier_id' => 'required|integer|exists:suppliers,id',
             'expense_type_id' => 'required|integer|exists:expense_types,id',
+            'request_type' => 'required|integer|exists:cvr_request_type,id',
             'truck_id' => 'nullable|integer|exists:trucks,id',
             'description' => 'required|array',
             'description.*' => 'required|string',
@@ -230,6 +235,7 @@ class AdminController extends Controller
             'withholding_tax_id' => $withholdingTaxId,
             'supplier_id' => $request->supplier_id,
             'expense_type_id' => $request->expense_type_id,
+            'request_type' => $request->request_type,
             'truck_id' => $request->cvr_type === 'rpm' ? $request->truck_id : null,
             'description' => $request->description,
             'amount_details' => $request->amount_details,
