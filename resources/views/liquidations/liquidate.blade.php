@@ -68,7 +68,6 @@
 
         <!-- People Involved -->
         <div class="bg-gray-50 p-4 rounded-md border border-gray-200 space-y-4">
-            <h2 class="text-lg font-semibold text-gray-700">People Involved</h2>
             @foreach ([
                 'prepared_by' => ['label' => 'Prepared By', 'list' => $preparers],
                 'noted_by' => ['label' => 'Noted By', 'list' => $employees]

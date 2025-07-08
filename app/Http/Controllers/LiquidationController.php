@@ -1440,7 +1440,6 @@ class LiquidationController extends Controller
                                                             ELSE dr.expense_type_id 
                                                         END
             LEFT JOIN fczcnyx.cvr_request_type crt ON crt.id = cv.request_type
-
             $conditions
             ORDER BY company_id ASC, cvr_number ASC
         ";

@@ -259,6 +259,7 @@ class AllocationController extends Controller
             'cashVouchers.employee',
             'cashVouchers.cvrApprovals',
             'cashVouchers.liquidations',
+            'lineItems',
         ])->findOrFail($id);
 
         return view('allocations.partials.dr_modal', compact('deliveryRequest'));

@@ -192,7 +192,6 @@
                     return response.text();
                 })
                 .then(html => {
-                    // Inject the content
                     const container = document.getElementById('dr-modal-content');
                     container.innerHTML = html;
 

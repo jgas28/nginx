@@ -218,8 +218,9 @@
                 }
             }
         }
+        $accessorialTotal = $deliveryRequest->lineItems->sum('accessorial_rate');
 
-        $remainingBalance = ($deliveryRequest->delivery_rate + $deliveryRequest->accessorial_total) 
+        $remainingBalance = ($deliveryRequest->delivery_rate + $accessorialTotal) 
                     - ($totalLiquidatedCash + $totalLiquidatedCard);
     @endphp
 
@@ -240,7 +241,7 @@
             <tbody>
                 <tr>
                     <td class="p-2 border">₱{{ number_format($deliveryRequest->delivery_rate, 2) }}</td>
-                    <td class="p-2 border">₱{{ number_format($deliveryRequest->accessorial_total, 2) }}</td>
+                    <td class="p-2 border">₱{{ number_format($accessorialTotal, 2) }}</td>
                     <td class="p-2 border">₱{{ number_format($totalApprovedAmount, 2) }}</td>
                     <td class="p-2 border">₱{{ number_format($totalLiquidatedCash, 2) }}</td>
                     <td class="p-2 border">₱{{ number_format($totalLiquidatedCard, 2) }}</td>

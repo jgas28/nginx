@@ -93,7 +93,7 @@
                             {{ Str::before($v->cvr_number,'/') }}-{{ $v->truck_name }}-{{ $v->company_code }}{{ $v->expense_code }}
                         @endif
                     </td>
-                    <td class="px-4 py-2">{{ $v->cvr_type }}</td>
+                    <td class="px-4 py-2">{{ $v->cvr_type }}</td> 
                     <td class="px-4 py-2 text-right">{{ $v->request_code }}</td>
                     <td class="px-4 py-2 text-right">{{ number_format($v->requested_amount, 2) }}</td>
                     <td class="px-4 py-2 text-right">{{ number_format($v->approved_amount, 2) }}</td>

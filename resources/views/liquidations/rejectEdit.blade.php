@@ -111,7 +111,6 @@
 
         <!-- People Involved -->
         <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
-            <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2 text-gray-800">People Involved</h3>
             <div class="space-y-4">
                 @foreach ([
                     'prepared_by' => ['label' => 'Prepared By', 'list' => $preparers],
