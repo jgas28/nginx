@@ -4,11 +4,30 @@
 
 @section('content')
     {{-- Trigger Button --}}
-    <div class="mb-4 flex justify-end">
-        <button onclick="openFilterModal()"
-            class="bg-gray-800 hover:bg-gray-900 text-white font-semibold px-4 py-2 rounded shadow">
-            Filter Options
-        </button>
+    <div class="mb-4 flex justify-between items-end">
+        <form method="GET" class="flex items-end gap-4">
+            <div>
+                <label for="mtm" class="block text-sm font-medium text-gray-700">MTM</label>
+                <input type="text" name="mtm" id="mtm" value="{{ request('mtm') }}"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm text-sm px-2 py-1">
+            </div>
+
+            <div class="pb-[2px]">
+                <button type="submit"
+                    class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded shadow">
+                    Filter
+                </button>
+                <a href="{{ route('allocation.drlist') }}"
+                    class="ml-2 text-gray-700 hover:text-gray-900 underline text-sm">Reset</a>
+            </div>
+        </form>
+
+        <div>
+            <button onclick="openFilterModal()"
+                class="bg-gray-800 hover:bg-gray-900 text-white font-semibold px-4 py-2 rounded shadow">
+                Filter Options
+            </button>
+        </div>
     </div>
 
     {{-- Filter Modal --}}
@@ -53,7 +72,7 @@
                         <option value="">All</option>
                         @foreach ($companies as $company)
                             <option value="{{ $company->id }}" {{ request('company_id') == $company->id ? 'selected' : '' }}>
-                                {{ $company->name }}
+                                {{ $company->company_code }}
                             </option>
                         @endforeach
                     </select>
@@ -67,7 +86,7 @@
                         <option value="">All</option>
                         @foreach ($areas as $area)
                             <option value="{{ $area->id }}" {{ request('area_id') == $area->id ? 'selected' : '' }}>
-                                {{ $area->name }}
+                                {{ $area->area_code }}
                             </option>
                         @endforeach
                     </select>
@@ -81,7 +100,7 @@
                         <option value="">All</option>
                         @foreach ($regions as $region)
                             <option value="{{ $region->id }}" {{ request('region_id') == $region->id ? 'selected' : '' }}>
-                                {{ $region->name }}
+                                {{ $region->province }}
                             </option>
                         @endforeach
                     </select>

@@ -198,6 +198,10 @@ class AllocationController extends Controller
             ]);
         }
 
+        if ($request->filled('mtm')) {
+            $query->where('mtm', 'like', '%' . $request->mtm . '%');
+        }
+
         if ($request->filled('month')) {
             $query->whereMonth('created_at', $request->month);
         }
@@ -218,10 +222,10 @@ class AllocationController extends Controller
             $query->where('created_by', $request->created_by);
         }
 
-        $drList = $query->paginate(20)->appends($request->query());
+        $drList = $query->get();
 
         // Add computed fields
-        $drList->getCollection()->transform(function ($dr) {
+        $drList->transform(function ($dr) {
             $accessorialTotal = $dr->lineItems->sum(function ($item) {
                 return is_array($item->accessorial_rate)
                     ? collect($item->accessorial_rate)->sum()
