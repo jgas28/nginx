@@ -26,97 +26,124 @@
 
     <form id="approvalForm" action="{{ route('liquidations.approvedEdit', $liquidation->id) }}" method="POST" class="bg-gray-50 p-4 rounded-lg shadow-sm">
         @csrf
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {{-- Expenses --}}
-            <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
-                <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2">Expenses</h3>
-                <ul class="space-y-2">
-                    @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
-                        <li class="flex justify-between">
-                            <span class="capitalize">
-                                {{ $field === 'roro_expense' ? 'Freight' : str_replace('_', ' ', $field) }}
-                            </span>
-                            <span class="font-semibold">₱{{ number_format($liquidation->$field ?? 0, 2) }}</span>
-                        </li>
-                    @endforeach
-                    <li class="flex justify-between">
-                        <span>Cash Charge</span>
-                        <span class="font-semibold text-indigo-600">₱{{ number_format($liquidation->cash_charge ?? 0, 2) }}</span>
-                    </li>
-                </ul>
+        <div class="space-y-8">
+
+    {{-- 🧾 Expenses Section --}}
+    <div class="bg-white p-6 rounded-xl shadow border">
+        <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Expenses</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                        {{ $field === 'roro_expense' ? 'Freight' : str_replace('_', ' ', $field) }}
+                    </label>
+                    <input 
+                        type="number" step="0.01" name="{{ $field }}"
+                        value="{{ old($field, $liquidation->$field ?? 0) }}"
+                        class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                    />
+                </div>
+            @endforeach
+
+            {{-- Readonly Cash Charge --}}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Cash Charge</label>
+                <input 
+                    type="text" readonly 
+                    value="₱{{ number_format($liquidation->cash_charge ?? 0, 2) }}"
+                    class="w-full px-3 py-2 bg-gray-100 text-gray-600 rounded-lg border border-gray-300 cursor-default text-sm"
+                />
             </div>
         </div>
+    </div>
 
-
-            {{-- Gasoline --}}
-            <div id="gasolineList" class="flex flex-col gap-2 p-4 rounded-lg bg-gray-50 shadow-sm">
-                <div class="flex justify-between items-center mb-3 border-b border-gray-300 pb-2">
-                    <h3 class="font-semibold text-lg">Gasoline</h3>
-                    <button type="button" onclick="addGasolineField()" class="px-3 py-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition">
-                        Add Gasoline
-                    </button>
-                </div>
+    {{-- 🛢️ Gasoline + RFID --}}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {{-- Gasoline --}}
+        <div class="bg-white p-6 rounded-xl shadow border">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h2 class="text-lg font-semibold text-gray-800">Gasoline</h2>
+                <button type="button" onclick="addGasolineField()" class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded">
+                    + Add
+                </button>
+            </div>
+            <div class="space-y-3" id="gasolineList">
                 @foreach ($gasoline as $index => $item)
-                    <div class="flex gap-2 items-center" data-index="{{ $index }}">
-                        <select name="gasoline[{{ $index }}][type]" class="w-32 rounded-md border px-2 py-1">
+                    <div class="flex flex-wrap gap-2 items-center" data-index="{{ $index }}">
+                        <select name="gasoline[{{ $index }}][type]" class="w-32 border rounded px-2 py-1 text-sm">
                             <option value="" {{ empty($item['type']) ? 'selected' : '' }}>Type</option>
                             <option value="cash" {{ ($item['type'] ?? '') === 'cash' ? 'selected' : '' }}>Cash</option>
                             <option value="card" {{ ($item['type'] ?? '') === 'card' ? 'selected' : '' }}>Card</option>
                         </select>
-                        <input type="number" step="0.01" name="gasoline[{{ $index }}][amount]" placeholder="Amount" value="{{ $item['amount'] ?? '' }}" class="w-40 rounded-md border px-2 py-1" />
-                        <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
+                        <input type="number" step="0.01" name="gasoline[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}"
+                            placeholder="Amount" class="w-36 border rounded px-2 py-1 text-sm" />
+                        <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
                     </div>
                 @endforeach
             </div>
+        </div>
 
-            {{-- RFID --}}
-            <div id="rfidList" class="flex flex-col gap-2 p-4 rounded-lg bg-gray-50 shadow-sm">
-                <div class="flex justify-between items-center mb-3 border-b border-gray-300 pb-2">
-                    <h3 class="font-semibold text-lg">RFID</h3>
-                    <button type="button" onclick="addRFIDField()" class="mt-2 px-3 py-1 rounded bg-indigo-600 text-white self-start">Add RFID</button>
-                </div>
+        {{-- RFID --}}
+        <div class="bg-white p-6 rounded-xl shadow border">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h2 class="text-lg font-semibold text-gray-800">RFID</h2>
+                <button type="button" onclick="addRFIDField()" class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded">
+                    + Add
+                </button>
+            </div>
+            <div class="space-y-3" id="rfidList">
                 @foreach ($rfid as $index => $item)
-                    <div class="flex gap-2 items-center" data-index="{{ $index }}">
-                        <select name="rfid[{{ $index }}][tag]" class="w-32 rounded-md border px-2 py-1">
-                            <option value="" {{ empty($item['tag']) ? 'selected' : '' }}>Select Tag</option>
+                    <div class="flex flex-wrap gap-2 items-center" data-index="{{ $index }}">
+                        <select name="rfid[{{ $index }}][tag]" class="w-32 border rounded px-2 py-1 text-sm">
+                            <option value="">Select Tag</option>
                             <option value="autosweep" {{ ($item['tag'] ?? '') === 'autosweep' ? 'selected' : '' }}>AutoSweep</option>
                             <option value="easytrip" {{ ($item['tag'] ?? '') === 'easytrip' ? 'selected' : '' }}>EasyTrip</option>
                         </select>
-                        <select name="rfid[{{ $index }}][type]" class="w-28 rounded-md border px-2 py-1">
-                            <option value="" {{ empty($item['type']) ? 'selected' : '' }}>Type</option>
+                        <select name="rfid[{{ $index }}][type]" class="w-28 border rounded px-2 py-1 text-sm">
+                            <option value="">Type</option>
                             <option value="cash" {{ ($item['type'] ?? '') === 'cash' ? 'selected' : '' }}>Cash</option>
                             <option value="card" {{ ($item['type'] ?? '') === 'card' ? 'selected' : '' }}>Card</option>
                         </select>
-                        <input type="number" step="0.01" name="rfid[{{ $index }}][amount]" placeholder="Amount" value="{{ $item['amount'] ?? '' }}" class="w-36 rounded-md border px-2 py-1" />
-                        <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
+                        <input type="number" step="0.01" name="rfid[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}"
+                            placeholder="Amount" class="w-32 border rounded px-2 py-1 text-sm" />
+                        <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
                     </div>
                 @endforeach
-            </div>
-
-            {{-- Others --}}
-            <div id="othersList" class="flex flex-col gap-2 p-4 rounded-lg bg-gray-50 shadow-sm">
-                <div class="flex justify-between items-center mb-3 border-b border-gray-300 pb-2">
-                    <h3 class="font-semibold text-lg">Others</h3>
-                    <button type="button" onclick="addOthersField()" class="mt-2 px-3 py-1 rounded bg-indigo-600 text-white self-start">Add Other</button>
-                </div>
-                @foreach ($others as $index => $item)
-                    <div class="flex gap-2 items-center" data-index="{{ $index }}">
-                        <input type="text" name="others[{{ $index }}][description]" placeholder="Description" value="{{ $item['description'] ?? '' }}" class="w-48 rounded-md border px-2 py-1" />
-                        <input type="number" step="0.01" name="others[{{ $index }}][amount]" placeholder="Amount" value="{{ $item['amount'] ?? '' }}" class="w-24 rounded-md border px-2 py-1" />
-                        <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
-                    </div>
-                @endforeach
-            </div>
-
-            {{-- Save Button Spanning Full Width --}}
-            <div class="md:col-span-2 mt-6">
-                <button type="submit" class="bg-indigo-600 text-white px-6 py-3 rounded hover:bg-indigo-700 transition w-full md:w-auto">
-                    Save Changes
-                </button>
             </div>
         </div>
-    </form>
+    </div>
 
+    {{-- 🧾 Others Section --}}
+    <div class="bg-white p-6 rounded-xl shadow border">
+        <div class="flex justify-between items-center mb-4 border-b pb-2">
+            <h2 class="text-lg font-semibold text-gray-800">Others</h2>
+            <button type="button" onclick="addOthersField()" class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded">
+                + Add
+            </button>
+        </div>
+        <div class="space-y-3" id="othersList">
+            @foreach ($others as $index => $item)
+                <div class="flex flex-wrap gap-2 items-center" data-index="{{ $index }}">
+                    <input type="text" name="others[{{ $index }}][description]" placeholder="Description" value="{{ $item['description'] ?? '' }}"
+                        class="w-64 border rounded px-3 py-1 text-sm" />
+                    <input type="number" step="0.01" name="others[{{ $index }}][amount]" placeholder="Amount" value="{{ $item['amount'] ?? '' }}"
+                        class="w-32 border rounded px-3 py-1 text-sm" />
+                    <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
+                </div>
+            @endforeach
+        </div>
+    </div>
+
+    {{-- Submit Button --}}
+    <div class="flex justify-end">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-6 py-2.5 rounded-md shadow">
+            Save Changes
+        </button>
+    </div>
+</div>
+
+    </form>
 
     {{-- Liquidation Summary Totals --}}
     <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 font-medium text-lg">
@@ -455,14 +482,14 @@
     function addGasolineField() {
         const wrapper = document.getElementById('gasolineList');
         wrapper.insertAdjacentHTML('beforeend', `
-            <div class="flex gap-2 items-center" data-index="${gasolineIndex}">
-                <select name="gasoline[${gasolineIndex}][type]" class="w-32 rounded-md border px-2 py-1">
+            <div class="flex flex-wrap gap-2 items-center" data-index="${gasolineIndex}">
+                <select name="gasoline[${gasolineIndex}][type]" class="w-32 border rounded px-2 py-1 text-sm">
                     <option value="">Type</option>
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                 </select>
-                <input type="number" step="0.01" name="gasoline[${gasolineIndex}][amount]" placeholder="Amount" class="w-40 rounded-md border px-2 py-1" />
-                <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
+                <input type="number" step="0.01" name="gasoline[${gasolineIndex}][amount]" placeholder="Amount" class="w-36 border rounded px-2 py-1 text-sm" />
+                <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
             </div>
         `);
         gasolineIndex++;
@@ -471,19 +498,19 @@
     function addRFIDField() {
         const wrapper = document.getElementById('rfidList');
         wrapper.insertAdjacentHTML('beforeend', `
-            <div class="flex gap-2 items-center" data-index="${rfidIndex}">
-                <select name="rfid[${rfidIndex}][tag]" class="w-32 rounded-md border px-2 py-1">
+            <div class="flex flex-wrap gap-2 items-center" data-index="${rfidIndex}">
+                <select name="rfid[${rfidIndex}][tag]" class="w-32 border rounded px-2 py-1 text-sm">
                     <option value="">Select Tag</option>
                     <option value="autosweep">AutoSweep</option>
                     <option value="easytrip">EasyTrip</option>
                 </select>
-                <select name="rfid[${rfidIndex}][type]" class="w-28 rounded-md border px-2 py-1">
+                <select name="rfid[${rfidIndex}][type]" class="w-28 border rounded px-2 py-1 text-sm1">
                     <option value="">Type</option>
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                 </select>
-                <input type="number" step="0.01" name="rfid[${rfidIndex}][amount]" placeholder="Amount" class="w-36 rounded-md border px-2 py-1" />
-                <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
+                <input type="number" step="0.01" name="rfid[${rfidIndex}][amount]" placeholder="Amount" class="w-32 border rounded px-2 py-1 text-sm" />
+                <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
             </div>
         `);
         rfidIndex++;
@@ -493,9 +520,9 @@
         const wrapper = document.getElementById('othersList');
         wrapper.insertAdjacentHTML('beforeend', `
             <div class="flex gap-2 items-center" data-index="${othersIndex}">
-                <input type="text" name="others[${othersIndex}][description]" placeholder="Description" class="w-48 rounded-md border px-2 py-1" />
-                <input type="number" step="0.01" name="others[${othersIndex}][amount]" placeholder="Amount" class="w-24 rounded-md border px-2 py-1" />
-                <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
+                <input type="text" name="others[${othersIndex}][description]" placeholder="Description" class="w-64 border rounded px-3 py-1 text-sm" />
+                <input type="number" step="0.01" name="others[${othersIndex}][amount]" placeholder="Amount" class="w-32 border rounded px-3 py-1 text-sm" />
+                <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
             </div>
         `);
         othersIndex++;
