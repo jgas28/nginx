@@ -482,7 +482,7 @@ class CashVoucherController extends Controller
         // }
 
         if ($cashVoucher) {
-            $cashVoucher->status = 3;
+            $cashVoucher->status = 3; 
 
             // Decode existing remarks and append new one
             $existingRemarks = json_decode($cashVoucher->reject_remarks, true) ?? [];
@@ -1012,16 +1012,51 @@ class CashVoucherController extends Controller
 
     public function updatePrintStatus(Request $request)
     {
-        // validate & extract ids
+        $user = Auth::user();
+        $employeeCode = $user->id;
+
+        // Log the authenticated user and their employee code
+        Log::info('User authenticated:', ['user_id' => $user->id, 'employee_code' => $employeeCode]);
+
+        // Validate & extract ids
         $cvrIds = $request->input('cvr_ids', []);
         $voucherIds = $request->input('voucher_ids', []);
- 
-        // update as needed
-        CashVoucher::whereIn('id', $cvrIds)->update(['print_status' => '1']);
-        cvr_approval::whereIn('id', $voucherIds)->update(['print_status' => '1']);
+
+        // Log the ids being updated
+        Log::info('Received CVR IDs:', ['cvr_ids' => $cvrIds]);
+        Log::info('Received Voucher IDs:', ['voucher_ids' => $voucherIds]);
+
+        // Check if there are any IDs to update
+        if (empty($cvrIds) && empty($voucherIds)) {
+            Log::warning('No CVR or Voucher IDs provided!');
+        }
+
+        // Update print status and printed_by for CashVoucher and cvr_approval
+        $cvrUpdateResult = CashVoucher::whereIn('id', $voucherIds)->update([
+            'print_status' => '1',
+            'printed_by' => $employeeCode
+        ]);
+
+        $voucherUpdateResult = cvr_approval::whereIn('id', $cvrIds)->update([
+            'print_status' => '1',
+            'printed_by' => $employeeCode
+        ]);
+
+        // Log the result of the update operations
+        Log::info('CashVoucher update result:', ['rows_affected' => $cvrUpdateResult]);
+        Log::info('cvr_approval update result:', ['rows_affected' => $voucherUpdateResult]);
+
+        // If no rows were affected, log a warning
+        if ($cvrUpdateResult == 0) {
+            Log::warning('No rows were updated for CashVoucher.');
+        }
+        if ($voucherUpdateResult == 0) {
+            Log::warning('No rows were updated for cvr_approval.');
+        }
 
         return response()->json(['message' => 'Print status updated']);
     }
+
 
     private function isJson($string)
     {

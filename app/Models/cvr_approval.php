@@ -11,7 +11,7 @@ class cvr_approval extends Model
     use HasFactory;
 
     protected $fillable = [
-        'payment_type', 'payment_name', 'reference_number', 'amount', 'receiver','source', 'charge', 'cvr_number', 'status', 'created_by', 'cvr_id', 'reject_remarks' 
+        'payment_type', 'payment_name', 'reference_number', 'amount', 'receiver','source', 'charge', 'cvr_number', 'status', 'created_by', 'cvr_id', 'reject_remarks','printed_by','print_status'
     ];
 
     public function deliveryRequests() 

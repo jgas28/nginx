@@ -1,7 +1,10 @@
 @extends('layouts.app')
+
 @section('content')
 @php
     use Illuminate\Support\Str;
+
+    // Calculate totals based on the filtered cashVouchers
     $totals = collect($cashVouchers)->reduce(function ($carry, $item) {
         $carry['approved'] += $item->approved_amount;
         $carry['cash'] += $item->liquidated_amount_cash ?? 0;
@@ -11,46 +14,77 @@
     }, ['approved'=>0,'cash'=>0,'card'=>0,'liquidated'=>0]);
 @endphp
 
-<form method="GET" action="{{ route('liquidations.overall') }}" class="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
-    <!-- Company -->
-    <div>
-        <label class="block text-sm text-gray-600">Company</label>
-        <select name="company_id" class="w-full border rounded px-2 py-1">
-            <option value="">All Companies</option>
-            @foreach (collect($cashVouchers)->pluck('company_code','company_id')->unique() as $cid => $code)
-                <option value="{{ $cid }}" @if(request('company_id')==$cid) selected @endif>
-                    {{ $code }}
-                </option>
-            @endforeach
-        </select>
+<!-- Filter Modal -->
+<div id="filterModal" class="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center hidden">
+    <div class="bg-white rounded-lg p-6 w-full max-w-lg">
+        <h2 class="text-xl font-semibold mb-4">Filter Liquidations</h2>
+
+        <!-- Filter Form -->
+        <form method="GET" action="{{ route('liquidations.overall') }}" class="grid grid-cols-1 gap-4">
+            <!-- Company -->
+            <div>
+                <label class="block text-sm text-gray-600">Company</label>
+                <select name="company_id" class="w-full border rounded px-2 py-1">
+                    <option value="">All Companies</option>
+                    @foreach (collect($cashVouchers)->pluck('company_code','company_id')->unique() as $cid => $code)
+                        <option value="{{ $cid }}" @if(request('company_id')==$cid) selected @endif>
+                            {{ $code }}
+                        </option> 
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Request Type -->
+            <div>
+                <label class="block text-sm text-gray-600">Request Type</label>
+                <select name="request_code" class="w-full border rounded px-2 py-1">
+                    <option value="">All Types</option>
+                    @foreach (collect($cashVouchers)->pluck('request_code')->unique()->sort() as $code)
+                        <option value="{{ $code }}" @if(request('request_code') == $code) selected @endif>
+                            {{ $code }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- CVR Number -->
+            <div>
+                <label class="block text-sm text-gray-600">CVR Number</label>
+                <input type="text" name="cvr_number" value="{{ request('cvr_number') }}" class="w-full border rounded px-2 py-1">
+            </div>
+
+            <!-- Status -->
+            <div>
+                <label class="block text-sm text-gray-600">Status</label>
+                <select name="status" class="w-full border rounded px-2 py-1">
+                    <option value="">All Statuses</option>
+                    <option value="1" @if(request('status') == '1') selected @endif>Pending Cash Approval</option>
+                    <option value="3" @if(request('status') == '3') selected @endif>Rejected CVR</option>
+                    <option value="5" @if(request('status') == '5') selected @endif>Completed</option>
+                    <option value="10" @if(request('status') == '10') selected @endif>Rejected Liquidation</option>
+                </select>
+            </div>
+
+            <!-- Date From -->
+            <div>
+                <label class="block text-sm text-gray-600">From</label>
+                <input type="date" name="date_from" value="{{ request('date_from', now()->startOfMonth()->toDateString()) }}" class="w-full border rounded px-2 py-1">
+            </div>
+
+            <!-- Date To -->
+            <div>
+                <label class="block text-sm text-gray-600">To</label>
+                <input type="date" name="date_to" value="{{ request('date_to', now()->endOfMonth()->toDateString()) }}" class="w-full border rounded px-2 py-1">
+            </div>
+
+            <!-- Filter Button -->
+            <div class="flex items-center justify-end mt-4">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Apply Filters</button>
+                <button type="button" id="closeModalBtn" class="ml-2 bg-gray-400 text-white px-4 py-2 rounded">Close</button>
+            </div>
+        </form>
     </div>
-    <!-- Request Type -->
-    <div>
-        <label class="block text-sm text-gray-600">Request Type</label>
-        <select name="request_code" class="w-full border rounded px-2 py-1">
-            <option value="">All Types</option>
-            @foreach (collect($cashVouchers)->pluck('request_code')->unique()->sort() as $code)
-                <option value="{{ $code }}" @if(request('request_code') == $code) selected @endif>
-                    {{ $code }}
-                </option>
-            @endforeach
-        </select>
-    </div>
-    <!-- Date From -->
-    <div>
-        <label class="block text-sm text-gray-600">From</label>
-        <input type="date" name="date_from" value="{{ request('date_from', now()->startOfMonth()->toDateString()) }}" class="w-full border rounded px-2 py-1">
-    </div>
-    <!-- Date To -->
-    <div>
-        <label class="block text-sm text-gray-600">To</label>
-        <input type="date" name="date_to" value="{{ request('date_to', now()->endOfMonth()->toDateString()) }}" class="w-full border rounded px-2 py-1">
-    </div>
-    <!-- Submit -->
-    <div class="flex items-end">
-        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Filter</button>
-    </div>
-</form>
+</div>
 
 <!-- Summary Cards -->
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -67,7 +101,12 @@
         </div>
     </div>
 </div>
-
+<!-- Filter Button to open Modal -->
+<div class="flex justify-end mb-4">
+    <button id="filterBtn" class="bg-blue-600 text-white px-4 py-2 rounded">
+        Filter
+    </button>
+</div>
 <!-- Table -->
 <div class="overflow-x-auto">
     <table class="min-w-full bg-white border border-gray-200 rounded shadow-sm mb-8">
@@ -109,4 +148,28 @@
         </tbody>
     </table>
 </div>
+<script>
+    // Get modal element
+    const modal = document.getElementById('filterModal');
+    const filterBtn = document.getElementById('filterBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+
+    // Open modal when filter button is clicked
+    filterBtn.addEventListener('click', function () {
+        modal.classList.remove('hidden');
+    });
+
+    // Close modal when close button is clicked
+    closeModalBtn.addEventListener('click', function () {
+        modal.classList.add('hidden');
+    });
+
+    // Close modal if clicked outside of it
+    window.addEventListener('click', function (event) {
+        if (event.target === modal) {
+            modal.classList.add('hidden');
+        }
+    });
+</script>
 @endsection
+
