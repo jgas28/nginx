@@ -37,7 +37,7 @@
                         <span class="font-semibold">₱{{ number_format($liquidation->$field ?? 0, 2) }}</span>
                     </li>
                 @endforeach
-                <li class="flex justify-between">
+                <li class="flex justify-between"> 
                     <span>Cash Charge</span>
                     <span class="font-semibold text-indigo-600">₱{{ number_format($liquidation->cash_charge ?? 0, 2) }}</span>
                 </li>

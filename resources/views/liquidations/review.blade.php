@@ -17,14 +17,24 @@
         {{-- Expenses --}}
         <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
             <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2">Expenses</h3>
-            @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense', 'cash_charge'] as $field)
+
+            {{-- Loop for all fields except 'cash_charge' --}}
+            @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
                 <div class="mb-3">
                     <label class="block font-medium">
                         {{ $field === 'roro_expense' ? 'Freight' : ucwords(str_replace('_', ' ', $field)) }}
                     </label>
                     <input type="number" step="0.01" name="{{ $field }}" value="{{ old($field, $liquidation->$field) }}" class="w-full px-3 py-2 border rounded" />
                 </div>
-            @endforeach
+            @endforeach 
+
+            {{-- Separate field for cash_charge --}}
+            <div class="mb-3">
+                <label class="block font-medium">Cash Charge</label>
+                <div class="w-full px-3 py-2 border rounded bg-gray-200 text-gray-600">
+                    {{ number_format($liquidation->cash_charge, 2) }}
+                </div>
+            </div>
         </div>
 
         {{-- Gasoline --}}
