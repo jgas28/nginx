@@ -37,6 +37,11 @@ class CashVoucher extends Model
         return $this->belongsTo(User::class, 'requestor', 'id');
     }
 
+    public function print_name()
+    {
+        return $this->belongsTo(User::class, 'printed_by', 'id');
+    }
+
     public function cvrApprovals()
     {
         return $this->hasMany(cvr_approval::class, 'cvr_id'); // This assumes 'cvr_number' is the foreign key in the cvr_approvals table
