@@ -21,6 +21,7 @@
                     <th class="py-3 px-4 border-b">Amount</th>
                     <th class="py-3 px-4 border-b">Company</th>
                     <th class="py-3 px-4 border-b">Supplier</th>
+                    <th class="py-3 px-4 border-b">Printed By</th>
                     <th class="py-3 px-4 border-b">Actions</th>
                 </tr>
             </thead>
@@ -49,6 +50,7 @@
                         <td class="py-3 px-4 border-b">{{ number_format($total, 2) }}</td>
                         <td class="py-3 px-4 border-b">{{ $cashVoucherRequest->cashVoucher->company->company_code }}</td>
                         <td class="py-3 px-4 border-b">{{ $cashVoucherRequest->cashVoucher->suppliers->supplier_name }}</td>
+                        <td class="py-3 px-4 border-b">{{ $cashVoucherRequest->cashVoucher->print_name->fname ?? '' }} {{ $cashVoucherRequest->cashVoucher->print_name->lname ?? '' }}</td>
                         <td class="py-3 px-4 border-b space-x-4">
                             <!-- Print Button -->
                             <a href="{{ route('adminCV.print', ['id' => $cashVoucherRequest->id, 'cvr_number' => $cashVoucherRequest->cashVoucher->id]) }}"
