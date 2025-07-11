@@ -212,7 +212,7 @@
         function closeModal() {
             const modal = document.getElementById('dr-modal');
             modal.classList.remove('flex');
-            modal.classList.add('hidden');
+            modal.classList.add('hidden'); 
         }
 
         function openFilterModal() {

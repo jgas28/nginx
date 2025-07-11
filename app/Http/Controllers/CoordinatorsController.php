@@ -159,7 +159,7 @@ class CoordinatorsController extends Controller
     public function create()
     {
         // Fetch necessary data for the view
-        $companies = Company::all();
+        $companies = Company::whereNotIn('id', [4])->get();
         $regions = Region::all();
         $deliveryTypes = DeliveryType::all();
         $warehouses = Warehouse::all();
@@ -406,7 +406,7 @@ class CoordinatorsController extends Controller
 
         // dd($deliveryLineItems);
 
-        $companies = Company::all();
+        $companies = Company::whereNotIn('id', [4])->get();
         $regions = Region::all();
         $deliveryTypes = DeliveryType::all();
         $warehouses = Warehouse::all();
@@ -845,7 +845,7 @@ class CoordinatorsController extends Controller
 
         $allocate = DeliveryRequest::with('allocations')->find($deliveryRequest->id);
 
-        $companies = Company::all();
+        $companies = Company::whereNotIn('id', [4])->get();
         $regions = Region::all();
         $deliveryTypes = DeliveryType::all();
         $warehouses = Warehouse::all();
@@ -887,7 +887,7 @@ class CoordinatorsController extends Controller
 
         // dd($deliveryLineItems);
 
-        $companies = Company::all();
+        $companies = Company::whereNotIn('id', [4])->get();
         $regions = Region::all();
         $deliveryTypes = DeliveryType::all();
         $warehouses = Warehouse::all();

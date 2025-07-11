@@ -18,6 +18,7 @@
                     <th class="py-2 px-4 border-b">MTM</th>
                     <th class="py-2 px-4 border-b">CVR NUMBER</th>
                     <th class="py-2 px-4 border-b">Amount</th>
+                    <th class="py-2 px-4 border-b">Printed By</th>
                     <th class="py-2 px-4 border-b">Actions</th>
                 </tr>
             </thead>
@@ -53,6 +54,7 @@
                                 {{ $approval->amount }}<br>
                             @endforeach
                         </td>
+                        <td class="py-2 px-4 border-b">{{ $cashVoucherRequest->print_name->fname ?? '' }} {{ $cashVoucherRequest->print_name->lname ?? '' }}</td>
                         <td class="py-2 px-4 border-b space-x-2">
                             <!-- Print / Re-Print Button -->
                             <a href="{{ route('cashVoucherRequests.print', ['id' => $cashVoucherRequest->id, 'cvr_number' => $cashVoucherRequest->dr_id, 'mtm' => $cashVoucherRequest->cvr_type]) }}"

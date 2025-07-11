@@ -250,7 +250,7 @@ class AllocationController extends Controller
         })->orderBy('fname')->orderBy('lname')->get();
 
         return view('allocations.drlist', compact('drList', 'companies', 'areas', 'regions', 'users'));
-    }
+    } 
 
 
     public function show($id)
@@ -259,7 +259,7 @@ class AllocationController extends Controller
             'cashVouchers.employee',
             'cashVouchers.cvrApprovals',
             'cashVouchers.liquidations',
-            'lineItems',
+            'lineItems', 
         ])->findOrFail($id);
 
         return view('allocations.partials.dr_modal', compact('deliveryRequest'));
