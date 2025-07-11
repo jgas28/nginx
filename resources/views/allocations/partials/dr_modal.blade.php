@@ -22,7 +22,24 @@
                     <tr>
                         <td class="p-2 border">{{ $cvr->cvr_number }}</td>
                         <td class="p-2 border">{{ ucfirst($cvr->cvr_type) }}</td>
-                        <td class="p-2 border">₱{{ number_format($cvr->amount, 2) }}</td>
+                        <td class="p-2 border text-sm">
+                            @php
+                                $statusText = match((int) $cvr->status) {
+                                    1 => 'for approval',
+                                    3 => 'Rejected', // Don't show status for status 3
+                                    4 => 'Complete',
+                                    default => 'N/A',
+                                };
+
+                                // If the status is 10 (Rejected), we'll show red color, otherwise green.
+                                $statusClass = $cvr->status == 3 ? 'text-red-600' : 'text-green-600';
+                            @endphp
+
+                            <span class="text-black">₱{{ number_format($cvr->amount, 2) }}</span>
+                            @if ($cvr->status !== 3 && !empty($statusText)) <!-- Only show status if it's not 3 and status text is not empty -->
+                                <span class="text-xs {{ $statusClass }} ml-2">({{ $statusText }})</span>
+                            @endif
+                        </td>
 
                         {{-- Approved Amounts with Status --}}
                         <td class="p-2 border">
@@ -104,8 +121,8 @@
                             </ul>
                         </td>
 
-                        {{-- Liquidated Card with Status --}}
-                        <td class="p-2 border text-blue-700 text-sm">
+                        {{-- Liquidated Card with Status (modified to match Liquidated Cash UI) --}}
+                        <td class="p-2 border text-sm">
                             <ul class="list-disc list-inside">
                                 @foreach ($cvr->liquidations as $liq)
                                     @php
@@ -126,18 +143,31 @@
                                                 }
                                             }
                                         }
+
+                                        $cardStatusText = match((int) $liq->status) {
+                                            1 => 'Validated',
+                                            3 => 'For Collection',
+                                            4 => 'For Approval',
+                                            5 => 'Completed',
+                                            10 => 'Rejected',
+                                            default => 'N/A',
+                                        };
+
+                                        $cardStatusClass = $liq->status == 10 ? 'text-red-600' : 'text-green-600';
                                     @endphp
 
                                     @if ($cardAmount > 0)
                                         <li>
-                                            ₱{{ number_format($cardAmount, 2) }} -
-                                            <span class="italic text-gray-500">{{ $liq->remarks }}</span><br>
-                                            <span class="text-xs text-gray-600">Status: {{ ucfirst($liq->status ?? 'N/A') }}</span>
+                                            <span class="text-black">₱{{ number_format($cardAmount, 2) }}</span>
+                                            (
+                                            <span class="{{ $cardStatusClass }}">{{ $cardStatusText }}</span>
+                                            )<br>
                                         </li>
                                     @endif
                                 @endforeach
                             </ul>
                         </td>
+
 
                         {{-- Requestor --}}
                         <td class="p-2 border">
