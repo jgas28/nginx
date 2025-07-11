@@ -50,7 +50,7 @@
                 <label class="block text-sm font-medium text-gray-700 mb-1">Cash Charge</label>
                 <input 
                     type="text" readonly 
-                    value="₱{{ number_format($liquidation->cash_charge ?? 0, 2) }}"
+                    value="₱{{ number_format($liquidation->charge ?? 0, 2) }}"
                     class="w-full px-3 py-2 bg-gray-100 text-gray-600 rounded-lg border border-gray-300 cursor-default text-sm"
                 />
             </div>
