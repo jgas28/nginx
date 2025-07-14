@@ -393,7 +393,7 @@
             <button 
                 onclick="printAndUpdateStatusSingle(this);" 
                 class="btn"
-                data-cvr-id="{{$cvrApprovals->id}}" 
+                data-cvr-id="{{$cvrApprovals->id}}"  
                 data-voucher-id="{{$cashVoucherRequest->id}}"> Print
             </button>
         </div>

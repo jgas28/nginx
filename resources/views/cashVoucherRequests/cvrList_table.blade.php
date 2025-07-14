@@ -67,7 +67,7 @@
                             <a href="{{ route('cashVoucherRequests.printView', ['id' => $cashVoucherRequest->id, 'cvr_number' => $cashVoucherRequest->dr_id, 'mtm' => $cashVoucherRequest->cvr_type]) }}"
                                 title="View Cash Voucher"
                                 target="_blank">
-                                <i class="fas fa-eye mr-2 text-sm"></i> <!-- View Icon -->
+                                <i class="fas fa-eye mr-2 text-sm"></i> <!-- View Icon --> 
                             </a>
                         </td>
                     </tr>

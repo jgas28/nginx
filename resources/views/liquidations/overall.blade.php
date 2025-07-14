@@ -62,7 +62,11 @@
                     <option value="3" @if(request('status') == '3') selected @endif>Rejected CVR</option>
                     <option value="5" @if(request('status') == '5') selected @endif>Completed</option>
                     <option value="10" @if(request('status') == '10') selected @endif>Rejected Liquidation</option>
-                </select>
+                    <option value="for_validation" @if(request('status') == 'for_validation') selected @endif>For Validation</option>
+                    <option value="for_collection" @if(request('status') == 'for_collection') selected @endif>For Collection</option>
+                    <option value="for_approval" @if(request('status') == 'for_approval') selected @endif>For Approval</option>
+                    <option value="liquidation_in_progress" @if(request('status') == 'liquidation_in_progress') selected @endif>Liquidation In Progress</option>
+                </select> 
             </div>
 
             <!-- Date From -->

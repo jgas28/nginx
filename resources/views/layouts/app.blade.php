@@ -251,6 +251,7 @@
                 <div x-show="openCoordinator && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
                     @if($user->hasAnyRoleId([1, 2, 3, 10]))<a href="{{ route('coordinators.create') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Create Request</a>@endif
                     @if($user->hasAnyRoleId([1, 2, 3, 11]))<a href="{{ route('coordinators.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">List</a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 11]))<a href="{{ route('reports.dr') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Report</a>@endif
                 </div>
             </div>
             @endif
@@ -304,6 +305,11 @@
                             Admin/RPM Request
                         </a>
                     @endif
+                    <!-- @if($user->hasAnyRoleId([1, 2, 3, 18]))
+                        <a href="{{ route('reports.cv') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            Reports
+                        </a>
+                    @endif -->
                 </div>
             </div>
             @endif

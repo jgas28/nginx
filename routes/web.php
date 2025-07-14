@@ -32,11 +32,9 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\LiquidationController;
 use App\Http\Controllers\RunningBalanceController;
 use App\Http\Controllers\EmployeeController;
-use App\Models\Liquidation;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DetailsController;
-use App\Http\Controllers\UsersViewController;
-use App\Models\Allocation;
+use App\Http\Controllers\ReportsController;
 
 // 🏠 Root route — redirect based on auth status
 Route::get('/', function () {
@@ -88,14 +86,16 @@ Route::middleware('auth')->group(function () {
     Route::resource('deliveryRequest', DeliveryRequestController::class);
     Route::resource('cashVoucherRequests', CashVoucherController::class);
     Route::resource('employees', EmployeeController::class);
-    Route::get('/user-view/coordinator-1', [UsersViewController::class, 'Coordinator1View'])->name('user.coordinator-1');
     Route::resource('coordinators', CoordinatorsController::class)
         ->parameters(['coordinators' => 'deliveryRequest'])
         ->except(['show']);
     Route::resource('admin', AdminController::class);
     Route::get('/running-balance', [RunningBalanceController::class, 'index'])->name('running_balance.index');
     Route::post('/running-balance/store', [RunningBalanceController::class, 'store'])->name('running_balance.store');
-
+    Route::get('/reports/deliveryRequest', [ReportsController::class, 'deliveryRequestReport'])->name('reports.dr');
+    Route::get('/reports/cashVoucher', [ReportsController::class, 'cashVoucherReport'])->name('reports.cv');
+    Route::get('/reports/export', [ReportsController::class, 'export'])->name('reports.export');
+    
     Route::get('/liquidations/admin', [LiquidationController::class, 'indexAdmin'])
     ->name('liquidations.indexAdmin');
     // 🟢 Put this first
@@ -123,14 +123,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/liquidations/rejectedList', [LiquidationController::class, 'rejectedList'])->name('liquidations.rejectedList');
     Route::post('/liquidations/{id}/reject', [LiquidationController::class, 'reject'])->name('liquidations.reject');
 
-
     Route::post('/running-balance/reimburse', [RunningBalanceController::class, 'storeReimbursement'])->name('running-balance.reimburse');
     Route::post('/running-balance/collected', [RunningBalanceController::class, 'storeCollected'])->name('running-balance.collected');
     Route::post('/running-balance/reimburse-admin', [RunningBalanceController::class, 'storeReimbursementAdmin'])->name('running-balance.reimburseAdmin');
     Route::post('/running-balance/collected-admin', [RunningBalanceController::class, 'storeCollectedAdmin'])->name('running-balance.collectedAdmin');
     // ⚠️ Put this after
     Route::resource('liquidations', LiquidationController::class);
-    
+
     //others
     Route::get('/regions/by-area/{area}', [RegionController::class, 'getByArea']);
     Route::get('/deliveryRequest/splitView/{deliveryRequest}', [DeliveryRequestController::class, 'splitView'])->name('deliveryRequest.splitView');
@@ -225,7 +224,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/liquidations/{id}/approvedEdit', [LiquidationController::class, 'approvedLiqUpdate'])->name('liquidations.approvedEdit');
 
     Route::get('/cash-vouchers-status', [LiquidationController::class, 'Overall'])->name('liquidations.overall');
-
+    
     Route::prefix('running-balance')->group(function () {
         Route::get('refunds/{id}/edit', [RunningBalanceController::class, 'editRefund'])->name('refunds.edit');
         Route::put('refunds/{id}', [RunningBalanceController::class, 'updateRefund'])->name('refunds.update');
@@ -236,6 +235,7 @@ Route::middleware('auth')->group(function () {
     
     Route::get('/delivery-details', [DetailsController::class, 'index'])->name('delivery.details');
     Route::get('/allocation/show/{id}', [AllocationController::class, 'show'])->name('allocation.show');
+   
 });
 
 // Admin-only Routes (if needed separately)
@@ -246,3 +246,4 @@ Route::middleware(['auth', 'role:administrator'])->group(function () {
 
     
 });
+ 

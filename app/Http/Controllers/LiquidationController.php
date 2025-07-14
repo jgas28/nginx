@@ -1282,85 +1282,106 @@ class LiquidationController extends Controller
     }
 
     public function Overall(Request $request)
-{
-    $companyId = $request->input('company_id');
-    $dateFrom = $request->input('date_from', now()->startOfMonth()->toDateString());
-    $dateTo = $request->input('date_to', now()->endOfMonth()->toDateString());
-    $requestCode = $request->input('request_code');
-    $cvrNumber = $request->input('cvr_number');  // New filter
-    $status = $request->input('status');          // New filter
+    {
+        // Extract the request data
+        $companyId = $request->input('company_id');
+        $dateFrom = $request->input('date_from', now()->startOfMonth()->toDateString());
+        $dateTo = $request->input('date_to', now()->endOfMonth()->toDateString());
+        $requestCode = $request->input('request_code');
+        $cvrNumber = $request->input('cvr_number');
+        $status = $request->input('status');
 
-    // Initialize conditions and parameters for the SQL query
-    $conditions = "WHERE DATE(cv.created_at) BETWEEN ? AND ?";
-    $params = [$dateFrom, $dateTo];
+        // Prepare conditions and params
+        $conditions = "WHERE DATE(cv.created_at) BETWEEN ? AND ?";
+        $params = [$dateFrom, $dateTo];
 
-    // Filter by request_code if provided
-    if ($requestCode) {
-        $conditions .= " AND crt.request_type = ?";
-        $params[] = $requestCode;
-    }
+        // Add filters dynamically
+        if ($requestCode) {
+            $conditions .= " AND crt.request_type = ?";
+            $params[] = $requestCode;
+        }
 
-    // Filter by company_id if provided
-    if ($companyId) {
-        $conditions .= " AND (
-            (cv.cvr_type IN ('admin','rpm') AND cv.company_id = ?) OR
-            (cv.cvr_type NOT IN ('admin','rpm') AND dr.company_id = ?)
-        )";
-        $params[] = $companyId;
-        $params[] = $companyId;
-    }
+        if ($companyId) {
+            $conditions .= " AND (
+                (cv.cvr_type IN ('admin','rpm') AND cv.company_id = ?) OR
+                (cv.cvr_type NOT IN ('admin','rpm') AND dr.company_id = ?)
+            )";
+            $params[] = $companyId;
+            $params[] = $companyId;
+        }
 
-    // Filter by cvr_number if provided
-    if ($cvrNumber) {
-        $conditions .= " AND cv.cvr_number LIKE ?";
-        $params[] = "%$cvrNumber%"; // Using LIKE for partial matching
-    }
+        if ($cvrNumber) {
+            $conditions .= " AND cv.cvr_number LIKE ?";
+            $params[] = "%$cvrNumber%";
+        }
 
-    // Filter by status if provided (assuming 'status' is a field in the 'cv' table)
-    if ($status) {
-        $conditions .= " AND cv.status = ?";
-        $params[] = $status;
-    }
+        // Add status filter (handled with a switch)
+        if ($status) {
+            switch ($status) {
+                case '1':  // Pending Cash Approval
+                    $conditions .= " AND cv.status = 1";
+                    break;
+                case '3':  // Rejected CVR
+                    $conditions .= " AND cv.status = 3";
+                    break;
+                case '5':  // Completed
+                    $conditions .= " AND l.status = 5";
+                    break;
+                case '10': // Rejected Liquidation
+                    $conditions .= " AND l.status = 10";
+                    break;
+                case 'for_validation':  // For Validation
+                    $conditions .= " AND l.status = 1";
+                    break;
+                case 'for_collection':  // For Collection
+                    $conditions .= " AND l.status = 3";
+                    break;
+                case 'for_approval':  // For Approval
+                    $conditions .= " AND l.status = 4";
+                    break;
+                case 'liquidation_in_progress':  // Liquidation In Progress
+                    $conditions .= " AND l.status NOT IN (1, 3, 4, 5, 10)";
+                    break;
+                default:
+                    break;
+            }
+        }
 
-    // SQL query
-    $sql = "
-        SELECT
-            cv.id AS cash_voucher_id,
-            cv.cvr_type,
-            cv.sequence,
-            cv.cvr_number,
-            CASE 
-                WHEN cv.cvr_type IN ('admin','rpm') THEN cv.truck_id 
-                ELSE a.truck_id 
-            END AS truck_id,
-            CASE 
-                WHEN cv.cvr_type IN ('admin','rpm') THEN cv.company_id 
-                ELSE dr.company_id 
-            END AS company_id, 
-            CASE 
-                WHEN cv.cvr_type IN ('admin','rpm') THEN cv.expense_type_id 
-                ELSE dr.expense_type_id 
-            END AS expense_type_id,
-            t.truck_name,
-            c.company_code,
-            et.expense_code,
-            crt.request_type AS request_code,
-
-            CASE 
-                WHEN cv.cvr_type IN ('admin','rpm') THEN (
-                    SELECT SUM(CAST(JSON_UNQUOTE(amt.value) AS DECIMAL(10,2)))
-                    FROM JSON_TABLE(cv.amount_details, '$[*]' COLUMNS (value JSON PATH '$')) AS amt
-                )
-                ELSE cv.amount
-            END AS requested_amount,
-
-            COALESCE((
-                SELECT SUM(amount)
-                FROM fczcnyx.cvr_approvals ca2
-                WHERE ca2.cvr_id = cv.id
-            ), 0) AS approved_amount,
-
-            (
+        // SQL query (fixed)
+        $sql = "
+            SELECT
+                cv.id AS cash_voucher_id,
+                cv.cvr_type,
+                cv.sequence,
+                cv.cvr_number,
+                CASE 
+                    WHEN cv.cvr_type IN ('admin','rpm') THEN cv.truck_id 
+                    ELSE a.truck_id 
+                END AS truck_id,
+                CASE 
+                    WHEN cv.cvr_type IN ('admin','rpm') THEN cv.company_id 
+                    ELSE dr.company_id 
+                END AS company_id, 
+                CASE 
+                    WHEN cv.cvr_type IN ('admin','rpm') THEN cv.expense_type_id 
+                    ELSE dr.expense_type_id 
+                END AS expense_type_id,
+                t.truck_name,
+                c.company_code,
+                et.expense_code,
+                crt.request_type AS request_code,
+                CASE 
+                    WHEN cv.cvr_type IN ('admin','rpm') THEN (
+                        SELECT SUM(CAST(JSON_UNQUOTE(amt.value) AS DECIMAL(10,2)))
+                        FROM JSON_TABLE(cv.amount_details, '$[*]' COLUMNS (value JSON PATH '$')) AS amt
+                    )
+                    ELSE cv.amount
+                END AS requested_amount,
+                COALESCE((
+                    SELECT SUM(amount)
+                    FROM fczcnyx.cvr_approvals ca2
+                    WHERE ca2.cvr_id = cv.id
+                ), 0) AS approved_amount,
                 COALESCE(l.allowance,0) + COALESCE(l.manpower,0) + COALESCE(l.hauling,0) +
                 COALESCE(l.right_of_way,0) + COALESCE(l.roro_expense,0) +
                 COALESCE((
@@ -1376,83 +1397,77 @@ class LiquidationController extends Controller
                 COALESCE((
                     SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
                     FROM JSON_TABLE(l.others,'$[*]' COLUMNS(value JSON PATH '$')) j
-                ), 0)
-            ) AS liquidated_amount_cash,
-
-            (
-                COALESCE((
-                    SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
-                    FROM JSON_TABLE(l.gasoline,'$[*]' COLUMNS(value JSON PATH '$')) j
-                    WHERE j.value->>'$.type' = 'card'
-                ), 0) +
-                COALESCE((
-                    SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
-                    FROM JSON_TABLE(l.rfid,'$[*]' COLUMNS(value JSON PATH '$')) j
-                    WHERE j.value->>'$.type' = 'card'
-                ), 0)
-            ) AS liquidated_amount_card,
-
-            cv.status AS cash_voucher_status,
-            ca.status AS approval_status,
-            l.status AS liquidation_status,
-
-            CASE
-                WHEN l.id IS NULL AND ca.status = '1' AND cv.status = 3 THEN 'Rejected CVR'
-                WHEN cv.status = 3 AND ca.status = '1' THEN 'Rejected CVR'
-                WHEN l.id IS NULL AND ca.status IS NULL AND cv.status = 3 THEN 'Rejected CVR'
-                WHEN l.id IS NOT NULL THEN
-                    CASE
-                        WHEN l.status = '1' THEN 'For Validation'
-                        WHEN l.status = '3' THEN 'For Collection'
-                        WHEN l.status = '4' THEN 'For Approval'
-                        WHEN l.status = '5' THEN 'Completed'
-                        WHEN l.status = '10' THEN 'Rejected Liquidation'
-                        ELSE 'Liquidation In Progress'
-                    END
-                WHEN ca.id IS NOT NULL THEN
-                    CASE
-                        WHEN ca.status = '1' THEN 'For Liquidation'
-                        WHEN ca.status = '3' THEN 'Rejected CVR'
-                        ELSE 'Pending Cash Approval'
-                    END
-                ELSE 'Pending Cash Approval'
-            END AS overall_status
-
-        FROM fczcnyx.cash_vouchers cv
-
-        LEFT JOIN fczcnyx.delivery_request dr ON dr.id = cv.dr_id
-        LEFT JOIN (
-            SELECT * FROM (
-                SELECT *, 
-                    ROW_NUMBER() OVER (PARTITION BY dr_id, trip_type, sequence ORDER BY id) AS row_num
-                FROM fczcnyx.allocations
-            ) AS ranked_allocations
-            WHERE row_num = 1
-        ) a ON a.dr_id = cv.dr_id AND a.trip_type = cv.cvr_type AND a.sequence = cv.sequence
-
-        LEFT JOIN fczcnyx.cvr_approvals ca ON ca.cvr_id = cv.id
-        LEFT JOIN fczcnyx.liquidations l ON l.cvr_approval_id = ca.id
-        LEFT JOIN fczcnyx.trucks t ON t.id = CASE 
-                                                WHEN cv.cvr_type IN ('admin','rpm') THEN cv.truck_id 
-                                                ELSE a.truck_id 
-                                            END
-        LEFT JOIN fczcnyx.companies c ON c.id = CASE 
-                                                    WHEN cv.cvr_type IN ('admin','rpm') THEN cv.company_id 
-                                                    ELSE dr.company_id 
+                ), 0) AS liquidated_amount_cash,
+                (
+                    COALESCE((
+                        SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
+                        FROM JSON_TABLE(l.gasoline,'$[*]' COLUMNS(value JSON PATH '$')) j
+                        WHERE j.value->>'$.type' = 'card'
+                    ), 0) +
+                    COALESCE((
+                        SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
+                        FROM JSON_TABLE(l.rfid,'$[*]' COLUMNS(value JSON PATH '$')) j
+                        WHERE j.value->>'$.type' = 'card'
+                    ), 0)
+                ) AS liquidated_amount_card,
+                cv.status AS cash_voucher_status,
+                ca.status AS approval_status,
+                l.status AS liquidation_status,
+                CASE
+                    WHEN l.id IS NULL AND ca.status = '1' AND cv.status = 3 THEN 'Rejected CVR'
+                    WHEN cv.status = 3 AND ca.status = '1' THEN 'Rejected CVR'
+                    WHEN l.id IS NULL AND ca.status IS NULL AND cv.status = 3 THEN 'Rejected CVR'
+                    WHEN l.id IS NOT NULL THEN
+                        CASE
+                            WHEN l.status = '1' THEN 'For Validation'
+                            WHEN l.status = '3' THEN 'For Collection'
+                            WHEN l.status = '4' THEN 'For Approval'
+                            WHEN l.status = '5' THEN 'Completed'
+                            WHEN l.status = '10' THEN 'Rejected Liquidation'
+                            ELSE 'Liquidation In Progress'
+                        END
+                    WHEN ca.id IS NOT NULL THEN
+                        CASE
+                            WHEN ca.status = '1' THEN 'For Liquidation'
+                            WHEN ca.status = '3' THEN 'Rejected CVR'
+                            ELSE 'Pending Cash Approval'
+                        END
+                    ELSE 'Pending Cash Approval'
+                END AS overall_status
+            FROM fczcnyx.cash_vouchers cv
+            LEFT JOIN fczcnyx.delivery_request dr ON dr.id = cv.dr_id
+            LEFT JOIN (
+                SELECT * FROM (
+                    SELECT *, 
+                        ROW_NUMBER() OVER (PARTITION BY dr_id, trip_type, sequence ORDER BY id) AS row_num
+                    FROM fczcnyx.allocations
+                ) AS ranked_allocations
+                WHERE row_num = 1
+            ) a ON a.dr_id = cv.dr_id AND a.trip_type = cv.cvr_type AND a.sequence = cv.sequence
+            LEFT JOIN fczcnyx.cvr_approvals ca ON ca.cvr_id = cv.id
+            LEFT JOIN fczcnyx.liquidations l ON l.cvr_approval_id = ca.id
+            LEFT JOIN fczcnyx.trucks t ON t.id = CASE 
+                                                    WHEN cv.cvr_type IN ('admin','rpm') THEN cv.truck_id 
+                                                    ELSE a.truck_id 
                                                 END
-        LEFT JOIN fczcnyx.expense_types et ON et.id = CASE 
-                                                        WHEN cv.cvr_type IN ('admin','rpm') THEN cv.expense_type_id 
-                                                        ELSE dr.expense_type_id 
+            LEFT JOIN fczcnyx.companies c ON c.id = CASE 
+                                                        WHEN cv.cvr_type IN ('admin','rpm') THEN cv.company_id 
+                                                        ELSE dr.company_id 
                                                     END
-        LEFT JOIN fczcnyx.cvr_request_type crt ON crt.id = cv.request_type
-        $conditions
-        ORDER BY company_id ASC, cvr_number ASC
-    ";
+            LEFT JOIN fczcnyx.expense_types et ON et.id = CASE 
+                                                                    WHEN cv.cvr_type IN ('admin','rpm') THEN cv.expense_type_id 
+                                                                    ELSE dr.expense_type_id 
+                                                                END
+            LEFT JOIN fczcnyx.cvr_request_type crt ON crt.id = cv.request_type
+            $conditions
+            ORDER BY company_id ASC, cvr_number ASC;
+        ";
 
-    // Execute the query
-    $cashVouchers = DB::select($sql, $params);
+        // Execute query
+        $cashVouchers = DB::select($sql, $params);
 
-    return view('liquidations.overall', compact('cashVouchers'));
-}
+        return view('liquidations.overall', compact('cashVouchers'));
+    }
 
-}
+
+} 
