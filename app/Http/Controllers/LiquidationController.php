@@ -187,7 +187,7 @@ class LiquidationController extends Controller
     public function liquidate($id)
     {
         $liquidation = cvr_approval::with('cashVoucher')->findOrFail($id);
-        $employees = User::whereIn('id', [1, 41, 15, 5])->get();
+        $employees = User::whereIn('id', [1, 41, 15, 5, 9, 16])->get();
         $preparers = User::all();
         
         return view('liquidations.liquidate', compact('liquidation', 'employees', 'preparers'));
@@ -472,7 +472,7 @@ class LiquidationController extends Controller
     public function validate(Request $request, $id)
     {
         $liquidation = Liquidation::with('cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy')->findOrFail($id);
-        $employees = User::whereIn('id', [54, 15, 35])->get();
+        $employees = User::whereIn('id', [54, 15, 35, 5, 15])->get();
         $staffs = User::all();
         $approvers = Approver::all();
 
