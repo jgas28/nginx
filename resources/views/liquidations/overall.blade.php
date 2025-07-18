@@ -65,7 +65,8 @@
                     <option value="for_validation" @if(request('status') == 'for_validation') selected @endif>For Validation</option>
                     <option value="for_collection" @if(request('status') == 'for_collection') selected @endif>For Collection</option>
                     <option value="for_approval" @if(request('status') == 'for_approval') selected @endif>For Approval</option>
-                    <option value="for_liquidation" @if(request('status') == 'for_liquidation') selected @endif>Liquidation In Progress</option>
+                    <option value="liquidation_in_progress" @if(request('status') == 'liquidation_in_progress') selected @endif>Liquidation In Progress</option>
+                    <option value="for_liquidation" @if(request('status') == 'for_liquidation') selected @endif>For Liquidation</option>
                 </select> 
             </div>
 

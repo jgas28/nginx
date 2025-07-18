@@ -1350,6 +1350,7 @@ class LiquidationController extends Controller
             }
         }
 
+
         // SQL query (fixed)
         $sql = "
             SELECT
