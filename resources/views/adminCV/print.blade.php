@@ -257,10 +257,16 @@
                             <td style="text-align: left; padding: 4px;">VAT (12%)</td>
                             <td style="text-align: right; padding: 4px;">@if($vouchers->cashVoucher->voucher_type === 'with_tax') ₱ {{ number_format($vat, 2) }} @endif</td>
                         </tr>
+                        @if($vouchers->withholdingTax && $vouchers->withholdingTax->description)
                         <tr>
-                            <td style="text-align: left; padding: 4px;"> {{ $vouchers->withholdingTax->description ?? '' }}</td>
-                            <td style="text-align: right; padding: 4px;">@if($vouchers->cashVoucher->voucher_type === 'with_tax') ₱ {{ number_format($withholding, 2) }} @endif</td>
+                            <td style="text-align: left; padding: 4px;">{{ $vouchers->withholdingTax->description }}</td>
+                            <td style="text-align: right; padding: 4px;">
+                                @if($vouchers->cashVoucher->voucher_type === 'with_tax')
+                                    ₱ {{ number_format($withholding, 2) }}
+                                @endif
+                            </td>
                         </tr>
+                        @endif
                         <tr>
                             <td style="text-align: left; font-weight: bold; color: red;">Total</td>
                             <td style="text-align: right; font-weight: bold; color: red;">
