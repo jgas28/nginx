@@ -258,7 +258,7 @@
                             <td style="text-align: right; padding: 4px;">@if($vouchers->cashVoucher->voucher_type === 'with_tax') ₱ {{ number_format($vat, 2) }} @endif</td>
                         </tr>
                         <tr>
-                            <td style="text-align: left; padding: 4px;">{{ $vouchers->withholdingTax->description }}</td>
+                            <td style="text-align: left; padding: 4px;">{{ $vouchers->withholdingTax->description ? '' }}</td>
                             <td style="text-align: right; padding: 4px;">@if($vouchers->cashVoucher->voucher_type === 'with_tax') ₱ {{ number_format($withholding, 2) }} @endif</td>
                         </tr>
                         <tr>
