@@ -1343,7 +1343,7 @@ class LiquidationController extends Controller
                     $conditions .= " AND l.status NOT IN (1, 3, 4, 5, 10)";
                     break;
                 case 'for_liquidation':  // For Liquidation
-                    $conditions .= " AND ca.status = 1";
+                    $conditions .= " AND ca.status = 1 AND l.status IS NULL";
                     break;
                 default:
                     break;
@@ -1469,6 +1469,11 @@ class LiquidationController extends Controller
 
         // Execute query
         $cashVouchers = DB::select($sql, $params);
+
+        Log::info("Status Filter: " . $status);
+        Log::info($request->all());
+        Log::info("SQL Query: " . $sql);
+        Log::info("Parameters: ", $params);
 
         return view('liquidations.overall', compact('cashVouchers'));
     }
