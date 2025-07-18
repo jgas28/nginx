@@ -258,7 +258,7 @@
                             <td style="text-align: right; padding: 4px;">@if($vouchers->cashVoucher->voucher_type === 'with_tax') ₱ {{ number_format($vat, 2) }} @endif</td>
                         </tr>
                         <tr>
-                            <td style="text-align: left; padding: 4px;">{{ $vouchers->withholdingTax->description ? '' }}</td>
+                            <td style="text-align: left; padding: 4px;">{{ $vouchers->withholdingTax->description ?: '' }}</td>
                             <td style="text-align: right; padding: 4px;">@if($vouchers->cashVoucher->voucher_type === 'with_tax') ₱ {{ number_format($withholding, 2) }} @endif</td>
                         </tr>
                         <tr>
@@ -294,7 +294,7 @@
                         <tr>
                             <td style="text-align: left; padding: 4px;">Net Amount</td>
                             <td style="text-align: right; padding: 4px;">
-                                ₱ {{ number_format(($vouchers->cashVoucher->voucher_type === 'with_tax') ?? $taxBase : $totalAmount, 2) }}
+                                ₱ {{ number_format(($vouchers->cashVoucher->voucher_type === 'with_tax') ? $taxBase : $totalAmount, 2) }}
                             </td>
                         </tr>
                         <tr>
@@ -308,7 +308,7 @@
                         <tr>
                             <td style="text-align: left; font-weight: bold; padding: 4px; color: red;">Total</td>
                             <td style="text-align: right; font-weight: bold; color: red; padding: 4px;">
-                                ₱ {{ number_format(($vouchers->cashVoucher->voucher_type === 'with_tax') ?? $final : $totalAmount, 2) }}
+                                ₱ {{ number_format(($vouchers->cashVoucher->voucher_type === 'with_tax') ? $final : $totalAmount, 2) }}
                             </td>
                         </tr>
                     </table>
