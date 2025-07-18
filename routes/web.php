@@ -95,6 +95,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports/deliveryRequest', [ReportsController::class, 'deliveryRequestReport'])->name('reports.dr');
     Route::get('/reports/cashVoucher', [ReportsController::class, 'cashVoucherReport'])->name('reports.cv');
     Route::get('/reports/export', [ReportsController::class, 'export'])->name('reports.export');
+    Route::get('/cash-voucher-report', [ReportsController::class, 'cashVoucherReport'])->name('cash-voucher-report');
     
     Route::get('/liquidations/admin', [LiquidationController::class, 'indexAdmin'])
     ->name('liquidations.indexAdmin');

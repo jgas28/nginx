@@ -305,11 +305,11 @@
                             Admin/RPM Request
                         </a>
                     @endif
-                    <!-- @if($user->hasAnyRoleId([1, 2, 3, 18]))
+                    @if($user->hasAnyRoleId([1, 2, 3, 18]))
                         <a href="{{ route('reports.cv') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Reports
                         </a>
-                    @endif -->
+                    @endif
                 </div>
             </div>
             @endif
