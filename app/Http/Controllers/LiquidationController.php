@@ -1342,6 +1342,9 @@ class LiquidationController extends Controller
                 case 'liquidation_in_progress':  // Liquidation In Progress
                     $conditions .= " AND l.status NOT IN (1, 3, 4, 5, 10)";
                     break;
+                case 'for_liquidation':  // For Liquidation
+                    $conditions .= " AND ca.status = 1";
+                    break;
                 default:
                     break;
             }
