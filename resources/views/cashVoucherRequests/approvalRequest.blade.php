@@ -115,8 +115,9 @@
             </div>
             <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="cash_amount" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="number" name="cash_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
             </div>
+
             <div>
                 <label class="block text-gray-700">Receiver</label>
                 <select name="cash_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
@@ -149,9 +150,9 @@
                 <label class="block text-gray-700">Reference Number</label>
                 <input type="text" name="bank_reference_number" class="w-full border border-gray-300 rounded px-3 py-2" />
             </div>
-            <div>
+           <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="bank_amount" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="number" name="bank_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
             </div>
             <div>
                 <label class="block text-gray-700">Receiver</label>
@@ -191,7 +192,7 @@
             </div>
             <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="outlet_amount" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="number" name="outlet_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
             </div>
             <div>
                 <label class="block text-gray-700">Receiver</label>
