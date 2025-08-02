@@ -116,7 +116,7 @@
             // Reset form fields
             document.getElementById('filterForm').reset();
             // Clear query parameters by redirecting to the same route
-            window.location.href = '{{ route('reports.cv') }}';
+            window.location.href = '{{ route('reports.rpm') }}';
         });
     </script>
 @endsection
