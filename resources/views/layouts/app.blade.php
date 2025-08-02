@@ -307,7 +307,12 @@
                     @endif
                     @if($user->hasAnyRoleId([1, 2, 3, 18]))
                         <a href="{{ route('reports.cv') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            Reports
+                            Admin Report
+                        </a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 18]))
+                        <a href="{{ route('reports.rpm') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            RPM Report
                         </a>
                     @endif
                 </div>

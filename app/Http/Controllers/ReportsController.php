@@ -6,7 +6,9 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 use App\Models\DeliveryRequest;
 use App\Models\Area;
+use App\Models\Supplier;
 use App\Models\DeliveryStatus;
+use App\Models\cvr_request_type;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Exports\DeliveryRequestExport;
@@ -83,114 +85,257 @@ class ReportsController extends Controller
 
     public function cashVoucherReport(Request $request)
     {
-        // Fetch the request types from the cvr_request_type table
-        $requestTypes = DB::table('fczcnyx.cvr_request_type')->get();
+        // Get the current month and year
+        $currentMonth = Carbon::now()->month;
+        $currentYear = Carbon::now()->year;
 
-        // Get the current date to filter by the current month
-        $currentMonthStart = now()->startOfMonth()->toDateString();
-        $currentMonthEnd = now()->endOfMonth()->toDateString();
+        $suppliers = Supplier::all();
+        $cvrTypes = cvr_request_type::all();
 
-        // Build the query with the basic joins and where condition
-        $query = DB::table('fczcnyx.cash_vouchers AS cv')
-            ->join('fczcnyx.cvr_approvals AS ca', 'cv.id', '=', 'ca.cvr_id')
-            ->join('fczcnyx.liquidations AS l', 'cv.id', '=', 'l.cvr_id')
-            ->leftJoin('fczcnyx.companies AS c', 'cv.company_id', '=', 'c.id')
-            ->leftJoin('fczcnyx.expense_types AS et', 'cv.expense_type_id', '=', 'et.id')
-            ->leftJoin('fczcnyx.cvr_request_type AS r', 'cv.request_type', '=', 'r.id')
-            ->whereBetween('cv.created_at', [$currentMonthStart, $currentMonthEnd]);  // Filter by current month
+        // Start the query with CashVouchers and related models
+        $query = CashVoucher::with('cvrApprovals', 'liquidations')  // Load liquidations relationship
+            ->where('cvr_type', 'admin');
 
-        // Apply additional filters if they exist in the request
-        if ($request->has('cvr_number') && $request->cvr_number) {
-            $query->where('cv.cvr_number', 'like', '%' . $request->cvr_number . '%');
+        // Apply filters for current month and year if no date range is provided
+        if (!$request->filled('start_date') && !$request->filled('end_date')) {
+            $query->whereMonth('created_at', $currentMonth)
+                ->whereYear('created_at', $currentYear);
         }
 
-        if ($request->has('status') && $request->status) {
-            $query->where('cv.status', '=', $request->status);
+        // Apply date filters if provided
+        if ($request->filled('start_date')) {
+            $startDate = Carbon::parse($request->start_date);
+            $query->whereDate('created_at', '>=', $startDate);
         }
 
-        if ($request->has('request_type') && $request->request_type) {
-            $query->where('cv.request_type', '=', $request->request_type);
+        if ($request->filled('end_date')) {
+            $endDate = Carbon::parse($request->end_date);
+            $query->whereDate('created_at', '<=', $endDate);
         }
 
-        // Apply the date range filter if provided
-        if ($request->has('start_date') && $request->start_date && $request->has('end_date') && $request->end_date) {
-            // Ensure the start date is at the beginning of the day and the end date is at the end of the day
-            $start = Carbon::parse($request->start_date)->startOfDay();
-            $end = Carbon::parse($request->end_date)->endOfDay();
-
-            // Apply the date filter to the query
-            $query->whereBetween('cv.created_at', [$start, $end]);
+        // Apply CVR Type filter if provided
+        if ($request->filled('cvr_type')) {
+            $query->where('request_type', $request->cvr_type);
         }
 
-        // Select the necessary fields
-        $results = $query->where('cv.cvr_type', 'admin')
-            ->select(
-                DB::raw("CONCAT(REGEXP_REPLACE(cv.cvr_number, '/[0-9]+$', ''), '-', c.company_code, '-', et.expense_code) AS cvr_number_1"),
-                'c.company_name',
-                'et.expense_code',
-                'cv.supplier_id',
-                'cv.request_type',
-                DB::raw('r.request_type AS request_type_name'),
-                DB::raw('SUM(
-                    COALESCE(l.allowance, 0) + 
-                    COALESCE(l.manpower, 0) + 
-                    COALESCE(l.hauling, 0) + 
-                    COALESCE(l.right_of_way, 0) + 
-                    COALESCE(l.roro_expense, 0) + 
-                    COALESCE(l.cash_charge, 0) + 
-                    COALESCE(CAST(JSON_UNQUOTE(JSON_EXTRACT(l.others, "$[0].amount")) AS DECIMAL(10,2)), 0)
-                ) AS total_liquidation_cash'),
-                DB::raw('COALESCE(SUM(
-                    CASE 
-                        WHEN JSON_UNQUOTE(JSON_EXTRACT(l.gasoline, "$[0].type")) = "card" 
-                        THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(l.gasoline, "$[0].amount")) AS DECIMAL(10,2))
-                        ELSE 0 
-                    END
-                ), 0) + COALESCE(SUM(
-                    CASE 
-                        WHEN JSON_UNQUOTE(JSON_EXTRACT(l.rfid, "$[0].type")) = "card" 
-                        THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(l.rfid, "$[0].amount")) AS DECIMAL(10,2))
-                        ELSE 0 
-                    END
-                ), 0) + COALESCE(SUM(
-                    CASE 
-                        WHEN JSON_UNQUOTE(JSON_EXTRACT(l.rfid, "$[1].type")) = "card" 
-                        THEN CAST(JSON_UNQUOTE(JSON_EXTRACT(l.rfid, "$[1].amount")) AS DECIMAL(10,2))
-                        ELSE 0 
-                    END
-                ), 0) AS total_liquidation_card'),
-                DB::raw('CASE 
-                    WHEN cv.status = 3 THEN "Rejected"
-                    WHEN MAX(ca.cvr_id) IS NULL AND cv.status != 3 THEN "Pending Approval"
-                    WHEN MAX(ca.cvr_id) IS NOT NULL AND MAX(l.cvr_id) IS NULL THEN "Pending Liquidation"
-                    WHEN MAX(ca.cvr_id) IS NOT NULL AND MAX(l.cvr_id) IS NOT NULL THEN 
-                        CASE
-                            WHEN MAX(l.status) = 1 THEN "for Validation"
-                            WHEN MAX(l.status) = 3 THEN "For Collection"
-                            WHEN MAX(l.status) = 4 THEN "for Approval"
-                            WHEN MAX(l.status) = 5 THEN "Completed"
-                            WHEN MAX(l.status) = 10 THEN "Rejected Liquidation"
-                            ELSE "Unknown"
-                        END
-                    ELSE "Unknown"
-                END AS status_check')
-            )
-            ->groupBy(
-                'cv.cvr_number', 
-                'cv.company_id', 
-                'cv.expense_type_id', 
-                'cv.supplier_id', 
-                'cv.request_type',
-                'cv.status',
-                'c.company_code', 
-                'et.expense_code', 
-                'r.request_type'
-            )
-            ->paginate(10);
+        // Apply Supplier filter if provided
+        if ($request->filled('supplier')) {
+            $query->whereHas('suppliers', function ($q) use ($request) {
+                $q->where('supplier_id', $request->supplier);
+            });
+        }
 
-        // Return the results and the requestTypes to the view
-        return view('reports.cashVoucher', compact('results', 'requestTypes'));
+        // Execute the query to fetch the results
+        $adminCV = $query->get();
+
+        // Filter by status AFTER fetching the results
+        if ($request->filled('status')) {
+            $adminCV = $adminCV->filter(function ($voucher) use ($request) {
+                // Map through and apply status logic
+                $status = $this->getVoucherStatus($voucher);
+                return $status === $request->status;
+            });
+        }
+
+        // Map through the vouchers and assign a single combined status text
+        $voucherStatuses = $adminCV->map(function ($voucher) {
+            // Default status
+            $status = $this->getVoucherStatus($voucher);
+
+            // Calculate liquidation cash and card totals from related liquidations
+            $totalCash = 0;
+            $totalCard = 0; // New variable to hold the total for card type
+
+            // Sum the fields for 'others', 'gasoline', and 'rfid' within the liquidations relationship
+            $voucher->liquidations->each(function ($liquidation) use (&$totalCash, &$totalCard) {
+                $othersTotal = $this->sumJsonOrArray($liquidation->others);
+                $gasolineTotal = $this->sumJsonOrArray($liquidation->gasoline, 'cash');
+                $rfidTotal = $this->sumJsonOrArray($liquidation->rfid, 'cash');
+                $gasolineCardTotal = $this->sumJsonOrArray($liquidation->gasoline, 'card');
+                $rfidCardTotal = $this->sumJsonOrArray($liquidation->rfid, 'card');
+
+                // Accumulate the totals
+                $totalCash += $othersTotal + $gasolineTotal + $rfidTotal;
+                $totalCard += $gasolineCardTotal + $rfidCardTotal;
+            });
+
+            // Add other non-JSON fields if necessary
+            $fieldsToSum = ['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense', 'cashcharge'];
+            foreach ($fieldsToSum as $field) {
+                $totalCash += (float) ($voucher->$field ?? 0);
+            }
+
+            // Add the totalCash to the voucher object
+            $voucher->liquidation_cash = $totalCash;
+            $voucher->liquidation_card = $totalCard;
+
+            // Assign the status text to the voucher object
+            $voucher->status_text = $status;
+
+            return $voucher;
+        });
+
+        // Pass the vouchers to the view
+        return view('reports.cashVoucher', compact('voucherStatuses', 'suppliers', 'cvrTypes'));
     }
 
+    private function getVoucherStatus($voucher)
+    {
+        $status = '';
 
+        // Status logic
+        if ($voucher->status == 3) {
+            $status = 'Rejected';
+        } elseif ($voucher->cvrApprovals->isEmpty()) {
+            $status = 'For Approval';
+        } elseif ($voucher->cvrApprovals->isNotEmpty() && $voucher->liquidations->isEmpty()) {
+            $status = 'For Liquidation';
+        } elseif ($voucher->cvrApprovals->isNotEmpty() && $voucher->liquidations->isNotEmpty()) {
+            $liquidation = $voucher->liquidations->first();
+
+            if ($liquidation->status == 1) {
+                $status = 'For Validation';
+            } elseif ($liquidation->status == 3) {
+                $status = 'For Collection';
+            } elseif ($liquidation->status == 4) {
+                $status = 'For Approved';
+            } elseif ($liquidation->status == 5) {
+                $status = 'Approved';
+            } elseif ($liquidation->status == 10) {
+                $status = 'Liquidation Reject';
+            } else {
+                $status = 'Liquidation Status Unknown';
+            }
+        }
+
+        return $status;
+    }
+
+    // Helper function to handle JSON decoding or summing array values
+    private function sumJsonOrArray($field, $type = null)
+    {
+        $total = 0;
+
+        if (is_string($field)) {
+            // If it's a string, decode the JSON
+            $decoded = json_decode($field, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                // If the decoding is successful and it's an array
+                $field = $decoded;
+            }
+        }
+
+        // If it's an array, sum the values
+        if (is_array($field)) {
+            foreach ($field as $item) {
+                // If type is specified (e.g. 'cash' or 'card'), filter by that type
+                if ($type && isset($item['type']) && $item['type'] === $type) {
+                    $total += is_numeric($item['amount']) ? (float) $item['amount'] : 0;
+                } elseif (!$type) {
+                    $total += is_numeric($item['amount']) ? (float) $item['amount'] : 0;
+                }
+            }
+        }
+
+        return $total;
+    }
+    
+    public function rpmCashVoucherReport(Request $request)
+    {
+        // Get the current month and year
+        $currentMonth = Carbon::now()->month;
+        $currentYear = Carbon::now()->year;
+
+        $suppliers = Supplier::all();
+        $cvrTypes = cvr_request_type::all();
+
+        // Start the query with CashVouchers and related models
+        $query = CashVoucher::with('cvrApprovals', 'liquidations')  // Load liquidations relationship
+            ->where('cvr_type', 'rpm');  // Change cvr_type to 'rpm'
+
+        // Apply filters for current month and year if no date range is provided
+        if (!$request->filled('start_date') && !$request->filled('end_date')) {
+            $query->whereMonth('created_at', $currentMonth)
+                ->whereYear('created_at', $currentYear);
+        }
+
+        // Apply date filters if provided
+        if ($request->filled('start_date')) {
+            $startDate = Carbon::parse($request->start_date);
+            $query->whereDate('created_at', '>=', $startDate);
+        }
+
+        if ($request->filled('end_date')) {
+            $endDate = Carbon::parse($request->end_date);
+            $query->whereDate('created_at', '<=', $endDate);
+        }
+
+        // Apply CVR Type filter if provided
+        if ($request->filled('cvr_type')) {
+            $query->where('request_type', $request->cvr_type);
+        }
+
+        // Apply Supplier filter if provided
+        if ($request->filled('supplier')) {
+            $query->whereHas('suppliers', function ($q) use ($request) {
+                $q->where('supplier_id', $request->supplier);
+            });
+        }
+
+        // Execute the query to fetch the results
+        $rpmCV = $query->get();
+
+        // Filter by status AFTER fetching the results
+        if ($request->filled('status')) {
+            $rpmCV = $rpmCV->filter(function ($voucher) use ($request) {
+                // Map through and apply status logic
+                $status = $this->getVoucherStatus($voucher);
+                return $status === $request->status;
+            });
+        }
+
+        // Map through the vouchers and assign a single combined status text
+        $voucherStatuses = $rpmCV->map(function ($voucher) {
+            // Default status
+            $status = $this->getVoucherStatus($voucher);
+
+            // Calculate liquidation cash and card totals from related liquidations
+            $totalCash = 0;
+            $totalCard = 0; // New variable to hold the total for card type
+
+            // Sum the fields for 'others', 'gasoline', and 'rfid' within the liquidations relationship
+            $voucher->liquidations->each(function ($liquidation) use (&$totalCash, &$totalCard) {
+                $othersTotal = $this->sumJsonOrArray($liquidation->others);
+                $gasolineTotal = $this->sumJsonOrArray($liquidation->gasoline, 'cash');
+                $rfidTotal = $this->sumJsonOrArray($liquidation->rfid, 'cash');
+                $gasolineCardTotal = $this->sumJsonOrArray($liquidation->gasoline, 'card');
+                $rfidCardTotal = $this->sumJsonOrArray($liquidation->rfid, 'card');
+
+                // Accumulate the totals
+                $totalCash += $othersTotal + $gasolineTotal + $rfidTotal;
+                $totalCard += $gasolineCardTotal + $rfidCardTotal;
+            });
+
+            // Add other non-JSON fields if necessary
+            $fieldsToSum = ['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense', 'cashcharge'];
+            foreach ($fieldsToSum as $field) {
+                $totalCash += (float) ($voucher->$field ?? 0);
+            }
+
+            // Add the totalCash to the voucher object
+            $voucher->liquidation_cash = $totalCash;
+            $voucher->liquidation_card = $totalCard;
+
+            // Assign the status text to the voucher object
+            $voucher->status_text = $status;
+
+            return $voucher;
+        });
+
+        // Pass the vouchers to the view
+        return view('reports.rpmCashVoucher', compact('voucherStatuses', 'suppliers', 'cvrTypes'));
+    }
 }
+
+    

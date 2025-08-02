@@ -3,7 +3,7 @@
 @section('content')
     <div class="container mx-auto px-4 py-8 bg-white">
         <!-- Filter Form -->
-        <form action="{{ route('reports.cv') }}" method="GET" class="mb-4 flex flex-wrap gap-4" id="filterForm">
+        <form action="{{ route('reports.rpm') }}" method="GET" class="mb-4 flex flex-wrap gap-4" id="filterForm">
             <!-- Date Range Filters -->
             <div class="flex-1 min-w-[200px]">
                 <label for="start_date" class="block text-sm font-medium text-gray-700">Start Date</label>
@@ -83,7 +83,7 @@
                     @foreach($voucherStatuses as $voucher)
                         <tr class="border-t border-gray-200">
                             <td class="px-4 py-2 text-sm text-gray-800">
-                                {{ preg_replace('/\/\d+/', '', $voucher->cvr_number) }}-{{ $voucher->company->company_code}}{{ $voucher->expenseTypes->expense_code}}
+                                {{ preg_replace('/\/\d+/', '', $voucher->cvr_number) }}-{{ $voucher->trucks->truck_name}}-{{ $voucher->company->company_code}}{{ $voucher->expenseTypes->expense_code}}
                             </td>
                             <td class="px-4 py-2 text-sm text-gray-800">{{ $voucher->cvrTypes->request_type ?? '' }}</td>
                             <td class="px-4 py-2 text-sm text-gray-800">{{ $voucher->suppliers->supplier_name ?? '' }}</td>
