@@ -55,93 +55,104 @@ class AdminController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $user = Auth::user();
-        $employeeCode = $user->id;
-        $company_id = $request->company_id;
-        $request->validate([
-            'cvr_type' => 'required|string',
-            'voucher_type' => 'required|string',
-            'company_id' => 'required|exists:companies,id',
-            'supplier_id' => 'required|exists:suppliers,id',
-            'expense_type_id' => 'required|exists:expense_types,id',
-            'description' => 'required|array|min:1',
-            'amount_details' => 'required|array|min:1',
-            'description.*' => 'required|string',
-            'amount_details.*' => 'required|numeric',
-            'truck_id' => 'nullable|exists:trucks,id',
-            'withholding_tax' => 'nullable|numeric',
-            'tax_base_amount' => 'nullable|numeric',
-            'remarks' => 'nullable|array',
-            'remarks.*' => 'nullable|string',
-            'request_type' => 'required|exists:cvr_request_type,id',
-        ]);
+{
+    $user = Auth::user();
+    $employeeCode = $user->id;
+    $company_id = $request->company_id;
 
-        DB::transaction(function () use ($request, $employeeCode, $company_id) {
-            // Calculate current (or next) month and year
-            $currentDate = new DateTime(); // Always current date
-            $yearMonth = $currentDate->format('Y-m');
-            $isFirstDayOfMonth = (int) $currentDate->format('d') === 1;
+    // Conditional validation based on cvr_type
+    $validationRules = [
+        'cvr_type' => 'required|string',
+        'voucher_type' => 'required|string',
+        'company_id' => 'required|exists:companies,id',
+        'supplier_id' => 'required|exists:suppliers,id',
+        'expense_type_id' => 'required|exists:expense_types,id',
+        'description' => 'required|array|min:1',
+        'amount_details' => 'required|array|min:1',
+        'description.*' => 'required|string',
+        'amount_details.*' => 'required|numeric',
+        'withholding_tax' => 'nullable|numeric',
+        'tax_base_amount' => 'nullable|numeric',
+        'remarks' => 'nullable|array',
+        'remarks.*' => 'nullable|string',
+        'request_type' => 'required|exists:cvr_request_type,id',
+    ];
 
-            $monthlySeries = MonthlySeriesNumber::where('company_id', $company_id)
-                ->lockForUpdate()
-                ->first();
+    // Conditionally make truck_id required if cvr_type is 'rpm'
+    if ($request->cvr_type === 'rpm') {
+        $validationRules['truck_id'] = 'required|exists:trucks,id';
+    } else {
+        $validationRules['truck_id'] = 'nullable|exists:trucks,id';
+    }
 
-            if (!$monthlySeries) {
-                    // Create if not exists
-                    $monthlySeries = MonthlySeriesNumber::create([
-                        'company_id' => $company_id,
+    $request->validate($validationRules);
+
+    DB::transaction(function () use ($request, $employeeCode, $company_id) {
+        // Calculate current (or next) month and year
+        $currentDate = new DateTime(); // Always current date
+        $yearMonth = $currentDate->format('Y-m');
+        $isFirstDayOfMonth = (int) $currentDate->format('d') === 1;
+
+        $monthlySeries = MonthlySeriesNumber::where('company_id', $company_id)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$monthlySeries) {
+                // Create if not exists
+                $monthlySeries = MonthlySeriesNumber::create([
+                    'company_id' => $company_id,
+                    'month' => $yearMonth,
+                    'series_number' => 1,
+                ]);
+                $nextCvrNumber = 1;
+                Log::info("Created MonthlySeriesNumber: company_id = $company_id, month = $yearMonth, series = 1");
+        } else {
+                // Check if the month has changed, and reset series number if true
+                $isNewMonth = $monthlySeries->month !== $yearMonth;
+            if ($isNewMonth) {
+                    // Reset the series number for the new month
+                    $monthlySeries->update([
                         'month' => $yearMonth,
                         'series_number' => 1,
                     ]);
                     $nextCvrNumber = 1;
-                    Log::info("Created MonthlySeriesNumber: company_id = $company_id, month = $yearMonth, series = 1");
+                    Log::info("Reset MonthlySeriesNumber: company_id = $company_id, new month = $yearMonth, series = 1");
             } else {
-                    // Check if the month has changed, and reset series number if true
-                    $isNewMonth = $monthlySeries->month !== $yearMonth;
-                if ($isNewMonth) {
-                        // Reset the series number for the new month
-                        $monthlySeries->update([
-                            'month' => $yearMonth,
-                            'series_number' => 1,
-                        ]);
-                        $nextCvrNumber = 1;
-                        Log::info("Reset MonthlySeriesNumber: company_id = $company_id, new month = $yearMonth, series = 1");
-                } else {
-                        // Normal increment
-                        $monthlySeries->increment('series_number');
-                        $nextCvrNumber = $monthlySeries->series_number;
-                        Log::info("Incremented MonthlySeriesNumber: company_id = $company_id, series = $nextCvrNumber");
-                }
+                    // Normal increment
+                    $monthlySeries->increment('series_number');
+                    $nextCvrNumber = $monthlySeries->series_number;
+                    Log::info("Incremented MonthlySeriesNumber: company_id = $company_id, series = $nextCvrNumber");
             }
+        }
 
-            $currentYear = $currentDate->format('Y');
-            $currentMonth = $currentDate->format('m');
-            $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber);
-            $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}/{$company_id}";
+        $currentYear = $currentDate->format('Y');
+        $currentMonth = $currentDate->format('m');
+        $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber);
+        $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}/{$company_id}";
 
-            // Save voucher
-            $voucher = new CashVoucher();
-            $voucher->cvr_type = $request->cvr_type;
-            $voucher->voucher_type = $request->voucher_type;
-            $voucher->cvr_number = $formattedCvrNumber;
-            $voucher->company_id = $company_id;
-            $voucher->supplier_id = $request->supplier_id;
-            $voucher->expense_type_id = $request->expense_type_id;
-            $voucher->request_type = $request->request_type;
-            $voucher->withholding_tax_id = $request->voucher_type === 'with_tax' ? $request->withholding_tax : null;
-            $voucher->tax_based_amount = $request->voucher_type === 'with_tax' ? $request->tax_base_amount : null;
-            $voucher->description = json_encode($request->description);
-            $voucher->amount_details = json_encode($request->amount_details);
-            $voucher->remarks = $request->remarks ? json_encode($request->remarks) : null;
-            $voucher->status = '1';
-            $voucher->truck_id = $request->truck_id;
-            $voucher->created_by = $employeeCode;
-            $voucher->save();
-        });
+        // Save voucher
+        $voucher = new CashVoucher();
+        $voucher->cvr_type = $request->cvr_type;
+        $voucher->voucher_type = $request->voucher_type;
+        $voucher->cvr_number = $formattedCvrNumber;
+        $voucher->company_id = $company_id;
+        $voucher->supplier_id = $request->supplier_id;
+        $voucher->expense_type_id = $request->expense_type_id;
+        $voucher->request_type = $request->request_type;
+        $voucher->withholding_tax_id = $request->voucher_type === 'with_tax' ? $request->withholding_tax : null;
+        $voucher->tax_based_amount = $request->voucher_type === 'with_tax' ? $request->tax_base_amount : null;
+        $voucher->description = json_encode($request->description);
+        $voucher->amount_details = json_encode($request->amount_details);
+        $voucher->remarks = $request->remarks ? json_encode($request->remarks) : null;
+        $voucher->status = '1';
+        $voucher->truck_id = $request->truck_id;
+        $voucher->created_by = $employeeCode;
+        $voucher->save();
+    });
 
-        return redirect()->route('admin.index')->with('success', 'Cash Voucher successfully created.');
-    }
+    return redirect()->route('admin.index')->with('success', 'Cash Voucher successfully created.');
+}
+
 
     public function generateCvrNumber(Request $request)
     {
