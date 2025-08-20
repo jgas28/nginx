@@ -268,16 +268,23 @@
                                     {{ $remark }}<br>
                                 @endforeach
                 @endif
-
               {{-- Transfer Charge / Cash Charge --}}
-                            @if(!empty($cvrApprovals->charge) && $cvrApprovals->charge != 0)
-                                <strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }} <br>
-                               <strong>Reference:</strong>
-                                @if(isset($cvrApprovals->payment_type) && strtolower($cvrApprovals->payment_type) !== 'cash')
-                                    {{ $cvrApprovals->payment_name }} /
-                                @endif
-                                {{ $cvrApprovals->reference_number }}
-                            @endif
+                @if(!empty($cvrApprovals->charge) && $cvrApprovals->charge != 0)
+                    <strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }} <br>
+                    <strong>Reference:</strong>
+                    @if(isset($cvrApprovals->payment_type) && strtolower($cvrApprovals->payment_type) !== 'cash')
+                        {{ $cvrApprovals->payment_name }} /
+                    @endif
+                    {{ $cvrApprovals->reference_number }}
+                @elseif(!empty($cvrApprovals->reference_number))
+                    {{-- Charge is zero, but there is a reference number --}}
+                    <strong>Reference:</strong>
+                    @if(isset($cvrApprovals->payment_type) && strtolower($cvrApprovals->payment_type) !== 'cash')
+                        {{ $cvrApprovals->payment_name }} /
+                    @endif
+                    {{ $cvrApprovals->reference_number }}
+                @endif
+
             </td>
             <td style="padding: 0;">
               <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
@@ -330,13 +337,20 @@
                             @endif
 
                             {{-- Transfer Charge / Cash Charge --}}
-                            @if(isset($cvrApprovals) && floatval($cvrApprovals->charge) > 0)
-                            <strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }} <br>
-                            <strong>Reference:</strong>
-                            @if(isset($cvrApprovals->payment_type) && strtolower($cvrApprovals->payment_type) !== 'cash')
-                                {{ $cvrApprovals->payment_name }} /
-                            @endif
-                            {{ $cvrApprovals->reference_number }}
+                            @if(!empty($cvrApprovals->charge) && $cvrApprovals->charge != 0)
+                                <strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }} <br>
+                                <strong>Reference:</strong>
+                                @if(isset($cvrApprovals->payment_type) && strtolower($cvrApprovals->payment_type) !== 'cash')
+                                    {{ $cvrApprovals->payment_name }} /
+                                @endif
+                                {{ $cvrApprovals->reference_number }}
+                            @elseif(!empty($cvrApprovals->reference_number))
+                                {{-- Charge is zero, but there is a reference number --}}
+                                <strong>Reference:</strong>
+                                @if(isset($cvrApprovals->payment_type) && strtolower($cvrApprovals->payment_type) !== 'cash')
+                                    {{ $cvrApprovals->payment_name }} /
+                                @endif
+                                {{ $cvrApprovals->reference_number }}
                             @endif
                         </td>
                         <td style="padding: 0;">
