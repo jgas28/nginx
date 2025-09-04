@@ -185,13 +185,13 @@
         $descriptions = json_decode($cv->description ?? '[]', true);
         $amounts = json_decode($cv->amount_details ?? '[]', true);
         $remarks = json_decode($cv->remarks ?? '[]', true);
-
-        $totalAmount = collect($amounts)->filter(fn($amt) => is_numeric($amt))->sum();
-        $taxBase = $cv->tax_based_amount ?? 0;
-        $vat = $taxBase * 0.12;
+        
+        $totalAmount = truncate2(collect($amounts)->filter(fn($amt) => is_numeric($amt))->sum());
+        $taxBase = truncate2($cv->tax_based_amount ?? 0);
+        $vat = truncate2($taxBase * 0.12);
         $withholdingPercentage = $cv->withholdingTax->percentage ?? 0;
-        $withholding = $taxBase * $withholdingPercentage;
-        $final = $taxBase + $vat - $withholding;
+        $withholding = truncate2($taxBase * $withholdingPercentage);
+        $final = round($taxBase + $vat - $withholding);
 
         $voucherType = $cv->voucher_type ?? 'regular';
     @endphp

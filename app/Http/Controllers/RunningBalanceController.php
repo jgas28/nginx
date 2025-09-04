@@ -44,8 +44,11 @@ class RunningBalanceController extends Controller
         $employees = User::all();
         $suppliers = Supplier::all();
 
+        $excludedApproverIds = [564,565,801,802,803,1532,1651,1652,1654,1655,1656,1660,1661,1662,1663,1664,1665,1666,1969,1972,1975];
+
         // ✅ Include transfer (type 10) in running balance
-        $runningTotalsByApprover = RunningBalance::whereIn('type', [1, 2, 3, 5, 8, 9, 10, 11])
+        $runningTotalsByApprover = RunningBalance::whereIn('type', [1, 2, 3, 5, 8, 9, 10, 11, 12])
+            ->whereNotIn('id', $excludedApproverIds)
             ->selectRaw('approver_id, SUM(amount) as total')
             ->groupBy('approver_id')
             ->pluck('total', 'approver_id');

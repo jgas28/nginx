@@ -31,6 +31,8 @@
                 <!-- Cash Charge (read-only) -->
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Cash Charge</label>
+                    <input type="hidden" name="cash_charge" value="{{ old('cash_charge', $liquidation->cash_charge ?? 0) }}"
+           class="mt-1 w-full bg-gray-100 text-indigo-600 font-semibold rounded-md border border-gray-300 px-3 py-2 cursor-not-allowed" readonly />
                     <input type="text" value="₱{{ number_format($liquidation->cash_charge ?? 0, 2) }}"
                         class="mt-1 w-full bg-gray-100 text-indigo-600 font-semibold rounded-md border border-gray-300 px-3 py-2 cursor-not-allowed" readonly />
                 </div>
