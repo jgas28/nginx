@@ -86,7 +86,7 @@ class DeliveryRequestController extends Controller
     {
         
         // Fetch necessary data for the view
-        $companies = Company::whereNotIn('id', [4])->get();
+        $companies = Company::all();
         $regions = Region::all();
         $deliveryTypes = DeliveryType::all();
         $warehouses = Warehouse::all();
@@ -307,7 +307,7 @@ class DeliveryRequestController extends Controller
 
         // dd($deliveryLineItems);
 
-        $companies = Company::whereNotIn('id', [4])->get();
+        $companies = Company::all();
         $regions = Region::all();
         $deliveryTypes = DeliveryType::all();
         $warehouses = Warehouse::all();
