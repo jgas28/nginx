@@ -100,6 +100,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports/deliveryRequest', [ReportsController::class, 'deliveryRequestReport'])->name('reports.dr');
     Route::get('/reports/cashVoucher', [ReportsController::class, 'cashVoucherReport'])->name('reports.cv');
     Route::get('/reports/rpm', [ReportsController::class, 'rpmCashVoucherReport'])->name('reports.rpm');
+    Route::get('/rpm-cash-voucher-export', [ReportsController::class, 'RPMexport'])->name('reports.rpm.export');
     Route::get('/reports/export', [ReportsController::class, 'export'])->name('reports.export');
     
     Route::get('/liquidations/admin', [LiquidationController::class, 'indexAdmin'])

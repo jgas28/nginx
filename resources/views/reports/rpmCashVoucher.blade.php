@@ -60,6 +60,7 @@
                 <button type="submit" class="px-6 py-2 bg-blue-500 text-white rounded-md">Apply Filters</button>
                 <!-- Reset Button -->
                 <button type="button" id="resetFilters" class="px-6 py-2 bg-gray-400 text-white rounded-md">Reset Filters</button>
+                <button type="submit" formaction="{{ route('reports.rpm.export') }}" class="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">Download Excel</button>
             </div>
         </form>
 

@@ -15,6 +15,7 @@ use App\Exports\DeliveryRequestExport;
 use App\Models\CashVoucher;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\CashVoucherReportExport;
+use App\Exports\RpmCashVoucherExport;
 use App\Models\Customer;
 
 class ReportsController extends Controller
@@ -362,6 +363,15 @@ class ReportsController extends Controller
 
         // Pass the vouchers to the view
         return view('reports.rpmCashVoucher', compact('voucherStatuses', 'suppliers', 'cvrTypes'));
+    }
+
+    public function RPMexport(Request $request)
+    {
+        // Get the filters passed from the request
+        $filters = $request->only(['start_date', 'end_date', 'status', 'cvr_type', 'supplier']);
+        
+        // Pass the filters to the export class
+        return Excel::download(new RpmCashVoucherExport($filters), 'rpm_cash_voucher_report.xlsx');
     }
 }
 
