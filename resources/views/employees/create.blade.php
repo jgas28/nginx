@@ -2,40 +2,74 @@
 
 @section('content')
 <div class="max-w-6xl mx-auto bg-white p-12 rounded-2xl shadow-md mt-10">
-    <h2 class="text-3xl font-semibold mb-10 text-gray-800">Create New Employee</h2>
     <form action="{{ route('employees.store') }}" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-8">
         @csrf
 
+        <!-- Employee Code -->
         <div>
             <label for="employee_code" class="block text-sm font-medium text-gray-700">Employee Code</label>
             <input type="text" name="employee_code" id="employee_code" required class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
         </div>
 
+        <!-- First Name -->
         <div>
             <label for="first_name" class="block text-sm font-medium text-gray-700">First Name</label>
             <input type="text" name="first_name" id="first_name" required class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
         </div>
 
+        <!-- Last Name -->
         <div>
             <label for="last_name" class="block text-sm font-medium text-gray-700">Last Name</label>
             <input type="text" name="last_name" id="last_name" required class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
         </div>
 
+        <!-- Position -->
         <div>
             <label for="position" class="block text-sm font-medium text-gray-700">Position</label>
             <input type="text" name="position" id="position" required class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
         </div>
 
+         <!-- Status -->
+        <div class="mt-4">
+            <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
+            <select name="status" id="status" required class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                <option value="1">Active</option>
+                <option value="0">Inactive</option>
+            </select>
+        </div>
+
+        <!-- Employment Status -->
+        <div class="mt-4">
+            <label for="employment_status" class="block text-sm font-medium text-gray-700">Employment Status</label>
+            <select name="employment_status" id="employment_status" required class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                <option value="regular">Regular</option>
+                <option value="probationary">Probationary</option>
+                <option value="terminated">Terminated</option>
+                <option value="suspended">Suspended</option>
+            </select>
+        </div>
+
+        <!-- Password -->
         <div>
             <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
             <input type="password" name="password" id="password" required class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
         </div>
 
+
+        <!-- Password Confirmation -->
         <div>
             <label for="password_confirmation" class="block text-sm font-medium text-gray-700">Confirm Password</label>
             <input type="password" name="password_confirmation" id="password_confirmation" required class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
         </div>
 
+        <!-- Submit Button -->
+        <div class="md:col-span-2 pt-6">
+            <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl hover:bg-blue-700 transition duration-300">
+                Create Employee
+            </button>
+        </div>
+
+        <!-- Roles Section -->
         <div class="md:col-span-2">
             <label class="block text-sm font-medium text-gray-700 mb-2">Roles</label>
             <div class="max-h-96 overflow-y-auto border border-gray-300 rounded-xl p-4 bg-gray-50 space-y-6">
@@ -51,7 +85,7 @@
                                         type="checkbox" 
                                         name="roles[]" 
                                         value="{{ $role->id }}" 
-                                        class="form-checkbox h-5 w-5 text-blue-600 rounded role-checkbox"
+                                        class="form-checkbox h-5 w-5 text-blue-600 rounded"
                                         {{ (collect(old('roles'))->contains($role->id)) ? 'checked' : '' }}>
                                     <span class="text-gray-700">{{ $role->name }}</span>
                                 </label>
@@ -71,7 +105,7 @@
                                         type="checkbox" 
                                         name="roles[]" 
                                         value="{{ $role->id }}" 
-                                        class="form-checkbox h-5 w-5 text-blue-600 rounded role-checkbox"
+                                        class="form-checkbox h-5 w-5 text-blue-600 rounded"
                                         {{ (collect(old('roles'))->contains($role->id)) ? 'checked' : '' }}>
                                     <span class="text-gray-700">{{ $role->name }}</span>
                                 </label>
@@ -91,7 +125,7 @@
                                         type="checkbox" 
                                         name="roles[]" 
                                         value="{{ $role->id }}" 
-                                        class="form-checkbox h-5 w-5 text-blue-600 rounded role-checkbox"
+                                        class="form-checkbox h-5 w-5 text-blue-600 rounded"
                                         {{ (collect(old('roles'))->contains($role->id)) ? 'checked' : '' }}>
                                     <span class="text-gray-700">{{ $role->name }}</span>
                                 </label>
@@ -111,7 +145,7 @@
                                         type="checkbox" 
                                         name="roles[]" 
                                         value="{{ $role->id }}" 
-                                        class="form-checkbox h-5 w-5 text-blue-600 rounded role-checkbox"
+                                        class="form-checkbox h-5 w-5 text-blue-600 rounded"
                                         {{ (collect(old('roles'))->contains($role->id)) ? 'checked' : '' }}>
                                     <span class="text-gray-700">{{ $role->name }}</span>
                                 </label>
@@ -131,7 +165,7 @@
                                         type="checkbox" 
                                         name="roles[]" 
                                         value="{{ $role->id }}" 
-                                        class="form-checkbox h-5 w-5 text-blue-600 rounded role-checkbox"
+                                        class="form-checkbox h-5 w-5 text-blue-600 rounded"
                                         {{ (collect(old('roles'))->contains($role->id)) ? 'checked' : '' }}>
                                     <span class="text-gray-700">{{ $role->name }}</span>
                                 </label>
@@ -140,7 +174,7 @@
                     </div>
                 </div>
 
-                {{-- Setting Group --}}
+                {{-- Settings Group --}}
                 <div>
                     <p class="font-semibold text-gray-800 mb-2">Settings:</p>
                     <div class="grid grid-cols-2 gap-4">
@@ -151,7 +185,7 @@
                                         type="checkbox" 
                                         name="roles[]" 
                                         value="{{ $role->id }}" 
-                                        class="form-checkbox h-5 w-5 text-blue-600 rounded role-checkbox"
+                                        class="form-checkbox h-5 w-5 text-blue-600 rounded"
                                         {{ (collect(old('roles'))->contains($role->id)) ? 'checked' : '' }}>
                                     <span class="text-gray-700">{{ $role->name }}</span>
                                 </label>
@@ -160,7 +194,7 @@
                     </div>
                 </div>
 
-                {{-- Dashboard --}}
+                {{-- Dashboard Group --}}
                 <div>
                     <p class="font-semibold text-gray-800 mb-2">Dashboard:</p>
                     <div class="grid grid-cols-2 gap-4">
@@ -171,7 +205,7 @@
                                         type="checkbox" 
                                         name="roles[]" 
                                         value="{{ $role->id }}" 
-                                        class="form-checkbox h-5 w-5 text-blue-600 rounded role-checkbox"
+                                        class="form-checkbox h-5 w-5 text-blue-600 rounded"
                                         {{ (collect(old('roles'))->contains($role->id)) ? 'checked' : '' }}>
                                     <span class="text-gray-700">{{ $role->name }}</span>
                                 </label>
@@ -180,7 +214,7 @@
                     </div>
                 </div>
 
-                {{-- Running balance --}}
+                {{-- Running Balance Group --}}
                 <div>
                     <p class="font-semibold text-gray-800 mb-2">Running Balance:</p>
                     <div class="grid grid-cols-2 gap-4">
@@ -191,7 +225,7 @@
                                         type="checkbox" 
                                         name="roles[]" 
                                         value="{{ $role->id }}" 
-                                        class="form-checkbox h-5 w-5 text-blue-600 rounded role-checkbox"
+                                        class="form-checkbox h-5 w-5 text-blue-600 rounded"
                                         {{ (collect(old('roles'))->contains($role->id)) ? 'checked' : '' }}>
                                     <span class="text-gray-700">{{ $role->name }}</span>
                                 </label>
@@ -199,11 +233,12 @@
                         @endforeach
                     </div>
                 </div>
-
             </div>
+
             <p class="text-sm text-gray-500 mt-1">Select one or more roles for the employee.</p>
         </div>
 
+        <!-- Submit Button -->
         <div class="md:col-span-2 pt-6">
             <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl hover:bg-blue-700 transition duration-300">
                 Create Employee

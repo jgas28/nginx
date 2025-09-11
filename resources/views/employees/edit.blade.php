@@ -27,6 +27,26 @@
             <input type="text" name="position" id="position" required value="{{ $employee->position }}" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
         </div>
 
+        <!-- Status -->
+        <div class="mt-4">
+            <label for="status" class="block text-sm font-medium text-gray-700">Status</label>
+            <select name="status" id="status" required class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                <option value="1" {{ old('status', $employee->status) == 1 ? 'selected' : '' }}>Active</option>
+                <option value="0" {{ old('status', $employee->status) == 0 ? 'selected' : '' }}>Inactive</option>
+            </select>
+        </div>
+
+        <!-- Employment Status -->
+        <div class="mt-4">
+            <label for="employment_status" class="block text-sm font-medium text-gray-700">Employment Status</label>
+            <select name="employment_status" id="employment_status" required class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                <option value="regular" {{ old('employment_status', $employee->employment_status) == 'regular' ? 'selected' : '' }}>Regular</option>
+                <option value="probationary" {{ old('employment_status', $employee->employment_status) == 'probationary' ? 'selected' : '' }}>Probationary</option>
+                <option value="terminated" {{ old('employment_status', $employee->employment_status) == 'terminated' ? 'selected' : '' }}>Terminated</option>
+                <option value="suspended" {{ old('employment_status', $employee->employment_status) == 'suspended' ? 'selected' : '' }}>Suspended</option>
+            </select>
+        </div>
+
          <div>
             <label for="password" class="block text-sm font-medium text-gray-700">New Password (Optional)</label>
             <input type="password" name="password" id="password" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
