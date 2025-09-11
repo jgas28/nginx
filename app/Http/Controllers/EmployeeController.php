@@ -58,6 +58,7 @@ class EmployeeController extends Controller
             'roles' => 'required|array',
             'roles.*' => 'exists:roles,id',
             'password' => 'required|min:6|confirmed',
+            'employment_status' => 'required',
         ]);
 
         $employee = User::create([
@@ -67,6 +68,8 @@ class EmployeeController extends Controller
             'position' => $request->position,
             'email' => $request->email, // if you use email
             'password' => Hash::make($request->password),
+            'status' => 1,
+            'employment_status' => $request->employment_status,
         ]);
 
         // Attach selected roles
@@ -102,15 +105,19 @@ class EmployeeController extends Controller
             'first_name' => 'required',
             'last_name' => 'required',
             'position' => 'required',
+            'employment_status' => 'required',
             'roles' => 'required|array',
             'roles.*' => 'exists:roles,id',
             'password' => 'nullable|min:6|confirmed',
+            'status' => 'required',
         ]);
 
         $employee->employee_code = $request->employee_code;
         $employee->fname = $request->first_name;
         $employee->lname = $request->last_name;
         $employee->position = $request->position;
+        $employee->status = $request->status;
+        $employee->employment_status = $request->employment_status;
 
         if ($request->filled('password')) {
             $employee->password = Hash::make($request->password);
@@ -130,7 +137,8 @@ class EmployeeController extends Controller
      */
     public function destroy(User $employee)
     {
-        $employee->delete();
+        $employee->status = 0; // Set the status to 0
+        $employee->save();
 
         return redirect()->route('employees.index')->with('success', 'Employee deleted successfully.');
     }

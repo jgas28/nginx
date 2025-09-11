@@ -162,7 +162,7 @@ class AllocationController extends Controller
         }
 
         // Pass supporting data (you need to load these from DB or services)
-        $employees = User::all(); // or however you're fetching
+        $employees = User::where('status', '!=', 0)->get(); // or however you're fetching
         $fleetCards = FleetCard::all();
         $trucks = Truck::all();
         $requestType = cvr_request_type::all();
@@ -247,7 +247,11 @@ class AllocationController extends Controller
                 ->from('delivery_request')
                 ->distinct()
                 ->whereNotNull('created_by');
-        })->orderBy('fname')->orderBy('lname')->get();
+        })
+        ->where('status', '!=', 0) // Adding the condition for status != 0
+        ->orderBy('fname')
+        ->orderBy('lname')
+        ->get();
 
         return view('allocations.drlist', compact('drList', 'companies', 'areas', 'regions', 'users'));
     } 

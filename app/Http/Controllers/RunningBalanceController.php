@@ -41,7 +41,7 @@ class RunningBalanceController extends Controller
         $balances = $query->orderBy($sort, $direction)->get();
 
         $approvers = Approver::all();
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
         $suppliers = Supplier::all();
 
         $excludedApproverIds = [564,565,801,802,803,1532,1651,1652,1654,1655,1656,1660,1661,1662,1663,1664,1665,1666,1969,1972,1975];
@@ -116,7 +116,7 @@ class RunningBalanceController extends Controller
         $balances = $query->orderBy($sort, $direction)->get();
 
         $approvers = Approver::all();
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
 
         $runningTotalsByApprover = RunningBalance::where('approver_id', $approverId)
             ->whereIn('type', [1, 2, 3, 5, 8, 9, 10, 11])
@@ -141,7 +141,7 @@ class RunningBalanceController extends Controller
             'approvers',
             'employees',
             'runningTotalsByApprover',
-            'salaryDeductions',
+            'salaryDeductions', 
             'uncollectedByApprover'
         ));
     }

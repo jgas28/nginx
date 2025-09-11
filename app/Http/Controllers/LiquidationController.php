@@ -59,7 +59,7 @@ class LiquidationController extends Controller
             });
         }
 
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
         $companies = Company::all();
 
         // Return the view with the filtered data
@@ -188,7 +188,7 @@ class LiquidationController extends Controller
     {
         $liquidation = cvr_approval::with('cashVoucher')->findOrFail($id);
         $employees = User::whereIn('id', [1, 41, 15, 5, 9, 16, 22])->get();
-        $preparers = User::all();
+        $preparers = User::where('status', '!=', 0)->get();
         
         return view('liquidations.liquidate', compact('liquidation', 'employees', 'preparers'));
     }
@@ -240,7 +240,7 @@ class LiquidationController extends Controller
         // Load liquidation with related data
         $liquidation = Liquidation::with('cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy')->findOrFail($id);
         $employees = User::whereIn('id', [41,5,15,53])->get(); // You can adjust this condition as needed
-        $staffs = User::all();
+        $staffs = User::where('status', '!=', 0)->get();
         $approvers = Approver::all();
         $collectors = User::whereIn('id', [15,35,54])->get();
 
@@ -473,7 +473,7 @@ class LiquidationController extends Controller
     {
         $liquidation = Liquidation::with('cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy')->findOrFail($id);
         $employees = User::whereIn('id', [54, 15, 35, 5, 15])->get();
-        $staffs = User::all();
+        $staffs = User::where('status', '!=', 0)->get();
         $approvers = Approver::all();
 
         // Total Liquidated Cash (Only cash items)
@@ -642,7 +642,7 @@ class LiquidationController extends Controller
 
         $employees = User::whereIn('id', [54])->get();
         $approvers = Approver::all();
-        $staffs = User::all();
+        $staffs = User::where('status', '!=', 0)->get();
 
         // Calculate total liquidated cash
         $totalCash = 0;
@@ -1227,7 +1227,7 @@ class LiquidationController extends Controller
         $liquidation = Liquidation::with('cashVoucher')->findOrFail($id);
 
         $employees = User::whereIn('id', [1, 41, 15, 5, 22])->get();
-        $preparers = User::all();
+        $preparers = User::where('status', '!=', 0)->get();
 
         return view('liquidations.rejectEdit', compact('liquidation', 'preparers', 'employees'));
     }

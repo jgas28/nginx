@@ -44,7 +44,7 @@ class CashVoucherController extends Controller
         ->paginate(10);
 
         // Get employees for the view (you can use it for dropdowns or other use cases)
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
 
         return view('cashVoucherRequests.index', compact('deliveryRequests', 'employees', 'search'));
     }
@@ -118,7 +118,7 @@ class CashVoucherController extends Controller
         ->paginate(10);
 
         // Get employees for the view (you can use it for dropdowns or other use cases)
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
 
         return view('cashVoucherRequests.accessorial', compact('deliveryRequests', 'employees', 'search'));
     }
@@ -136,7 +136,7 @@ class CashVoucherController extends Controller
             ->paginate(10); // Pagination
 
         // Get employees for the view (you can use it for dropdowns or other use cases)
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
 
         return view('cashVoucherRequests.index', compact('deliveryRequests', 'employees', 'search'));
     }
@@ -190,7 +190,7 @@ class CashVoucherController extends Controller
 
         // Fetch other required data
         $requestType = cvr_request_type::all();
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
         $fleetCards = FleetCard::all();
         $taxes = WithholdingTax::all();
 
@@ -226,7 +226,7 @@ class CashVoucherController extends Controller
 
         $cvr = MonthlySeriesNumber::all();
         $requestType = cvr_request_type::all();
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
         $fleetCards = FleetCard::All();
 
         return view('cashVoucherRequests.accessorialRequest', compact('deliveryLineItems', 'cvr', 'requestType', 'employees', 'fleetCards'));
@@ -461,7 +461,7 @@ class CashVoucherController extends Controller
             ->where('sequence', $cashVouchers->sequence)
             ->first();
 
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
         $approves = Approver::all(); 
 
         return view('cashVoucherRequests.approvalRequest', compact('deliveryRequestId', 'employees', 'approves', 'cashVouchers', 'allocations', 'deliveryRequests'));
@@ -1072,7 +1072,7 @@ class CashVoucherController extends Controller
         
         $cashVouchers = CashVoucher::where('id', $id)->firstOrFail();
         $deliveryRequestId = $cashVouchers->id;
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
         $approves = Approver::all();
         $requestType = cvr_request_type::all();
         $fleetCards = FleetCard::All();
@@ -1346,7 +1346,7 @@ class CashVoucherController extends Controller
             ->where('id', $cashVoucher->dr_id)
             ->get();
 
-            $employees = User::all();
+            $employees = User::where('status', '!=', 0)->get();
             $approves = Approver::all();
             $taxes = WithholdingTax::all();
             $requestType = cvr_request_type::all();

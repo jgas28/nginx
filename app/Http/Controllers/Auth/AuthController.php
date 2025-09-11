@@ -27,7 +27,9 @@ class AuthController extends Controller
                 'password' => 'required',
             ]);
 
-            $user = User::where('employee_code', $request->employee_code)->first();
+            $user = User::where('employee_code', $request->employee_code)
+            ->where('status', '!=', 0)
+            ->first();
 
             if (!$user || !Hash::check($request->password, $user->password)) {
                 return back()->withErrors(['employee_code' => 'Invalid credentials']);

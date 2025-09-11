@@ -473,7 +473,7 @@ class AdminController extends Controller
         $cashVoucher->remarks = json_decode($cashVoucher->remarks, true) ?? [];
 
         // Other required data
-        $employees     = User::all();
+        $employees = User::where('status', '!=', 0)->get();
         $approves      = Approver::all();
         $taxes         = WithholdingTax::all();
         $companies     = Company::all();
