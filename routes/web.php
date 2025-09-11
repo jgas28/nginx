@@ -35,6 +35,11 @@ use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DetailsController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\BillingController;
+use App\Exports\SoaExcel;
+use App\Exports\SoaDownload;
+use App\Exports\CashVoucherReportExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 // 🏠 Root route — redirect based on auth status
 Route::get('/', function () {
@@ -236,7 +241,21 @@ Route::middleware('auth')->group(function () {
     
     Route::get('/delivery-details', [DetailsController::class, 'index'])->name('delivery.details');
     Route::get('/allocation/show/{id}', [AllocationController::class, 'show'])->name('allocation.show');
-   
+
+    // Show delivery requests (index view) with company filter
+    Route::get('billing', [BillingController::class, 'index'])->name('billing.index');
+    Route::get('billing/accessorial', [BillingController::class, 'indexAccessorial'])->name('billing.indexAccessorial');
+
+    // Show the form for creating SOA (after selecting delivery requests)
+    Route::get('/billing/create-soa', [BillingController::class, 'createSOAForm'])->name('billing.createSOA.form');
+    Route::get('/billing/create-acc', [BillingController::class, 'createSOAFormAccessorial'])->name('billing.createSOA-acc.form');
+    // Save SOA after the form is submitted
+    Route::post('/billing/create-soa', [BillingController::class, 'createSOA'])->name('billing.createSOA');
+    Route::post('/billing/create-acc', [BillingController::class, 'createAccessorialSOA'])->name('billing.createSOA-acc');
+    Route::get('/billing/show-soa', [BillingController::class, 'showSoa'])->name('billing.showSoa');
+    
+    Route::get('/billing/{soa}/print', [BillingController::class, 'print'])->name('soa.print');
+    Route::get('admin-cv-report/export', [ReportsController::class, 'AdminExport'])->name('cashVoucherReport.export');
 });
 
 // Admin-only Routes (if needed separately)
