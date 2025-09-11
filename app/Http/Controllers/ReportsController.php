@@ -14,7 +14,8 @@ use Illuminate\Support\Facades\Log;
 use App\Exports\DeliveryRequestExport;
 use App\Models\CashVoucher;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Exports\CashVoucherReportExport; 
+use App\Exports\CashVoucherReportExport;
+use App\Models\Customer;
 
 class ReportsController extends Controller
 {
@@ -25,27 +26,30 @@ class ReportsController extends Controller
         $startOfMonth = $currentDate->copy()->startOfMonth()->format('Y-m-d');
         $endOfMonth = $currentDate->copy()->endOfMonth()->format('Y-m-d');
 
-        // Fetch area and status options for dropdowns
-        $areas = Area::all(); // Assuming Area is the model for the Area data
-        $statuses = DeliveryStatus::all(); // Assuming DeliveryStatus is the model for the Status data
+        // Fetch area, status, and customer options for dropdowns
+        $areas = Area::all();
+        $statuses = DeliveryStatus::all();
+        $customers = Customer::all();
 
         // Prepare the query builder
         $query = DeliveryRequest::with(['lineItems' => function ($query) {
             $query->where('status', '!=', 0); // Line items filter
         }]);
 
-        // Apply filters based on the user's inputs
+        // Apply date filters if they exist, otherwise default to current month range
         if ($request->date_from && $request->date_to) {
             $dateFrom = Carbon::parse($request->date_from)->startOfDay()->format('Y-m-d H:i:s');
             $dateTo = Carbon::parse($request->date_to)->endOfDay()->format('Y-m-d H:i:s');
             $query->whereBetween('created_at', [$dateFrom, $dateTo]);
         } else {
+            // Default to the current month's date range
             $query->whereBetween('created_at', [
                 Carbon::parse($startOfMonth)->startOfDay(),
                 Carbon::parse($endOfMonth)->endOfDay()
             ]);
         }
 
+        // Apply additional filters (MTM, Delivery Date, Area, Status, Customer) independently
         $query->when($request->mtm, function ($query) use ($request) {
             return $query->where('mtm', 'like', '%' . $request->mtm . '%');
         })
@@ -61,9 +65,12 @@ class ReportsController extends Controller
             return $query->whereHas('deliveryStatus', function ($query) use ($request) {
                 $query->where('status_name', 'like', '%' . $request->status . '%');
             });
+        })
+        ->when($request->customer_id, function ($query) use ($request) {
+            return $query->where('customer_id', '=', $request->customer_id);
         });
 
-        // Get the data
+        // Get the filtered data
         $deliveryRequests = $query->get();
 
         // Calculate the total accessorial rate for each delivery request
@@ -72,17 +79,31 @@ class ReportsController extends Controller
         }
 
         // Return the view with the filtered delivery requests data and dropdown data
-        return view('reports.deliveryRequest', compact('deliveryRequests', 'areas', 'statuses'));
+        return view('reports.deliveryRequest', compact('deliveryRequests', 'areas', 'statuses', 'customers'));
     }
 
-    // Method to export to Excel
     public function export(Request $request)
     {
-        // Pass the filters to the export class
-        $filters = $request->only(['mtm', 'date_from', 'date_to', 'area', 'status']);
+        // Get the current date and start of the month
+        $currentDate = Carbon::now();
+        $startOfMonth = $currentDate->copy()->startOfMonth()->format('Y-m-d');
+        $endOfMonth = $currentDate->copy()->endOfMonth()->format('Y-m-d');
+
+        // Default to the current month if no date filters are provided
+        if (!$request->date_from && !$request->date_to) {
+            $request->merge([
+                'date_from' => $startOfMonth,
+                'date_to' => $endOfMonth,
+            ]);
+        }
+
+        // Pass the filters from the request (which come from the view) to the export class
+        $filters = $request->only(['mtm', 'date_from', 'date_to', 'area', 'status', 'customer_id']);
         
+        // Pass filters to the export class and generate the Excel file
         return Excel::download(new DeliveryRequestExport($filters), 'delivery_requests.xlsx');
     }
+
 
     public function cashVoucherReport(Request $request)
     {
