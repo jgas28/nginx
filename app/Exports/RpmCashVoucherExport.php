@@ -92,9 +92,13 @@ class RpmCashVoucherExport implements FromCollection, WithHeadings, WithMapping
 
     public function map($voucher): array
     {
+        $voucherId = preg_replace('/\/\d+/', '', $voucher->cvr_number) . '-' . 
+                 ($voucher->trucks->truck_name ?? '') . '-' . 
+                 ($voucher->company->company_code ?? '') . 
+                 ($voucher->expenseTypes->expense_code ?? '');
         // Return the mapped data for each row in the export
         return [
-            $voucher->cvr_number,
+            $voucherId,
             $voucher->cvrTypes->request_type ?? '',
             $voucher->suppliers->supplier_name ?? '',
             number_format(array_sum(json_decode($voucher->amount_details, true) ?? []), 2),
