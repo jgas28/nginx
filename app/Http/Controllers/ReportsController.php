@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use App\Exports\DeliveryRequestExport;
 use App\Models\CashVoucher;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\CashVoucherReportExport; 
 
 class ReportsController extends Controller
 {
@@ -177,6 +178,11 @@ class ReportsController extends Controller
 
         // Pass the vouchers to the view
         return view('reports.cashVoucher', compact('voucherStatuses', 'suppliers', 'cvrTypes'));
+    }
+
+    public function AdminExport(Request $request)
+    {
+        return Excel::download(new CashVoucherReportExport($request), 'cash_voucher_report.xlsx');
     }
 
     private function getVoucherStatus($voucher)

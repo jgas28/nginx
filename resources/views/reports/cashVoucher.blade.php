@@ -60,6 +60,9 @@
                 <button type="submit" class="px-6 py-2 bg-blue-500 text-white rounded-md">Apply Filters</button>
                 <!-- Reset Button -->
                 <button type="button" id="resetFilters" class="px-6 py-2 bg-gray-400 text-white rounded-md">Reset Filters</button>
+                <a href="{{ route('cashVoucherReport.export', request()->all()) }}" class="px-6 py-2 bg-green-500 text-white rounded-md text-center inline-block hover:bg-green-600 transition duration-300">
+                    Download
+                </a>
             </div>
         </form>
 
