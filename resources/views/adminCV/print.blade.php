@@ -213,13 +213,13 @@
                 $approvedAmounts = json_decode($vouchers->cvr_approval->amount_details ?? '[]', true);
                 $remarks = json_decode($vouchers->cashVoucher->remarks ?? '[]', true);
 
-                $totalAmount = truncate2(collect($amounts)->filter(fn($amt) => is_numeric($amt))->sum());
+                $totalAmount = collect($amounts)->filter(fn($amt) => is_numeric($amt))->sum();
 
-                $taxBase = truncate2($vouchers->cashVoucher->tax_based_amount ?? 0);
-                $vat = truncate2($taxBase * 0.12);
+                $taxBase = $vouchers->cashVoucher->tax_based_amount ?? 0;
+                $vat = $taxBase * 0.12;
                 $withholdingRate = $vouchers->cashVoucher->withholdingTax->percentage ?? 0;
-                $withholding = truncate2($taxBase * $withholdingRate);
-                $final = round($taxBase + $vat - $withholding, 2);
+                $withholding = $taxBase * $withholdingRate;
+                $final = $taxBase + $vat - $withholding;
             @endphp
 
 
