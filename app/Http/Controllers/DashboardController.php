@@ -104,7 +104,7 @@ class DashboardController extends Controller
             $approvers = Approver::all();
 
             // Monthly running balance for the selected range
-            $runningTotalsByApprover = RunningBalance::whereIn('type', [1, 2, 3, 5, 8, 10])
+            $runningTotalsByApprover = RunningBalance::whereIn('type', [1, 2, 3, 5, 8, 9, 10, 11, 12])
                 ->selectRaw('approver_id, SUM(amount) as total')
                 ->groupBy('approver_id')
                 ->pluck('total', 'approver_id');
