@@ -132,7 +132,7 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/running-balance/reimburse', [RunningBalanceController::class, 'storeReimbursement'])->name('running-balance.reimburse');
     Route::post('/running-balance/collected', [RunningBalanceController::class, 'storeCollected'])->name('running-balance.collected');
-    // Route::post('/running-balance/uncollected', [RunningBalanceController::class, 'storeUncollected'])->name('running-balance.uncollected');
+    Route::post('/running-balance/uncollected', [RunningBalanceController::class, 'storeUncollected'])->name('running-balance.uncollected');
     Route::post('/running-balance/reimburse-admin', [RunningBalanceController::class, 'storeReimbursementAdmin'])->name('running-balance.reimburseAdmin');
     Route::post('/running-balance/collected-admin', [RunningBalanceController::class, 'storeCollectedAdmin'])->name('running-balance.collectedAdmin');
     // ⚠️ Put this after

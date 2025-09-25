@@ -267,13 +267,192 @@
     </div>
 
     @if ($difference != 0)
-        <button id="openModalBtn"
+        <!-- <button id="openModalBtn"
             class="mt-6 {{ $difference > 0 ? 'bg-yellow-500' : 'bg-red-600' }} text-white px-5 py-2 rounded hover:{{ $difference > 0 ? 'bg-yellow-600' : 'bg-red-700' }} transition">
             {{ $difference > 0 ? 'Create Return' : 'Create Refund' }}
-        </button>
+        </button> -->
+        @if($difference > 0)
+            <div>
+                <button id="openCollectedModalBtn" 
+                    class="mt-6 bg-indigo-600 text-white px-5 py-2 rounded hover:bg-indigo-700 transition">
+                    Create Return Collected
+                </button>
+
+                <button id="openUncollectedModalBtn" 
+                    class="mt-6 bg-yellow-600 text-white px-5 py-2 rounded hover:bg-yellow-700 transition">
+                    Create Return Uncollected
+                </button>
+            </div>
+        @elseif($difference < 0)
+            <button id="openRefundModalBtn" 
+                class="mt-6 bg-indigo-600 text-white px-5 py-2 rounded hover:bg-indigo-700 transition">
+                Create Refund
+            </button>
+        @endif
     @endif
 
-    <div id="reimbursementModal"
+    <!--Return Modal (collected and uncollected)-->
+    <!-- Collected Modal Backdrop -->
+    <div id="collectedModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-y-auto p-4">
+        <!-- Collected Modal Panel -->
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-semibold mb-4">Create Reimbursement (Collected)</h3>
+
+            <form action="{{ route('running-balance.collected') }}" method="POST" class="space-y-4" id="reimbursementForm">
+                @csrf
+                <input type="hidden" name="liquidation_id" value="{{ $liquidation->id }}" />
+
+                <div>
+                    <label class="block mb-1 font-medium" for="amount_label">Amount Difference (₱)</label>
+                    <input type="number" step="0.01" min="0" name="amount_label" id="amount_label" value="{{ abs($difference) }}" readonly
+                        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+
+                <div>
+                    <label class="block mb-1 font-medium" for="amount_collected">Collected Amount (₱)</label>
+                    <input type="number" step="0.01" min="0" name="amount_collected" id="amount_collected" required oninput="calculateUncollected()"
+                        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+
+                <div>
+                    <label class="block mb-1 font-medium" for="description_collected">Description</label>
+                    <input type="text" name="description_collected" id="description_collected" placeholder="Enter description" required
+                        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+
+                <div>
+                    <label class="block mb-1 font-medium" for="cvr_number_collected">CVR Number</label>
+                    <input type="text" name="cvr_number_collected" id="cvr_number_collected" value="{{ $liquidation->cvr_number }}" readonly
+                        class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed" />
+                </div>
+
+                <div>
+                    <label class="block mb-1 font-medium" for="employee_id">Employee for Collected Amount</label>
+                    <select name="employee_id" id="employee_id" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="" disabled selected>Select employee</option>
+                        @foreach ($staffs as $staff)
+                            <option value="{{ $staff->id }}">{{ $staff->fname }} {{ $staff->lname }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block mb-1 font-medium" for="approver_id_collected">Approver</label>
+                    <select name="approver_id_collected" id="approver_id_collected" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="" disabled selected>Select approver</option>
+                        @foreach ($approvers as $approver)
+                            <option value="{{ $approver->id }}">{{ $approver->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-4 border-t border-gray-200">
+                    <button type="button" id="closeCollectedModalBtn" class="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Uncollected Modal Backdrop -->
+    <div id="uncollectedModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-y-auto p-4">
+        <!-- Uncollected Modal Panel -->
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
+            <h3 class="text-xl font-semibold mb-4">Create Reimbursement (Uncollected)</h3>
+
+            <form action="{{ route('running-balance.uncollected') }}" method="POST" class="space-y-4" id="reimbursementFormUncollected">
+
+                @csrf
+                <input type="hidden" name="liquidation_id" value="{{ $liquidation->id }}" />
+                
+                <div>
+                    <label class="block mb-1 font-medium" for="amount_uncollected">Uncollected Amount (₱)</label>
+                    <input type="number" step="0.01" min="0" name="amount_uncollected" id="amount_uncollected" value="{{ abs($difference) }}" readonly required
+                        class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100" />
+                </div>
+
+                <div>
+                    <label class="block mb-1 font-medium" for="period">Period (e.g. May 2025)</label>
+                    <input type="text" id="period" placeholder="Enter payroll period"
+                        class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                </div>
+
+                <div>
+                    <label class="block mb-1 font-medium" for="description_uncollected">Description</label>
+                    <input type="text" name="description_uncollected" id="description_uncollected" placeholder="Auto-filled"
+                        readonly required
+                        class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100" />
+                </div>
+
+                <div>
+                    <label class="block mb-1 font-medium" for="cvr_number_uncollected">CVR Number</label>
+                    <input type="text" name="cvr_number_uncollected" id="cvr_number_uncollected" value="{{ $liquidation->cvr_number }}" readonly
+                        class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed" />
+                </div>
+
+                <div>
+                    <label class="block mb-1 font-medium" for="employee_deductions_uncollected">Employee Deductions for Uncollected</label>
+                    <div id="employee-deductions-uncollected-container">
+                        <!-- Dynamic Employee and Deduction rows for Uncollected will be added here -->
+                    </div>
+                    <button type="button" id="add-employee-uncollected-btn" class="mt-2 px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 transition">
+                        Add Employee
+                    </button>
+                </div>
+
+                <div>
+                    <label class="block mb-1 font-medium" for="approver_id_uncollected">Approver</label>
+                    <select name="approver_id_uncollected" id="approver_id_uncollected" required
+                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="" disabled selected>Select approver</option>
+                        @foreach ($approvers as $approver)
+                            <option value="{{ $approver->id }}">{{ $approver->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-4 border-t border-gray-200">
+                    <button type="button" id="closeUncollectedModalBtn" class="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition">
+                        Cancel
+                    </button>
+                    <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!--Return Modal-->
+    <div id="reimbursementModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative" id="modalPanel">
+            <h3 class="text-xl font-semibold mb-4">Create Reimbursement</h3>
+            <form action="{{ route('running-balance.reimburse') }}" method="POST" class="space-y-4">
+                @csrf
+                <input type="hidden" name="created_by" value="{{ auth()->user()->id }}" />
+                <input type="hidden" name="liquidation_id" value="{{ $liquidation->id }}" />
+                <input type="hidden" name="type" value="{{ $difference > 0 ? 'refund' : 'return' }}" />
+                <div><label class="block mb-1 font-medium">Amount Difference (₱)</label><input type="number" step="0.01" min="0" value="{{ abs($difference) }}" readonly class="w-full border rounded px-3 py-2 bg-gray-100" /></div>
+                <div><label class="block mb-1 font-medium">Amount (₱)</label><input type="number" step="0.01" min="0" name="amount" required class="w-full border rounded px-3 py-2" /></div>
+                <div><label class="block mb-1 font-medium">Description</label><input type="text" name="description" value="Refund - {{ $liquidation->cvr_number }}" required class="w-full border rounded px-3 py-2" /></div>
+                <div><label class="block mb-1 font-medium">CVR Number</label><input type="text" name="cvr_number" value="{{ $liquidation->cvr_number }}" readonly class="w-full border rounded px-3 py-2 bg-gray-100" /></div>
+                <div><label class="block mb-1 font-medium">Employee</label><select name="employee_id" required class="w-full border rounded px-3 py-2">@foreach ($staffs as $staff)<option value="{{ $staff->id }}">{{ $staff->fname }} {{ $staff->lname }}</option>@endforeach</select></div>
+                <div><label class="block mb-1 font-medium">Approver</label><select name="approver_id" required class="w-full border rounded px-3 py-2">@foreach ($approvers as $approver)<option value="{{ $approver->id }}">{{ $approver->name }}</option>@endforeach</select></div>
+                <div class="flex justify-end space-x-2 pt-4 border-t border-gray-200">
+                    <button type="button" id="closeModalBtn" class="px-4 py-2 rounded border hover:bg-gray-100">Cancel</button>
+                    <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- <div id="reimbursementModal"
         class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-y-auto p-4">
         <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto" id="modalPanel">
             <h3 class="text-xl font-semibold mb-4">
@@ -370,7 +549,7 @@
                 </div>
             </form>
         </div>
-    </div>
+    </div> -->
 
     <div class="mt-8 pt-6 border-t border-gray-200">
         <form id="approvalFormOK" action="{{ route('liquidations.approved', $liquidation->id) }}" method="POST" class="bg-gray-50 p-4 rounded-lg shadow-sm">
@@ -592,86 +771,151 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
-        const openBtn = document.getElementById('openModalBtn');
-        const modal = document.getElementById('reimbursementModal');
-        const closeBtn = document.getElementById('closeModalBtn');
-        const rejectBtn = document.getElementById('reject-btn');
-        const rejectModal = document.getElementById('rejectModal');
-        const cancelRejectBtn = document.getElementById('cancelRejectBtn');
-        const validateBtn = document.getElementById('validate-btn');
-        const confirmValidationModal = document.getElementById('confirmValidationModal');
-        const confirmValidationBtn = document.getElementById('confirmValidationBtn');
-        const cancelConfirmValidationBtn = document.getElementById('cancelConfirmValidationBtn');
-        const validationForm = document.getElementById('approvalForm');
-        const difference = parseFloat({{ abs($difference) }});
-        const warningSpan = confirmValidationModal.querySelector('.text-red-600');
-        const differenceAmount = document.getElementById('differenceAmount');
+    const rejectBtn = document.getElementById('reject-btn');
+    const rejectModal = document.getElementById('rejectModal');
+    const cancelRejectBtn = document.getElementById('cancelRejectBtn');
+    const validateBtn = document.getElementById('validate-btn');
+    const confirmValidationModal = document.getElementById('confirmValidationModal');
+    const confirmValidationBtn = document.getElementById('confirmValidationBtn');
+    const cancelConfirmValidationBtn = document.getElementById('cancelConfirmValidationBtn');
+    const validationForm = document.getElementById('approvalForm');
+    const difference = parseFloat({{ abs($difference) }});
+    const warningSpan = confirmValidationModal.querySelector('.text-red-600');
+    const differenceAmount = document.getElementById('differenceAmount');
+    
+    // Reject modal open/close
+    rejectBtn?.addEventListener('click', function () {
+        rejectModal?.classList.remove('hidden');
+    });
 
-        // Reimbursement modal open/close
-        if (openBtn && modal && closeBtn) {
-            openBtn.addEventListener('click', () => {
-                modal.classList.remove('hidden');
-            });
+    cancelRejectBtn?.addEventListener('click', function () {
+        rejectModal?.classList.add('hidden');
+    });
 
-            closeBtn.addEventListener('click', () => {
-                modal.classList.add('hidden');
-            });
+    // Validate modal
+    validateBtn?.addEventListener('click', function () {
+        confirmValidationModal?.classList.remove('hidden');
 
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    modal.classList.add('hidden');
-                }
-            });
+        if (difference !== 0) {
+            warningSpan?.classList.remove('hidden');
+            differenceAmount.textContent = difference.toFixed(2);
+            confirmValidationBtn.disabled = true;
+            confirmValidationBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            warningSpan?.classList.add('hidden');
+            confirmValidationBtn.disabled = false;
+            confirmValidationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    });
 
-            document.addEventListener('keydown', function (e) {
-                if (e.key === "Escape") {
-                    modal.classList.add('hidden');
-                }
-            });
+    confirmValidationBtn?.addEventListener('click', function () {
+        const validationForm = document.getElementById('approvalFormOK');
+        if (!validationForm) {
+            console.error('Approval form not found.');
+            return;
         }
 
-        // Reject modal open/close
-        rejectBtn?.addEventListener('click', function () {
-            rejectModal?.classList.remove('hidden');
-        });
+        document.getElementById('form-action').value = 'validate';
 
-        cancelRejectBtn?.addEventListener('click', function () {
-            rejectModal?.classList.add('hidden');
-        });
+        if (validationForm.reportValidity()) {
+            validationForm.submit();
+        }
+    });
 
-        // Validate modal
-        validateBtn?.addEventListener('click', function () {
-            confirmValidationModal?.classList.remove('hidden');
+    cancelConfirmValidationBtn?.addEventListener('click', function () {
+        confirmValidationModal?.classList.add('hidden');
+    });
 
-            if (difference !== 0) {
-                warningSpan?.classList.remove('hidden');
-                differenceAmount.textContent = difference.toFixed(2);
-                confirmValidationBtn.disabled = true;
-                confirmValidationBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            } else {
-                warningSpan?.classList.add('hidden');
-                confirmValidationBtn.disabled = false;
-                confirmValidationBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            }
-        });
+    // New modal buttons
+    const openCollectedModalBtn = document.getElementById('openCollectedModalBtn');
+    const openUncollectedModalBtn = document.getElementById('openUncollectedModalBtn');
+    const openRefundModalBtn = document.getElementById('openRefundModalBtn');
 
-        confirmValidationBtn?.addEventListener('click', function () {
-            const validationForm = document.getElementById('approvalFormOK');
-            if (!validationForm) {
-                console.error('Approval form not found.');
-                return;
-            }
+    const collectedModal = document.getElementById('collectedModal');
+    const uncollectedModal = document.getElementById('uncollectedModal');
+    const reimbursementModal = document.getElementById('reimbursementModal');
 
-            document.getElementById('form-action').value = 'validate';
+    const closeCollectedModalBtn = document.getElementById('closeCollectedModalBtn');
+    const closeUncollectedModalBtn = document.getElementById('closeUncollectedModalBtn');
+    const closeRefundModalBtn = document.getElementById('closeModalBtn');
 
-            if (validationForm.reportValidity()) {
-                validationForm.submit();
-            }
-        });
+    // Open collected modal
+    openCollectedModalBtn?.addEventListener('click', function () {
+        collectedModal?.classList.remove('hidden');
+    });
 
-        cancelConfirmValidationBtn?.addEventListener('click', function () {
-            confirmValidationModal?.classList.add('hidden');
+    // Open uncollected modal
+    openUncollectedModalBtn?.addEventListener('click', function () {
+        uncollectedModal?.classList.remove('hidden');
+    });
+
+    // Open refund modal
+    openRefundModalBtn?.addEventListener('click', function () {
+        reimbursementModal?.classList.remove('hidden');
+    });
+
+    // Close collected modal
+    closeCollectedModalBtn?.addEventListener('click', function () {
+        collectedModal?.classList.add('hidden');
+    });
+
+    // Close uncollected modal
+    closeUncollectedModalBtn?.addEventListener('click', function () {
+        uncollectedModal?.classList.add('hidden');
+    });
+
+    // Close refund modal
+    closeRefundModalBtn?.addEventListener('click', function () {
+        reimbursementModal?.classList.add('hidden');
+    });
+
+    // Additional dynamic functionality for uncollected modal
+    const addEmployeeUncollectedBtn = document.getElementById('add-employee-uncollected-btn');
+    const employeeDeductionsUncollectedContainer = document.getElementById('employee-deductions-uncollected-container');
+
+    // Add employee row in uncollected modal
+    addEmployeeUncollectedBtn?.addEventListener('click', function () {
+        const employeeRow = document.createElement('div');
+        employeeRow.classList.add('flex', 'space-x-2', 'mt-2');
+        employeeRow.innerHTML = `
+            <input type="text" name="employee_name[]" placeholder="Employee Name" class="w-full border border-gray-300 rounded px-3 py-2" />
+            <input type="number" step="0.01" name="deduction_amount[]" placeholder="Deduction Amount" class="w-full border border-gray-300 rounded px-3 py-2" />
+            <button type="button" class="remove-employee-btn px-2 text-red-600" style="cursor: pointer;">Remove</button>
+        `;
+        employeeDeductionsUncollectedContainer?.appendChild(employeeRow);
+
+        // Remove employee row
+        employeeRow.querySelector('.remove-employee-btn')?.addEventListener('click', function () {
+            employeeRow.remove();
         });
     });
+
+    // Handle form submissions and validations
+    const collectedForm = document.getElementById('reimbursementForm');
+    const uncollectedForm = document.getElementById('reimbursementFormUncollected');
+    const reimbursementForm = document.querySelector('#reimbursementModal form');
+
+    // Submit collected form
+    collectedForm?.addEventListener('submit', function (e) {
+        e.preventDefault();
+        // Submit the collected form here
+        collectedForm.submit();
+    });
+
+    // Submit uncollected form
+    uncollectedForm?.addEventListener('submit', function (e) {
+        e.preventDefault();
+        // Submit the uncollected form here
+        uncollectedForm.submit();
+    });
+
+    // Submit refund form
+    reimbursementForm?.addEventListener('submit', function (e) {
+        e.preventDefault();
+        // Submit the refund form here
+        reimbursementForm.submit();
+    });
+});
+
 </script>
 @endsection

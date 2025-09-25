@@ -86,7 +86,7 @@
                 @endforelse
             </tbody>
         </table>
-    </div>
+    </div> 
 
     <!-- Pagination -->
     <div class="mt-4">
