@@ -336,117 +336,119 @@ class RunningBalanceController extends Controller
         return view('returns.print', compact('reimbursement'));
     }
 
-    public function storeCollected(Request $request)
-    {
-        $liquidation_id = $request->liquidation_id;
-        $validated = $request->validate([
-            'employee_id' => 'required|exists:users,id',
-            'amount_collected' => 'required|numeric|min:0',
-            'amount_uncollected' => 'required|numeric|min:0',
-            'description' => 'required|string',
-            'description1' => 'required|string',
-            'approver_id' => 'required|exists:cvr_approver,id',
-            'created_by' => 'required|exists:users,id',
-            'cvr_number' => 'required|string',
-        ]);
-
-        // 1. Returned Cash Record
-        $reimbursement=RunningBalance::create([
-            'employee_id' => $validated['employee_id'],
-            'amount' => abs($validated['amount_collected']), // positive value
-            'description' => $validated['description'],
-            'approver_id' => $validated['approver_id'],
-            'created_by' => $validated['created_by'],
-            'cvr_number' => $validated['cvr_number'],
-            'adjustment_type' => 'In',
-            'type' => 2,
-        ]);
-
-        RunningBalance::create([
-            'employee_id' => $validated['employee_id'],
-            'amount' => -abs($validated['amount_uncollected']), // negative value
-            'description' => $validated['description1'],
-            'approver_id' => $validated['approver_id'],
-            'created_by' => $validated['created_by'],
-            'cvr_number' => $validated['cvr_number'],
-            'adjustment_type' => 'Float',
-            'type' => 4,
-        ]);
-    }
-
-
     // public function storeCollected(Request $request)
     // {
-    //     // dd($request->all());
     //     $liquidation_id = $request->liquidation_id;
-    //     $user = Auth::user();
-    //     // Validate the collected form data
     //     $validated = $request->validate([
-    //         'amount_collected' => 'required|numeric|min:0', // Amount collected
-    //         'description_collected' => 'required|string', // Description for collected
-    //         'employee_id' => 'required|exists:users,id', // Employee ID for collected amount
-    //         'approver_id_collected' => 'required|exists:cvr_approver,id', // Approver ID
-    //         'cvr_number_collected' => 'required|string', // CVR Number
+    //         'employee_id' => 'required|exists:users,id',
+    //         'amount_collected' => 'required|numeric|min:0',
+    //         'amount_uncollected' => 'required|numeric|min:0',
+    //         'description' => 'required|string',
+    //         'description1' => 'required|string',
+    //         'approver_id' => 'required|exists:cvr_approver,id',
+    //         'created_by' => 'required|exists:users,id',
+    //         'cvr_number' => 'required|string',
     //     ]);
 
-    //     // Create a new reimbursement entry for the collected amount
+    //     // 1. Returned Cash Record
+    //     $reimbursement=RunningBalance::create([
+    //         'employee_id' => $validated['employee_id'],
+    //         'amount' => abs($validated['amount_collected']), // positive value
+    //         'description' => $validated['description'],
+    //         'approver_id' => $validated['approver_id'],
+    //         'created_by' => $validated['created_by'],
+    //         'cvr_number' => $validated['cvr_number'],
+    //         'adjustment_type' => 'In',
+    //         'type' => 2,
+    //     ]);
+
     //     RunningBalance::create([
     //         'employee_id' => $validated['employee_id'],
-    //         'amount' => abs($validated['amount_collected']), // Positive value for collected amount
-    //         'description' => $validated['description_collected'],
-    //         'approver_id' => $validated['approver_id_collected'],
-    //         'created_by' => $user->id,
-    //         'cvr_number' => $validated['cvr_number_collected'],
-    //         'type' => 2,  // Assuming type '2' represents collected
-    //         'adjustment_type' => 'In',  // Type of adjustment
+    //         'amount' => -abs($validated['amount_uncollected']), // negative value
+    //         'description' => $validated['description1'],
+    //         'approver_id' => $validated['approver_id'],
+    //         'created_by' => $validated['created_by'],
+    //         'cvr_number' => $validated['cvr_number'],
+    //         'adjustment_type' => 'Float',
+    //         'type' => 4,
     //     ]);
-
-    //     return redirect()->route('liquidations.validated', $liquidation_id)
-    //                     ->with('success', 'Collected amount saved successfully!');
     // }
 
-    // public function storeUncollected(Request $request)
-    // {
-    //     // dd($request->all());
-    //     $liquidation_id = $request->liquidation_id;
-    //     $user = Auth::user();
-    //     // Validate the uncollected form data
-    //     $validated = $request->validate([
-    //         'amount_uncollected' => 'required|numeric|min:0', // Amount uncollected (readonly in the form)
-    //         'employee_id_uncollected' => 'required|array', // Employee IDs (array for multiple)
-    //         'deduction_amount_uncollected' => 'required|array', // Deduction amounts (array for multiple)
-    //         'employee_id_uncollected.*' => 'exists:users,id', // Ensure each employee exists
-    //         'deduction_amount_uncollected.*' => 'numeric|min:0', // Ensure each deduction is a valid number
-    //         'approver_id_uncollected' => 'required|exists:cvr_approver,id', // Approver ID
-    //         'cvr_number_uncollected' => 'required|string', // CVR Number
-    //         'description_uncollected' => 'required|string',
-    //     ]);
 
-    //     // Store uncollected amounts for each employee
-    //     $employeeIds = $validated['employee_id_uncollected'];
-    //     $deductionAmounts = $validated['deduction_amount_uncollected'];
+    public function storeCollected(Request $request)
+    {
+        // dd($request->all());
+        $liquidation_id = $request->liquidation_id;
+        $user = Auth::user();
+        // Validate the collected form data
+        $validated = $request->validate([
+            'amount_collected' => 'required|numeric|min:0', // Amount collected
+            'description_collected' => 'required|string', // Description for collected
+            'employee_id' => 'required|exists:users,id', // Employee ID for collected amount
+            'approver_id_collected' => 'required|exists:cvr_approver,id', // Approver ID
+            'cvr_number_collected' => 'required|string', // CVR Number
+        ]);
 
-    //     // Loop through each employee ID and its corresponding deduction amount
-    //     foreach ($employeeIds as $index => $employeeId) {
-    //         $deductionAmount = $deductionAmounts[$index];
+        // Create a new reimbursement entry for the collected amount
+        RunningBalance::create([
+            'employee_id' => $validated['employee_id'],
+            'amount' => abs($validated['amount_collected']), // Positive value for collected amount
+            'description' => $validated['description_collected'],
+            'approver_id' => $validated['approver_id_collected'],
+            'created_by' => $user->id,
+            'cvr_number' => $validated['cvr_number_collected'],
+            'type' => 2,  // Assuming type '2' represents collected
+            'adjustment_type' => 'In',  // Type of adjustment
+        ]);
 
-    //         // Create a record in the RunningBalance table for each employee
-    //         RunningBalance::create([
-    //             'employee_id' => $employeeId,
-    //             'amount' => -abs($deductionAmount), // Negative value for uncollected amount
-    //             'description' => $validated['description_uncollected'], // Use description for uncollected
-    //             'approver_id' => $validated['approver_id_uncollected'],
-    //             'created_by' =>  $user->id,
-    //             'cvr_number' => $validated['cvr_number_uncollected'],
-    //             'type' => 4,  // Assuming type '4' represents uncollected
-    //             'adjustment_type' => 'Float',  // Type of adjustment for uncollected
-    //         ]);
-    //     }
+        dd($validated);
 
-    //     // Redirect with success message
-    //     return redirect()->route('liquidations.validated', $liquidation_id)
-    //                     ->with('success', 'Uncollected amounts and deductions saved successfully!');
-    // }
+        return redirect()->route('liquidations.validated', $liquidation_id)
+                        ->with('success', 'Collected amount saved successfully!');
+    }
+
+    public function storeUncollected(Request $request)
+    {
+        // dd($request->all());
+        $liquidation_id = $request->liquidation_id;
+        $user = Auth::user();
+        // Validate the uncollected form data
+        $validated = $request->validate([
+            'amount_uncollected' => 'required|numeric|min:0', // Amount uncollected (readonly in the form)
+            'employee_id_uncollected' => 'required|array', // Employee IDs (array for multiple)
+            'deduction_amount_uncollected' => 'required|array', // Deduction amounts (array for multiple)
+            'employee_id_uncollected.*' => 'exists:users,id', // Ensure each employee exists
+            'deduction_amount_uncollected.*' => 'numeric|min:0', // Ensure each deduction is a valid number
+            'approver_id_uncollected' => 'required|exists:cvr_approver,id', // Approver ID
+            'cvr_number_uncollected' => 'required|string', // CVR Number
+            'description_uncollected' => 'required|string',
+        ]);
+
+        // Store uncollected amounts for each employee
+        $employeeIds = $validated['employee_id_uncollected'];
+        $deductionAmounts = $validated['deduction_amount_uncollected'];
+
+        // Loop through each employee ID and its corresponding deduction amount
+        foreach ($employeeIds as $index => $employeeId) {
+            $deductionAmount = $deductionAmounts[$index];
+
+            // Create a record in the RunningBalance table for each employee
+            RunningBalance::create([
+                'employee_id' => $employeeId,
+                'amount' => -abs($deductionAmount), // Negative value for uncollected amount
+                'description' => $validated['description_uncollected'], // Use description for uncollected
+                'approver_id' => $validated['approver_id_uncollected'],
+                'created_by' =>  $user->id,
+                'cvr_number' => $validated['cvr_number_uncollected'],
+                'type' => 4,  // Assuming type '4' represents uncollected
+                'adjustment_type' => 'Float',  // Type of adjustment for uncollected
+            ]);
+        }
+
+        // Redirect with success message
+        return redirect()->route('liquidations.validated', $liquidation_id)
+                        ->with('success', 'Uncollected amounts and deductions saved successfully!');
+    }
 
     public function storeCollectedAdmin(Request $request)
     {
