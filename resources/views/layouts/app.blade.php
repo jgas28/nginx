@@ -61,11 +61,11 @@
             @endif
 
 
-            @if(in_array($user->id, [1, 97]))
+            <!-- @if(in_array($user->id, [1, 97]))
                 <a href="{{ route('delivery.details') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
                     <span x-show="sidebarOpen" x-transition>Delivery Details</span>
                 </a>
-            @endif
+            @endif -->
 
             {{-- Settings nav (role_id = 28) --}}
             @if($user->hasAnyRoleId([1, 2, 3, 28]))
@@ -376,6 +376,31 @@
             </div>
             @endif
 
+            <div x-data="{ openBilling: false }">
+                <button @click="openBilling = !openBilling" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-envelope"></i>
+                        <span x-show="sidebarOpen" x-transition>Billing</span>
+                    </div>
+                    <svg x-show="sidebarOpen" :class="openBilling ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <div x-show="openBilling && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+                        <a href="{{ route('billing.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            SOA DR
+                        </a>
+                        <a href="{{ route('billing.indexAccessorial') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            SOA Accessorial
+                        </a>
+                        <a href="{{ route('billing.showSoa') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            List
+                        </a>
+                        <!-- <a href="{{ route('liquidations.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            List
+                        </a> -->
+                </div>
+            </div>
         </nav>
 
         <!-- Logout -->
