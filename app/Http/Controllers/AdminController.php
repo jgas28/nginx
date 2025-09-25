@@ -337,6 +337,14 @@ class AdminController extends Controller
                 $fund_source = $request->outlet_fund_source;
                 $charge = $request->outlet_charge;
                 break;
+            case 'cheque_transfer':
+                $paymentName = $request->cheque_bank_name;
+                $reference_number = $request->cheque_number;
+                $amount = $request->cheque_amount;
+                $receiver = $request->cheque_receiver;
+                $fund_source = $request->cheque_fund_source;
+                $charge = $request->cheque_charge;
+                break;
         }
 
         // Wrap the saving logic in a try-catch block and use a transaction

@@ -130,6 +130,11 @@
                     <input type="radio" name="payment_type" value="outlet_transfer" class="mr-3" />
                     <span>Outlet Transfer</span>
                 </label>
+
+                <label class="flex items-center bg-white border rounded p-4 shadow cursor-pointer">
+                    <input type="radio" name="payment_type" value="cheque_transfer" class="mr-3" />
+                    <span>Cheque Transfer</span>
+                </label>
             </div>
         </fieldset>
 
@@ -245,6 +250,46 @@
             </div>
         </fieldset>
 
+        <!-- Cheque Fields -->
+        <fieldset id="chequeFields" class="hidden mb-6 p-4 border border-gray-200 rounded bg-gray-50 space-y-4">
+            <legend class="text-blue-600 font-semibold text-sm mb-3">Cheque Transfer Details</legend>
+
+            <div>
+                <label class="block text-gray-700">Bank Name</label>
+                <input type="text" name="cheque_bank_name" class="w-full border border-gray-300 rounded px-3 py-2" />
+            </div>
+            <div>
+                <label class="block text-gray-700">Cheque Number</label>
+                <input type="text" name="cheque_number" class="w-full border border-gray-300 rounded px-3 py-2" />
+            </div>
+            <div>
+                <label class="block text-gray-700">Amount</label>
+                <input type="number" name="cheque_amount" step="0.01" class="w-full border border-gray-300 rounded px-3 py-2" />
+            </div>
+            <div>
+                <label class="block text-gray-700">Receiver</label>
+                <select nambere="cheque_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
+                    <option value="">Select Receiver</option>
+                    @foreach($employees as $employee)
+                        <option value="{{ $employee->id }}">{{ $employee->supplier_name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-gray-700">Fund Source</label>
+                <select name="cheque_fund_source" class="w-full border border-gray-300 rounded px-3 py-2">
+                    <option value="">Select Funds</option>
+                    @foreach($approves as $approve)
+                        <option value="{{ $approve->id }}">{{ $approve->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-gray-700">Cheque Charge</label>
+                <input type="text" name="cheque_charge" class="w-full border border-gray-300 rounded px-3 py-2" />
+            </div>
+        </fieldset>
+
         <!-- Submit Buttons -->
         <div class="mt-6 text-right">
             <button type="button" id="rejectBtn" class="bg-red-600 text-white px-6 py-2 rounded hover:bg-red-700 transition">
@@ -308,7 +353,8 @@
         const paymentFields = {
             cash: document.getElementById('cashFields'),
             bank_transfer: document.getElementById('bankTransferFields'),
-            outlet_transfer: document.getElementById('storeTransferFields')
+            outlet_transfer: document.getElementById('storeTransferFields'),
+            cheque_transfer: document.getElementById('chequeFields')
         };
 
         document.querySelectorAll('input[name="payment_type"]').forEach(radio => {

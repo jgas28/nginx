@@ -527,6 +527,14 @@ class CashVoucherController extends Controller
             'outlet_receiver' => 'sometimes|required_if:payment_type,outlet_transfer|string',
             'outlet_fund_source' => 'sometimes|required_if:payment_type,outlet_transfer|string',
             'outlet_charge' => 'nullable|numeric',
+
+            // Cheque fields
+            'cheque_bank_name' => 'sometimes|required_if:payment_type,cheque_transfer|string',
+            'cheque_number' => 'sometimes|required_if:payment_type,cheque_transfer|string',
+            'cheque_amount' => 'sometimes|required_if:payment_type,cheque_transfer|numeric',
+            'cheque_receiver' => 'sometimes|required_if:payment_type,cheque_transfer|string',
+            'cheque_fund_source' => 'sometimes|required_if:payment_type,cheque_transfer|string',
+            'cheque_charge' => 'nullable|numeric',
         ]);
 
 
@@ -566,6 +574,14 @@ class CashVoucherController extends Controller
                 $receiver = $request->outlet_receiver;
                 $fund_source = $request->outlet_fund_source;
                 $charge = $request->outlet_charge ?? 0;
+                break;
+            case 'cheque_transfer':
+                $paymentName = $request->cheque_bank_name;
+                $reference_number = $request->cheque_number;
+                $amount = $request->cheque_amount;
+                $receiver = $request->cheque_receiver;
+                $fund_source = $request->cheque_fund_source;
+                $charge = $request->cheque_charge ?? 0;
                 break;
         }
 
