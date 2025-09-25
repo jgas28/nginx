@@ -551,7 +551,7 @@ class LiquidationController extends Controller
             'totalCash',
             'totalCard',
             'approvedAmount',
-            'difference', 
+            'difference',
             'refund',
             'return',
             'nextStatus',
@@ -640,7 +640,7 @@ class LiquidationController extends Controller
         $liquidation = Liquidation::with(['cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy', 'runningBalances'])
                         ->findOrFail($id);
 
-        $employees = User::whereIn('id', [54])->get(); 
+        $employees = User::whereIn('id', [54])->get();
         $approvers = Approver::all();
         $staffs = User::where('status', '!=', 0)->get();
 

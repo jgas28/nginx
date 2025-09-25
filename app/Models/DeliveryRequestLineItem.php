@@ -22,9 +22,7 @@ class DeliveryRequestLineItem extends Model
         'accessorial_type',
         'accessorial_rate',
         'dr_id',
-        'created_by',
-        'soa_id',
-        'billing_id'
+        'created_by'
     ];
 
     protected $casts = [

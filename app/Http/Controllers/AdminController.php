@@ -294,7 +294,7 @@ class AdminController extends Controller
 
     public function StoreApprovalRequest(Request $request)
     {
-        $cvr_id = $request->cvr_id; 
+        $cvr_id = $request->cvr_id;
         $cashVouchers = CashVoucher::where('id', $cvr_id)->first();
 
         if ($cashVouchers) {
@@ -336,14 +336,6 @@ class AdminController extends Controller
                 $receiver = $request->outlet_receiver;
                 $fund_source = $request->outlet_fund_source;
                 $charge = $request->outlet_charge;
-                break;
-            case 'cheque_transfer':
-                $paymentName = $request->cheque_bank_name;
-                $reference_number = $request->cheque_number;
-                $amount = $request->cheque_amount;
-                $receiver = $request->cheque_receiver;
-                $fund_source = $request->cheque_fund_source;
-                $charge = $request->cheque_charge;
                 break;
         }
 

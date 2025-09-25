@@ -401,6 +401,8 @@ class RunningBalanceController extends Controller
             'adjustment_type' => 'In',  // Type of adjustment
         ]);
 
+        dd($validated);
+
         return redirect()->route('liquidations.validated', $liquidation_id)
                         ->with('success', 'Collected amount saved successfully!');
     }
