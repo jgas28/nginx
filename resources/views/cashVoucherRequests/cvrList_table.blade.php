@@ -57,14 +57,14 @@
                         <td class="py-2 px-4 border-b">{{ $cashVoucherRequest->print_name->fname ?? '' }} {{ $cashVoucherRequest->print_name->lname ?? '' }}</td>
                         <td class="py-2 px-4 border-b space-x-2">
                             <!-- Print / Re-Print Button -->
-                            <a href="{{ route('cashVoucherRequests.print', ['id' => $cashVoucherRequest->id, 'cvr_number' => $cashVoucherRequest->dr_id, 'mtm' => $cashVoucherRequest->cvr_type]) }}"
+                            <a href="{{ route('cashVoucherRequests.print', ['id' => $cashVoucherRequest->id, 'cvr_number' => $cashVoucherRequest->dr_id, 'mtm' => $cashVoucherRequest->cvr_type, 'sequence' => $cashVoucherRequest->sequence]) }}"
                                 title="{{ empty($cashVoucherRequest->print_status) || $cashVoucherRequest->print_status === '0' ? 'Print Cash Voucher' : 'Re-Print Cash Voucher' }}"
                                 target="_blank">
                                 <i class="fas {{ empty($cashVoucherRequest->print_status) || $cashVoucherRequest->print_status === '0' ? 'fa-print' : 'fa-redo' }} text-sm"></i>
                             </a>
                             
                             <!-- View Button -->
-                            <a href="{{ route('cashVoucherRequests.printView', ['id' => $cashVoucherRequest->id, 'cvr_number' => $cashVoucherRequest->dr_id, 'mtm' => $cashVoucherRequest->cvr_type]) }}"
+                            <a href="{{ route('cashVoucherRequests.printView', ['id' => $cashVoucherRequest->id, 'cvr_number' => $cashVoucherRequest->dr_id, 'mtm' => $cashVoucherRequest->cvr_type, 'sequence' => $cashVoucherRequest->sequence]) }}"
                                 title="View Cash Voucher"
                                 target="_blank">
                                 <i class="fas fa-eye mr-2 text-sm"></i> <!-- View Icon --> 

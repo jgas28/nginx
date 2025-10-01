@@ -763,7 +763,7 @@ class CashVoucherController extends Controller
                 ->join('users', 'allocations.driver_id', '=', 'users.id')
                 ->where('allocations.dr_id', $cashVoucherRequest->dr_id)
                 ->where('allocations.trip_type', $mtm)
-                 ->where('sequence', $cashVoucherRequest->sequence)
+                ->where('sequence', $cashVoucherRequest->sequence)
                 ->first();
                 
             // Allocation + Truck
@@ -825,7 +825,7 @@ class CashVoucherController extends Controller
     }
 
 
-    public function printCVR($id, $cvr_number, $mtm)
+    public function printCVR($id, $cvr_number, $mtm, $sequence)
     {
          $cashVoucherRequest = CashVoucher::with([
                 'deliveryRequest',
@@ -833,6 +833,7 @@ class CashVoucherController extends Controller
             ])
             ->where('id', $id)
             ->where('dr_id', $cvr_number)
+            ->where('sequence', $sequence)
             ->first();
 
             // Check if the remarks column contains a JSON string
@@ -888,7 +889,8 @@ class CashVoucherController extends Controller
             ->join('users', 'cash_vouchers.requestor', '=', 'users.id')
             ->select('users.*', 'cash_vouchers.*') 
             ->where('cash_vouchers.dr_id', $cvr_number) 
-             ->where('cash_vouchers.cvr_type', $mtm) 
+            ->where('cash_vouchers.cvr_type', $mtm) 
+            ->where('sequence', $cashVoucherRequest->sequence)
             ->first();
 
             $cvrApprovals = cvr_approval::where('cvr_id', $id)
@@ -926,7 +928,7 @@ class CashVoucherController extends Controller
         ));
     }
 
-    public function printViewCVR($id, $cvr_number, $mtm)
+    public function printViewCVR($id, $cvr_number, $mtm, $sequence)
     {
          $cashVoucherRequest = CashVoucher::with([
                 'deliveryRequest',
@@ -934,6 +936,7 @@ class CashVoucherController extends Controller
             ])
             ->where('id', $id)
             ->where('dr_id', $cvr_number)
+            ->where('sequence', $sequence)
             ->first();
 
             // Check if the remarks column contains a JSON string
@@ -989,7 +992,8 @@ class CashVoucherController extends Controller
             ->join('users', 'cash_vouchers.requestor', '=', 'users.id')
             ->select('users.*', 'cash_vouchers.*') 
             ->where('cash_vouchers.dr_id', $cvr_number) 
-             ->where('cash_vouchers.cvr_type', $mtm) 
+            ->where('cash_vouchers.cvr_type', $mtm) 
+            ->where('sequence', $cashVoucherRequest->sequence)
             ->first();
 
             $cvrApprovals = cvr_approval::where('cvr_id', $id)
