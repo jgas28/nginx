@@ -229,7 +229,7 @@
                     @foreach ($descriptions as $desc) {{ $desc }}<br> @endforeach
                 </td>
                 <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 150px; vertical-align: top;">
-                    {{$approved_amount}}
+                    ₱ {{$approved_amount}}
                 </td>
             </tr>
 
