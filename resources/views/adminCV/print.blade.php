@@ -228,7 +228,7 @@
                     @foreach ($descriptions as $desc) {{ $desc }}<br> @endforeach
                 </td>
                 <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 150px; vertical-align: top;">
-                    ₱ @foreach ($amounts as $amt) ₱ {{ number_format($amt, 2) }}<br> @endforeach
+                    @foreach ($amounts as $amt) ₱ {{ number_format($amt, 2) }}<br> @endforeach
                 </td>
             </tr>
 

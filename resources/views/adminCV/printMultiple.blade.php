@@ -181,14 +181,12 @@
         $approver = $data['approvers'] ?? null;
         $amountInWords = $data['amountInWords'] ?? '';
         $cv = $voucher->cashVoucher ?? null;
-        $cv2 = $voucher->amount;
 
         $descriptions = json_decode($cv->description ?? '[]', true);
         $amounts = json_decode($cv->amount_details ?? '[]', true);
         $remarks = json_decode($cv->remarks ?? '[]', true);
         
         $totalAmount = collect($amounts)->filter(fn($amt) => is_numeric($amt))->sum();
-        $totalApprovedAmount = $cv2;
         $taxBase = $cv->tax_based_amount ?? 0;
         $vat = $taxBase * 0.12;
         $withholdingPercentage = $cv->withholdingTax->percentage ?? 0;
@@ -197,6 +195,7 @@
 
         $voucherType = $cv->voucher_type ?? 'regular';
     @endphp
+
 
    <div class="container" 
          data-cvr-id="{{ $voucher->id }}" 
@@ -240,7 +239,9 @@
                     @endforeach
                 </td>
                 <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 150px; vertical-align: top;">
-                      ₱ {{$cv2}}
+                    @foreach ($amounts as $amt)
+                      ₱ {{ number_format($amt, 2) }}<br>
+                    @endforeach
                 </td>
             </tr>
 
@@ -261,12 +262,12 @@
                     <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
                         <tr>
                             <td style="text-align: left; padding: 4px;">Subtotal</td>
-                            <td style="text-align: right; padding: 4px;">₱ {{ number_format($totalApprovedAmount, 2) }}</td>
+                            <td style="text-align: right; padding: 4px;">₱ {{ number_format($totalAmount, 2) }}</td>
                         </tr>
                         <tr>
                             <td style="text-align: left; padding: 4px;">Net Amount</td>
                             <td style="text-align: right; padding: 4px;">
-                                ₱ {{ number_format(($voucherType === 'with_tax') ? $taxBase : $totalApprovedAmount, 2) }}
+                                ₱ {{ number_format(($voucherType === 'with_tax') ? $taxBase : $totalAmount, 2) }}
                             </td>
                         </tr>
                         <tr>
@@ -292,7 +293,7 @@
                         <tr>
                             <td style="text-align: left; font-weight: bold; color: red; padding: 4px;">Total</td>
                             <td style="text-align: right; font-weight: bold; color: red; padding: 4px;">
-                                ₱ {{ number_format(($voucherType === 'with_tax') ? $final : $totalApprovedAmount, 2) }}
+                                ₱ {{ number_format(($voucherType === 'with_tax') ? $final : $totalAmount, 2) }}
                             </td>
                         </tr>
                     </table>
