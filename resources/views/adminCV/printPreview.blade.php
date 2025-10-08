@@ -229,6 +229,7 @@
                     @php
                         $descriptions = json_decode($vouchers->description ?? '[]');
                         $amounts = json_decode($vouchers->amount_details ?? '[]'); 
+                        $approved_amount = $vouchers->amount;
                     @endphp
                     <tr>
                          <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
@@ -237,9 +238,7 @@
                             @endforeach
                         </td>
                          <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
-                            @foreach ($amounts as $amt)
-                                ₱ {{ number_format($amt, 2) }}<br>
-                            @endforeach
+                                ₱ {{ number_format($approved_amount, 2) }}
                         </td>
                     </tr>
                     <tr>
@@ -273,9 +272,10 @@
                                         @php
                                             $totalAmount = 0;
                                             $amountDetails = json_decode($vouchers->amount_details); // ✅ Corrected here
+                                            $approved_amountDetails = $vouchers->amount;
 
-                                            if (is_array($amountDetails)) {
-                                                foreach ($amountDetails as $item) {
+                                            if (is_array($approved_amountDetails)) {
+                                                foreach ($approved_amountDetails as $item) {
                                                     if (is_numeric($item)) {
                                                         $totalAmount += $item;
                                                     }
