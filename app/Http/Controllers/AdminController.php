@@ -604,17 +604,13 @@ class AdminController extends Controller
             } elseif ($voucher->cashVoucher->voucher_type === 'regular') {
                 $amountDetails = json_decode($voucher->cashVoucher->amount_details, true) ?? [];
                 $finalAmount = array_sum(array_filter($amountDetails, 'is_numeric'));
-                $approvedAmount = $voucher->amount;
-                $finalApprovedAmount = $approvedAmount;
             } else {
                 $finalAmount = 0;
-                $finalApprovedAmount = 0;
             }
 
             return [
                 'cashVoucherRequest' => $voucher,
                 'amountInWords' => app()->make(Self::class)->convertAmountToWords($finalAmount),
-                'approvedamountInWords' => app()->make(Self::class)->convertApprovedAmountToWordsPreview($finalApprovedAmount),
                 'approvers' => $approvers[$voucher->id] ?? null,
             ];
         });
@@ -777,42 +773,6 @@ class AdminController extends Controller
 
             // Return the amount in words with currency (e.g., "five hundred pesos")
             return ucfirst($amountInWords) . ' ' . $currency;
-        }
-
-         public function convertApprovedAmountToWordsPreview($amount)
-        {
-            // Handle edge cases like 0, null or non-numeric values
-            if (is_null($amount) || !is_numeric($amount) || $amount <= 0) {
-                return 'Zero or Invalid Amount';
-            }
-
-            // Initialize the NumberToWords class
-            $numberToWords = new NumberToWords();
-
-            // Get the number to words transformer (not currency transformer)
-            $numberTransformer = $numberToWords->getNumberTransformer('en');
-            
-            // Convert the amount (integer part) into words
-            $approvedamountInWords = $numberTransformer->toWords(floor($amount)); // Get the integer part
-
-            // Handle fractional part (cents)
-            $fractionalPart = round(($amount - floor($amount)) * 100); // Get the cents (if any)
-
-            $currency = 'pesos'; // Default currency
-            $fractionalCurrency = 'centavos'; // Default fractional currency
-            
-            // Check for singular/plural currency
-            if ($amount == 1) {
-                $currency = 'peso';
-            }
-
-            // If there is a fractional part, format it as a fraction (e.g., 45/100)
-            if ($fractionalPart > 0) {
-                return ucfirst($approvedamountInWords) . ' ' . $currency . ' & ' . $fractionalPart . '/100 ';
-            }
-
-            // Return the amount in words with currency (e.g., "five hundred pesos")
-            return ucfirst($approvedamountInWords) . ' ' . $currency;
         }
 
         public function updatePrintStatus(Request $request)
