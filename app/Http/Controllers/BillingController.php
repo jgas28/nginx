@@ -4,111 +4,110 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Company;
-use App\Models\WithholdingTax;
 use App\Models\DeliveryRequest;
 use App\Models\DeliveryRequestLineItem;
+use App\Models\WithholdingTax;
 use App\Models\Billing;
 
 class BillingController extends Controller
 {
+    // Step 1: Select items
     public function selectItems()
     {
-        // Fetch all companies
         $companies = Company::all();
-
-        // Fetch all unbilled DeliveryRequests with status = 1 for the selected company
-        $deliveryRequests = DeliveryRequest::where('status', 1)
-                                            ->whereNull('billing_id') // Ensure billing_id is null
-                                            ->get();
-
-        // Fetch all unbilled DeliveryRequestLineItems for the selected company
-        $lineItems = DeliveryRequestLineItem::whereNull('billing_id')
-                                            ->whereHas('deliveryRequest', function ($query) {
-                                                $query->where('status', 1); // Ensure related DeliveryRequest is delivered
-                                            })
-                                            ->get();
+        $deliveryRequests = DeliveryRequest::where('status', 1)->get();
+        $lineItems = DeliveryRequestLineItem::whereHas('deliveryRequest', function ($query) {
+            $query->where('status', 1);
+        })->get();
 
         return view('billing.select-items', compact('companies', 'deliveryRequests', 'lineItems'));
     }
-
 
     public function getItemsByCompany(Request $request)
     {
         $companyId = $request->input('company_id');
 
-        // Fetch all unbilled DeliveryRequests with status = 1 for the selected company
         $deliveryRequests = DeliveryRequest::where('company_id', $companyId)
-                                            ->where('status', 1)
-                                            ->whereNull('billing_id') // Ensure billing_id is null
-                                            ->get();
+            ->where('status', 1)
+            ->get();
 
-        // Fetch all unbilled DeliveryRequestLineItems for the selected company
-        $lineItems = DeliveryRequestLineItem::whereNull('billing_id')
-                                            ->whereHas('deliveryRequest', function ($query) use ($companyId) {
-                                                $query->where('company_id', $companyId)
-                                                    ->where('status', 1); // Ensure related DeliveryRequest is delivered
-                                            })
-                                            ->get();
+        $lineItems = DeliveryRequestLineItem::whereHas('deliveryRequest', function ($query) use ($companyId) {
+            $query->where('company_id', $companyId)
+                ->where('status', 1);
+        })->get();
 
-        // Organize line items by delivery request id
         $lineItemsByDr = [];
         foreach ($lineItems as $item) {
             $lineItemsByDr[$item->deliveryRequest->id][] = $item;
         }
 
-        // Include total amount for each delivery request and its line items
-        $deliveryRequestsWithTotal = $deliveryRequests->map(function($dr) use ($lineItemsByDr) {
-            $totalAmount = 0;
-            $lineItemsForDr = $lineItemsByDr[$dr->id] ?? [];
-
-            // Add the `delivery_rate` from the DeliveryRequest itself
-            $totalAmount += $dr->delivery_rate;
-
-            // Add up the `accessorial_rate` from the associated line items
-            foreach ($lineItemsForDr as $lineItem) {
-                $totalAmount += $lineItem->accessorial_rate;
-            }
-
-            $dr->totalAmount = $totalAmount;
-            return $dr;
-        });
-
-        // Return the results as JSON
         return response()->json([
-            'deliveryRequests' => $deliveryRequestsWithTotal,
-            'lineItems' => $lineItemsByDr, // grouped by deliveryRequest id
+            'deliveryRequests' => $deliveryRequests,
+            'lineItems' => $lineItemsByDr,
         ]);
     }
 
+    public function getItemsByCompanyForBilling(Request $request)
+    {
+        $companyId = $request->company_id;
 
+        return DeliveryRequest::where('company_id', $companyId)
+            ->where('status', 1)
+            ->with('lineItems')
+            ->get()
+            ->map(fn ($dr) => [
+                'id' => $dr->id,
+                'mtm' => $dr->mtm,
+                'delivery_rate' => $dr->delivery_rate,
+                'is_billed' => $dr->billing_id !== null,
+                'line_items' => $dr->lineItems->map(fn ($li) => [
+                    'id' => $li->id,
+                    'delivery_number' => $li->delivery_number,
+                    'accessorial_rate' => $li->accessorial_rate,
+                    'is_billed' => $li->billing_id !== null,
+                ]),
+            ]);
+    }
 
+    // Step 1: storeSelection
     public function storeSelection(Request $request)
     {
-        // Store the selected MTMs and line items in session or pass to the next step
-        $request->session()->put('selected_delivery_requests', $request->delivery_requests);
-        $request->session()->put('selected_line_items', $request->line_items);
+        $deliveryRequests = json_decode($request->delivery_requests, true) ?? [];
+        $lineItems = json_decode($request->line_items, true) ?? [];
 
+        // Store selected IDs in session
+        $request->session()->put('selected_delivery_requests', $deliveryRequests);
+        $request->session()->put('selected_line_items', $lineItems);
+
+        // Redirect to Step 2
         return redirect()->route('billing.create');
     }
 
+    // Step 2: create billing
     public function create()
     {
-        // Retrieve selected items from the session
-        $deliveryRequests = session('selected_delivery_requests', []);
-        $lineItems = session('selected_line_items', []);
 
-        // Fetch additional data for the second step (company, withholding tax, etc.)
+        // Get IDs from session
+        $deliveryRequestIds = session('selected_delivery_requests', []);
+        $lineItemIds = session('selected_line_items', []);
+
+        // Fetch the models using the IDs
+        $deliveryRequests = DeliveryRequest::whereIn('id', $deliveryRequestIds)->get();
+        $lineItems = DeliveryRequestLineItem::whereIn('id', $lineItemIds)->get();
+
+        $company_id = $deliveryRequests->first()?->company_id ?? null;
+
         $companies = Company::all();
         $withholdingTaxes = WithholdingTax::all();
 
-        return view('billing.create-billing', compact('deliveryRequests', 'lineItems', 'companies', 'withholdingTaxes'));
+        return view('billing.create-billing', compact(
+            'deliveryRequests', 'lineItems', 'companies', 'withholdingTaxes', 'company_id'
+        ));
     }
 
+    // Step 3: store billing
     public function store(Request $request)
     {
-        // Handle the storing of the full billing data
-
-        // Validate and create the billing record
         $validated = $request->validate([
             'soa_number' => 'required|string|max:255|unique:billings',
             'company_id' => 'required|exists:companies,id',
@@ -120,19 +119,21 @@ class BillingController extends Controller
 
         $billing = Billing::create($validated);
 
-        // Attach selected delivery requests and line items
-        if ($deliveryRequests = session('selected_delivery_requests')) {
+        // Attach selected items from session
+        $deliveryRequests = session('selected_delivery_requests', []);
+        $lineItems = session('selected_line_items', []);
+
+        if($deliveryRequests){
             $billing->deliveryRequests()->attach($deliveryRequests);
         }
 
-        if ($lineItems = session('selected_line_items')) {
+        if($lineItems){
             $billing->deliveryRequestLineItems()->attach($lineItems);
         }
 
-        // Clear session after creating the billing
+        // Clear session after storing
         session()->forget(['selected_delivery_requests', 'selected_line_items']);
 
         return redirect()->route('billing.index')->with('status', 'Billing created successfully!');
     }
-
 }
