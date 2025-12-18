@@ -260,6 +260,17 @@ Route::middleware('auth')->group(function () {
     Route::get('admin-cv-report/export', [ReportsController::class, 'AdminExport'])->name('cashVoucherReport.export');
 });
 
+//billing
+Route::prefix('billing')->name('billing.')->group(function() {
+    Route::get('/select-items', [BillingController::class, 'selectItems'])->name('select');
+    Route::post('/select-items', [BillingController::class, 'storeSelection'])->name('storeSelection');
+    Route::get('/create', [BillingController::class, 'create'])->name('create');
+    Route::post('/create', [BillingController::class, 'store'])->name('store');
+    Route::post('/get-items-by-company', [BillingController::class, 'getItemsByCompany'])->name('getItemsByCompany');
+
+});
+
+
 // Admin-only Routes (if needed separately)
 Route::middleware(['auth', 'role:administrator'])->group(function () {
     Route::get('/administrator', function () {

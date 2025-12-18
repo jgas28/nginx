@@ -65,6 +65,10 @@
                 <a href="{{ route('delivery.details') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
                     <span x-show="sidebarOpen" x-transition>Delivery Details</span>
                 </a>
+
+                <a href="{{ route('billing.select') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
+                    <span x-show="sidebarOpen" x-transition>Billing</span>
+                </a>
             @endif
 
             {{-- Settings nav (role_id = 28) --}}
@@ -451,9 +455,12 @@
     });
 </script>
 
-{{-- Alpine.js (for dropdowns) --}}
+{{-- Alpine.js --}}
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+
+{{-- Font Awesome --}}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
 
 </body>
 </html>

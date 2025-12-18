@@ -57,6 +57,12 @@ class DeliveryRequestLineItem extends Model
         return $this->belongsTo(AccessorialType::class, 'accessorial_type');
     }
 
+    public function billings()
+    {
+        return $this->belongsToMany(Billing::class, 'billing_delivery_request_line_item', 'delivery_request_line_item_id', 'billing_id')
+                    ->withTimestamps();
+    }
+
     public function warehouses()
     {
         return $this->belongsToMany(Warehouse::class, 'delivery_request_line_item_warehouse', 'line_item_id', 'warehouse_id');

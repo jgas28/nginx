@@ -38,6 +38,12 @@ class DeliveryRequest extends Model
         return $this->hasMany(DeliveryRequestLineItem::class, 'dr_id', 'id');
     }
 
+    public function billings()
+    {
+        return $this->belongsToMany(Billing::class, 'billing_delivery_request', 'delivery_request_id', 'billing_id')
+                    ->withTimestamps();
+    }
+
     public function cashVoucher()
     {
         return $this->hasMany(CashVoucher::class, 'mtm', 'mtm');
@@ -184,5 +190,7 @@ class DeliveryRequest extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+
 
 }
