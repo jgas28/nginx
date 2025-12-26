@@ -8,6 +8,10 @@ use App\Models\DeliveryRequest;
 use App\Models\DeliveryRequestLineItem;
 use App\Models\WithholdingTax;
 use App\Models\Billing;
+use App\Models\Billing_Delivery_Request;
+use App\Models\Billing_Delivery_Request_Line_Item;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;  
 
 class BillingController extends Controller
 {
@@ -105,35 +109,121 @@ class BillingController extends Controller
         ));
     }
 
-    // Step 3: store billing
     public function store(Request $request)
     {
+        // Validate the request data
         $validated = $request->validate([
             'soa_number' => 'required|string|max:255|unique:billings',
             'company_id' => 'required|exists:companies,id',
             'withholding_tax_id' => 'required|exists:withholding_taxes,id',
             'billed_to' => 'required|string|max:255',
-            'billing_address' => 'required|string',
+            'billing_address' => 'required|string|max:45',
             'billing_date' => 'required|date',
+            'total_amount' => 'required|numeric',
+            // Additional fields like total_price, etc.
         ]);
 
-        $billing = Billing::create($validated);
+        // Start a transaction to ensure data integrity
+        DB::beginTransaction();
 
-        // Attach selected items from session
-        $deliveryRequests = session('selected_delivery_requests', []);
-        $lineItems = session('selected_line_items', []);
+        try {
+            // Create the billing record
+            $billing = Billing::create(array_merge($validated));
 
-        if($deliveryRequests){
-            $billing->deliveryRequests()->attach($deliveryRequests);
+            // Attach selected delivery requests from session (if any)
+            $deliveryRequests = session('selected_delivery_requests', []);
+            if ($deliveryRequests) {
+                // Update `billing_id` in the delivery requests
+                $updateDeliveryRequests = DeliveryRequest::whereIn('id', $deliveryRequests)
+                    ->update(['billing_id' => $billing->id]);
+
+                // If the update fails, throw an exception to trigger the rollback
+                if ($updateDeliveryRequests === 0) {
+                    throw new \Exception('Failed to update Delivery Requests.');
+                }
+
+                // Insert into the pivot table `billing_delivery_request`
+                foreach ($deliveryRequests as $drId) {
+                    Billing_Delivery_Request::create([
+                        'billing_id' => $billing->id, // Use the billing ID
+                        'delivery_request_id' => $drId,
+                    ]);
+                }
+            }
+
+            // Attach selected line items from session (if any)
+            $lineItems = session('selected_line_items', []);
+            if ($lineItems) {
+                // Update `billing_id` in the delivery request line items
+                $updateLineItems = DeliveryRequestLineItem::whereIn('id', $lineItems)
+                    ->update(['billing_id' => $billing->id]);
+
+                // If the update fails, throw an exception to trigger the rollback
+                if ($updateLineItems === 0) {
+                    throw new \Exception('Failed to update Delivery Request Line Items.');
+                }
+
+                // Insert into the pivot table `billing_delivery_request_line_item`
+                foreach ($lineItems as $liId) {
+                    Billing_Delivery_Request_Line_Item::create([
+                        'billing_id' => $billing->id, // Use the billing ID
+                        'delivery_request_line_item_id' => $liId,
+                    ]);
+                }
+            }
+
+            $billing->total_price = $request->input('total_amount'); // Store total amount
+            $billing->status = 1;
+            $billing->created_at = now();
+            $billing->save();
+
+            // Clear session after storing
+            session()->forget(['selected_delivery_requests', 'selected_line_items']);
+
+            // Commit the transaction
+            DB::commit();
+
+            // Redirect to the billing select page with success message
+            return redirect()->route('billing.select')->with('status', 'Billing created successfully!');
+        } catch (\Exception $e) {
+            // Rollback the transaction if something goes wrong
+            DB::rollBack();
+
+            // Log the error
+            Log::error('Failed to create billing', [
+                'error_message' => $e->getMessage(),
+                'stack_trace' => $e->getTraceAsString(),
+                'request_data' => $request->all(),  // Optionally log the request data
+            ]);
+
+            // Return error message
+            return redirect()->route('billing.select')->with('error', 'Failed to create billing. Please try again.');
         }
-
-        if($lineItems){
-            $billing->deliveryRequestLineItems()->attach($lineItems);
-        }
-
-        // Clear session after storing
-        session()->forget(['selected_delivery_requests', 'selected_line_items']);
-
-        return redirect()->route('billing.index')->with('status', 'Billing created successfully!');
     }
+
+    public function index()
+    {
+        $billings = Billing::all();
+
+        return view('billing.index', compact('billings'));
+    }
+
+    public function edit($id)
+    {
+        // Find the billing record by ID
+        $billing = Billing::findOrFail($id);
+
+        // Fetch associated data (e.g., companies, withholding taxes)
+        $companies = Company::all();
+        $withholdingTaxes = WithholdingTax::all();
+
+        // Fetch the delivery requests and line items associated with this billing (or any other related data)
+        $deliveryRequests = DeliveryRequest::all();
+        $lineItems = DeliveryRequestLineItem::all();
+
+        // Pass the data to the view
+        return view('billing.edit', compact('billing', 'companies', 'withholdingTaxes', 'deliveryRequests', 'lineItems'));
+    }
+
+
 }

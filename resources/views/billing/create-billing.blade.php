@@ -200,6 +200,8 @@ function recalcTotals(){
         .forEach(li => hidden.innerHTML += `<input type="hidden" name="delivery_requests[]" value="${li.dataset.id}">`);
     document.querySelectorAll('#selected-line-items li')
         .forEach(li => hidden.innerHTML += `<input type="hidden" name="line_items[]" value="${li.dataset.id}">`);
+
+    hidden.innerHTML += `<input type="hidden" name="total_amount" value="${d + a}">`;
 }
 
 

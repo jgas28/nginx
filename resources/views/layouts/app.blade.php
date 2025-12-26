@@ -69,6 +69,10 @@
                 <a href="{{ route('billing.select') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
                     <span x-show="sidebarOpen" x-transition>Billing</span>
                 </a>
+
+                <a href="{{ route('billing.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
+                    <span x-show="sidebarOpen" x-transition>List</span>
+                </a>
             @endif
 
             {{-- Settings nav (role_id = 28) --}}

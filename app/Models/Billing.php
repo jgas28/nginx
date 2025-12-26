@@ -16,6 +16,7 @@ class Billing extends Model
         'billed_to',
         'billing_address',
         'billing_date',
+        'total_price',
     ];
 
     public function company()
@@ -29,7 +30,7 @@ class Billing extends Model
     }
 
     // Many-to-many relationship with DeliveryRequest
-    public function deliveryRequests()
+    public function deliveryRequest()
     {
         return $this->belongsToMany(DeliveryRequest::class, 'billing_delivery_request', 'billing_id', 'delivery_request_id')
                     ->withTimestamps();

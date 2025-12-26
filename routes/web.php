@@ -268,6 +268,8 @@ Route::prefix('billing')->name('billing.')->group(function() {
     Route::post('/create', [BillingController::class, 'store'])->name('store');
     Route::post('/get-items-by-company', [BillingController::class, 'getItemsByCompany'])->name('getItemsByCompany');
     Route::post('/company-items-modal',[BillingController::class, 'getItemsByCompanyForBilling'])->name('getItemsByCompanyForBilling');
+    Route::get('/', [BillingController::class, 'index'])->name('index');
+    Route::get('/{billing}/edit', [BillingController::class, 'edit'])->name('edit');
 });
 
 

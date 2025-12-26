@@ -1,115 +1,141 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container">
-    <h2>Edit Billing</h2>
+<div class="container mx-auto p-6">
+    <h2 class="text-3xl font-semibold mb-6 text-gray-800">Edit Billing</h2>
 
-    <form action="{{ route('billing.update', $billing->id) }}" method="POST">
+    <form action="" method="POST">
         @csrf
-        @method('PUT') <!-- For the update request -->
+        @method('POST') <!-- Use POST for update form submission -->
 
-        <!-- SOA Number -->
-        <div class="form-group">
-            <label for="soa_number">SOA Number</label>
-            <input type="text" name="soa_number" id="soa_number" class="form-control" value="{{ old('soa_number', $billing->soa_number) }}" required>
+        {{-- ================= BILLING SUMMARY ================= --}}
+        <div class="bg-indigo-50 rounded-xl p-5 shadow mb-6">
+            <h3 class="font-semibold text-lg mb-3">Billing Summary</h3>
+
+            <div class="max-h-40 overflow-y-auto text-sm space-y-3">
+
+                {{-- DELIVERY --}}
+                <div>
+                    <p class="font-semibold">Delivery</p>
+                    <ul id="selected-delivery-requests" class="space-y-1">
+                        @php $deliveryTotal = 0; @endphp
+                        @foreach($deliveryRequests as $dr)
+                            <li class="flex justify-between items-center border p-2 rounded"
+                                data-id="{{ $dr->id }}"
+                                data-rate="{{ $dr->delivery_rate }}">
+                                <span>{{ $dr->mtm }} ({{ number_format($dr->delivery_rate, 2) }})</span>
+                                <button type="button" class="text-red-500"
+                                    onclick="removeItem('dr', {{ $dr->id }})">&times;</button>
+                            </li>
+                            @php $deliveryTotal += $dr->delivery_rate; @endphp
+                        @endforeach
+                    </ul>
+                </div>
+
+                {{-- ACCESSORIAL --}}
+                <div>
+                    <p class="font-semibold">Accessorial</p>
+                    <ul id="selected-line-items" class="space-y-1">
+                        @php $accessorialTotal = 0; @endphp
+                        @foreach($lineItems as $item)
+                            <li class="flex justify-between items-center border p-2 rounded"
+                                data-id="{{ $item->id }}"
+                                data-rate="{{ $item->accessorial_rate }}">
+                                <span>{{ $item->delivery_number }} ({{ number_format($item->accessorial_rate, 2) }})</span>
+                                <button type="button" class="text-red-500"
+                                    onclick="removeItem('li', {{ $item->id }})">&times;</button>
+                            </li>
+                            @php $accessorialTotal += $item->accessorial_rate; @endphp
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+
+            {{-- TOTALS --}}
+            <div class="grid grid-cols-3 gap-4 text-sm mt-4">
+                <div>
+                    <p class="text-gray-500">Delivery Total</p>
+                    <p id="delivery_total" class="font-semibold">{{ number_format($deliveryTotal, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Accessorial Total</p>
+                    <p id="accessorial_total" class="font-semibold">{{ number_format($accessorialTotal, 2) }}</p>
+                </div>
+                <div>
+                    <p class="text-gray-500">Grand Total</p>
+                    <p id="grand_total" class="font-bold text-lg">
+                        {{ number_format($deliveryTotal + $accessorialTotal, 2) }}
+                    </p>
+                </div>
+            </div>
+
+            <button type="button"
+                onclick="openModal()"
+                class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg">
+                Add Items
+            </button>
         </div>
 
-        <!-- Company Dropdown -->
-        <div class="form-group">
-            <label for="company_id">Company</label>
-            <select name="company_id" id="company_id" class="form-control" required>
-                <option value="">Select Company</option>
-                @foreach($companies as $company)
-                    <option value="{{ $company->id }}" {{ $billing->company_id == $company->id ? 'selected' : '' }}>
-                        {{ $company->name }}
-                    </option>
-                @endforeach
-            </select>
+        {{-- ================= BILLING DETAILS ================= --}}
+        <div class="grid grid-cols-2 gap-6 mb-6">
+
+            <div>
+                <label class="block text-sm font-medium">SOA Number</label>
+                <input name="soa_number" class="w-full border rounded-lg p-3" value="{{ old('soa_number', $billing->soa_number) }}" required>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium">Company</label>
+                <select id="company_id" name="company_id" class="w-full border rounded-lg p-3" required>
+                    @foreach($companies as $company)
+                        <option value="{{ $company->id }}"
+                            {{ $company->id == old('company_id', $billing->company_id) ? 'selected' : '' }}>
+                            {{ $company->company_name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium">Withholding Tax</label>
+                <select name="withholding_tax_id" class="w-full border rounded-lg p-3" required>
+                    @foreach($withholdingTaxes as $tax)
+                        <option value="{{ $tax->id }}" {{ $tax->id == old('withholding_tax_id', $billing->withholding_tax_id) ? 'selected' : '' }}>
+                            {{ $tax->description }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium">Billed To</label>
+                <input name="billed_to" class="w-full border rounded-lg p-3" value="{{ old('billed_to', $billing->billed_to) }}" required>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium">Billing Address</label>
+                <textarea name="billing_address" class="w-full border rounded-lg p-3" required>{{ old('billing_address', $billing->billing_address) }}</textarea>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium">Billing Date</label>
+                <input type="date" name="billing_date" class="w-full border rounded-lg p-3" value="{{ old('billing_date', $billing->billing_date) }}" required>
+            </div>
         </div>
 
-        <!-- Withholding Tax Dropdown -->
-        <div class="form-group">
-            <label for="withholding_tax_id">Withholding Tax</label>
-            <select name="withholding_tax_id" id="withholding_tax_id" class="form-control" required>
-                <option value="">Select Withholding Tax</option>
-                @foreach($withholdingTaxes as $tax)
-                    <option value="{{ $tax->id }}" {{ $billing->withholding_tax_id == $tax->id ? 'selected' : '' }}>
-                        {{ $tax->name }} ({{ $tax->rate }}%)
-                    </option>
-                @endforeach
-            </select>
-        </div>
+        {{-- HIDDEN INPUTS (ARRAY SAFE) --}}
+        <div id="hidden-inputs"></div>
 
-        <!-- Delivery Request (MTM) Selection -->
-        <div class="form-group">
-            <label for="delivery_requests">Select Delivery Requests (MTMs)</label>
-            <select name="delivery_requests[]" id="delivery_requests" class="form-control" multiple>
-                @foreach($deliveryRequests as $dr)
-                    <option value="{{ $dr->id }}" {{ in_array($dr->id, old('delivery_requests', $billing->deliveryRequests->pluck('id')->toArray())) ? 'selected' : '' }}>
-                        {{ $dr->mtm }} - {{ $dr->project_name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
-        <!-- Delivery Request Line Item Selection -->
-        <div class="form-group">
-            <label for="line_items">Select Line Items</label>
-            <select name="line_items[]" id="line_items" class="form-control" multiple>
-                @foreach($lineItems as $lineItem)
-                    <option value="{{ $lineItem->id }}" {{ in_array($lineItem->id, old('line_items', $billing->deliveryRequestLineItems->pluck('id')->toArray())) ? 'selected' : '' }}>
-                        {{ $lineItem->delivery_number }} - {{ $lineItem->site_name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
-        <!-- Remove Delivery Requests -->
-        <div class="form-group">
-            <label for="remove_delivery_requests">Remove Delivery Requests</label>
-            <select name="remove_delivery_requests[]" id="remove_delivery_requests" class="form-control" multiple>
-                @foreach($billing->deliveryRequests as $dr)
-                    <option value="{{ $dr->id }}">
-                        {{ $dr->mtm }} - {{ $dr->project_name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
-        <!-- Remove Delivery Request Line Items -->
-        <div class="form-group">
-            <label for="remove_line_items">Remove Line Items</label>
-            <select name="remove_line_items[]" id="remove_line_items" class="form-control" multiple>
-                @foreach($billing->deliveryRequestLineItems as $lineItem)
-                    <option value="{{ $lineItem->id }}">
-                        {{ $lineItem->delivery_number }} - {{ $lineItem->site_name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-
-        <!-- Billed To -->
-        <div class="form-group">
-            <label for="billed_to">Billed To</label>
-            <input type="text" name="billed_to" id="billed_to" class="form-control" value="{{ old('billed_to', $billing->billed_to) }}" required>
-        </div>
-
-        <!-- Billing Address -->
-        <div class="form-group">
-            <label for="billing_address">Billing Address</label>
-            <textarea name="billing_address" id="billing_address" class="form-control" required>{{ old('billing_address', $billing->billing_address) }}</textarea>
-        </div>
-
-        <!-- Billing Date -->
-        <div class="form-group">
-            <label for="billing_date">Billing Date</label>
-            <input type="date" name="billing_date" id="billing_date" class="form-control" value="{{ old('billing_date', $billing->billing_date) }}" required>
-        </div>
-
-        <!-- Submit Button -->
-        <div class="form-group">
-            <button type="submit" class="btn btn-primary">Update Billing</button>
-        </div>
+        <button class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg">
+            Update Billing
+        </button>
     </form>
 </div>
+
+<!-- Include your modal code as in the create-billing form -->
+
+<script>
+// Include JavaScript logic from your create-billing view here
+</script>
+
 @endsection
