@@ -64,6 +64,12 @@
                             target="_blank">
                                 <i class="fas fa-eye mr-2 text-sm"></i> <!-- View Icon -->
                             </a>
+                            <!-- Edit Button -->
+                            <a href="{{ route('adminCV.editPrintView', ['id' => $cashVoucherRequest->id, 'cvr_number' => $cashVoucherRequest->cashVoucher->id]) }}"
+                            title="Edit Cash Voucher"
+                            target="_blank">
+                                <i class="fas fa-pencil mr-2 text-sm"></i> <!-- View Icon -->
+                            </a>
                         </td>
                     </tr>
                 @endforeach

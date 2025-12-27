@@ -1,4 +1,19 @@
 <div class="p-4">
+
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+    
     <!-- Print Selected Button (initially hidden) -->
     <form id="multi-print-form" method="POST" action="{{ route('cashVoucherRequests.printMultiple') }}" target="_blank">
         @csrf
@@ -68,6 +83,12 @@
                                 title="View Cash Voucher"
                                 target="_blank">
                                 <i class="fas fa-eye mr-2 text-sm"></i> <!-- View Icon --> 
+                            </a>
+
+                            <a href="{{ route('cashVoucherRequests.editPrint', ['id' => $cashVoucherRequest->id, 'cvr_number' => $cashVoucherRequest->dr_id, 'mtm' => $cashVoucherRequest->cvr_type, 'sequence' => $cashVoucherRequest->sequence]) }}"
+                                title="Edit Cash Voucher"
+                                target="_blank">
+                                <i class="fas fa-pencil mr-2 text-sm"></i> <!-- Edit Icon --> 
                             </a>
                         </td>
                     </tr>

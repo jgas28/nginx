@@ -187,8 +187,11 @@ Route::middleware('auth')->group(function () {
     Route::put('/cash-voucher-requests/{id}/update-cvr', [CashVoucherController::class, 'updateCVR'])
     ->name('cashVoucherRequests.updateCVR');
     Route::get('/cash-voucher-list', [CashVoucherController::class, 'cvrList'])->name('cashVoucherRequests.cvrList');
+    Route::put('/cvr/update-reference/{id}', [CashVoucherController::class, 'updateReference'])->name('cvr.updateReference');
     Route::get('/cash-voucher/{id}/{cvr_number}/{mtm}/{sequence}/print', [CashVoucherController::class, 'printCVR'])->name('cashVoucherRequests.print');
     Route::get('/cash-voucher/{id}/{cvr_number}/{mtm}/{sequence}/printView', [CashVoucherController::class, 'printViewCVR'])->name('cashVoucherRequests.printView');
+    //edit Print View
+    Route::get('/cash-voucher/{id}/{cvr_number}/{mtm}/{sequence}/edit-print-view', [CashVoucherController::class, 'editPrint'])->name('cashVoucherRequests.editPrint');
     Route::post('/cash-voucher/print-multiple', [CashVoucherController::class, 'printMultiple'])
     ->name('cashVoucherRequests.printMultiple');
     Route::get('/cash-voucher/reject-print/{id}/{cvr_number}/{cvr_type}', [CashVoucherController::class, 'rejectPrintView'])->name('cashVoucherRequests.rejectPrintView');
@@ -206,6 +209,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/adminCV/{id}/{cvr_number}/print', [AdminController::class, 'printCVR'])->name('adminCV.print');
     Route::get('/adminCV/{id}/{cvr_number}/printView', [AdminController::class, 'printViewCVR'])->name('adminCV.printView');
     Route::get('/admin-cvr-list', [AdminController::class, 'cvrList'])->name('adminCV.cvrList');
+    //edit print view
+    Route::get('/adminCV/{id}/{cvr_number}/edit-print-view', [AdminController::class, 'editPrintView'])->name('adminCV.editPrintView');
+    Route::put('/adminCV/update-reference/{id}', [AdminController::class, 'updateReference'])->name('adminCV.updateReference');
     Route::post('/adminCV/reject', [AdminController::class, 'reject'])->name('adminCV.reject');
     Route::get('/adminCV/rejectView', [AdminController::class, 'rejectView'])->name('adminCV.rejectView');
         Route::get('/adminCV/{id}/edit-cvr', [AdminController::class, 'editCVR'])

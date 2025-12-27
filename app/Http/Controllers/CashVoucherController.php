@@ -928,6 +928,38 @@ class CashVoucherController extends Controller
         ));
     }
 
+    public function editPrint($id, $cvr_number, $mtm, $sequence)
+    {
+        $cvrApprovals = cvr_approval::where('cvr_id', $id)
+            ->first();
+
+        return view('cashVoucherRequests.editPrintView', compact('cvrApprovals'));
+    }
+
+    public function updateReference(Request $request, $id)
+    {
+        $request->validate([
+            'reference_number' => 'required|string|max:255',
+        ]);
+
+        try {
+            $cvrApproval = cvr_approval::findOrFail($id);
+            $cvrApproval->reference_number = $request->reference_number;
+            $cvrApproval->save();
+
+            return redirect()
+                ->route('cashVoucherRequests.cvrList')
+                ->with('success', 'Reference number updated successfully.');
+
+        } catch (\Exception $e) {
+
+            return redirect()
+                ->route('cashVoucherRequests.cvrList')
+                ->with('error', 'Failed to update reference number.');
+        }
+    }
+
+
     public function printViewCVR($id, $cvr_number, $mtm, $sequence)
     {
          $cashVoucherRequest = CashVoucher::with([

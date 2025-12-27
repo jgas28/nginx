@@ -680,6 +680,34 @@ class AdminController extends Controller
         return view('adminCV.printView', compact('vouchers', 'fullname', 'approvers', 'amountInWords'));
     }
 
+    public function editPrintView($id, $cvr_number)
+    {
+        $vouchers = cvr_approval::where('cvr_id', $cvr_number)->first();
+        return view('adminCV.editPrintView', compact('vouchers'));
+    }
+
+    public function updateReference(Request $request, $id)
+    {
+        $request->validate([
+            'reference_number' => 'required|string|max:255',
+        ]);
+
+        try {
+            $voucher = cvr_approval::findOrFail($id);
+            $voucher->reference_number = $request->reference_number;
+            $voucher->save();
+
+            return redirect()
+                ->route('adminCV.cvrList')  // or whatever the appropriate redirect is
+                ->with('success', 'Reference number updated successfully.');
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('adminCV.cvrList')
+                ->with('error', 'Failed to update reference number.');
+        }
+    }
+
+
     public function cvrList(Request $request)
     { 
         // Get the search query from the request
