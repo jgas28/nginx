@@ -110,7 +110,12 @@ class CoordinatorsController extends Controller
                 $query->where('created_at', '<=', $end);
             }
 
-            return [$tab => $query->orderBy('created_at', 'desc')->paginate(10)->appends($request->all())];
+            return [
+                $tab => $query->orderBy('created_at', 'desc')
+                    ->paginate(10)
+                    ->withPath(route('coordinators.index')) // 👈 IMPORTANT
+                    ->appends($request->except('page'))
+            ];
         }
 
         // If not singleTab, process all tabs (e.g., for initial page load)

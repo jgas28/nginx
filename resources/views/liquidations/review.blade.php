@@ -217,7 +217,7 @@
         <form id="liquidation-form" action="{{ route('liquidations.validate', $liquidation->id) }}" method="POST" class="bg-gray-50 p-4 rounded-lg shadow-sm">
             @csrf
             {{-- Show collector if there's a return (user owes money) --}}
-            @if ($difference < 0 && abs($difference) > 0.009)
+            @if (($difference < 0 && abs($difference) > 0.009) || $liquidation->collector_id)
                 <label for="collector_id" class="block mb-2 font-medium text-gray-700">Collector</label>
                 <select id="collector_id" name="collector_id" required class="w-full border rounded px-3 py-2 mb-4">
                     @foreach ($collectors as $employee)
