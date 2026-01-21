@@ -149,6 +149,7 @@
                     <th class="p-2 border">Delivery Date</th>
                     <th class="p-2 border">Created At</th>
                     <th class="p-2 border">Created By</th>
+                    <th class="p-2 border">Status</th>
                     <th class="p-2 border">Action</th>
                 </tr>
             </thead>
@@ -161,6 +162,20 @@
                         <td class="p-2 border">{{ \Carbon\Carbon::parse($dr->delivery_date)->format('Y-m-d') }}</td>
                         <td class="p-2 border">{{ \Carbon\Carbon::parse($dr->created_at)->format('Y-m-d') }}</td>
                         <td class="p-2 border">{{ $dr->creator_name }}</td>
+                        <td class="p-2 border">
+                            @switch($dr->status)
+                                @case(1)
+                                    Active
+                                    @break
+
+                                @case(0)
+                                    Inactive
+                                    @break
+
+                                @default
+                                    Unknown
+                            @endswitch
+                        </td>
                         <td class="p-2 border">
                             <button 
                                 onclick="fetchDRDetails({{ $dr->id }}, {{ $dr->delivery_rate }}, {{ $dr->accessorial_total }})"
