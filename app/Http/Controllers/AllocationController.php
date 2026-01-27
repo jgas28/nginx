@@ -181,8 +181,13 @@ class AllocationController extends Controller
 
     public function DRList(Request $request)
     {
-        $query = DeliveryRequest::with(['lineItems', 'creator'])
-            ->select('id', 'mtm', 'delivery_rate', 'delivery_date', 'created_at', 'created_by', 'company_id', 'area_id', 'region_id');
+        // $query = DeliveryRequest::with(['lineItems', 'creator'])
+        //     ->select('id', 'mtm', 'delivery_rate', 'delivery_date', 'created_at', 'created_by', 'company_id', 'area_id', 'region_id');
+
+        $query = DeliveryRequest::with(['lineItems' => function ($q) {
+            $q->where('status', '!=', 0);
+        }, 'creator'])
+        ->select('id', 'mtm', 'delivery_rate', 'delivery_date', 'created_at', 'created_by', 'company_id', 'area_id', 'region_id');
 
         // Default filter: show current month ONLY if no filters at all are applied
         if (!$request->hasAny(['date_from', 'date_to', 'month', 'mtm', 'company_id', 'area_id', 'region_id', 'created_by'])) {
