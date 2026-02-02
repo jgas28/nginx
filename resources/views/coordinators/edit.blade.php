@@ -84,7 +84,7 @@
 
                 <div class="w-full md:w-2/12 px-2 mb-4 md:mb-0">
                 <label for="company_id" class="block text-sm font-medium text-gray-700 mb-1">Company</label>
-                <select name="company_id" id="company_id" required
+                <select name="company_id" id="company_id" readonly
                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
                                 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">Select Company</option>
