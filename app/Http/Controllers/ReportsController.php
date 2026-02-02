@@ -16,6 +16,7 @@ use App\Models\CashVoucher;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\CashVoucherReportExport;
 use App\Exports\RpmCashVoucherExport;
+use App\Models\Company;
 use App\Models\Customer;
 
 class ReportsController extends Controller
@@ -31,6 +32,7 @@ class ReportsController extends Controller
         $areas = Area::all();
         $statuses = DeliveryStatus::all();
         $customers = Customer::all();
+        $companies = Company::all();
 
         // Prepare the query builder
         $query = DeliveryRequest::with(['lineItems' => function ($query) {
@@ -69,6 +71,9 @@ class ReportsController extends Controller
         })
         ->when($request->customer_id, function ($query) use ($request) {
             return $query->where('customer_id', '=', $request->customer_id);
+        })
+        ->when($request->company_id, function ($query) use ($request) {
+            return $query->where('company_id', $request->company_id);
         });
 
         // Get the filtered data
@@ -80,8 +85,8 @@ class ReportsController extends Controller
         }
 
         // Return the view with the filtered delivery requests data and dropdown data
-        return view('reports.deliveryRequest', compact('deliveryRequests', 'areas', 'statuses', 'customers'));
-    }
+        return view('reports.deliveryRequest', compact('deliveryRequests', 'areas', 'statuses', 'customers','companies'));
+    } 
 
     public function export(Request $request)
     {

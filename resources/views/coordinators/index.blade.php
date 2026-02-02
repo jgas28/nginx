@@ -65,6 +65,46 @@
         const tabHiddenInput = document.getElementById('active-tab');
         let debounceTimer;
 
+        function syncPageParam(url, tabName) {
+            const pageParam = tabName + '_page';
+            const pageValue = url.searchParams.get(pageParam);
+
+            // Remove existing page inputs
+            document
+                .querySelectorAll(`input[name$="_page"]`)
+                .forEach(el => el.remove());
+
+            // Add page input if present
+            if (pageValue) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = pageParam;
+                input.value = pageValue;
+                filterForm.appendChild(input);
+            }
+        }
+
+        function syncInitialPageFromUrl() {
+            const url = new URL(window.location.href);
+            const tab = url.searchParams.get('tab') || 'list';
+            const pageParam = tab + '_page';
+            const pageValue = url.searchParams.get(pageParam);
+
+            if (pageValue) {
+                // Remove old page inputs
+                document
+                    .querySelectorAll(`input[name$="_page"]`)
+                    .forEach(el => el.remove());
+
+                // Inject correct page into the form
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = pageParam;
+                input.value = pageValue;
+                filterForm.appendChild(input);
+            }
+        }
+
         function activateTab(tabName) {
             tabContents.forEach(content => content.classList.add('hidden'));
             tabButtons.forEach(btn => {
@@ -108,6 +148,12 @@
 
         function handleFilterInput() {
             clearTimeout(debounceTimer);
+
+            // ✅ Reset pagination FIRST
+            document
+                .querySelectorAll(`input[name$="_page"]`)
+                .forEach(el => el.remove());
+
             debounceTimer = setTimeout(() => {
                 const tab = tabHiddenInput.value || 'list';
                 fetchTabData(tab);
@@ -143,8 +189,11 @@
             const paginationLink = e.target.closest('.pagination a');
             if (paginationLink) {
                 e.preventDefault();
+
                 const url = new URL(paginationLink.href);
-                const tab = url.searchParams.get('tab') || 'list';
+                const tab = url.searchParams.get('tab') || tabHiddenInput.value || 'list';
+
+                syncPageParam(url, tab);
 
                 fetch(url, {
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -160,7 +209,12 @@
             }
         });
 
+
         const initialTab = new URLSearchParams(window.location.search).get('tab') || 'list';
+
+        // 🔥 IMPORTANT: sync page first
+        syncInitialPageFromUrl();
+
         activateTab(initialTab);
         initializeFilterInputs();
     });

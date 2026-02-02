@@ -14,7 +14,7 @@
         <input type="hidden" name="area" value="{{ request('area') }}">
         <input type="hidden" name="status" value="{{ request('status') }}">
         <input type="hidden" name="customer_id" value="{{ request('customer_id') }}">
-        
+        <input type="hidden" name="company_id" value="{{ request('company_id') }}">
         <!-- MTM Filter -->
         <div>
             <label for="mtm" class="block text-sm font-medium text-gray-700">MTM:</label>
@@ -77,6 +77,20 @@
                 @foreach($customers as $customer)
                     <option value="{{ $customer->id }}" {{ old('customer_id', request('customer_id')) == $customer->id ? 'selected' : '' }}>
                         {{ $customer->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+
+        <div>
+            <label for="company_id" class="block text-sm font-medium text-gray-700">Company:</label>
+            <select id="company_id" name="company_id"
+                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                <option value="">Select Company</option>
+                @foreach($companies as $company)
+                    <option value="{{ $company->id }}"
+                        {{ old('company_id', request('company_id')) == $company->id ? 'selected' : '' }}>
+                        {{ $company->company_name }}
                     </option>
                 @endforeach
             </select>

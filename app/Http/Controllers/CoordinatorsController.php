@@ -112,9 +112,12 @@ class CoordinatorsController extends Controller
 
             return [
                 $tab => $query->orderBy('created_at', 'desc')
-                    ->paginate(10)
-                    ->withPath(route('coordinators.index')) // 👈 IMPORTANT
-                    ->appends($request->except('page'))
+                    ->paginate(10, ['*'], $tab . '_page')
+                    ->withPath(route('coordinators.index'))
+                    ->appends([
+                        ...$request->except($tab . '_page'),
+                        'tab' => $tab
+                    ])
             ];
         }
 
@@ -152,14 +155,15 @@ class CoordinatorsController extends Controller
             }
 
             $results[$tabKey] = $query->orderBy('created_at', 'desc')
-                ->paginate(10)
-                ->appends($request->all());
+                ->paginate(10, ['*'], $tabKey . '_page')
+                ->appends([
+                    ...$request->except($tabKey . '_page'),
+                    'tab' => $tabKey
+                ]);
         }
 
         return $results;
     }
-
-
 
     public function create()
     {
