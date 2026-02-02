@@ -191,7 +191,7 @@ class CashVoucherController extends Controller
         // Fetch other required data
         $requestType = cvr_request_type::all();
         $employees = User::where('status', '!=', 0)->get();
-        $fleetCards = FleetCard::all();
+        $fleetCards = FleetCard::where('status', 1)->get();
         $taxes = WithholdingTax::all();
 
         return view('cashVoucherRequests.request', compact(
@@ -227,7 +227,7 @@ class CashVoucherController extends Controller
         $cvr = MonthlySeriesNumber::all();
         $requestType = cvr_request_type::all();
         $employees = User::where('status', '!=', 0)->get();
-        $fleetCards = FleetCard::All();
+        $fleetCards = FleetCard::where('status', 1)->get();
 
         return view('cashVoucherRequests.accessorialRequest', compact('deliveryLineItems', 'cvr', 'requestType', 'employees', 'fleetCards'));
     }
@@ -1127,7 +1127,7 @@ class CashVoucherController extends Controller
         $employees = User::where('status', '!=', 0)->get();
         $approves = Approver::all();
         $requestType = cvr_request_type::all();
-        $fleetCards = FleetCard::All();
+        $fleetCards = FleetCard::where('status', 1)->get();
         $trucks = Truck::All();
 
         $remarks = json_decode($cashVouchers->remarks ?? '[]', true);

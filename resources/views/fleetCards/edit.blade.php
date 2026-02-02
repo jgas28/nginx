@@ -58,6 +58,23 @@
         </div>
 
         <div>
+            <label for="status" class="block text-sm font-medium text-gray-700">
+                Status
+            </label>
+
+            <select name="status" id="status"
+                class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm
+                    focus:ring-blue-500 focus:border-blue-500">
+                <option value="1" {{ $fleetCard->status == 1 ? 'selected' : '' }}>
+                    Active
+                </option>
+                <option value="0" {{ $fleetCard->status == 0 ? 'selected' : '' }}>
+                    Inactive
+                </option>
+            </select>
+        </div>
+
+        <div>
             <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl hover:bg-blue-700 transition duration-300">
                 Update Fleet Card
             </button>

@@ -163,7 +163,7 @@ class AllocationController extends Controller
 
         // Pass supporting data (you need to load these from DB or services)
         $employees = User::where('status', '!=', 0)->get(); // or however you're fetching
-        $fleetCards = FleetCard::all();
+        $fleetCards = FleetCard::where('status', 1)->get();
         $trucks = Truck::all();
         $requestType = cvr_request_type::all();
 

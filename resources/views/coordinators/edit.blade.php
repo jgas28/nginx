@@ -83,20 +83,28 @@
                 </div>
 
                 <div class="w-full md:w-2/12 px-2 mb-4 md:mb-0">
-                <label for="company_id" class="block text-sm font-medium text-gray-700 mb-1">Company</label>
-                <select name="company_id" id="company_id" readonly
+                    <label for="company_id" class="block text-sm font-medium text-gray-700 mb-1">
+                        Company
+                    </label>
+
+                    <select id="company_id" disabled
                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
-                                focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">Select Company</option>
-                    @foreach($companies as $company)
-                    <option value="{{ $company->id }}" {{ $company->id == old('company_id', $deliveryRequest->company_id) ? 'selected' : '' }}>
-                        {{ $company->company_name }}
-                    </option>
-                    @endforeach
-                </select>
-                @error('company_id')
-                    <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
-                @enderror
+                            bg-gray-100 cursor-not-allowed">
+                        @foreach($companies as $company)
+                            <option value="{{ $company->id }}"
+                                {{ $company->id == old('company_id', $deliveryRequest->company_id) ? 'selected' : '' }}>
+                                {{ $company->company_name }}
+                            </option>
+                        @endforeach
+                    </select>
+
+                    <!-- Hidden input to actually submit the value -->
+                    <input type="hidden" name="company_id"
+                        value="{{ old('company_id', $deliveryRequest->company_id) }}">
+
+                    @error('company_id')
+                        <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                    @enderror
                 </div>
 
                 <div class="w-full md:w-2/12 px-2 mb-4 md:mb-0">

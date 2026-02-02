@@ -864,7 +864,7 @@ class CoordinatorsController extends Controller
         $truckTypes = TruckType::all();
         $areas = Area::all();
         $expenseTypes = Expense_Type::all();
-        $fleetCards = FleetCard::all(); 
+        $fleetCards = FleetCard::where('status', 1)->get();
         $drivers = User::where('status', '!=', 0)->get();
 
         return view('coordinators.editAllocation', compact(
@@ -906,7 +906,9 @@ class CoordinatorsController extends Controller
         $truckTypes = TruckType::all();
         $areas = Area::all();
         $expenseTypes = Expense_Type::all();
-        $fleetCards = FleetCard::orderBy('account_name')->get();
+        $fleetCards = FleetCard::where('status', 1)
+        ->orderBy('account_name')
+        ->get();
         $drivers = User::where('status', '!=', 0)
                ->orderBy('fname')
                ->get();
@@ -1263,7 +1265,7 @@ class CoordinatorsController extends Controller
         // Fetch other required data
         $requestType = cvr_request_type::all();
         $employees = User::where('status', '!=', 0)->get();
-        $fleetCards = FleetCard::all();
+        $fleetCards = FleetCard::where('status', 1)->get();
         $taxes = WithholdingTax::all();
 
         return view('coordinators.requestPullout', compact(
@@ -1467,7 +1469,7 @@ class CoordinatorsController extends Controller
         // Fetch other required data
         $requestType = cvr_request_type::all();
         $employees = User::where('status', '!=', 0)->get();
-        $fleetCards = FleetCard::all();
+        $fleetCards = FleetCard::where('status', 1)->get();
         $taxes = WithholdingTax::all();
 
         return view('coordinators.requestAccessorial', compact(

@@ -5,6 +5,7 @@
             <th class="py-2 px-4 border-b">Account</th>
             <th class="py-2 px-4 border-b">Account Name</th>
             <th class="py-2 px-4 border-b">Account Number</th>
+            <th class="py-2 px-4 border-b">Status</th>
             <th class="py-2 px-4 border-b">Actions</th>
         </tr>
     </thead>
@@ -14,6 +15,26 @@
                 <td class="py-2 px-4 border-b">{{ $fleetCard->account }}</td>
                 <td class="py-2 px-4 border-b">{{ $fleetCard->account_name }}</td>
                 <td class="py-2 px-4 border-b">{{ $fleetCard->account_number }}</td>
+                <td class="py-2 px-4 border-b">
+                    @switch($fleetCard->status)
+                        @case(1)
+                            <span class="px-3 py-1 text-sm rounded-full bg-green-100 text-green-700">
+                                Active
+                            </span>
+                            @break
+
+                        @case(0)
+                            <span class="px-3 py-1 text-sm rounded-full bg-red-100 text-red-700">
+                                Inactive
+                            </span>
+                            @break
+
+                        @default
+                            <span class="px-3 py-1 text-sm rounded-full bg-gray-100 text-gray-700">
+                                Unknown
+                            </span>
+                    @endswitch
+                </td>
                 <td class="py-2 px-4 border-b">
                     <a href="{{ route('fleetCards.edit', $fleetCard) }}" class="btn btn-warning bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">
                         Edit
