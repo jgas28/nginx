@@ -23,7 +23,7 @@
                 <input type="text" name="mtm" id="mtm" required
                         value="{{ old('mtm', $deliveryRequest->mtm) }}"
                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
-                                focus:ring-blue-500 focus:border-blue-500">
+                                focus:ring-blue-500 focus:border-blue-500" readonly>
                 @error('mtm')
                     <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                 @enderror
