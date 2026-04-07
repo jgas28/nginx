@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\SoaListExport;
 use App\Models\Soa;
 use App\Models\Company;
 use App\Models\Customer;
@@ -11,32 +12,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 
 class BillingController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Soa::with(['company', 'customer', 'creator']);
-
-        // Apply filters
-        if ($request->filled('company')) {
-            $query->whereHas('company', function($q) use ($request) {
-                $q->where('company_name', 'like', '%' . $request->company . '%');
-            });
-        }
-
-        if ($request->filled('date_from')) {
-            $query->where('billing_period_from', '>=', $request->date_from);
-        }
-
-        if ($request->filled('date_to')) {
-            $query->where('billing_period_to', '<=', $request->date_to);
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
+        $query = $this->buildSoaIndexQuery($request);
 
         $soas = $query->orderBy('created_at', 'desc')->get();
 
@@ -51,9 +35,31 @@ class BillingController extends Controller
         return view('billing.index', compact('soas', 'stats'));
     }
 
+    public function exportExcel(Request $request)
+    {
+        return Excel::download(
+            new SoaListExport($request->only(['company', 'date_from', 'date_to', 'status'])),
+            'soa_list.xlsx'
+        );
+    }
+
     public function editSOAForm(Soa $soa)
     {
-        return view('billing.edit-soa', compact('soa'));
+        $soa->load(['company', 'customer', 'creator']);
+
+        $editableDeliveryRequests = $this->getEditableDeliveryRequests($soa);
+        $selectedDeliveryRequestIds = collect($soa->delivery_request_ids ?? [])
+            ->merge(
+                $this->getAttachedDeliveryRequests($soa)
+            ->pluck('delivery_request_id')
+            ->map(fn ($id) => (int) $id)
+            )
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        return view('billing.edit-soa', compact('soa', 'editableDeliveryRequests', 'selectedDeliveryRequestIds'));
     }
 
     public function updateSOA(Request $request, Soa $soa)
@@ -61,9 +67,10 @@ class BillingController extends Controller
         $validator = Validator::make($request->all(), [
             'billing_period_from' => 'required|date',
             'billing_period_to' => 'required|date|after_or_equal:billing_period_from',
-            'statement_date' => 'required|date',
-            'due_date' => 'nullable|date|after_or_equal:statement_date',
+            'booking_date' => 'nullable|date',
             'status' => 'required|string|in:draft,pending,approved,paid,overdue',
+            'delivery_request_ids' => 'required|array|min:1',
+            'delivery_request_ids.*' => 'integer',
             'notes' => 'nullable|string|max:1000',
         ]);
 
@@ -71,14 +78,75 @@ class BillingController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
-        $soa->update([
-            'billing_period_from' => $request->billing_period_from,
-            'billing_period_to' => $request->billing_period_to,
-            'statement_date' => $request->statement_date,
-            'due_date' => $request->due_date,
-            'status' => $request->status,
-            'notes' => $request->notes,
-        ]);
+        $deliveryRequestIds = collect($request->delivery_request_ids)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (Schema::hasTable('soa_delivery_requests')) {
+            $existingAttachedIds = DB::table('soa_delivery_requests')
+                ->whereIn('delivery_request_id', $deliveryRequestIds)
+                ->where('soa_id', '!=', $soa->id)
+                ->pluck('delivery_request_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            if (!empty($existingAttachedIds)) {
+                return back()
+                    ->withErrors([
+                        'delivery_request_ids' => 'One or more selected delivery requests are already attached to another SOA.',
+                    ])
+                    ->withInput();
+            }
+        }
+
+        $deliveryRequestTable = Schema::hasTable('delivery_request') ? 'delivery_request' : 'delivery_requests';
+
+        $selectedRequests = DB::table($deliveryRequestTable)
+            ->select('id', 'delivery_rate')
+            ->whereIn('id', $deliveryRequestIds)
+            ->get()
+            ->keyBy('id');
+
+        $totalAmount = collect($deliveryRequestIds)->sum(function ($id) use ($selectedRequests) {
+            return (float) optional($selectedRequests->get($id))->delivery_rate;
+        });
+
+        DB::beginTransaction();
+
+        try {
+            $soa->update([
+                'billing_period_from' => $request->billing_period_from,
+                'billing_period_to' => $request->billing_period_to,
+                'statement_date' => $request->booking_date,
+                'due_date' => $request->booking_date,
+                'total_amount' => $totalAmount,
+                'outstanding_amount' => max(0, $totalAmount - (float) $soa->paid_amount),
+                'status' => $request->status,
+                'notes' => $request->notes,
+                'delivery_request_ids' => $deliveryRequestIds,
+            ]);
+
+            if (Schema::hasTable('soa_delivery_requests')) {
+                DB::table('soa_delivery_requests')->where('soa_id', $soa->id)->delete();
+
+                foreach ($deliveryRequestIds as $deliveryRequestId) {
+                    DB::table('soa_delivery_requests')->insert([
+                        'soa_id' => $soa->id,
+                        'delivery_request_id' => $deliveryRequestId,
+                        'amount' => (float) optional($selectedRequests->get($deliveryRequestId))->delivery_rate,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Failed to update SOA: ' . $e->getMessage()])->withInput();
+        }
 
         return redirect()->route('billing.showSoa', $soa->id)->with('success', 'SOA updated successfully.');
     }
@@ -88,8 +156,8 @@ class BillingController extends Controller
         DB::beginTransaction();
 
         try {
-            if (Schema::hasTable('soa_delivery_line_items')) {
-                $soa->deliveryRequestLineItems()->detach();
+            if (Schema::hasTable('soa_delivery_requests')) {
+                DB::table('soa_delivery_requests')->where('soa_id', $soa->id)->delete();
             }
 
             $soa->delete();
@@ -122,14 +190,16 @@ class BillingController extends Controller
 
         // Debug information
         $debug = [
-            'delivery_requests_table_exists' => Schema::hasTable('delivery_requests'),
+            'delivery_requests_table_exists' => Schema::hasTable('delivery_requests') || Schema::hasTable('delivery_request'),
+            'delivery_request_source_table' => Schema::hasTable('delivery_request') ? 'delivery_request' : 'delivery_requests',
             'delivery_request_line_items_table_exists' => Schema::hasTable('delivery_request_line_items'),
-            'soa_delivery_line_items_table_exists' => Schema::hasTable('soa_delivery_line_items'),
+            'soa_delivery_requests_table_exists' => Schema::hasTable('soa_delivery_requests'),
         ];
 
         if ($debug['delivery_requests_table_exists']) {
-            $debug['total_delivery_requests'] = \App\Models\DeliveryRequest::count();
-            $debug['delivery_request_statuses'] = \App\Models\DeliveryRequest::select('status')->distinct()->pluck('status')->toArray();
+            $deliveryRequestTable = $debug['delivery_request_source_table'];
+            $debug['total_delivery_requests'] = DB::table($deliveryRequestTable)->count();
+            $debug['delivery_request_statuses'] = DB::table($deliveryRequestTable)->select('status')->distinct()->pluck('status')->toArray();
         }
 
         if ($debug['delivery_request_line_items_table_exists']) {
@@ -140,59 +210,98 @@ class BillingController extends Controller
         $deliveryLineItems = collect(); // Start with empty collection
 
         if ($debug['delivery_request_line_items_table_exists']) {
-            $query = \App\Models\DeliveryRequestLineItem::with(['deliveryRequest.company', 'deliveryRequest.customer']);
+            $deliveryRequestTable = $debug['delivery_request_source_table'];
 
-            // Only add the delivery request filter if the relationship exists
-            if ($debug['delivery_requests_table_exists']) {
-                $query->whereHas('deliveryRequest', function($q) {
-                    $q->whereIn('status', ['completed', 'delivered']);
+            // Pull display data from the delivery request source table used by the live database.
+            $deliveryLineItems = \App\Models\DeliveryRequestLineItem::query()
+                ->leftJoin($deliveryRequestTable, function ($join) use ($deliveryRequestTable) {
+                    $join->on($deliveryRequestTable . '.id', '=', 'delivery_request_line_items.dr_id')
+                        ->orOn($deliveryRequestTable . '.mtm', '=', 'delivery_request_line_items.mtm');
+                })
+                ->leftJoin('companies', 'companies.id', '=', $deliveryRequestTable . '.company_id')
+                ->leftJoin('customers', 'customers.id', '=', $deliveryRequestTable . '.customer_id')
+                ->leftJoin('delivery_status as request_delivery_status', 'request_delivery_status.id', '=', $deliveryRequestTable . '.delivery_status')
+                ->with('deliveryStatus')
+                ->select([
+                    'delivery_request_line_items.*',
+                    $deliveryRequestTable . '.booking_date as delivery_request_booking_date',
+                    $deliveryRequestTable . '.delivery_date as delivery_request_delivery_date',
+                    $deliveryRequestTable . '.delivery_rate as delivery_request_amount',
+                    $deliveryRequestTable . '.status as delivery_request_status',
+                    $deliveryRequestTable . '.delivery_status as delivery_request_delivery_status',
+                    $deliveryRequestTable . '.company_id as delivery_request_company_id',
+                    $deliveryRequestTable . '.customer_id as delivery_request_customer_id',
+                    'companies.company_name as joined_company_name',
+                    'customers.name as joined_customer_name',
+                    'request_delivery_status.status_name as joined_delivery_status_name',
+                ])
+                ->where('delivery_request_line_items.status', '1')
+                ->orderBy('delivery_request_line_items.created_at', 'desc')
+                ->limit(100) // Limit results to prevent timeout
+                ->get();
+
+            // Filter out items already in SOAs if the pivot table exists
+            if ($debug['soa_delivery_requests_table_exists']) {
+                $usedDeliveryRequestIds = DB::table('soa_delivery_requests')->pluck('delivery_request_id')->toArray();
+                $deliveryLineItems = $deliveryLineItems->filter(function ($item) use ($usedDeliveryRequestIds) {
+                    $deliveryRequestId = $item->dr_id ?: null;
+                    return !$deliveryRequestId || !in_array($deliveryRequestId, $usedDeliveryRequestIds);
                 });
             }
-
-            // Only filter out items already in SOAs if the pivot table exists
-            if ($debug['soa_delivery_line_items_table_exists']) {
-                $query->whereNotIn('id', function($subQuery) {
-                    $subQuery->select('delivery_request_line_item_id')
-                             ->from('soa_delivery_line_items');
-                });
-            }
-
-            $deliveryLineItems = $query->orderBy('created_at', 'desc')->get();
         } else {
             // Mock data for testing when tables don't exist
             $deliveryLineItems = collect([
                 (object) [
                     'id' => 1,
-                    'mtm' => 'MTM2025061600898',
-                    'truck_id' => '16',
-                    'status' => 'completed',
-                    'delivery_status' => 'delivered',
-                    'distance_type' => '15',
-                    'add_on_rate' => json_encode([1000.00]),
-                    'accessorial_rate' => json_encode([2400.00]),
-                    'dr_id' => '365',
-                    'created_by' => '1',
-                    'created_at' => '2025-06-17 08:43:44',
-                    'updated_at' => '2025-07-09 07:09:00',
+                    'mtm' => 'MTM2026041600898',
+                    'accessorial_rate' => [2400.00], // Keep as array to match model casting
+                    'add_on_rate' => [1000.00], // Keep as array to match model casting
+                    'site_name' => ['56A0JNM/Philippines Smart LTE Project 2023'],
                     'deliveryRequest' => (object) [
-                        'id' => 365,
-                        'mtm' => 'MTM2025061600898',
-                        'booking_date' => '2025-06-17',
-                        'delivery_date' => '2025-06-17',
-                        'delivery_type' => 'Regular',
-                        'delivery_rate' => 3400.00,
+                        'delivery_date' => '2026-04-16',
                         'company_id' => '2',
-                        'project_name' => '56A0JNM/Philippines Smart LTE Project 2023',
-                        'region_id' => '19',
-                        'status' => '1',
                         'customer_id' => '1',
                         'company' => (object) [
-                            'id' => 2,
                             'company_name' => 'Sample Company'
                         ],
                         'customer' => (object) [
-                            'id' => 1,
                             'name' => 'Sample Customer'
+                        ]
+                    ]
+                ],
+                (object) [
+                    'id' => 2,
+                    'mtm' => 'MTM2026041700456',
+                    'accessorial_rate' => [1500.00],
+                    'add_on_rate' => [500.00],
+                    'site_name' => ['Another Project Site'],
+                    'deliveryRequest' => (object) [
+                        'delivery_date' => '2026-04-17',
+                        'company_id' => '2',
+                        'customer_id' => '1',
+                        'company' => (object) [
+                            'company_name' => 'Sample Company'
+                        ],
+                        'customer' => (object) [
+                            'name' => 'Sample Customer'
+                        ]
+                    ]
+                ],
+                (object) [
+                    'id' => 3,
+                    'mtm' => 'MTM2026041900789',
+                    'accessorial_rate' => [3200.00],
+                    'add_on_rate' => [800.00],
+                    'site_name' => ['Third Project Location'],
+                    'deliveryRequest' => (object) [
+                        'delivery_date' => '2026-04-19',
+                        'company_id' => '3',
+                        'customer_id' => '2',
+                        'company' => (object) [
+                            'company_name' => 'Another Company'
+                        ],
+                        'customer' => (object) [
+                            'name' => 'Another Customer'
                         ]
                     ]
                 ]
@@ -209,8 +318,7 @@ class BillingController extends Controller
             'customer_id' => 'required_without:company_id|exists:customers,id',
             'billing_period_from' => 'required|date',
             'billing_period_to' => 'required|date|after_or_equal:billing_period_from',
-            'statement_date' => 'required|date',
-            'due_date' => 'nullable|date|after:statement_date',
+            'booking_date' => 'nullable|date',
             'delivery_line_item_ids' => 'required|array|min:1',
             'delivery_line_item_ids.*' => 'exists:delivery_request_line_items,id',
             'notes' => 'nullable|string|max:1000',
@@ -228,8 +336,61 @@ class BillingController extends Controller
 
             // Calculate total amount from selected delivery request line items
             $deliveryLineItemIds = $request->delivery_line_item_ids;
-            $totalAmount = \App\Models\DeliveryRequestLineItem::whereIn('id', $deliveryLineItemIds)
-                ->sum(\DB::raw('COALESCE(accessorial_rate, 0) + COALESCE(add_on_rate, 0)'));
+            $deliveryRequestTable = Schema::hasTable('delivery_request') ? 'delivery_request' : 'delivery_requests';
+
+            $selectedLineItems = \App\Models\DeliveryRequestLineItem::query()
+                ->leftJoin($deliveryRequestTable, function ($join) use ($deliveryRequestTable) {
+                    $join->on($deliveryRequestTable . '.id', '=', 'delivery_request_line_items.dr_id')
+                        ->orOn($deliveryRequestTable . '.mtm', '=', 'delivery_request_line_items.mtm');
+                })
+                ->select([
+                    'delivery_request_line_items.id',
+                    'delivery_request_line_items.dr_id',
+                    'delivery_request_line_items.mtm',
+                    'delivery_request_line_items.accessorial_rate',
+                    'delivery_request_line_items.add_on_rate',
+                    $deliveryRequestTable . '.id as delivery_request_id',
+                    $deliveryRequestTable . '.delivery_rate as delivery_request_amount',
+                ])
+                ->whereIn('delivery_request_line_items.id', $deliveryLineItemIds)
+                ->get();
+
+            $requestSummaries = $selectedLineItems
+                ->groupBy(function ($lineItem) {
+                    return $lineItem->delivery_request_id ?: $lineItem->dr_id ?: $lineItem->mtm;
+                })
+                ->map(function ($group) {
+                    $firstItem = $group->first();
+                    $requestId = $firstItem->delivery_request_id ?: $firstItem->dr_id;
+
+                    $amount = $group->sum(function ($lineItem) {
+                        $requestAmount = (float) ($lineItem->delivery_request_amount ?? 0);
+
+                        if ($requestAmount > 0) {
+                            return $requestAmount;
+                        }
+
+                        $accessorialRate = is_array($lineItem->accessorial_rate)
+                            ? array_sum($lineItem->accessorial_rate)
+                            : (float) ($lineItem->accessorial_rate ?? 0);
+
+                        $addOnRate = is_array($lineItem->add_on_rate)
+                            ? array_sum($lineItem->add_on_rate)
+                            : (float) ($lineItem->add_on_rate ?? 0);
+
+                        return $accessorialRate + $addOnRate;
+                    });
+
+                    return [
+                        'delivery_request_id' => $requestId,
+                        'amount' => $amount,
+                    ];
+                })
+                ->filter(fn ($summary) => !empty($summary['delivery_request_id']))
+                ->values();
+
+            $totalAmount = $requestSummaries->sum('amount');
+            $deliveryRequestIds = $requestSummaries->pluck('delivery_request_id')->map(fn ($id) => (int) $id)->all();
 
             // Create SOA
             $soa = Soa::create([
@@ -238,23 +399,24 @@ class BillingController extends Controller
                 'customer_id' => $request->customer_id,
                 'billing_period_from' => $request->billing_period_from,
                 'billing_period_to' => $request->billing_period_to,
-                'statement_date' => $request->statement_date,
-                'due_date' => $request->due_date,
+                'statement_date' => $request->booking_date, // Use booking_date for statement_date
+                'due_date' => $request->booking_date,
                 'total_amount' => $totalAmount,
                 'outstanding_amount' => $totalAmount,
                 'status' => 'draft',
                 'notes' => $request->notes,
                 'created_by' => auth()->id(),
-                'delivery_request_line_item_ids' => $deliveryLineItemIds,
+                'delivery_request_ids' => $deliveryRequestIds,
             ]);
 
-            // Attach delivery request line items to SOA (only if pivot table exists)
-            if (Schema::hasTable('soa_delivery_line_items')) {
-                foreach ($deliveryLineItemIds as $lineItemId) {
-                    $lineItem = \App\Models\DeliveryRequestLineItem::find($lineItemId);
-                    $amount = ($lineItem->accessorial_rate ?? 0) + ($lineItem->add_on_rate ?? 0);
-                    $soa->deliveryRequestLineItems()->attach($lineItemId, [
-                        'amount' => $amount
+            if (Schema::hasTable('soa_delivery_requests')) {
+                foreach ($requestSummaries as $summary) {
+                    DB::table('soa_delivery_requests')->insert([
+                        'soa_id' => $soa->id,
+                        'delivery_request_id' => $summary['delivery_request_id'],
+                        'amount' => $summary['amount'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
                     ]);
                 }
             }
@@ -274,24 +436,132 @@ class BillingController extends Controller
     {
         $soa->load(['company', 'customer', 'creator']);
 
-        // Load delivery request line items if pivot table exists
-        if (Schema::hasTable('soa_delivery_line_items')) {
-            $soa->load('deliveryRequestLineItems.deliveryRequest');
-        }
+        $attachedDeliveryRequests = $this->getAttachedDeliveryRequests($soa);
 
-        return view('billing.show-soa', compact('soa'));
+        return view('billing.show-soa', compact('soa', 'attachedDeliveryRequests'));
     }
 
     public function print($id)
     {
         $soa = Soa::with(['company', 'customer', 'creator'])->findOrFail($id);
 
-        // Load delivery request line items if pivot table exists
-        if (Schema::hasTable('soa_delivery_line_items')) {
-            $soa->load('deliveryRequestLineItems.deliveryRequest');
+        $attachedDeliveryRequests = $this->getAttachedDeliveryRequests($soa);
+
+        return view('billing.print', compact('soa', 'attachedDeliveryRequests'));
+    }
+
+    public function downloadPdf($id)
+    {
+        $soa = Soa::with(['company', 'customer', 'creator'])->findOrFail($id);
+        $attachedDeliveryRequests = $this->getAttachedDeliveryRequests($soa);
+
+        $pdf = Pdf::loadView('billing.print', compact('soa', 'attachedDeliveryRequests'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download(($soa->soa_number ?? 'soa') . '.pdf');
+    }
+
+    private function getAttachedDeliveryRequests(Soa $soa)
+    {
+        if (!Schema::hasTable('soa_delivery_requests')) {
+            return collect();
         }
 
-        return view('billing.print', compact('soa'));
+        $deliveryRequestTable = Schema::hasTable('delivery_request') ? 'delivery_request' : 'delivery_requests';
+
+        return DB::table('soa_delivery_requests')
+            ->join($deliveryRequestTable, $deliveryRequestTable . '.id', '=', 'soa_delivery_requests.delivery_request_id')
+            ->leftJoin('companies', 'companies.id', '=', $deliveryRequestTable . '.company_id')
+            ->leftJoin('customers', 'customers.id', '=', $deliveryRequestTable . '.customer_id')
+            ->select([
+                'soa_delivery_requests.delivery_request_id',
+                'soa_delivery_requests.amount',
+                $deliveryRequestTable . '.mtm',
+                $deliveryRequestTable . '.booking_date',
+                $deliveryRequestTable . '.delivery_date',
+                'companies.company_name',
+                'customers.name as customer_name',
+            ])
+            ->where('soa_delivery_requests.soa_id', $soa->id)
+            ->orderBy($deliveryRequestTable . '.delivery_date')
+            ->get();
+    }
+
+    private function getEditableDeliveryRequests(Soa $soa)
+    {
+        if (!Schema::hasTable('soa_delivery_requests')) {
+            return collect($soa->delivery_request_ids ?? []);
+        }
+
+        $deliveryRequestTable = Schema::hasTable('delivery_request') ? 'delivery_request' : 'delivery_requests';
+        $selectedIds = collect($soa->delivery_request_ids ?? [])
+            ->merge(
+                $this->getAttachedDeliveryRequests($soa)->pluck('delivery_request_id')
+            )
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->all();
+        $usedElsewhereIds = DB::table('soa_delivery_requests')
+            ->where('soa_id', '!=', $soa->id)
+            ->pluck('delivery_request_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        return DB::table($deliveryRequestTable)
+            ->leftJoin('companies', 'companies.id', '=', $deliveryRequestTable . '.company_id')
+            ->leftJoin('customers', 'customers.id', '=', $deliveryRequestTable . '.customer_id')
+            ->leftJoin('delivery_status', 'delivery_status.id', '=', $deliveryRequestTable . '.delivery_status')
+            ->select([
+                $deliveryRequestTable . '.id',
+                $deliveryRequestTable . '.mtm',
+                $deliveryRequestTable . '.booking_date',
+                $deliveryRequestTable . '.delivery_date',
+                $deliveryRequestTable . '.delivery_rate',
+                $deliveryRequestTable . '.company_id',
+                $deliveryRequestTable . '.customer_id',
+                'companies.company_name',
+                'customers.name as customer_name',
+                'delivery_status.status_name',
+            ])
+            ->where($deliveryRequestTable . '.company_id', $soa->company_id)
+            ->where($deliveryRequestTable . '.customer_id', $soa->customer_id)
+            ->whereBetween($deliveryRequestTable . '.delivery_date', [$soa->billing_period_from->format('Y-m-d'), $soa->billing_period_to->format('Y-m-d')])
+            ->whereNotIn($deliveryRequestTable . '.id', $usedElsewhereIds)
+            ->orWhere(function ($query) use ($deliveryRequestTable, $selectedIds, $soa) {
+                $query->whereIn($deliveryRequestTable . '.id', $selectedIds)
+                    ->where($deliveryRequestTable . '.company_id', $soa->company_id)
+                    ->where($deliveryRequestTable . '.customer_id', $soa->customer_id);
+            })
+            ->orderByRaw('CASE WHEN ' . $deliveryRequestTable . '.id IN (' . (count($selectedIds) ? implode(',', $selectedIds) : '0') . ') THEN 0 ELSE 1 END')
+            ->orderBy($deliveryRequestTable . '.delivery_date')
+            ->get()
+            ->unique('id')
+            ->values();
+    }
+
+    private function buildSoaIndexQuery(Request $request)
+    {
+        $query = Soa::with(['company', 'customer', 'creator']);
+
+        if ($request->filled('company')) {
+            $query->whereHas('company', function ($q) use ($request) {
+                $q->where('company_name', 'like', '%' . $request->company . '%');
+            });
+        }
+
+        if ($request->filled('date_from')) {
+            $query->where('billing_period_from', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->where('billing_period_to', '<=', $request->date_to);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        return $query;
     }
 
     private function generateSoaNumber()

@@ -299,10 +299,10 @@ class DeliveryRequestController extends Controller
     public function edit(DeliveryRequest $deliveryRequest)
     {
         // Fetch related delivery line items by joining with the correct table name
-        $deliveryLineItems = DeliveryRequestLineItem::join('delivery_request', 'delivery_request.mtm', '=', 'delivery_request_line_items.mtm')
-        ->where('delivery_request.id', $deliveryRequest->id)
+        $deliveryLineItems = DeliveryRequestLineItem::join('delivery_requests', 'delivery_requests.mtm', '=', 'delivery_request_line_items.mtm')
+        ->where('delivery_requests.id', $deliveryRequest->id)
         ->where('delivery_request_line_items.status', '!=', 0)
-        ->select('delivery_request_line_items.*', 'delivery_request.id as request_id')
+        ->select('delivery_request_line_items.*', 'delivery_requests.id as request_id')
         ->get();
 
         // dd($deliveryLineItems);
@@ -412,8 +412,7 @@ class DeliveryRequestController extends Controller
             $deliveryRequest->region_id = $request->region_id;
             $deliveryRequest->area_id = $request->area_id;
             $deliveryRequest->expense_type_id = $request->expense_type_id;
-            $deliveryRequest->status = '1';
-            $deliveryRequest->delivery_status = $request->delivery_status;
+            $deliveryRequest->status = $request->delivery_status;
 
             $deliveryRequest->update();
             Log::debug('DeliveryRequest saved:', $deliveryRequest->toArray());
@@ -619,10 +618,10 @@ class DeliveryRequestController extends Controller
     
     public function splitView(DeliveryRequest $deliveryRequest){
         // Fetch related delivery line items by joining with the correct table name
-        $deliveryLineItems = DeliveryRequestLineItem::join('delivery_request', 'delivery_request.mtm', '=', 'delivery_request_line_items.mtm')
-        ->where('delivery_request.id', $deliveryRequest->id)
+        $deliveryLineItems = DeliveryRequestLineItem::join('delivery_requests', 'delivery_requests.mtm', '=', 'delivery_request_line_items.mtm')
+        ->where('delivery_requests.id', $deliveryRequest->id)
         ->where('delivery_request_line_items.status', '!=', 0)
-        ->select('delivery_request_line_items.*', 'delivery_request.id as request_id')
+        ->select('delivery_request_line_items.*', 'delivery_requests.id as request_id')
         ->get();
 
         // dd($deliveryLineItems);
@@ -652,10 +651,10 @@ class DeliveryRequestController extends Controller
     {
         $requestId = $request->query('request_id');
 
-        $deliveryLineItems = DeliveryRequestLineItem::join('delivery_request', 'delivery_request.mtm', '=', 'delivery_request_line_items.mtm')
+        $deliveryLineItems = DeliveryRequestLineItem::join('delivery_requests', 'delivery_requests.mtm', '=', 'delivery_request_line_items.mtm')
         ->where('delivery_request_line_items.id', $id)
         ->where('delivery_request_line_items.status', '!=', 0)
-        ->select('delivery_request_line_items.*', 'delivery_request.id as request_id')
+        ->select('delivery_request_line_items.*', 'delivery_requests.id as request_id')
         ->get();
 
 

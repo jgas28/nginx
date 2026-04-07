@@ -113,6 +113,9 @@
                     <a href="{{ route('billing.index') }}" class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-6 py-2 rounded-lg font-medium">
                         <i class="fas fa-redo mr-2"></i>Reset
                     </a>
+                    <a href="{{ route('billing.exportExcel', request()->only(['company', 'date_from', 'date_to', 'status'])) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium">
+                        <i class="fas fa-file-excel mr-2"></i>Export Excel
+                    </a>
                     <a href="{{ route('billing.createSOA.form') }}" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium ml-auto">
                         <i class="fas fa-plus mr-2"></i>Create SOA
                     </a>
@@ -137,7 +140,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
-                        @forelse($soas ?? [] as $soa)
+                        @foreach($soas ?? [] as $soa)
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4 font-medium">{{ $soa->soa_number }}</td>
                                 <td class="px-6 py-4">{{ optional($soa->statement_date)->format('M d, Y') }}</td>
@@ -165,7 +168,7 @@
                                         <a href="{{ route('billing.editSoa', $soa->id) }}" class="text-indigo-600 hover:text-indigo-800" title="Edit">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <form method="POST" action="{{ route('billing.destroySOA', $soa->id) }}" onsubmit="return confirm('Delete this SOA?');" class="inline">
+                                        <form method="POST" action="{{ route('billing.destroySoa', $soa->id) }}" onsubmit="return confirm('Delete this SOA?');" class="inline">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="text-red-600 hover:text-red-800" title="Delete">
@@ -175,18 +178,13 @@
                                         <a href="{{ route('soa.print', $soa->id) }}" class="text-green-600 hover:text-green-800" target="_blank" title="Print">
                                             <i class="fas fa-print"></i>
                                         </a>
+                                        <a href="{{ route('soa.downloadPdf', $soa->id) }}" class="text-red-600 hover:text-red-800" title="Download PDF">
+                                            <i class="fas fa-file-pdf"></i>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr class="hover:bg-gray-50">
-                                <td colspan="8" class="px-6 py-8 text-center text-gray-500">
-                                    <i class="fas fa-inbox text-3xl mb-2 block"></i>
-                                    <p>No billing records found</p>
-                                    <p class="text-sm mt-2">Start by creating a new SOA (Statement of Account)</p>
-                                </td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
@@ -202,6 +200,17 @@
         $('#soaTable').DataTable({
             pageLength: 10,
             order: [[1, 'desc']],
+            autoWidth: false,
+            columns: [
+                { width: '18%' },
+                { width: '12%' },
+                { width: '18%' },
+                { width: '18%' },
+                { width: '18%' },
+                { width: '10%', className: 'text-right' },
+                { width: '8%' },
+                { orderable: false, searchable: false, width: '8%' }
+            ],
             columnDefs: [
                 { orderable: false, targets: 7 }
             ],

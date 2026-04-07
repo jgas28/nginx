@@ -143,10 +143,10 @@ class CashVoucherController extends Controller
 
     public function request($id)
     {
-        $deliveryLineItems = DeliveryRequest::join('delivery_request_line_items', 'delivery_request.id', '=', 'delivery_request_line_items.dr_id')
-            ->where('delivery_request.id', $id)
+        $deliveryLineItems = DeliveryRequest::join('delivery_request_line_items', 'delivery_requests.id', '=', 'delivery_request_line_items.dr_id')
+            ->where('delivery_requests.id', $id)
             ->where('delivery_request_line_items.status', '!=', 0)
-            ->select('delivery_request.*', 'delivery_request_line_items.*', 'delivery_request.id as request_id')
+            ->select('delivery_requests.*', 'delivery_request_line_items.*', 'delivery_requests.id as request_id')
             ->get();
 
         $allocation = Allocation::where('dr_id', $id)->first();
@@ -210,15 +210,15 @@ class CashVoucherController extends Controller
 
     public function accessorialRequest($id)
     {
-        $deliveryLineItems = DeliveryRequest::join('delivery_request_line_items', 'delivery_request.id', '=', 'delivery_request_line_items.dr_id')
+        $deliveryLineItems = DeliveryRequest::join('delivery_request_line_items', 'delivery_requests.id', '=', 'delivery_request_line_items.dr_id')
         ->leftJoin('accessorial_types', DB::raw('REPLACE(delivery_request_line_items.accessorial_type, \'"\', \'\')'), '=', 'accessorial_types.id')
-        ->where('delivery_request.id', $id)
+        ->where('delivery_requests.id', $id)
         ->where('delivery_request_line_items.status', '!=', 0)
         ->whereNotNull('delivery_request_line_items.accessorial_type')
         ->select(
-            'delivery_request.*',
+            'delivery_requests.*',
             'delivery_request_line_items.*',
-            'delivery_request.id as request_id',
+            'delivery_requests.id as request_id',
             'accessorial_types.accessorial_types_name as accessorial_type_name'
         )
         ->get();
@@ -331,9 +331,8 @@ class CashVoucherController extends Controller
             // Update DeliveryRequest status
             $deliveryRequest = DeliveryRequest::where('id', $request->dr_id)->first();
             if ($deliveryRequest && $deliveryRequest->status != 0) {
-                Log::info("Updating DeliveryRequest status: dr_id = {$request->dr_id}, old_status = {$deliveryRequest->status}, new_status = 1");
-                $deliveryRequest->status = '1';
-                $deliveryRequest->delivery_status = 2;
+                Log::info("Updating DeliveryRequest status: dr_id = {$request->dr_id}, old_status = {$deliveryRequest->status}, new_status = 2");
+                $deliveryRequest->status = 2;
                 $deliveryRequest->save();
             }
 

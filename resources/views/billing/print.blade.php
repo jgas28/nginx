@@ -5,13 +5,11 @@
 @section('content')
 <div class="min-h-screen bg-white p-8 print:p-4">
     <div class="max-w-4xl mx-auto">
-        <!-- Print Header -->
         <div class="text-center mb-8 print:mb-4">
             <h1 class="text-3xl font-bold text-gray-900">STATEMENT OF ACCOUNT</h1>
             <p class="text-lg text-gray-600 mt-2">{{ $soa->soa_number ?? 'N/A' }}</p>
         </div>
 
-        <!-- Company Header -->
         <div class="border-b-2 border-gray-300 pb-6 mb-6">
             <div class="grid grid-cols-2 gap-8">
                 <div>
@@ -32,7 +30,6 @@
             </div>
         </div>
 
-        <!-- Bill To -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Bill To:</h3>
             <div class="border border-gray-300 rounded p-4">
@@ -46,7 +43,6 @@
             </div>
         </div>
 
-        <!-- Delivery Requests Table -->
         <div class="mb-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-4">Services Provided</h3>
             <table class="w-full border border-gray-300 text-sm">
@@ -59,40 +55,39 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($soa->deliveryRequests ?? [] as $dr)
+                    @foreach($attachedDeliveryRequests as $dr)
                         <tr>
                             <td class="border border-gray-300 px-4 py-2">{{ $dr->mtm }}</td>
                             <td class="border border-gray-300 px-4 py-2">
                                 {{ $dr->delivery_date ? \Carbon\Carbon::parse($dr->delivery_date)->format('M d, Y') : 'N/A' }}
                             </td>
                             <td class="border border-gray-300 px-4 py-2">
-                                Delivery Service - {{ $dr->company->company_name ?? 'N/A' }}
-                                @if($dr->customer)
-                                    ({{ $dr->customer->name }})
+                                Delivery Service - {{ $dr->company_name ?? 'N/A' }}
+                                @if($dr->customer_name)
+                                    ({{ $dr->customer_name }})
                                 @endif
                             </td>
-                            <td class="border border-gray-300 px-4 py-2 text-right">₱{{ number_format($dr->pivot->amount ?? 0, 2) }}</td>
+                            <td class="border border-gray-300 px-4 py-2 text-right">P{{ number_format($dr->amount ?? 0, 2) }}</td>
                         </tr>
                     @endforeach
                 </tbody>
                 <tfoot class="bg-gray-50">
                     <tr>
                         <td colspan="3" class="border border-gray-300 px-4 py-3 text-right font-semibold">Total Amount:</td>
-                        <td class="border border-gray-300 px-4 py-3 text-right font-bold text-lg">₱{{ number_format($soa->total_amount, 2) }}</td>
+                        <td class="border border-gray-300 px-4 py-3 text-right font-bold text-lg">P{{ number_format($soa->total_amount, 2) }}</td>
                     </tr>
                     <tr>
                         <td colspan="3" class="border border-gray-300 px-4 py-3 text-right font-semibold">Paid Amount:</td>
-                        <td class="border border-gray-300 px-4 py-3 text-right">₱{{ number_format($soa->paid_amount, 2) }}</td>
+                        <td class="border border-gray-300 px-4 py-3 text-right">P{{ number_format($soa->paid_amount, 2) }}</td>
                     </tr>
                     <tr class="bg-red-50">
                         <td colspan="3" class="border border-gray-300 px-4 py-3 text-right font-semibold">Outstanding Amount:</td>
-                        <td class="border border-gray-300 px-4 py-3 text-right font-bold text-red-600">₱{{ number_format($soa->outstanding_amount, 2) }}</td>
+                        <td class="border border-gray-300 px-4 py-3 text-right font-bold text-red-600">P{{ number_format($soa->outstanding_amount, 2) }}</td>
                     </tr>
                 </tfoot>
             </table>
         </div>
 
-        <!-- Notes -->
         @if($soa->notes)
         <div class="mb-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-2">Notes:</h3>
@@ -102,7 +97,6 @@
         </div>
         @endif
 
-        <!-- Footer -->
         <div class="border-t-2 border-gray-300 pt-6 mt-8">
             <div class="grid grid-cols-2 gap-8 text-sm text-gray-600">
                 <div>
@@ -116,7 +110,6 @@
             </div>
         </div>
 
-        <!-- Print Button (hidden in print) -->
         <div class="text-center mt-8 print:hidden">
             <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
                 <i class="fas fa-print mr-2"></i>Print SOA
@@ -134,13 +127,13 @@
         -webkit-print-color-adjust: exact;
         color-adjust: exact;
     }
-    .print\\:hidden {
+    .print\:hidden {
         display: none !important;
     }
-    .print\\:p-4 {
+    .print\:p-4 {
         padding: 1rem !important;
     }
-    .print\\:mb-4 {
+    .print\:mb-4 {
         margin-bottom: 1rem !important;
     }
 }

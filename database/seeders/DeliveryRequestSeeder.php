@@ -31,7 +31,6 @@ class DeliveryRequestSeeder extends Seeder
             'expense_type_id' => '1',
             'delivery_request_type' => '1',
             'created_by' => '1',
-            'delivery_status' => 'completed',
             'created_at' => '2025-06-17 08:43:44',
             'updated_at' => '2025-07-09 07:09:00',
         ]);
@@ -39,17 +38,17 @@ class DeliveryRequestSeeder extends Seeder
         // Create a corresponding line item
         DeliveryRequestLineItem::create([
             'mtm' => 'MTM2025061600898',
-            'warehouse_id' => json_encode(['1']), // Sample warehouse
-            'site_name' => json_encode(['Sample Site']),
-            'delivery_number' => json_encode(['DN001']),
+            'warehouse_id' => ['1'], // Sample warehouse
+            'site_name' => ['Sample Site'],
+            'delivery_number' => ['DN001'],
             'truck_id' => '16',
             'status' => 'completed',
             'delivery_status' => 'delivered',
-            'delivery_address' => json_encode(['Sample Address']),
+            'delivery_address' => ['Sample Address'],
             'distance_type' => '15',
-            'add_on_rate' => json_encode([1000.00]), // Part of the total
-            'accessorial_type' => json_encode(['Sample Accessorial']),
-            'accessorial_rate' => json_encode([2400.00]), // Part of the total
+            'add_on_rate' => [1000.00], // Part of the total
+            'accessorial_type' => ['Sample Accessorial'],
+            'accessorial_rate' => [2400.00], // Part of the total
             'dr_id' => '365',
             'created_by' => '1',
         ]);

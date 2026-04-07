@@ -30,7 +30,7 @@ return new class extends Migration
 
             $table->foreign('delivery_request_id', 'fk_soa_delivery_request')
                   ->references('id')
-                  ->on('delivery_request')
+                  ->on('delivery_requests')
                   ->onDelete('cascade');
         });
     }

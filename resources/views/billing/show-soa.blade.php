@@ -5,7 +5,6 @@
 @section('content')
 <div class="min-h-screen bg-gray-100 py-8">
     <div class="max-w-4xl mx-auto px-4">
-        <!-- Page Header -->
         <div class="mb-8">
             <div class="flex items-center justify-between">
                 <div>
@@ -16,6 +15,9 @@
                     <a href="{{ route('soa.print', $soa->id) }}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
                         <i class="fas fa-print mr-2"></i>Print SOA
                     </a>
+                    <a href="{{ route('soa.downloadPdf', $soa->id) }}" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg">
+                        <i class="fas fa-file-pdf mr-2"></i>Download PDF
+                    </a>
                     <a href="{{ route('billing.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
                         <i class="fas fa-arrow-left mr-2"></i>Back to List
                     </a>
@@ -23,7 +25,6 @@
             </div>
         </div>
 
-        <!-- SOA Information -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
             <h2 class="text-xl font-semibold text-gray-900 mb-6">SOA Information</h2>
 
@@ -88,38 +89,37 @@
             @endif
         </div>
 
-        <!-- Financial Summary -->
         <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
             <h2 class="text-xl font-semibold text-gray-900 mb-6">Financial Summary</h2>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="text-center">
                     <p class="text-gray-600 text-sm font-medium">Total Amount</p>
-                    <p class="text-3xl font-bold text-green-600 mt-2">₱{{ number_format($soa->total_amount, 2) }}</p>
+                    <p class="text-3xl font-bold text-green-600 mt-2">P{{ number_format($soa->total_amount, 2) }}</p>
                 </div>
 
                 <div class="text-center">
                     <p class="text-gray-600 text-sm font-medium">Paid Amount</p>
-                    <p class="text-3xl font-bold text-blue-600 mt-2">₱{{ number_format($soa->paid_amount, 2) }}</p>
+                    <p class="text-3xl font-bold text-blue-600 mt-2">P{{ number_format($soa->paid_amount, 2) }}</p>
                 </div>
 
                 <div class="text-center">
                     <p class="text-gray-600 text-sm font-medium">Outstanding Amount</p>
-                    <p class="text-3xl font-bold text-red-600 mt-2">₱{{ number_format($soa->outstanding_amount, 2) }}</p>
+                    <p class="text-3xl font-bold text-red-600 mt-2">P{{ number_format($soa->outstanding_amount, 2) }}</p>
                 </div>
             </div>
         </div>
 
-        <!-- Delivery Line Items -->
         <div class="bg-white rounded-lg shadow-lg p-6">
             <h2 class="text-xl font-semibold text-gray-900 mb-6">Included Delivery Requests</h2>
 
-            @if($soa->deliveryRequestLineItems && $soa->deliveryRequestLineItems->count() > 0)
+            @if($attachedDeliveryRequests->count() > 0)
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left text-gray-600">
                         <thead class="bg-gray-100 text-gray-900 font-semibold">
                             <tr>
                                 <th class="px-4 py-3">MTM</th>
+                                <th class="px-4 py-3">Booking Date</th>
                                 <th class="px-4 py-3">Delivery Date</th>
                                 <th class="px-4 py-3">Company</th>
                                 <th class="px-4 py-3">Customer</th>
@@ -127,20 +127,21 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
-                            @foreach($soa->deliveryRequestLineItems as $lineItem)
+                            @foreach($attachedDeliveryRequests as $deliveryRequest)
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-3 font-medium">{{ $lineItem->deliveryRequest->mtm ?? $lineItem->mtm ?? 'N/A' }}</td>
-                                    <td class="px-4 py-3">{{ optional($lineItem->deliveryRequest->delivery_date)->format('M d, Y') ?? 'N/A' }}</td>
-                                    <td class="px-4 py-3">{{ $lineItem->deliveryRequest->company->company_name ?? 'N/A' }}</td>
-                                    <td class="px-4 py-3">{{ $lineItem->deliveryRequest->customer->name ?? 'N/A' }}</td>
-                                    <td class="px-4 py-3 font-semibold">₱{{ number_format($lineItem->pivot->amount ?? 0, 2) }}</td>
+                                    <td class="px-4 py-3 font-medium">{{ $deliveryRequest->mtm ?? 'N/A' }}</td>
+                                    <td class="px-4 py-3">{{ $deliveryRequest->booking_date ? \Carbon\Carbon::parse($deliveryRequest->booking_date)->format('M d, Y') : 'N/A' }}</td>
+                                    <td class="px-4 py-3">{{ $deliveryRequest->delivery_date ? \Carbon\Carbon::parse($deliveryRequest->delivery_date)->format('M d, Y') : 'N/A' }}</td>
+                                    <td class="px-4 py-3">{{ $deliveryRequest->company_name ?? 'N/A' }}</td>
+                                    <td class="px-4 py-3">{{ $deliveryRequest->customer_name ?? 'N/A' }}</td>
+                                    <td class="px-4 py-3 font-semibold">P{{ number_format($deliveryRequest->amount ?? 0, 2) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
                         <tfoot class="bg-gray-50">
                             <tr>
-                                <td colspan="4" class="px-4 py-3 text-right font-semibold">Total:</td>
-                                <td class="px-4 py-3 font-bold text-green-600">₱{{ number_format($soa->total_amount, 2) }}</td>
+                                <td colspan="5" class="px-4 py-3 text-right font-semibold">Total:</td>
+                                <td class="px-4 py-3 font-bold text-green-600">P{{ number_format($soa->total_amount, 2) }}</td>
                             </tr>
                         </tfoot>
                     </table>

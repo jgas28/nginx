@@ -29,6 +29,31 @@
             <input type="text" name="position" id="position" required class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
         </div>
 
+        <div>
+            <label for="daily_rate" class="block text-sm font-medium text-gray-700">Daily Rate</label>
+            <input type="number" step="0.01" min="0" name="daily_rate" id="daily_rate" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <div>
+            <label for="monthly_salary" class="block text-sm font-medium text-gray-700">Fixed Monthly Salary</label>
+            <input type="number" step="0.01" min="0" name="monthly_salary" id="monthly_salary" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <div>
+            <label for="sss_no" class="block text-sm font-medium text-gray-700">SSS Number</label>
+            <input type="text" name="sss_no" id="sss_no" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <div>
+            <label for="philhealth_no" class="block text-sm font-medium text-gray-700">PhilHealth Number</label>
+            <input type="text" name="philhealth_no" id="philhealth_no" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <div>
+            <label for="tin_no" class="block text-sm font-medium text-gray-700">TIN</label>
+            <input type="text" name="tin_no" id="tin_no" class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
          <!-- Status -->
         <div class="mt-4">
             <label for="status" class="block text-sm font-medium text-gray-700">Status</label>

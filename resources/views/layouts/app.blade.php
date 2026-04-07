@@ -399,10 +399,22 @@
 
             {{-- Attendance nav --}}
             @if($user->hasAnyRoleId([1, 2, 3]))
-            <a href="{{ route('attendance.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
-                <i class="fas fa-clipboard-list"></i>
-                <span x-show="sidebarOpen" x-transition>Attendance</span>
-            </a>
+            <div x-data="{ openAttendance: false }">
+                <button @click="openAttendance = !openAttendance" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700 text-left">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-clipboard-list"></i>
+                        <span x-show="sidebarOpen" x-transition>Attendance</span>
+                    </div>
+                    <svg x-show="sidebarOpen" :class="openAttendance ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <div x-show="openAttendance && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+                    <a href="{{ route('attendance.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Attendance List</a>
+                    <a href="{{ route('attendance.create') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Add Attendance</a>
+                    <a href="{{ route('attendance.summary') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Summary</a>
+                </div>
+            </div>
             @endif
 
             {{-- Human Resource nav --}}

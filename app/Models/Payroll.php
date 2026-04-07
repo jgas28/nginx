@@ -21,7 +21,12 @@ class Payroll extends Model
         'total_late_minutes',
         'total_undertime_minutes',
         'total_overtime_hours',
+        'compensation_basis',
+        'base_rate',
         'gross_salary',
+        'sss_deduction',
+        'philhealth_deduction',
+        'tax_deduction',
         'total_allowance',
         'total_deduction',
         'net_salary',
@@ -32,6 +37,14 @@ class Payroll extends Model
     protected $casts = [
         'cutoff_from' => 'date',
         'cutoff_to' => 'date',
+        'base_rate' => 'decimal:2',
+        'gross_salary' => 'decimal:2',
+        'sss_deduction' => 'decimal:2',
+        'philhealth_deduction' => 'decimal:2',
+        'tax_deduction' => 'decimal:2',
+        'total_allowance' => 'decimal:2',
+        'total_deduction' => 'decimal:2',
+        'net_salary' => 'decimal:2',
     ];
 
     /**

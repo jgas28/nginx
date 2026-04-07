@@ -40,7 +40,7 @@ class AllocationController extends Controller
             'lineItems.addOnRate',
         ])
         ->where('status', '!=', 0)
-        ->where('delivery_status', 8) // Now using delivery_status on DeliveryRequest
+        ->where('status', 8) // Filter by delivery request status code
         ->when($search, function ($query, $search) {
             $query->where(function ($q) use ($search) {
                 $q->where('mtm', 'like', '%' . $search . '%')
@@ -127,7 +127,7 @@ class AllocationController extends Controller
                 'sequence' => $sequence,
             ]);
 
-            DeliveryRequest::where('id', $drId)->update(['delivery_status' => 14]);
+            DeliveryRequest::where('id', $drId)->update(['status' => 14]);
         }
         Log::info('Cash voucher allocations processed successfully.', [
             'user_id' => $employeeCode,

@@ -59,6 +59,11 @@ class EmployeeController extends Controller
             'roles.*' => 'exists:roles,id',
             'password' => 'required|min:6|confirmed',
             'employment_status' => 'required',
+            'daily_rate' => 'nullable|numeric|min:0',
+            'monthly_salary' => 'nullable|numeric|min:0',
+            'sss_no' => 'nullable|string|max:50',
+            'philhealth_no' => 'nullable|string|max:50',
+            'tin_no' => 'nullable|string|max:50',
         ]);
 
         $employee = User::create([
@@ -70,6 +75,11 @@ class EmployeeController extends Controller
             'password' => Hash::make($request->password),
             'status' => 1,
             'employment_status' => $request->employment_status,
+            'daily_rate' => $request->daily_rate ?? 0,
+            'monthly_salary' => $request->monthly_salary ?? 0,
+            'sss_no' => $request->sss_no,
+            'philhealth_no' => $request->philhealth_no,
+            'tin_no' => $request->tin_no,
         ]);
 
         // Attach selected roles
@@ -110,6 +120,11 @@ class EmployeeController extends Controller
             'roles.*' => 'exists:roles,id',
             'password' => 'nullable|min:6|confirmed',
             'status' => 'required',
+            'daily_rate' => 'nullable|numeric|min:0',
+            'monthly_salary' => 'nullable|numeric|min:0',
+            'sss_no' => 'nullable|string|max:50',
+            'philhealth_no' => 'nullable|string|max:50',
+            'tin_no' => 'nullable|string|max:50',
         ]);
 
         $employee->employee_code = $request->employee_code;
@@ -118,6 +133,11 @@ class EmployeeController extends Controller
         $employee->position = $request->position;
         $employee->status = $request->status;
         $employee->employment_status = $request->employment_status;
+        $employee->daily_rate = $request->daily_rate ?? 0;
+        $employee->monthly_salary = $request->monthly_salary ?? 0;
+        $employee->sss_no = $request->sss_no;
+        $employee->philhealth_no = $request->philhealth_no;
+        $employee->tin_no = $request->tin_no;
 
         if ($request->filled('password')) {
             $employee->password = Hash::make($request->password);

@@ -27,6 +27,11 @@ class User extends Authenticatable
         'password',
         'status',
         'employment_status',
+        'daily_rate',
+        'monthly_salary',
+        'sss_no',
+        'philhealth_no',
+        'tin_no',
     ];
 
     /**
@@ -49,6 +54,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'daily_rate' => 'decimal:2',
+            'monthly_salary' => 'decimal:2',
         ];
     }
 
@@ -73,6 +80,15 @@ class User extends Authenticatable
     {
         return $this->roles->whereIn('id', $roleIds)->isNotEmpty();
     }
+
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
+    public function payrolls()
+    {
+        return $this->hasMany(Payroll::class);
+    }
     
 }
-

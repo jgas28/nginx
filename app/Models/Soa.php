@@ -23,7 +23,7 @@ class Soa extends Model
         'status',
         'notes',
         'created_by',
-        'delivery_request_line_item_ids', // JSON array of delivery request line item IDs included in this SOA
+        'delivery_request_ids',
     ];
 
     protected $casts = [
@@ -34,7 +34,7 @@ class Soa extends Model
         'total_amount' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'outstanding_amount' => 'decimal:2',
-        'delivery_request_line_item_ids' => 'array',
+        'delivery_request_ids' => 'array',
     ];
 
     // Relationships
@@ -53,8 +53,8 @@ class Soa extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function deliveryRequestLineItems()
+    public function deliveryRequests()
     {
-        return $this->belongsToMany(\App\Models\DeliveryRequestLineItem::class, 'soa_delivery_line_items', 'soa_id', 'delivery_request_line_item_id');
+        return $this->belongsToMany(\App\Models\DeliveryRequest::class, 'soa_delivery_requests', 'soa_id', 'delivery_request_id');
     }
 }

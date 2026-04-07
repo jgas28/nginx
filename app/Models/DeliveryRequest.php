@@ -9,7 +9,7 @@ class DeliveryRequest extends Model
 { 
     use HasFactory;
 
-    protected $table = 'delivery_request';
+    protected $table = 'delivery_requests';
 
     protected $fillable = [
         'mtm', 'booking_date', 'delivery_date', 'delivery_type', 'delivery_rate', 
@@ -21,6 +21,11 @@ class DeliveryRequest extends Model
     public function company()
     {
         return $this->belongsTo(Company::class, 'company_id');
+    }
+
+    public function customer()
+    {
+        return $this->belongsTo(Customer::class, 'customer_id');
     }
 
     public function region()
@@ -124,20 +129,11 @@ class DeliveryRequest extends Model
         ];
     }
 
-    public function customer()
-    {
-        return $this->belongsTo(Customer::class, 'customer_id');
-    }
-
     public function expenseType()
     {
         return $this->belongsTo(Expense_Type::class, 'expense_type_id');
     }
 
-    public function truckType()
-    {
-        return $this->belongsTo(TruckType::class, 'truck_type_id');
-    }
 
     public function area()
     {

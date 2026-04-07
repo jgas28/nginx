@@ -116,14 +116,14 @@ class DashboardController extends Controller
                 ->map(fn($amount) => abs($amount));
         }
 
-        $totalPendingDeliveries = DeliveryRequest::where('delivery_status', '!=', 1)
+        $totalPendingDeliveries = DeliveryRequest::where('status', '!=', 1)
             ->count();
 
-        $totalDelivered = DeliveryRequest::where('delivery_status', 1)
+        $totalDelivered = DeliveryRequest::where('status', 1)
             ->whereDate('created_at', Carbon::today())
             ->count();
 
-        $totalTruckAllocated = DeliveryRequest::where('delivery_status', 8)
+        $totalTruckAllocated = DeliveryRequest::where('status', 8)
             ->count();
 
         $totalCVRapproval = CashVoucher::where('status', 1)
