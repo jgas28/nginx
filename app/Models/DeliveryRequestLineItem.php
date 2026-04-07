@@ -66,4 +66,9 @@ class DeliveryRequestLineItem extends Model
     {
         return $this->belongsTo(DeliveryStatus::class, 'delivery_status');
     }
+
+    public function soas()
+    {
+        return $this->belongsToMany(\App\Models\Soa::class, 'soa_delivery_line_items', 'delivery_request_line_item_id', 'soa_id');
+    }
 }

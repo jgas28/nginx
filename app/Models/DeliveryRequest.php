@@ -185,4 +185,9 @@ class DeliveryRequest extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function soas()
+    {
+        return $this->belongsToMany(Soa::class, 'soa_delivery_requests', 'delivery_request_id', 'soa_id');
+    }
+
 }

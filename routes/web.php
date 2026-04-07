@@ -36,6 +36,8 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DetailsController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\BillingController;
+use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\HRController;
 use App\Exports\SoaExcel;
 use App\Exports\SoaDownload;
 use App\Exports\CashVoucherReportExport;
@@ -252,6 +254,7 @@ Route::middleware('auth')->group(function () {
 
     // Show delivery requests (index view) with company filter
     Route::get('billing', [BillingController::class, 'index'])->name('billing.index');
+    Route::get('billing/dashboard', [BillingController::class, 'dashboard'])->name('billing.dashboard');
     Route::get('billing/accessorial', [BillingController::class, 'indexAccessorial'])->name('billing.indexAccessorial');
 
     // Show the form for creating SOA (after selecting delivery requests)
@@ -260,10 +263,22 @@ Route::middleware('auth')->group(function () {
     // Save SOA after the form is submitted
     Route::post('/billing/create-soa', [BillingController::class, 'createSOA'])->name('billing.createSOA');
     Route::post('/billing/create-acc', [BillingController::class, 'createAccessorialSOA'])->name('billing.createSOA-acc');
-    Route::get('/billing/show-soa', [BillingController::class, 'showSoa'])->name('billing.showSoa');
-    
+    Route::get('/billing/show-soa/{soa}', [BillingController::class, 'showSoa'])->name('billing.showSoa');
+    Route::get('/billing/{soa}/edit', [BillingController::class, 'editSOAForm'])->name('billing.editSoa');
+    Route::put('/billing/{soa}', [BillingController::class, 'updateSOA'])->name('billing.updateSoa');
+    Route::delete('/billing/{soa}', [BillingController::class, 'destroySOA'])->name('billing.destroySoa');
     Route::get('/billing/{soa}/print', [BillingController::class, 'print'])->name('soa.print');
     Route::get('admin-cv-report/export', [ReportsController::class, 'AdminExport'])->name('cashVoucherReport.export');
+
+    // Attendance Routes
+    Route::get('/attendance', [AttendanceController::class, 'index'])->name('attendance.index');
+    Route::get('/attendance/create', [AttendanceController::class, 'create'])->name('attendance.create');
+    Route::post('/attendance', [AttendanceController::class, 'store'])->name('attendance.store');
+
+    // HR/Payroll Routes
+    Route::get('/hr', [HRController::class, 'index'])->name('hr.index');
+    Route::get('/hr/create', [HRController::class, 'create'])->name('hr.create');
+    Route::post('/hr', [HRController::class, 'store'])->name('hr.store');
 });
 
 // Admin-only Routes (if needed separately)

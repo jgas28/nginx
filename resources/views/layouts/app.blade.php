@@ -376,6 +376,43 @@
             </div>
             @endif
 
+            {{-- Billing nav --}}
+            @if($user->hasAnyRoleId([1, 2, 3]))
+            <div x-data="{ openBilling: false }">
+                <button @click="openBilling = !openBilling" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-receipt"></i>
+                        <span x-show="sidebarOpen" x-transition>Billing</span>
+                    </div>
+                    <svg x-show="sidebarOpen" :class="openBilling ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <div x-show="openBilling && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+                    <a href="{{ route('billing.dashboard') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Dashboard</a>
+                    <a href="{{ route('billing.createSOA.form') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Create SOA</a>
+                    <a href="{{ route('billing.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">SOA List</a>
+                    <a href="{{ route('billing.indexAccessorial') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Accessorial</a>
+                </div>
+            </div>
+            @endif
+
+            {{-- Attendance nav --}}
+            @if($user->hasAnyRoleId([1, 2, 3]))
+            <a href="{{ route('attendance.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
+                <i class="fas fa-clipboard-list"></i>
+                <span x-show="sidebarOpen" x-transition>Attendance</span>
+            </a>
+            @endif
+
+            {{-- Human Resource nav --}}
+            @if($user->hasAnyRoleId([1, 2, 3, 47]))
+            <a href="{{ route('hr.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
+                <i class="fas fa-users"></i>
+                <span x-show="sidebarOpen" x-transition>Human Resource</span>
+            </a>
+            @endif
+
         </nav>
 
         <!-- Logout -->
