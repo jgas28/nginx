@@ -136,56 +136,61 @@
             </form>
         </div>
 
-        <!-- Attendance Records Table -->
+        <!-- Attendance Groups Table -->
         <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h2 class="text-xl font-semibold text-gray-900">Attendance by Employee</h2>
+                <p class="mt-1 text-sm text-gray-500">Each row shows one employee. Click View Summary to open the detailed attendance modal.</p>
+            </div>
+
             <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left text-gray-600">
                     <thead class="bg-gray-100 text-gray-900 font-semibold">
                         <tr>
-                            <th class="px-6 py-3">Date</th>
                             <th class="px-6 py-3">Employee</th>
                             <th class="px-6 py-3">Employee Code</th>
-                            <th class="px-6 py-3">Time In</th>
-                            <th class="px-6 py-3">Time Out</th>
+                            <th class="px-6 py-3">Position</th>
+                            <th class="px-6 py-3">Records</th>
+                            <th class="px-6 py-3">Present</th>
+                            <th class="px-6 py-3">Late</th>
+                            <th class="px-6 py-3">Absent</th>
                             <th class="px-6 py-3">Total Hours</th>
-                            <th class="px-6 py-3">Status</th>
-                            <th class="px-6 py-3">Remarks</th>
+                            <th class="px-6 py-3">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
-                        @forelse($attendanceRecords as $record)
+                        @forelse($attendanceGroups as $employee)
                             @php
-                                $displayTimeIn = $record->time_in
-                                    ? $record->time_in->format('h:i A')
-                                    : ($record->status === 'Present' ? '08:00 AM' : '-');
-                                $displayTimeOut = $record->time_out
-                                    ? $record->time_out->format('h:i A')
-                                    : ($record->status === 'Present' ? '05:00 PM' : '-');
-                                $displayTotalHours = !is_null($record->total_hours)
-                                    ? number_format($record->total_hours, 2)
-                                    : ($record->status === 'Present' ? '8.00' : '0.00');
+                                $employeeRecords = $employee->attendances;
+                                $presentRecords = $employeeRecords->where('status', 'Present')->count();
+                                $lateRecords = $employeeRecords->where('status', 'Late')->count();
+                                $absentRecords = $employeeRecords->where('status', 'Absent')->count();
+                                $totalHours = number_format($employeeRecords->sum(function ($record) {
+                                    if (!is_null($record->total_hours)) {
+                                        return (float) $record->total_hours;
+                                    }
+
+                                    return in_array($record->status, ['Present', 'Late'], true) ? 8.0 : 0.0;
+                                }), 2);
                             @endphp
                             <tr class="hover:bg-gray-50">
-                                <td class="px-6 py-4">{{ $record->date->format('M d, Y') }}</td>
-                                <td class="px-6 py-4 font-medium">{{ $record->user->fname }} {{ $record->user->lname }}</td>
-                                <td class="px-6 py-4">{{ $record->user->employee_code }}</td>
-                                <td class="px-6 py-4">{{ $displayTimeIn }}</td>
-                                <td class="px-6 py-4">{{ $displayTimeOut }}</td>
-                                <td class="px-6 py-4">{{ $displayTotalHours }} hrs</td>
+                                <td class="px-6 py-4 font-medium text-gray-900">{{ $employee->fname }} {{ $employee->lname }}</td>
+                                <td class="px-6 py-4">{{ $employee->employee_code }}</td>
+                                <td class="px-6 py-4">{{ $employee->position ?? 'N/A' }}</td>
+                                <td class="px-6 py-4">{{ $employeeRecords->count() }}</td>
+                                <td class="px-6 py-4"><span class="font-semibold text-green-600">{{ $presentRecords }}</span></td>
+                                <td class="px-6 py-4"><span class="font-semibold text-yellow-600">{{ $lateRecords }}</span></td>
+                                <td class="px-6 py-4"><span class="font-semibold text-red-600">{{ $absentRecords }}</span></td>
+                                <td class="px-6 py-4 font-semibold text-blue-700">{{ $totalHours }} hrs</td>
                                 <td class="px-6 py-4">
-                                    @if($record->status === 'Present')
-                                        <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">Present</span>
-                                    @elseif($record->status === 'Late')
-                                        <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">Late</span>
-                                    @else
-                                        <span class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">Absent</span>
-                                    @endif
+                                    <button type="button" onclick="openAttendanceSummaryModal({{ $employee->id }})" class="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+                                        <i class="fas fa-eye mr-2"></i>View Summary
+                                    </button>
                                 </td>
-                                <td class="px-6 py-4">{{ $record->remarks ?? '-' }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="px-6 py-8 text-center text-gray-500">
+                                <td colspan="9" class="px-6 py-8 text-center text-gray-500">
                                     <i class="fas fa-inbox text-3xl mb-2"></i>
                                     <p>No attendance records found</p>
                                 </td>
@@ -195,11 +200,279 @@
                 </table>
             </div>
 
-            <!-- Pagination -->
             <div class="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                {{ $attendanceRecords->links() }}
+                {{ $attendanceGroups->links() }}
             </div>
         </div>
     </div>
 </div>
+
+<div id="attendanceSummaryModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 px-4 py-6 backdrop-blur-sm">
+    <div class="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div class="flex items-start justify-between border-b border-gray-200 bg-gradient-to-r from-slate-50 to-blue-50 px-6 py-5">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-blue-600">Attendance Summary</p>
+                <h3 id="attendanceModalEmployeeName" class="mt-2 text-2xl font-semibold text-gray-900">Employee Summary</h3>
+                <p id="attendanceModalEmployeeMeta" class="mt-1 text-sm text-gray-500">Attendance details</p>
+            </div>
+            <button type="button" onclick="closeAttendanceSummaryModal()" class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-400 transition hover:border-gray-300 hover:text-gray-600">
+                <i class="fas fa-times text-lg"></i>
+            </button>
+        </div>
+
+        <div class="px-6 py-5">
+            <div class="mb-4 overflow-x-auto pb-1">
+                <div class="flex min-w-max flex-nowrap gap-1.5">
+                    <div class="flex min-w-[118px] items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5 shadow-sm">
+                        <div class="flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-600 shadow-sm">
+                            <i class="fas fa-clipboard-list text-xs"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[9px] font-semibold uppercase tracking-[0.14em] text-slate-500">Records</p>
+                            <p id="attendanceModalTotalRecords" class="mt-0.5 text-sm font-bold leading-none text-slate-900">0</p>
+                        </div>
+                    </div>
+                    <div class="flex min-w-[118px] items-center gap-2 rounded-lg border border-green-100 bg-green-50 px-2 py-1.5 shadow-sm">
+                        <div class="flex h-7 w-7 items-center justify-center rounded-full bg-white text-green-600 shadow-sm">
+                            <i class="fas fa-check-circle text-xs"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[9px] font-semibold uppercase tracking-[0.14em] text-green-600">Present</p>
+                            <p id="attendanceModalPresentCount" class="mt-0.5 text-sm font-bold leading-none text-green-700">0</p>
+                        </div>
+                    </div>
+                    <div class="flex min-w-[118px] items-center gap-2 rounded-lg border border-yellow-100 bg-yellow-50 px-2 py-1.5 shadow-sm">
+                        <div class="flex h-7 w-7 items-center justify-center rounded-full bg-white text-yellow-600 shadow-sm">
+                            <i class="fas fa-clock text-xs"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[9px] font-semibold uppercase tracking-[0.14em] text-yellow-700">Late</p>
+                            <p id="attendanceModalLateCount" class="mt-0.5 text-sm font-bold leading-none text-yellow-700">0</p>
+                        </div>
+                    </div>
+                    <div class="flex min-w-[118px] items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-2 py-1.5 shadow-sm">
+                        <div class="flex h-7 w-7 items-center justify-center rounded-full bg-white text-red-600 shadow-sm">
+                            <i class="fas fa-times-circle text-xs"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[9px] font-semibold uppercase tracking-[0.14em] text-red-600">Absent</p>
+                            <p id="attendanceModalAbsentCount" class="mt-0.5 text-sm font-bold leading-none text-red-700">0</p>
+                        </div>
+                    </div>
+                    <div class="flex min-w-[130px] items-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-2 py-1.5 shadow-sm">
+                        <div class="flex h-7 w-7 items-center justify-center rounded-full bg-white text-blue-600 shadow-sm">
+                            <i class="fas fa-hourglass-half text-xs"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <p class="text-[9px] font-semibold uppercase tracking-[0.14em] text-blue-600">Hours</p>
+                            <p id="attendanceModalTotalHours" class="mt-0.5 text-sm font-bold leading-none text-blue-700">0.00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-3">
+                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div class="min-w-0">
+                        <h4 class="text-base font-semibold text-gray-900">Daily Attendance Log</h4>
+                        <p class="text-xs text-gray-500">Review time in, time out, status, and rendered hours.</p>
+                    </div>
+                    <div class="flex w-full flex-col gap-2 sm:flex-row md:w-auto md:items-center">
+                        <div class="relative w-full sm:w-64">
+                            <i class="fas fa-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                            <input type="text" id="attendanceModalSearch" placeholder="Search date or status..." class="w-full rounded-lg border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                        </div>
+                        <div class="relative w-full sm:w-28">
+                            <select id="attendanceModalPageSize" class="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                <option value="5" selected>5 rows</option>
+                                <option value="10">10 rows</option>
+                                <option value="15">15 rows</option>
+                            </select>
+                            <i class="fas fa-chevron-down pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+                <div class="max-h-[18rem] overflow-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="sticky top-0 z-10 bg-gray-100 text-left text-gray-700">
+                        <tr>
+                            <th class="px-4 py-3 font-semibold">Date</th>
+                            <th class="px-4 py-3 font-semibold">Time In</th>
+                            <th class="px-4 py-3 font-semibold">Time Out</th>
+                            <th class="px-4 py-3 font-semibold">Status</th>
+                            <th class="px-4 py-3 font-semibold">Total Hours</th>
+                            <th class="px-4 py-3 font-semibold">Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendanceModalRows" class="divide-y divide-gray-200 text-gray-700"></tbody>
+                </table>
+                </div>
+                <div class="flex flex-col gap-3 border-t border-gray-200 bg-white px-4 py-3 text-sm text-gray-500 sm:flex-row sm:items-center sm:justify-between">
+                    <p id="attendanceModalPaginationText">Showing 0 to 0 of 0 rows</p>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="attendanceModalPrev" class="rounded-lg border border-gray-300 px-3 py-1.5 text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+                            Previous
+                        </button>
+                        <span id="attendanceModalPageIndicator" class="min-w-[88px] text-center font-medium text-gray-700">Page 1 of 1</span>
+                        <button type="button" id="attendanceModalNext" class="rounded-lg border border-gray-300 px-3 py-1.5 text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+                            Next
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between border-t border-gray-200 bg-gray-50 px-6 py-4">
+            <p class="text-sm text-gray-500">Tip: use the search box to quickly filter this employee's attendance rows.</p>
+            <button type="button" onclick="closeAttendanceSummaryModal()" class="rounded-xl bg-slate-900 px-4 py-2 text-white transition hover:bg-slate-700">
+                Close Summary
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+const attendanceModalData = @json($attendanceModalData);
+let attendanceModalActiveRecords = [];
+let attendanceModalFilteredRecords = [];
+let attendanceModalCurrentPage = 1;
+
+function getAttendanceStatusBadgeClasses(status) {
+    if (status === 'Present') {
+        return 'bg-green-100 text-green-800';
+    }
+
+    if (status === 'Late') {
+        return 'bg-yellow-100 text-yellow-800';
+    }
+
+    return 'bg-red-100 text-red-800';
+}
+
+function renderAttendanceModalRows() {
+    const pageSize = parseInt(document.getElementById('attendanceModalPageSize').value, 10);
+    const totalRows = attendanceModalFilteredRecords.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+
+    if (attendanceModalCurrentPage > totalPages) {
+        attendanceModalCurrentPage = totalPages;
+    }
+
+    const startIndex = totalRows === 0 ? 0 : (attendanceModalCurrentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalRows);
+    const visibleRows = attendanceModalFilteredRecords.slice(startIndex, endIndex);
+
+    document.getElementById('attendanceModalRows').innerHTML = visibleRows.length
+        ? visibleRows.map((record) => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3">${record.date}</td>
+                <td class="px-4 py-3">${record.time_in}</td>
+                <td class="px-4 py-3">${record.time_out}</td>
+                <td class="px-4 py-3">
+                    <span class="rounded-full px-3 py-1 text-xs font-semibold ${getAttendanceStatusBadgeClasses(record.status)}">${record.status}</span>
+                </td>
+                <td class="px-4 py-3 font-medium">${record.total_hours} hrs</td>
+                <td class="px-4 py-3">${record.remarks}</td>
+            </tr>
+        `).join('')
+        : `
+            <tr>
+                <td colspan="6" class="px-4 py-8 text-center text-gray-500">No attendance rows match the current search.</td>
+            </tr>
+        `;
+
+    const startDisplay = totalRows === 0 ? 0 : startIndex + 1;
+    const endDisplay = totalRows === 0 ? 0 : endIndex;
+
+    document.getElementById('attendanceModalPaginationText').textContent = `Showing ${startDisplay} to ${endDisplay} of ${totalRows} rows`;
+    document.getElementById('attendanceModalPageIndicator').textContent = `Page ${attendanceModalCurrentPage} of ${totalPages}`;
+    document.getElementById('attendanceModalPrev').disabled = attendanceModalCurrentPage <= 1;
+    document.getElementById('attendanceModalNext').disabled = attendanceModalCurrentPage >= totalPages;
+}
+
+function filterAttendanceModalRows() {
+    const searchTerm = document.getElementById('attendanceModalSearch').value.toLowerCase().trim();
+
+    attendanceModalFilteredRecords = attendanceModalActiveRecords.filter((record) => {
+        return `${record.date} ${record.time_in} ${record.time_out} ${record.status} ${record.total_hours} ${record.remarks}`
+            .toLowerCase()
+            .includes(searchTerm);
+    });
+
+    attendanceModalCurrentPage = 1;
+    renderAttendanceModalRows();
+}
+
+function openAttendanceSummaryModal(userId) {
+    const employee = attendanceModalData[userId];
+
+    if (!employee) {
+        return;
+    }
+
+    document.getElementById('attendanceModalEmployeeName').textContent = employee.name;
+    document.getElementById('attendanceModalEmployeeMeta').textContent = `${employee.employee_code || 'No Code'} | ${employee.position || 'N/A'}`;
+    document.getElementById('attendanceModalTotalRecords').textContent = employee.total_records;
+    document.getElementById('attendanceModalPresentCount').textContent = employee.present_count;
+    document.getElementById('attendanceModalLateCount').textContent = employee.late_count;
+    document.getElementById('attendanceModalAbsentCount').textContent = employee.absent_count;
+    document.getElementById('attendanceModalTotalHours').textContent = `${employee.total_hours} hrs`;
+
+    document.getElementById('attendanceModalSearch').value = '';
+    attendanceModalActiveRecords = employee.records;
+    attendanceModalFilteredRecords = [...employee.records];
+    attendanceModalCurrentPage = 1;
+    renderAttendanceModalRows();
+
+    const modal = document.getElementById('attendanceSummaryModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.classList.add('overflow-hidden');
+}
+
+function closeAttendanceSummaryModal() {
+    const modal = document.getElementById('attendanceSummaryModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.classList.remove('overflow-hidden');
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('attendanceModalSearch').addEventListener('input', filterAttendanceModalRows);
+    document.getElementById('attendanceModalPageSize').addEventListener('change', function () {
+        attendanceModalCurrentPage = 1;
+        renderAttendanceModalRows();
+    });
+    document.getElementById('attendanceModalPrev').addEventListener('click', function () {
+        if (attendanceModalCurrentPage > 1) {
+            attendanceModalCurrentPage -= 1;
+            renderAttendanceModalRows();
+        }
+    });
+    document.getElementById('attendanceModalNext').addEventListener('click', function () {
+        const pageSize = parseInt(document.getElementById('attendanceModalPageSize').value, 10);
+        const totalPages = Math.max(1, Math.ceil(attendanceModalFilteredRecords.length / pageSize));
+
+        if (attendanceModalCurrentPage < totalPages) {
+            attendanceModalCurrentPage += 1;
+            renderAttendanceModalRows();
+        }
+    });
+
+    document.getElementById('attendanceSummaryModal').addEventListener('click', function (event) {
+        if (event.target === this) {
+            closeAttendanceSummaryModal();
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') {
+            closeAttendanceSummaryModal();
+        }
+    });
+});
+</script>
 @endsection

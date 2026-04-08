@@ -228,8 +228,8 @@
     </div>
 </div>
 
-<div id="calculateTotalModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4">
-    <div class="w-full max-w-4xl rounded-xl bg-white shadow-2xl">
+<div id="calculateTotalModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/65 px-4 backdrop-blur-[2px]">
+    <div class="w-full max-w-4xl rounded-xl bg-white shadow-[0_30px_80px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/80">
         <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
             <div>
                 <h3 class="text-xl font-semibold text-gray-900">Selected Delivery Request Summary</h3>
@@ -259,6 +259,18 @@
                     </div>
                 </div>
 
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <p id="calculateTotalModalPaginationText" class="text-sm text-gray-500">Showing 0 to 0 of 0 rows</p>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-gray-500">Rows</span>
+                        <select id="calculateTotalModalPageSize" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                            <option value="5" selected>5</option>
+                            <option value="10">10</option>
+                            <option value="15">15</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="overflow-x-auto rounded-lg border border-gray-200">
                     <table class="min-w-full text-sm">
                         <thead class="bg-gray-100 text-left text-gray-700">
@@ -273,6 +285,16 @@
                         </thead>
                         <tbody id="calculateTotalModalRows" class="divide-y divide-gray-200 text-gray-700"></tbody>
                     </table>
+                </div>
+
+                <div class="mt-3 flex items-center justify-end gap-2">
+                    <button type="button" id="calculateTotalModalPrev" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+                        Previous
+                    </button>
+                    <span id="calculateTotalModalPageIndicator" class="min-w-[88px] text-center text-sm font-medium text-gray-700">Page 1 of 1</span>
+                    <button type="button" id="calculateTotalModalNext" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+                        Next
+                    </button>
                 </div>
             </div>
         </div>
@@ -315,6 +337,8 @@ const deliveryLineItems = [
 ];
 
 console.log('Delivery line items loaded:', deliveryLineItems.length);
+let calculateTotalModalItems = [];
+let calculateTotalModalCurrentPage = 1;
 
 function formatPeso(amount) {
     return `PHP ${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -349,6 +373,43 @@ function getSelectedLineItems() {
     return Array.from(document.querySelectorAll('.delivery-checkbox:checked'))
         .map((checkbox) => deliveryLineItems.find((item) => item.id === parseInt(checkbox.value, 10)))
         .filter(Boolean);
+}
+
+function renderCalculateTotalModalRows() {
+    const rowsContainer = document.getElementById('calculateTotalModalRows');
+    const pageSize = parseInt(document.getElementById('calculateTotalModalPageSize').value, 10);
+    const totalRows = calculateTotalModalItems.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+
+    if (calculateTotalModalCurrentPage > totalPages) {
+        calculateTotalModalCurrentPage = totalPages;
+    }
+
+    const startIndex = totalRows === 0 ? 0 : (calculateTotalModalCurrentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalRows);
+    const visibleRows = calculateTotalModalItems.slice(startIndex, endIndex);
+
+    rowsContainer.innerHTML = visibleRows.map((lineItem) => `
+        <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 align-top">
+                <div class="font-medium text-gray-900">${lineItem.mtm}</div>
+                <div class="text-xs text-gray-500">Line Item #${lineItem.id}</div>
+            </td>
+            <td class="px-4 py-3 align-top">${formatDisplayDate(lineItem.bookingDate)}</td>
+            <td class="px-4 py-3 align-top">${formatDisplayDate(lineItem.deliveryRequest ? lineItem.deliveryRequest.deliveryDate : '')}</td>
+            <td class="px-4 py-3 align-top">${lineItem.deliveryRequest ? lineItem.deliveryRequest.companyName : 'N/A'}</td>
+            <td class="px-4 py-3 align-top">${lineItem.deliveryRequest ? lineItem.deliveryRequest.customerName : 'N/A'}</td>
+            <td class="px-4 py-3 align-top font-semibold text-gray-900">${formatPeso(getLineItemAmount(lineItem))}</td>
+        </tr>
+    `).join('');
+
+    const startDisplay = totalRows === 0 ? 0 : startIndex + 1;
+    const endDisplay = totalRows === 0 ? 0 : endIndex;
+
+    document.getElementById('calculateTotalModalPaginationText').textContent = `Showing ${startDisplay} to ${endDisplay} of ${totalRows} rows`;
+    document.getElementById('calculateTotalModalPageIndicator').textContent = `Page ${calculateTotalModalCurrentPage} of ${totalPages}`;
+    document.getElementById('calculateTotalModalPrev').disabled = calculateTotalModalCurrentPage <= 1;
+    document.getElementById('calculateTotalModalNext').disabled = calculateTotalModalCurrentPage >= totalPages;
 }
 
 function filterDeliveryRequests() {
@@ -590,31 +651,23 @@ function openCalculateTotalModal(selectedLineItems, total) {
     const modal = document.getElementById('calculateTotalModal');
     const emptyState = document.getElementById('calculateTotalModalEmpty');
     const content = document.getElementById('calculateTotalModalContent');
-    const rowsContainer = document.getElementById('calculateTotalModalRows');
 
     if (selectedLineItems.length === 0) {
         emptyState.classList.remove('hidden');
         content.classList.add('hidden');
-        rowsContainer.innerHTML = '';
+        calculateTotalModalItems = [];
+        calculateTotalModalCurrentPage = 1;
+        document.getElementById('calculateTotalModalRows').innerHTML = '';
+        document.getElementById('calculateTotalModalPaginationText').textContent = 'Showing 0 to 0 of 0 rows';
+        document.getElementById('calculateTotalModalPageIndicator').textContent = 'Page 1 of 1';
     } else {
         emptyState.classList.add('hidden');
         content.classList.remove('hidden');
         document.getElementById('modalSelectedCount').textContent = selectedLineItems.length;
         document.getElementById('modalGrandTotal').textContent = formatPeso(total);
-
-        rowsContainer.innerHTML = selectedLineItems.map((lineItem) => `
-            <tr class="hover:bg-gray-50">
-                <td class="px-4 py-3 align-top">
-                    <div class="font-medium text-gray-900">${lineItem.mtm}</div>
-                    <div class="text-xs text-gray-500">Line Item #${lineItem.id}</div>
-                </td>
-                <td class="px-4 py-3 align-top">${formatDisplayDate(lineItem.bookingDate)}</td>
-                <td class="px-4 py-3 align-top">${formatDisplayDate(lineItem.deliveryRequest ? lineItem.deliveryRequest.deliveryDate : '')}</td>
-                <td class="px-4 py-3 align-top">${lineItem.deliveryRequest ? lineItem.deliveryRequest.companyName : 'N/A'}</td>
-                <td class="px-4 py-3 align-top">${lineItem.deliveryRequest ? lineItem.deliveryRequest.customerName : 'N/A'}</td>
-                <td class="px-4 py-3 align-top font-semibold text-gray-900">${formatPeso(getLineItemAmount(lineItem))}</td>
-            </tr>
-        `).join('');
+        calculateTotalModalItems = selectedLineItems;
+        calculateTotalModalCurrentPage = 1;
+        renderCalculateTotalModalRows();
     }
 
     modal.classList.remove('hidden');
@@ -777,6 +830,28 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('calculateTotalModal').addEventListener('click', function(event) {
         if (event.target === this) {
             closeCalculateTotalModal();
+        }
+    });
+
+    document.getElementById('calculateTotalModalPageSize').addEventListener('change', function() {
+        calculateTotalModalCurrentPage = 1;
+        renderCalculateTotalModalRows();
+    });
+
+    document.getElementById('calculateTotalModalPrev').addEventListener('click', function() {
+        if (calculateTotalModalCurrentPage > 1) {
+            calculateTotalModalCurrentPage -= 1;
+            renderCalculateTotalModalRows();
+        }
+    });
+
+    document.getElementById('calculateTotalModalNext').addEventListener('click', function() {
+        const pageSize = parseInt(document.getElementById('calculateTotalModalPageSize').value, 10);
+        const totalPages = Math.max(1, Math.ceil(calculateTotalModalItems.length / pageSize));
+
+        if (calculateTotalModalCurrentPage < totalPages) {
+            calculateTotalModalCurrentPage += 1;
+            renderCalculateTotalModalRows();
         }
     });
 

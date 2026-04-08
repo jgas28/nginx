@@ -53,6 +53,7 @@
                             </div>
                         </div>
                         <input type="hidden" id="summary_employee_id" name="user_id" value="{{ $employeeId }}">
+                        <p class="mt-2 text-xs text-gray-500">Type the employee name or code, then pick one from the suggestion list to load the summary.</p>
                     </div>
 
                     <div class="flex items-end gap-2">
@@ -66,16 +67,25 @@
                 </div>
 
                 <div class="flex gap-2">
-                    <a href="{{ route('attendance.summary.excel', request()->only(['month', 'employee', 'user_id'])) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium">
+                    <a href="{{ route('attendance.summary.excel', request()->only(['month', 'employee', 'user_id'])) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium {{ !$hasEmployeeFilter ? 'pointer-events-none opacity-50' : '' }}">
                         <i class="fas fa-file-excel mr-2"></i>Export Excel
                     </a>
-                    <a href="{{ route('attendance.summary.pdf', request()->only(['month', 'employee', 'user_id'])) }}" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium">
+                    <a href="{{ route('attendance.summary.pdf', request()->only(['month', 'employee', 'user_id'])) }}" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium {{ !$hasEmployeeFilter ? 'pointer-events-none opacity-50' : '' }}">
                         <i class="fas fa-file-pdf mr-2"></i>Download PDF
                     </a>
                 </div>
             </form>
         </div>
 
+        @if(!$hasEmployeeFilter)
+            <div class="bg-white rounded-lg shadow p-10 text-center text-gray-500">
+                <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                    <i class="fas fa-search text-2xl"></i>
+                </div>
+                <p class="text-lg font-semibold text-gray-800">Search an employee to view attendance summary.</p>
+                <p class="mt-2 text-sm text-gray-500">Choose a month, type an employee name or code, then select the employee from the suggestion list.</p>
+            </div>
+        @else
         @forelse($employeeSummaries as $summary)
             <div class="bg-white rounded-lg shadow mb-6 overflow-hidden">
                 <div class="p-6 border-b border-gray-200">
@@ -107,11 +117,11 @@
 
                 <div class="border-t border-gray-200">
                     <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-                        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                            <div>
-                                <h3 class="text-lg font-semibold text-gray-900">Schedule Table</h3>
-                                <p class="text-sm text-gray-500 mt-1">Detailed attendance schedule for the selected month.</p>
-                            </div>
+                            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">Schedule Table</h3>
+                                    <p class="text-sm text-gray-500 mt-1">Detailed attendance schedule for the selected month.</p>
+                                </div>
                             <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
                                 <div>
                                     <label class="sr-only" for="schedule-search-{{ $summary->user_id }}">Search Schedule</label>
@@ -122,10 +132,14 @@
                                         class="schedule-search-input w-full sm:w-80 px-4 py-2 border border-gray-300 rounded-lg"
                                         data-target-table="schedule-table-{{ $summary->user_id }}"
                                         data-target-count="schedule-count-{{ $summary->user_id }}"
+                                        data-target-pagination="schedule-pagination-{{ $summary->user_id }}"
+                                        data-target-page-indicator="schedule-page-indicator-{{ $summary->user_id }}"
+                                        data-target-prev="schedule-prev-{{ $summary->user_id }}"
+                                        data-target-next="schedule-next-{{ $summary->user_id }}"
                                     >
                                 </div>
                                 <span id="schedule-count-{{ $summary->user_id }}" class="inline-flex items-center rounded-full bg-white px-3 py-2 text-sm text-gray-600 border border-gray-200">
-                                    {{ $summary->records->count() }} rows
+                                    {{ min(5, $summary->records->count()) }} of {{ $summary->records->count() }} rows
                                 </span>
                             </div>
                         </div>
@@ -156,7 +170,7 @@
                                         ? number_format($record->total_hours, 2)
                                         : ($record->status === 'Present' ? '8.00' : '-');
                                 @endphp
-                                <tr class="schedule-row hover:bg-gray-50">
+                                <tr class="schedule-row hover:bg-gray-50" data-row-index="{{ $loop->index }}">
                                     <td class="px-4 py-3">{{ $record->date->format('M d, Y') }}</td>
                                     <td class="px-4 py-3">{{ $record->status }}</td>
                                     <td class="px-4 py-3">{{ $displayTimeIn }}</td>
@@ -168,6 +182,15 @@
                         </tbody>
                     </table>
                     </div>
+                    <div id="schedule-pagination-{{ $summary->user_id }}" class="flex items-center justify-end gap-2 px-6 py-4 border-t border-gray-200 bg-white">
+                        <button type="button" id="schedule-prev-{{ $summary->user_id }}" class="schedule-prev rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50" data-target-table="schedule-table-{{ $summary->user_id }}" data-target-count="schedule-count-{{ $summary->user_id }}" data-target-page-indicator="schedule-page-indicator-{{ $summary->user_id }}">
+                            Previous
+                        </button>
+                        <span id="schedule-page-indicator-{{ $summary->user_id }}" class="min-w-[88px] text-center text-sm font-medium text-gray-700">Page 1 of {{ max(1, (int) ceil($summary->records->count() / 5)) }}</span>
+                        <button type="button" id="schedule-next-{{ $summary->user_id }}" class="schedule-next rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50" data-target-table="schedule-table-{{ $summary->user_id }}" data-target-count="schedule-count-{{ $summary->user_id }}" data-target-page-indicator="schedule-page-indicator-{{ $summary->user_id }}">
+                            Next
+                        </button>
+                    </div>
                 </div>
             </div>
         @empty
@@ -176,6 +199,7 @@
                 <p>No attendance summary found for the selected filters.</p>
             </div>
         @endforelse
+        @endif
     </div>
 </div>
 
@@ -185,6 +209,7 @@ const summaryEmployeeIdInput = document.getElementById('summary_employee_id');
 const summaryEmployeeSuggestions = document.getElementById('summary_employee_suggestions');
 const summaryEmployeeSuggestionItems = Array.from(document.querySelectorAll('.summary-employee-suggestion'));
 const scheduleSearchInputs = Array.from(document.querySelectorAll('.schedule-search-input'));
+const scheduleTableStates = {};
 
 function hideSummaryEmployeeSuggestions() {
     summaryEmployeeSuggestions?.classList.add('hidden');
@@ -258,29 +283,91 @@ scheduleSearchInputs.forEach((input) => {
     input.addEventListener('input', function () {
         const tableId = input.dataset.targetTable;
         const countId = input.dataset.targetCount;
-        const table = document.getElementById(tableId);
-        const count = document.getElementById(countId);
+        const state = scheduleTableStates[tableId];
 
-        if (!table || !count) {
+        if (!state) {
             return;
         }
 
         const keyword = input.value.trim().toLowerCase();
-        const rows = Array.from(table.querySelectorAll('.schedule-row'));
-        let visibleRows = 0;
-
-        rows.forEach((row) => {
-            const rowText = row.textContent.toLowerCase();
-            const shouldShow = keyword === '' || rowText.includes(keyword);
-            row.classList.toggle('hidden', !shouldShow);
-
-            if (shouldShow) {
-                visibleRows += 1;
-            }
-        });
-
-        count.textContent = `${visibleRows} row${visibleRows === 1 ? '' : 's'}`;
+        state.filteredRows = state.allRows.filter((row) => keyword === '' || row.textContent.toLowerCase().includes(keyword));
+        state.currentPage = 1;
+        renderScheduleTablePage(tableId, countId);
     });
+});
+
+function renderScheduleTablePage(tableId, countId) {
+    const state = scheduleTableStates[tableId];
+    const count = document.getElementById(countId);
+
+    if (!state || !count) {
+        return;
+    }
+
+    const pageSize = 5;
+    const totalRows = state.filteredRows.length;
+    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+
+    if (state.currentPage > totalPages) {
+        state.currentPage = totalPages;
+    }
+
+    const startIndex = totalRows === 0 ? 0 : (state.currentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalRows);
+    const visibleRows = new Set(state.filteredRows.slice(startIndex, endIndex));
+
+    state.allRows.forEach((row) => {
+        row.classList.toggle('hidden', !visibleRows.has(row));
+    });
+
+    count.textContent = `${totalRows === 0 ? 0 : startIndex + 1} to ${endIndex} of ${totalRows} rows`;
+    document.getElementById(state.pageIndicatorId).textContent = `Page ${state.currentPage} of ${totalPages}`;
+    document.getElementById(state.prevButtonId).disabled = state.currentPage <= 1;
+    document.getElementById(state.nextButtonId).disabled = state.currentPage >= totalPages;
+}
+
+document.querySelectorAll('[id^="schedule-table-"]').forEach((table) => {
+    const tableId = table.id;
+    const countId = tableId.replace('schedule-table-', 'schedule-count-');
+    const pageIndicatorId = tableId.replace('schedule-table-', 'schedule-page-indicator-');
+    const prevButtonId = tableId.replace('schedule-table-', 'schedule-prev-');
+    const nextButtonId = tableId.replace('schedule-table-', 'schedule-next-');
+
+    scheduleTableStates[tableId] = {
+        allRows: Array.from(table.querySelectorAll('.schedule-row')),
+        filteredRows: Array.from(table.querySelectorAll('.schedule-row')),
+        currentPage: 1,
+        pageIndicatorId,
+        prevButtonId,
+        nextButtonId,
+    };
+
+    document.getElementById(prevButtonId)?.addEventListener('click', function () {
+        const state = scheduleTableStates[tableId];
+        if (!state || state.currentPage <= 1) {
+            return;
+        }
+
+        state.currentPage -= 1;
+        renderScheduleTablePage(tableId, countId);
+    });
+
+    document.getElementById(nextButtonId)?.addEventListener('click', function () {
+        const state = scheduleTableStates[tableId];
+        if (!state) {
+            return;
+        }
+
+        const totalPages = Math.max(1, Math.ceil(state.filteredRows.length / 5));
+        if (state.currentPage >= totalPages) {
+            return;
+        }
+
+        state.currentPage += 1;
+        renderScheduleTablePage(tableId, countId);
+    });
+
+    renderScheduleTablePage(tableId, countId);
 });
 </script>
 @endsection

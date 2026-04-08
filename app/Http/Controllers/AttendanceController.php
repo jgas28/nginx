@@ -19,33 +19,83 @@ class AttendanceController extends Controller
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
         $status = $request->input('status');
+        $applyAttendanceFilters = function ($query) use ($dateFrom, $dateTo, $status) {
+            if ($dateFrom && $dateTo) {
+                $query->whereBetween('date', [
+                    Carbon::parse($dateFrom)->startOfDay(),
+                    Carbon::parse($dateTo)->endOfDay(),
+                ]);
+            } elseif ($dateFrom) {
+                $query->whereDate('date', '>=', Carbon::parse($dateFrom)->toDateString());
+            } elseif ($dateTo) {
+                $query->whereDate('date', '<=', Carbon::parse($dateTo)->toDateString());
+            }
 
-        $query = Attendance::with('user')
-            ->orderBy('date', 'desc');
+            if ($status) {
+                $query->where('status', $status);
+            }
+        };
 
-        // Apply search by employee name
-        if ($search) {
-            $query->whereHas('user', function ($q) use ($search) {
-                $q->where('fname', 'like', '%' . $search . '%')
-                  ->orWhere('lname', 'like', '%' . $search . '%')
-                  ->orWhere('employee_code', 'like', '%' . $search . '%');
-            });
-        }
+        $attendanceGroups = User::query()
+            ->where('status', '!=', 0)
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($userQuery) use ($search) {
+                    $userQuery->where('fname', 'like', '%' . $search . '%')
+                        ->orWhere('lname', 'like', '%' . $search . '%')
+                        ->orWhere('employee_code', 'like', '%' . $search . '%');
+                });
+            })
+            ->whereHas('attendances', function ($query) use ($applyAttendanceFilters) {
+                $applyAttendanceFilters($query);
+            })
+            ->with(['attendances' => function ($query) use ($applyAttendanceFilters) {
+                $applyAttendanceFilters($query);
+                $query->orderBy('date', 'desc');
+            }])
+            ->orderBy('fname')
+            ->orderBy('lname')
+            ->paginate(10)
+            ->appends($request->query());
 
-        // Filter by date range
-        if ($dateFrom && $dateTo) {
-            $query->whereBetween('date', [
-                Carbon::parse($dateFrom)->startOfDay(),
-                Carbon::parse($dateTo)->endOfDay(),
-            ]);
-        }
+        $attendanceModalData = $attendanceGroups->getCollection()
+            ->mapWithKeys(function ($user) {
+                $records = $user->attendances->map(function ($record) {
+                    $displayTimeIn = $record->time_in
+                        ? $record->time_in->format('h:i A')
+                        : (in_array($record->status, ['Present', 'Late'], true) ? '08:00 AM' : '-');
+                    $displayTimeOut = $record->time_out
+                        ? $record->time_out->format('h:i A')
+                        : (in_array($record->status, ['Present', 'Late'], true) ? '05:00 PM' : '-');
+                    $displayTotalHours = !is_null($record->total_hours)
+                        ? (float) $record->total_hours
+                        : (in_array($record->status, ['Present', 'Late'], true) ? 8.0 : 0.0);
 
-        // Filter by status
-        if ($status) {
-            $query->where('status', $status);
-        }
+                    return [
+                        'date' => $record->date->format('M d, Y'),
+                        'status' => $record->status,
+                        'time_in' => $displayTimeIn,
+                        'time_out' => $displayTimeOut,
+                        'total_hours' => number_format($displayTotalHours, 2),
+                        'remarks' => $record->remarks ?: '-',
+                    ];
+                })->values();
 
-        $attendanceRecords = $query->paginate(15);
+                return [
+                    $user->id => [
+                        'id' => $user->id,
+                        'name' => trim($user->fname . ' ' . $user->lname),
+                        'employee_code' => $user->employee_code,
+                        'position' => $user->position ?: 'N/A',
+                        'total_records' => $records->count(),
+                        'present_count' => $records->where('status', 'Present')->count(),
+                        'late_count' => $records->where('status', 'Late')->count(),
+                        'absent_count' => $records->where('status', 'Absent')->count(),
+                        'total_hours' => number_format($records->sum(fn ($record) => (float) $record['total_hours']), 2),
+                        'records' => $records,
+                    ],
+                ];
+            })
+            ->all();
 
         // Calculate dashboard stats
         $totalRecords = Attendance::count();
@@ -70,7 +120,8 @@ class AttendanceController extends Controller
             ->count();
 
         return view('attendance.index', compact(
-            'attendanceRecords',
+            'attendanceGroups',
+            'attendanceModalData',
             'search',
             'dateFrom',
             'dateTo',
@@ -222,16 +273,28 @@ class AttendanceController extends Controller
         $selectedMonth = $request->input('month', now()->format('Y-m'));
         $employee = $request->input('employee');
         $employeeId = $request->input('user_id');
+        $hasEmployeeFilter = filled($employeeId) || filled($employee);
         $employees = User::where('status', '!=', 0)
             ->orderBy('fname')
             ->orderBy('lname')
             ->get();
 
-        $summaryQuery = $this->buildSummaryQuery($selectedMonth, $employee, $employeeId);
-        $summaryRecords = $summaryQuery->get();
-        $employeeSummaries = $this->buildEmployeeSummaries($summaryRecords, $selectedMonth, $employee, $employeeId);
+        $employeeSummaries = collect();
 
-        return view('attendance.summary', compact('selectedMonth', 'employee', 'employeeId', 'employeeSummaries', 'employees'));
+        if ($hasEmployeeFilter) {
+            $summaryQuery = $this->buildSummaryQuery($selectedMonth, $employee, $employeeId);
+            $summaryRecords = $summaryQuery->get();
+            $employeeSummaries = $this->buildEmployeeSummaries($summaryRecords, $selectedMonth, $employee, $employeeId);
+        }
+
+        return view('attendance.summary', compact(
+            'selectedMonth',
+            'employee',
+            'employeeId',
+            'employeeSummaries',
+            'employees',
+            'hasEmployeeFilter'
+        ));
     }
 
     public function summaryExcel(Request $request)
