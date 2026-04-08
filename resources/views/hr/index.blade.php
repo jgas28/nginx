@@ -82,8 +82,17 @@
             </div>
         </div>
 
-        <div id="compensation-setup-container">
+        <div id="compensation-setup-container" class="relative">
             @include('hr.partials.compensation-setup')
+            <div id="compensation-setup-loading" class="absolute inset-0 hidden items-center justify-center rounded-lg bg-white/80 backdrop-blur-[1px]">
+                <div class="flex items-center gap-3 rounded-lg border border-blue-100 bg-white px-5 py-3 shadow-sm">
+                    <svg class="h-5 w-5 animate-spin text-blue-600" viewBox="0 0 24 24" fill="none">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
+                    <span class="text-sm font-medium text-gray-700">Loading compensation setup...</span>
+                </div>
+            </div>
         </div>
 
         <div class="bg-white rounded-lg shadow p-6 mb-8">
@@ -208,20 +217,52 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
 
-    async function loadCompensationSection(url) {
-        const response = await fetch(url, {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'text/html',
-            },
-        });
+    function setCompensationLoading(isLoading) {
+        const currentLoadingOverlay = document.getElementById('compensation-setup-loading');
 
-        if (!response.ok) {
-            throw new Error('Unable to load compensation setup.');
+        if (!currentLoadingOverlay) {
+            return;
         }
 
-        const html = await response.text();
-        container.innerHTML = html;
+        currentLoadingOverlay.classList.toggle('hidden', !isLoading);
+        currentLoadingOverlay.classList.toggle('flex', isLoading);
+    }
+
+    async function loadCompensationSection(url) {
+        setCompensationLoading(true);
+
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'text/html',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Unable to load compensation setup.');
+            }
+
+            const html = await response.text();
+            container.innerHTML = html + `
+                <div id="compensation-setup-loading" class="absolute inset-0 hidden items-center justify-center rounded-lg bg-white/80 backdrop-blur-[1px]">
+                    <div class="flex items-center gap-3 rounded-lg border border-blue-100 bg-white px-5 py-3 shadow-sm">
+                        <svg class="h-5 w-5 animate-spin text-blue-600" viewBox="0 0 24 24" fill="none">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                        </svg>
+                        <span class="text-sm font-medium text-gray-700">Loading compensation setup...</span>
+                    </div>
+                </div>
+            `;
+        } finally {
+            const refreshedLoadingOverlay = document.getElementById('compensation-setup-loading');
+
+            if (refreshedLoadingOverlay) {
+                refreshedLoadingOverlay.classList.add('hidden');
+                refreshedLoadingOverlay.classList.remove('flex');
+            }
+        }
     }
 
     container.addEventListener('submit', async function (event) {

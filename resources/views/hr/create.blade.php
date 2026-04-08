@@ -32,20 +32,53 @@
         <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
             <form method="GET" action="{{ route('hr.create') }}" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
+                    @php
+                        $selectedEmployee = $employees->firstWhere('id', (int) request('user_id'));
+                        $selectedEmployeeLabel = $selectedEmployee
+                            ? trim($selectedEmployee->fname . ' ' . $selectedEmployee->lname) . ' - ' . $selectedEmployee->employee_code
+                            : '';
+                    @endphp
                     <label class="block text-sm font-medium text-gray-700 mb-2">Employee</label>
-                    <select name="user_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-                        <option value="">Select Employee</option>
-                        @foreach($employees as $employee)
-                            <option value="{{ $employee->id }}" {{ request('user_id') == $employee->id ? 'selected' : '' }}>
-                                {{ $employee->fname }} {{ $employee->lname }} - {{ $employee->employee_code }}
-                                @if(($employee->monthly_salary ?? 0) > 0)
-                                    (Monthly: P{{ number_format($employee->monthly_salary ?? 0, 2) }})
-                                @else
-                                    (Daily: P{{ number_format($employee->daily_rate ?? 0, 2) }})
-                                @endif
-                            </option>
-                        @endforeach
-                    </select>
+                    <div class="relative">
+                        <input
+                            type="text"
+                            id="hr_employee_search"
+                            value="{{ old('employee_search', $selectedEmployeeLabel) }}"
+                            placeholder="Search employee name or code..."
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                            autocomplete="off"
+                            required
+                        >
+                        <div
+                            id="hr_employee_suggestions"
+                            class="absolute z-20 mt-1 hidden max-h-64 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg"
+                        >
+                            @foreach($employees as $employee)
+                                @php
+                                    $employeeLabel = trim($employee->fname . ' ' . $employee->lname) . ' - ' . $employee->employee_code;
+                                @endphp
+                                <button
+                                    type="button"
+                                    class="hr-employee-suggestion flex w-full items-center justify-between px-4 py-3 text-left text-sm text-gray-700 hover:bg-blue-50"
+                                    data-label="{{ $employeeLabel }}"
+                                    data-user-id="{{ $employee->id }}"
+                                >
+                                    <span>
+                                        {{ $employee->fname }} {{ $employee->lname }}
+                                        <span class="text-xs text-gray-500">({{ $employee->employee_code }})</span>
+                                    </span>
+                                    <span class="text-xs text-gray-500">
+                                        @if(($employee->monthly_salary ?? 0) > 0)
+                                            Monthly: P{{ number_format($employee->monthly_salary ?? 0, 2) }}
+                                        @else
+                                            Daily: P{{ number_format($employee->daily_rate ?? 0, 2) }}
+                                        @endif
+                                    </span>
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                    <input type="hidden" id="hr_user_id" name="user_id" value="{{ old('user_id', request('user_id')) }}">
                 </div>
 
                 <div>
@@ -229,6 +262,11 @@
 </div>
 
 <script>
+const hrEmployeeSearchInput = document.getElementById('hr_employee_search');
+const hrEmployeeIdInput = document.getElementById('hr_user_id');
+const hrEmployeeSuggestions = document.getElementById('hr_employee_suggestions');
+const hrEmployeeSuggestionItems = Array.from(document.querySelectorAll('.hr-employee-suggestion'));
+
 document.getElementById('quick_cutoff')?.addEventListener('change', function () {
     const value = this.value;
     const fromInput = document.getElementById('cutoff_from');
@@ -266,6 +304,47 @@ document.getElementById('quick_cutoff')?.addEventListener('change', function () 
     }
 });
 
+function hideHrEmployeeSuggestions() {
+    hrEmployeeSuggestions?.classList.add('hidden');
+}
+
+function showHrEmployeeSuggestions() {
+    if (!hrEmployeeSuggestions) {
+        return;
+    }
+
+    hrEmployeeSuggestions.classList.remove('hidden');
+}
+
+function filterHrEmployeeSuggestions() {
+    if (!hrEmployeeSearchInput || !hrEmployeeSuggestions) {
+        return;
+    }
+
+    const keyword = hrEmployeeSearchInput.value.trim().toLowerCase();
+    let visibleCount = 0;
+
+    if (hrEmployeeIdInput) {
+        hrEmployeeIdInput.value = '';
+    }
+
+    hrEmployeeSuggestionItems.forEach((item) => {
+        const label = (item.dataset.label || '').toLowerCase();
+        const shouldShow = keyword === '' || label.includes(keyword);
+        item.classList.toggle('hidden', !shouldShow);
+
+        if (shouldShow) {
+            visibleCount += 1;
+        }
+    });
+
+    if (visibleCount > 0) {
+        showHrEmployeeSuggestions();
+    } else {
+        hideHrEmployeeSuggestions();
+    }
+}
+
 const attendanceDateCheckboxes = Array.from(document.querySelectorAll('.attendance-date-checkbox'));
 const checkedDaysCount = document.getElementById('checked-days-count');
 const checkWorkedDatesButton = document.getElementById('check-worked-dates');
@@ -298,6 +377,33 @@ uncheckAllDatesButton?.addEventListener('click', function () {
     });
 
     updateCheckedDaysCount();
+});
+
+hrEmployeeSearchInput?.addEventListener('focus', filterHrEmployeeSuggestions);
+hrEmployeeSearchInput?.addEventListener('input', filterHrEmployeeSuggestions);
+
+hrEmployeeSuggestionItems.forEach((item) => {
+    item.addEventListener('click', function () {
+        if (!hrEmployeeSearchInput) {
+            return;
+        }
+
+        hrEmployeeSearchInput.value = item.dataset.label || '';
+        if (hrEmployeeIdInput) {
+            hrEmployeeIdInput.value = item.dataset.userId || '';
+        }
+        hideHrEmployeeSuggestions();
+    });
+});
+
+document.addEventListener('click', function (event) {
+    if (!hrEmployeeSearchInput || !hrEmployeeSuggestions) {
+        return;
+    }
+
+    if (!hrEmployeeSearchInput.closest('.relative')?.contains(event.target)) {
+        hideHrEmployeeSuggestions();
+    }
 });
 
 updateCheckedDaysCount();

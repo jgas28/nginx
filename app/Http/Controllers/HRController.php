@@ -22,6 +22,7 @@ class HRController extends Controller
         $status = $request->input('status');
         $month = $request->input('month');
         $compensationSearch = $request->input('comp_search');
+        $availableUserColumns = $this->getAvailableUserCompensationColumns();
 
         $query = Payroll::with(['user', 'creator'])
             ->orderBy('created_at', 'desc');
@@ -76,6 +77,35 @@ class HRController extends Controller
                         ->orWhere('position', 'like', '%' . $compensationSearch . '%');
                 });
             })
+            ->when(collect($availableUserColumns)->contains(true), function ($query) use ($availableUserColumns) {
+                $priorityConditions = [];
+
+                if ($availableUserColumns['daily_rate']) {
+                    $priorityConditions[] = 'COALESCE(daily_rate, 0) > 0';
+                }
+
+                if ($availableUserColumns['monthly_salary']) {
+                    $priorityConditions[] = 'COALESCE(monthly_salary, 0) > 0';
+                }
+
+                if ($availableUserColumns['sss_no']) {
+                    $priorityConditions[] = "TRIM(COALESCE(sss_no, '')) <> ''";
+                }
+
+                if ($availableUserColumns['philhealth_no']) {
+                    $priorityConditions[] = "TRIM(COALESCE(philhealth_no, '')) <> ''";
+                }
+
+                if ($availableUserColumns['tin_no']) {
+                    $priorityConditions[] = "TRIM(COALESCE(tin_no, '')) <> ''";
+                }
+
+                if (!empty($priorityConditions)) {
+                    $query->orderByRaw(
+                        'CASE WHEN ' . implode(' OR ', $priorityConditions) . ' THEN 1 ELSE 0 END DESC'
+                    );
+                }
+            })
             ->orderBy('fname')
             ->orderBy('lname')
             ->paginate(5, ['*'], 'employees_page')
@@ -87,7 +117,8 @@ class HRController extends Controller
                 'search',
                 'status',
                 'month',
-                'compensationSearch'
+                'compensationSearch',
+                'availableUserColumns'
             ));
         }
 
@@ -106,7 +137,8 @@ class HRController extends Controller
             'totalAllowances',
             'totalDeductions',
             'currentMonthPayrolls',
-            'employees'
+            'employees',
+            'availableUserColumns'
         ));
     }
 
@@ -273,6 +305,24 @@ class HRController extends Controller
     public function updateDailyRates(Request $request)
     {
         $availableUserColumns = $this->getAvailableUserCompensationColumns();
+        $enabledColumns = collect($availableUserColumns)->filter()->keys()->values();
+        $redirectParameters = collect($request->only([
+            'search',
+            'status',
+            'month',
+            'comp_search',
+            'employees_page',
+        ]))
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->all();
+
+        if ($enabledColumns->isEmpty()) {
+            return redirect()->route('hr.index', $redirectParameters)->with(
+                'error',
+                'Compensation setup cannot be saved yet because the users table is missing the HR compensation columns. Run the compensation migrations first.'
+            );
+        }
+
         $validationRules = [];
 
         if ($availableUserColumns['daily_rate']) {
@@ -309,6 +359,12 @@ class HRController extends Controller
             array_keys($request->input('tin_nos', [])),
         ])->flatten()->unique()->filter()->values();
 
+        if ($userIds->isEmpty()) {
+            return redirect()->route('hr.index', $redirectParameters)->with('error', 'No compensation setup data was submitted.');
+        }
+
+        $updatedUsers = 0;
+
         foreach ($userIds as $userId) {
             $updates = [];
 
@@ -334,10 +390,19 @@ class HRController extends Controller
 
             if (!empty($updates)) {
                 User::where('id', $userId)->update($updates);
+                $updatedUsers++;
             }
         }
 
-        return redirect()->route('hr.index')->with('success', 'Daily rates updated successfully.');
+        if ($updatedUsers === 0) {
+            return redirect()->route('hr.index', $redirectParameters)->with(
+                'error',
+                'No compensation values were saved. Please confirm the HR compensation columns already exist in the users table.'
+            );
+        }
+
+        return redirect()->route('hr.index', $redirectParameters)
+            ->with('success', 'Compensation setup updated successfully.');
     }
 
     private function buildPayrollPreview(User $employee, string $cutoffFrom, string $cutoffTo, float $allowance = 0, float $deduction = 0, array $selectedAttendanceDates = []): array

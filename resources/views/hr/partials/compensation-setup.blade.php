@@ -1,4 +1,11 @@
 <div class="bg-white rounded-lg shadow p-6 mb-8" id="compensation-setup-card">
+    @php
+        $missingCompensationColumns = collect($availableUserColumns ?? [])
+            ->filter(fn ($isAvailable) => !$isAvailable)
+            ->keys()
+            ->values();
+    @endphp
+
     <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
         <div>
             <h2 class="text-xl font-semibold text-gray-900">Compensation Setup</h2>
@@ -27,10 +34,26 @@
         </form>
     </div>
 
+    @if($missingCompensationColumns->isNotEmpty())
+        <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <p class="font-medium">Compensation fields are not ready in the database yet.</p>
+            <p class="mt-1">
+                Missing columns:
+                {{ $missingCompensationColumns->implode(', ') }}.
+                Save will stay disabled until these fields exist in the <code>users</code> table.
+            </p>
+        </div>
+    @endif
+
     <p class="text-sm text-gray-500 mb-4">Showing {{ $employees->count() }} of {{ $employees->total() }} employee{{ $employees->total() === 1 ? '' : 's' }} in compensation setup.</p>
 
     <form method="POST" action="{{ route('hr.updateDailyRates') }}">
         @csrf
+        <input type="hidden" name="search" value="{{ $search }}">
+        <input type="hidden" name="status" value="{{ $status }}">
+        <input type="hidden" name="month" value="{{ $month }}">
+        <input type="hidden" name="comp_search" value="{{ $compensationSearch }}">
+        <input type="hidden" name="employees_page" value="{{ $employees->currentPage() }}">
         <div class="overflow-x-auto">
             <table class="w-full text-sm text-left text-gray-600">
                 <thead class="bg-gray-100 text-gray-900 font-semibold">
@@ -107,7 +130,11 @@
             </table>
         </div>
         <div class="mt-4">
-            <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-medium">
+            <button
+                type="submit"
+                class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium"
+                @disabled($missingCompensationColumns->isNotEmpty())
+            >
                 <i class="fas fa-save mr-2"></i>Save Compensation Setup
             </button>
         </div>
