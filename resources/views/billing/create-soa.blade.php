@@ -216,7 +216,7 @@
                     </div>
                     <div class="flex gap-4">
                         <button type="button" onclick="calculateTotal()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg">
-                            <i class="fas fa-calculator mr-2"></i>Calculate Total
+                            <i class="fas fa-calculator mr-2"></i>Show Summary
                         </button>
                         <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg">
                             <i class="fas fa-save mr-2"></i>Create SOA
@@ -225,6 +225,66 @@
                 </div>
             </div>
         </form>
+    </div>
+</div>
+
+<div id="calculateTotalModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 px-4">
+    <div class="w-full max-w-4xl rounded-xl bg-white shadow-2xl">
+        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+            <div>
+                <h3 class="text-xl font-semibold text-gray-900">Selected Delivery Request Summary</h3>
+                <p class="mt-1 text-sm text-gray-500">Review the selected delivery requests and total amount before creating the SOA.</p>
+            </div>
+            <button type="button" onclick="closeCalculateTotalModal()" class="text-gray-400 hover:text-gray-600">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <div class="max-h-[70vh] overflow-y-auto px-6 py-4">
+            <div id="calculateTotalModalEmpty" class="hidden rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-10 text-center text-gray-500">
+                <i class="fas fa-inbox text-3xl mb-3"></i>
+                <p class="font-medium">No delivery requests selected yet.</p>
+                <p class="mt-1 text-sm">Select at least one delivery request, then click Calculate Total again.</p>
+            </div>
+
+            <div id="calculateTotalModalContent" class="hidden">
+                <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <div class="rounded-lg bg-blue-50 px-4 py-3">
+                        <p class="text-sm text-blue-700">Selected Requests</p>
+                        <p id="modalSelectedCount" class="mt-1 text-2xl font-bold text-blue-900">0</p>
+                    </div>
+                    <div class="rounded-lg bg-emerald-50 px-4 py-3 md:col-span-2">
+                        <p class="text-sm text-emerald-700">Grand Total</p>
+                        <p id="modalGrandTotal" class="mt-1 text-2xl font-bold text-emerald-700">PHP 0.00</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto rounded-lg border border-gray-200">
+                    <table class="min-w-full text-sm">
+                        <thead class="bg-gray-100 text-left text-gray-700">
+                            <tr>
+                                <th class="px-4 py-3 font-semibold">MTM / Line Item</th>
+                                <th class="px-4 py-3 font-semibold">Booking Date</th>
+                                <th class="px-4 py-3 font-semibold">Delivery Date</th>
+                                <th class="px-4 py-3 font-semibold">Company</th>
+                                <th class="px-4 py-3 font-semibold">Customer</th>
+                                <th class="px-4 py-3 font-semibold">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="calculateTotalModalRows" class="divide-y divide-gray-200 text-gray-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
+            <button type="button" onclick="closeCalculateTotalModal()" class="rounded-lg bg-gray-100 px-4 py-2 text-gray-700 hover:bg-gray-200">
+                Close
+            </button>
+            <button type="button" onclick="closeCalculateTotalModal(); document.querySelector('#soaForm button[type=&quot;submit&quot;]')?.focus();" class="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+                Continue to Create SOA
+            </button>
+        </div>
     </div>
 </div>
 
@@ -255,6 +315,41 @@ const deliveryLineItems = [
 ];
 
 console.log('Delivery line items loaded:', deliveryLineItems.length);
+
+function formatPeso(amount) {
+    return `PHP ${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function formatDisplayDate(dateValue) {
+    if (!dateValue) {
+        return 'N/A';
+    }
+
+    try {
+        const normalizedDate = dateValue.includes('T') ? dateValue : `${dateValue}T00:00:00`;
+        const date = new Date(normalizedDate);
+
+        if (isNaN(date.getTime())) {
+            return dateValue;
+        }
+
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch (error) {
+        return dateValue;
+    }
+}
+
+function getLineItemAmount(lineItem) {
+    return Number(lineItem.requestAmount || 0) > 0
+        ? Number(lineItem.requestAmount || 0)
+        : (Number(lineItem.accessorialRate || 0) + Number(lineItem.addOnRate || 0));
+}
+
+function getSelectedLineItems() {
+    return Array.from(document.querySelectorAll('.delivery-checkbox:checked'))
+        .map((checkbox) => deliveryLineItems.find((item) => item.id === parseInt(checkbox.value, 10)))
+        .filter(Boolean);
+}
 
 function filterDeliveryRequests() {
     try {
@@ -465,10 +560,11 @@ function filterDeliveryRequests() {
 }
 
 function updateSummary() {
-    const checkboxes = document.querySelectorAll('.delivery-checkbox:checked');
-    const count = checkboxes.length;
+    const selectedLineItems = getSelectedLineItems();
+    const count = selectedLineItems.length;
     document.getElementById('selectedRequests').textContent = `Selected Line Items: ${count}`;
-    calculateTotal();
+    const total = selectedLineItems.reduce((sum, lineItem) => sum + getLineItemAmount(lineItem), 0);
+    document.getElementById('totalAmount').textContent = `Total Amount: ${formatPeso(total)}`;
 }
 
 function calculateTotal() {
@@ -488,6 +584,57 @@ function calculateTotal() {
     });
 
     document.getElementById('totalAmount').textContent = `Total Amount: ₱${total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+}
+
+function openCalculateTotalModal(selectedLineItems, total) {
+    const modal = document.getElementById('calculateTotalModal');
+    const emptyState = document.getElementById('calculateTotalModalEmpty');
+    const content = document.getElementById('calculateTotalModalContent');
+    const rowsContainer = document.getElementById('calculateTotalModalRows');
+
+    if (selectedLineItems.length === 0) {
+        emptyState.classList.remove('hidden');
+        content.classList.add('hidden');
+        rowsContainer.innerHTML = '';
+    } else {
+        emptyState.classList.add('hidden');
+        content.classList.remove('hidden');
+        document.getElementById('modalSelectedCount').textContent = selectedLineItems.length;
+        document.getElementById('modalGrandTotal').textContent = formatPeso(total);
+
+        rowsContainer.innerHTML = selectedLineItems.map((lineItem) => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 align-top">
+                    <div class="font-medium text-gray-900">${lineItem.mtm}</div>
+                    <div class="text-xs text-gray-500">Line Item #${lineItem.id}</div>
+                </td>
+                <td class="px-4 py-3 align-top">${formatDisplayDate(lineItem.bookingDate)}</td>
+                <td class="px-4 py-3 align-top">${formatDisplayDate(lineItem.deliveryRequest ? lineItem.deliveryRequest.deliveryDate : '')}</td>
+                <td class="px-4 py-3 align-top">${lineItem.deliveryRequest ? lineItem.deliveryRequest.companyName : 'N/A'}</td>
+                <td class="px-4 py-3 align-top">${lineItem.deliveryRequest ? lineItem.deliveryRequest.customerName : 'N/A'}</td>
+                <td class="px-4 py-3 align-top font-semibold text-gray-900">${formatPeso(getLineItemAmount(lineItem))}</td>
+            </tr>
+        `).join('');
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.classList.add('overflow-hidden');
+}
+
+function closeCalculateTotalModal() {
+    const modal = document.getElementById('calculateTotalModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.classList.remove('overflow-hidden');
+}
+
+function calculateTotal() {
+    const selectedLineItems = getSelectedLineItems();
+    const total = selectedLineItems.reduce((sum, lineItem) => sum + getLineItemAmount(lineItem), 0);
+
+    document.getElementById('totalAmount').textContent = `Total Amount: ${formatPeso(total)}`;
+    openCalculateTotalModal(selectedLineItems, total);
 }
 
 // Bulk selection functions
@@ -626,6 +773,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Then filter delivery requests
     filterDeliveryRequests();
+
+    document.getElementById('calculateTotalModal').addEventListener('click', function(event) {
+        if (event.target === this) {
+            closeCalculateTotalModal();
+        }
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeCalculateTotalModal();
+        }
+    });
 });
 </script>
 @endsection
