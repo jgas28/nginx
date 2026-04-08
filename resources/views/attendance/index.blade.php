@@ -154,13 +154,24 @@
                     </thead>
                     <tbody class="divide-y divide-gray-200">
                         @forelse($attendanceRecords as $record)
+                            @php
+                                $displayTimeIn = $record->time_in
+                                    ? $record->time_in->format('h:i A')
+                                    : ($record->status === 'Present' ? '08:00 AM' : '-');
+                                $displayTimeOut = $record->time_out
+                                    ? $record->time_out->format('h:i A')
+                                    : ($record->status === 'Present' ? '05:00 PM' : '-');
+                                $displayTotalHours = !is_null($record->total_hours)
+                                    ? number_format($record->total_hours, 2)
+                                    : ($record->status === 'Present' ? '8.00' : '0.00');
+                            @endphp
                             <tr class="hover:bg-gray-50">
                                 <td class="px-6 py-4">{{ $record->date->format('M d, Y') }}</td>
                                 <td class="px-6 py-4 font-medium">{{ $record->user->fname }} {{ $record->user->lname }}</td>
                                 <td class="px-6 py-4">{{ $record->user->employee_code }}</td>
-                                <td class="px-6 py-4">{{ $record->time_in ? $record->time_in->format('H:i') : '-' }}</td>
-                                <td class="px-6 py-4">{{ $record->time_out ? $record->time_out->format('H:i') : '-' }}</td>
-                                <td class="px-6 py-4">{{ $record->total_hours ? number_format($record->total_hours, 2) : '-' }} hrs</td>
+                                <td class="px-6 py-4">{{ $displayTimeIn }}</td>
+                                <td class="px-6 py-4">{{ $displayTimeOut }}</td>
+                                <td class="px-6 py-4">{{ $displayTotalHours }} hrs</td>
                                 <td class="px-6 py-4">
                                     @if($record->status === 'Present')
                                         <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">Present</span>

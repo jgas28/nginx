@@ -22,7 +22,37 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Employee</label>
-                        <input type="text" name="employee" value="{{ $employee }}" placeholder="Search name or code..." class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        <div class="relative">
+                            <input
+                                type="text"
+                                id="summary_employee_search"
+                                name="employee"
+                                value="{{ $employee }}"
+                                placeholder="Search name or code..."
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                                autocomplete="off"
+                            >
+                            <div
+                                id="summary_employee_suggestions"
+                                class="absolute z-20 mt-1 hidden max-h-64 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg"
+                            >
+                                @foreach($employees as $employeeOption)
+                                    @php
+                                        $employeeLabel = trim($employeeOption->fname . ' ' . $employeeOption->lname) . ' - ' . $employeeOption->employee_code;
+                                    @endphp
+                                    <button
+                                        type="button"
+                                        class="summary-employee-suggestion flex w-full items-center justify-between px-4 py-3 text-left text-sm text-gray-700 hover:bg-blue-50"
+                                        data-label="{{ $employeeLabel }}"
+                                        data-user-id="{{ $employeeOption->id }}"
+                                    >
+                                        <span>{{ $employeeOption->fname }} {{ $employeeOption->lname }}</span>
+                                        <span class="text-xs text-gray-500">{{ $employeeOption->employee_code }}</span>
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+                        <input type="hidden" id="summary_employee_id" name="user_id" value="{{ $employeeId }}">
                     </div>
 
                     <div class="flex items-end gap-2">
@@ -36,10 +66,10 @@
                 </div>
 
                 <div class="flex gap-2">
-                    <a href="{{ route('attendance.summary.excel', request()->only(['month', 'employee'])) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium">
+                    <a href="{{ route('attendance.summary.excel', request()->only(['month', 'employee', 'user_id'])) }}" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium">
                         <i class="fas fa-file-excel mr-2"></i>Export Excel
                     </a>
-                    <a href="{{ route('attendance.summary.pdf', request()->only(['month', 'employee'])) }}" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium">
+                    <a href="{{ route('attendance.summary.pdf', request()->only(['month', 'employee', 'user_id'])) }}" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium">
                         <i class="fas fa-file-pdf mr-2"></i>Download PDF
                     </a>
                 </div>
@@ -75,9 +105,35 @@
                     </div>
                 </div>
 
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left text-gray-600">
-                        <thead class="bg-gray-100 text-gray-900 font-semibold">
+                <div class="border-t border-gray-200">
+                    <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-900">Schedule Table</h3>
+                                <p class="text-sm text-gray-500 mt-1">Detailed attendance schedule for the selected month.</p>
+                            </div>
+                            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                                <div>
+                                    <label class="sr-only" for="schedule-search-{{ $summary->user_id }}">Search Schedule</label>
+                                    <input
+                                        type="text"
+                                        id="schedule-search-{{ $summary->user_id }}"
+                                        placeholder="Search date, status, time, remarks..."
+                                        class="schedule-search-input w-full sm:w-80 px-4 py-2 border border-gray-300 rounded-lg"
+                                        data-target-table="schedule-table-{{ $summary->user_id }}"
+                                        data-target-count="schedule-count-{{ $summary->user_id }}"
+                                    >
+                                </div>
+                                <span id="schedule-count-{{ $summary->user_id }}" class="inline-flex items-center rounded-full bg-white px-3 py-2 text-sm text-gray-600 border border-gray-200">
+                                    {{ $summary->records->count() }} rows
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="max-h-[420px] overflow-auto">
+                    <table id="schedule-table-{{ $summary->user_id }}" class="w-full text-sm text-left text-gray-600">
+                        <thead class="sticky top-0 z-10 bg-gray-100 text-gray-900 font-semibold shadow-sm">
                             <tr>
                                 <th class="px-4 py-3">Date</th>
                                 <th class="px-4 py-3">Status</th>
@@ -100,7 +156,7 @@
                                         ? number_format($record->total_hours, 2)
                                         : ($record->status === 'Present' ? '8.00' : '-');
                                 @endphp
-                                <tr>
+                                <tr class="schedule-row hover:bg-gray-50">
                                     <td class="px-4 py-3">{{ $record->date->format('M d, Y') }}</td>
                                     <td class="px-4 py-3">{{ $record->status }}</td>
                                     <td class="px-4 py-3">{{ $displayTimeIn }}</td>
@@ -111,6 +167,7 @@
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
         @empty
@@ -121,4 +178,109 @@
         @endforelse
     </div>
 </div>
+
+<script>
+const summaryEmployeeSearchInput = document.getElementById('summary_employee_search');
+const summaryEmployeeIdInput = document.getElementById('summary_employee_id');
+const summaryEmployeeSuggestions = document.getElementById('summary_employee_suggestions');
+const summaryEmployeeSuggestionItems = Array.from(document.querySelectorAll('.summary-employee-suggestion'));
+const scheduleSearchInputs = Array.from(document.querySelectorAll('.schedule-search-input'));
+
+function hideSummaryEmployeeSuggestions() {
+    summaryEmployeeSuggestions?.classList.add('hidden');
+}
+
+function showSummaryEmployeeSuggestions() {
+    if (!summaryEmployeeSuggestions) {
+        return;
+    }
+
+    summaryEmployeeSuggestions.classList.remove('hidden');
+}
+
+function filterSummaryEmployeeSuggestions() {
+    if (!summaryEmployeeSearchInput || !summaryEmployeeSuggestions) {
+        return;
+    }
+
+    const keyword = summaryEmployeeSearchInput.value.trim().toLowerCase();
+    let visibleCount = 0;
+
+    if (summaryEmployeeIdInput) {
+        summaryEmployeeIdInput.value = '';
+    }
+
+    summaryEmployeeSuggestionItems.forEach((item) => {
+        const label = (item.dataset.label || '').toLowerCase();
+        const shouldShow = keyword === '' || label.includes(keyword);
+        item.classList.toggle('hidden', !shouldShow);
+
+        if (shouldShow) {
+            visibleCount += 1;
+        }
+    });
+
+    if (visibleCount > 0) {
+        showSummaryEmployeeSuggestions();
+    } else {
+        hideSummaryEmployeeSuggestions();
+    }
+}
+
+summaryEmployeeSearchInput?.addEventListener('focus', filterSummaryEmployeeSuggestions);
+summaryEmployeeSearchInput?.addEventListener('input', filterSummaryEmployeeSuggestions);
+
+summaryEmployeeSuggestionItems.forEach((item) => {
+    item.addEventListener('click', function () {
+        if (!summaryEmployeeSearchInput) {
+            return;
+        }
+
+        summaryEmployeeSearchInput.value = item.dataset.label || '';
+        if (summaryEmployeeIdInput) {
+            summaryEmployeeIdInput.value = item.dataset.userId || '';
+        }
+        hideSummaryEmployeeSuggestions();
+    });
+});
+
+document.addEventListener('click', function (event) {
+    if (!summaryEmployeeSearchInput || !summaryEmployeeSuggestions) {
+        return;
+    }
+
+    if (!summaryEmployeeSearchInput.closest('.relative')?.contains(event.target)) {
+        hideSummaryEmployeeSuggestions();
+    }
+});
+
+scheduleSearchInputs.forEach((input) => {
+    input.addEventListener('input', function () {
+        const tableId = input.dataset.targetTable;
+        const countId = input.dataset.targetCount;
+        const table = document.getElementById(tableId);
+        const count = document.getElementById(countId);
+
+        if (!table || !count) {
+            return;
+        }
+
+        const keyword = input.value.trim().toLowerCase();
+        const rows = Array.from(table.querySelectorAll('.schedule-row'));
+        let visibleRows = 0;
+
+        rows.forEach((row) => {
+            const rowText = row.textContent.toLowerCase();
+            const shouldShow = keyword === '' || rowText.includes(keyword);
+            row.classList.toggle('hidden', !shouldShow);
+
+            if (shouldShow) {
+                visibleRows += 1;
+            }
+        });
+
+        count.textContent = `${visibleRows} row${visibleRows === 1 ? '' : 's'}`;
+    });
+});
+</script>
 @endsection

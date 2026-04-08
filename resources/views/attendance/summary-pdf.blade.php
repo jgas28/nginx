@@ -9,6 +9,7 @@
         .meta { margin-bottom: 20px; color: #555; }
         .employee-block { margin-bottom: 24px; }
         .employee-head { margin-bottom: 8px; }
+        .table-title { margin: 10px 0 4px; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; margin-top: 8px; }
         th, td { border: 1px solid #ccc; padding: 6px; text-align: left; }
         th { background: #f3f4f6; }
@@ -37,6 +38,7 @@
                 </div>
             </div>
 
+            <div class="table-title">Schedule Table</div>
             <table>
                 <thead>
                     <tr>

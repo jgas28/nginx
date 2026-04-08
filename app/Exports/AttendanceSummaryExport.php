@@ -26,7 +26,9 @@ class AttendanceSummaryExport implements FromCollection, WithHeadings, WithMappi
                 ->whereMonth('date', $monthDate->month);
         }
 
-        if (!empty($this->filters['employee'])) {
+        if (!empty($this->filters['user_id'])) {
+            $query->where('user_id', $this->filters['user_id']);
+        } elseif (!empty($this->filters['employee'])) {
             $employee = $this->filters['employee'];
             $query->whereHas('user', function ($q) use ($employee) {
                 $q->where('fname', 'like', '%' . $employee . '%')

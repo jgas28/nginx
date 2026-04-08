@@ -281,6 +281,11 @@ Route::middleware('auth')->group(function () {
     // HR/Payroll Routes
     Route::get('/hr', [HRController::class, 'index'])->name('hr.index');
     Route::get('/hr/create', [HRController::class, 'create'])->name('hr.create');
+    Route::get('/hr/payslips', [HRController::class, 'payslips'])->name('hr.payslips.index');
+    Route::get('/hr/payslips/export/excel', [HRController::class, 'exportPayslipsExcel'])->name('hr.payslips.export.excel');
+    Route::get('/hr/payslips/export/pdf', [HRController::class, 'exportPayslipsPdf'])->name('hr.payslips.export.pdf');
+    Route::get('/hr/payslips/{payroll}', [HRController::class, 'showPayslip'])->name('hr.payslips.show');
+    Route::get('/hr/payslips/{payroll}/download-pdf', [HRController::class, 'downloadPayslipPdf'])->name('hr.payslips.pdf');
     Route::post('/hr', [HRController::class, 'store'])->name('hr.store');
     Route::post('/hr/daily-rates', [HRController::class, 'updateDailyRates'])->name('hr.updateDailyRates');
   });

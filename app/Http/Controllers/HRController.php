@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\PayslipListExport;
 use App\Models\Payroll;
 use App\Models\Attendance;
 use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
+use Maatwebsite\Excel\Facades\Excel;
 
 class HRController extends Controller
 {
@@ -134,6 +138,77 @@ class HRController extends Controller
         return view('hr.create', compact('employees', 'preview'));
     }
 
+    public function payslips(Request $request)
+    {
+        $search = $request->input('search');
+        $month = $request->input('month');
+        $status = $request->input('status');
+        $employeeId = $request->input('user_id');
+        $employees = User::where('status', '!=', 0)
+            ->orderBy('fname')
+            ->orderBy('lname')
+            ->get();
+
+        $query = $this->buildPayslipListQuery($search, $month, $status, $employeeId);
+        $payslips = $query->paginate(12)->withQueryString();
+
+        return view('hr.payslips.index', compact('payslips', 'search', 'month', 'status', 'employeeId', 'employees'));
+    }
+
+    public function exportPayslipsExcel(Request $request)
+    {
+        return Excel::download(
+            new PayslipListExport($request->only(['search', 'month', 'status', 'user_id'])),
+            'payslips_' . ($request->input('month') ?: now()->format('Y-m')) . '.xlsx'
+        );
+    }
+
+    public function exportPayslipsPdf(Request $request)
+    {
+        $search = $request->input('search');
+        $month = $request->input('month');
+        $status = $request->input('status');
+        $employeeId = $request->input('user_id');
+
+        $payslips = $this->buildPayslipListQuery($search, $month, $status, $employeeId)->get();
+
+        $pdf = Pdf::loadView('hr.payslips.list-pdf', compact('payslips', 'search', 'month', 'status', 'employeeId'))
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->download('payslips_' . ($month ?: now()->format('Y-m')) . '.pdf');
+    }
+
+    public function showPayslip(Payroll $payroll)
+    {
+        $payroll->load(['user', 'creator']);
+
+        $attendanceRecords = Attendance::where('user_id', $payroll->user_id)
+            ->whereBetween('date', [$payroll->cutoff_from, $payroll->cutoff_to])
+            ->orderBy('date')
+            ->get();
+
+        $payslip = $this->buildPayslipData($payroll, $attendanceRecords);
+
+        return view('hr.payslips.show', compact('payslip'));
+    }
+
+    public function downloadPayslipPdf(Payroll $payroll)
+    {
+        $payroll->load(['user', 'creator']);
+
+        $attendanceRecords = Attendance::where('user_id', $payroll->user_id)
+            ->whereBetween('date', [$payroll->cutoff_from, $payroll->cutoff_to])
+            ->orderBy('date')
+            ->get();
+
+        $payslip = $this->buildPayslipData($payroll, $attendanceRecords);
+
+        $pdf = Pdf::loadView('hr.payslips.pdf', compact('payslip'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download($payroll->payroll_no . '_payslip.pdf');
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -197,24 +272,69 @@ class HRController extends Controller
 
     public function updateDailyRates(Request $request)
     {
-        $request->validate([
-            'daily_rates' => 'required|array',
-            'daily_rates.*' => 'nullable|numeric|min:0',
-            'monthly_salaries' => 'nullable|array',
-            'monthly_salaries.*' => 'nullable|numeric|min:0',
-            'sss_nos' => 'nullable|array',
-            'philhealth_nos' => 'nullable|array',
-            'tin_nos' => 'nullable|array',
-        ]);
+        $availableUserColumns = $this->getAvailableUserCompensationColumns();
+        $validationRules = [];
 
-        foreach ($request->daily_rates as $userId => $dailyRate) {
-            User::where('id', $userId)->update([
-                'daily_rate' => (float) ($dailyRate ?? 0),
-                'monthly_salary' => (float) ($request->monthly_salaries[$userId] ?? 0),
-                'sss_no' => $request->sss_nos[$userId] ?? null,
-                'philhealth_no' => $request->philhealth_nos[$userId] ?? null,
-                'tin_no' => $request->tin_nos[$userId] ?? null,
-            ]);
+        if ($availableUserColumns['daily_rate']) {
+            $validationRules['daily_rates'] = 'required|array';
+            $validationRules['daily_rates.*'] = 'nullable|numeric|min:0';
+        }
+
+        if ($availableUserColumns['monthly_salary']) {
+            $validationRules['monthly_salaries'] = 'nullable|array';
+            $validationRules['monthly_salaries.*'] = 'nullable|numeric|min:0';
+        }
+
+        if ($availableUserColumns['sss_no']) {
+            $validationRules['sss_nos'] = 'nullable|array';
+        }
+
+        if ($availableUserColumns['philhealth_no']) {
+            $validationRules['philhealth_nos'] = 'nullable|array';
+        }
+
+        if ($availableUserColumns['tin_no']) {
+            $validationRules['tin_nos'] = 'nullable|array';
+        }
+
+        if (!empty($validationRules)) {
+            $request->validate($validationRules);
+        }
+
+        $userIds = collect([
+            array_keys($request->input('daily_rates', [])),
+            array_keys($request->input('monthly_salaries', [])),
+            array_keys($request->input('sss_nos', [])),
+            array_keys($request->input('philhealth_nos', [])),
+            array_keys($request->input('tin_nos', [])),
+        ])->flatten()->unique()->filter()->values();
+
+        foreach ($userIds as $userId) {
+            $updates = [];
+
+            if ($availableUserColumns['daily_rate']) {
+                $updates['daily_rate'] = (float) ($request->input("daily_rates.$userId", 0) ?? 0);
+            }
+
+            if ($availableUserColumns['monthly_salary']) {
+                $updates['monthly_salary'] = (float) ($request->input("monthly_salaries.$userId", 0) ?? 0);
+            }
+
+            if ($availableUserColumns['sss_no']) {
+                $updates['sss_no'] = $request->input("sss_nos.$userId");
+            }
+
+            if ($availableUserColumns['philhealth_no']) {
+                $updates['philhealth_no'] = $request->input("philhealth_nos.$userId");
+            }
+
+            if ($availableUserColumns['tin_no']) {
+                $updates['tin_no'] = $request->input("tin_nos.$userId");
+            }
+
+            if (!empty($updates)) {
+                User::where('id', $userId)->update($updates);
+            }
         }
 
         return redirect()->route('hr.index')->with('success', 'Daily rates updated successfully.');
@@ -288,6 +408,77 @@ class HRController extends Controller
         ];
     }
 
+    private function buildPayslipData(Payroll $payroll, $attendanceRecords): array
+    {
+        $otherDeductions = max(0, (float) $payroll->total_deduction - (float) $payroll->sss_deduction - (float) $payroll->philhealth_deduction - (float) $payroll->tax_deduction);
+
+        return [
+            'payroll' => $payroll,
+            'employee' => $payroll->user,
+            'attendance_records' => $attendanceRecords,
+            'other_deductions' => $otherDeductions,
+            'earnings' => [
+                [
+                    'label' => $payroll->compensation_basis === 'monthly_fixed' ? 'Semi-Monthly Salary' : 'Daily Rate Salary',
+                    'amount' => (float) $payroll->gross_salary,
+                ],
+                [
+                    'label' => 'Allowance',
+                    'amount' => (float) $payroll->total_allowance,
+                ],
+            ],
+            'deductions' => [
+                [
+                    'label' => 'SSS',
+                    'amount' => (float) $payroll->sss_deduction,
+                ],
+                [
+                    'label' => 'PhilHealth',
+                    'amount' => (float) $payroll->philhealth_deduction,
+                ],
+                [
+                    'label' => 'Withholding Tax',
+                    'amount' => (float) $payroll->tax_deduction,
+                ],
+                [
+                    'label' => 'Other Deductions',
+                    'amount' => $otherDeductions,
+                ],
+            ],
+        ];
+    }
+
+    private function buildPayslipListQuery(?string $search, ?string $month, ?string $status, $employeeId = null)
+    {
+        $query = Payroll::with(['user', 'creator'])
+            ->orderByDesc('cutoff_to')
+            ->orderByDesc('created_at');
+
+        if ($employeeId) {
+            $query->where('user_id', $employeeId);
+        } elseif ($search) {
+            $query->where(function ($payrollQuery) use ($search) {
+                $payrollQuery->whereHas('user', function ($userQuery) use ($search) {
+                    $userQuery->where('fname', 'like', '%' . $search . '%')
+                        ->orWhere('lname', 'like', '%' . $search . '%')
+                        ->orWhere('employee_code', 'like', '%' . $search . '%');
+                })->orWhere('payroll_no', 'like', '%' . $search . '%');
+            });
+        }
+
+        if ($month) {
+            $monthDate = Carbon::createFromFormat('Y-m', $month);
+            $query->whereYear('cutoff_from', $monthDate->year)
+                ->whereMonth('cutoff_from', $monthDate->month);
+        }
+
+        if ($status) {
+            $query->where('payroll_status', $status);
+        }
+
+        return $query;
+    }
+
     private function calculateSemiMonthlySss(float $monthlySalary): float
     {
         $monthlySalaryCredit = min(max($monthlySalary, 5000), 35000);
@@ -345,5 +536,16 @@ class HRController extends Controller
         }
 
         return "PR-{$date}-{$newNumber}";
+    }
+
+    private function getAvailableUserCompensationColumns(): array
+    {
+        return [
+            'daily_rate' => Schema::hasColumn('users', 'daily_rate'),
+            'monthly_salary' => Schema::hasColumn('users', 'monthly_salary'),
+            'sss_no' => Schema::hasColumn('users', 'sss_no'),
+            'philhealth_no' => Schema::hasColumn('users', 'philhealth_no'),
+            'tin_no' => Schema::hasColumn('users', 'tin_no'),
+        ];
     }
 }

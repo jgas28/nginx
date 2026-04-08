@@ -419,10 +419,22 @@
 
             {{-- Human Resource nav --}}
             @if($user->hasAnyRoleId([1, 2, 3, 47]))
-            <a href="{{ route('hr.index') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
-                <i class="fas fa-users"></i>
-                <span x-show="sidebarOpen" x-transition>Human Resource</span>
-            </a>
+            <div x-data="{ openHr: false }">
+                <button @click="openHr = !openHr" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700 text-left">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-users"></i>
+                        <span x-show="sidebarOpen" x-transition>Human Resource</span>
+                    </div>
+                    <svg x-show="sidebarOpen" :class="openHr ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <div x-show="openHr && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+                    <a href="{{ route('hr.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Payroll Dashboard</a>
+                    <a href="{{ route('hr.create') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Create Payroll</a>
+                    <a href="{{ route('hr.payslips.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Payslips</a>
+                </div>
+            </div>
             @endif
 
         </nav>

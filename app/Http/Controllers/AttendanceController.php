@@ -164,9 +164,9 @@ class AttendanceController extends Controller
                         'date' => $dateKey,
                     ],
                     [
-                        'time_in' => null,
-                        'time_out' => null,
-                        'total_hours' => null,
+                        'time_in' => $isPresent ? Carbon::createFromTimeString('08:00') : null,
+                        'time_out' => $isPresent ? Carbon::createFromTimeString('17:00') : null,
+                        'total_hours' => $isPresent ? 8.0 : 0.0,
                         'status' => $isPresent ? 'Present' : 'Absent',
                         'remarks' => null,
                     ]
@@ -221,32 +221,17 @@ class AttendanceController extends Controller
     {
         $selectedMonth = $request->input('month', now()->format('Y-m'));
         $employee = $request->input('employee');
+        $employeeId = $request->input('user_id');
+        $employees = User::where('status', '!=', 0)
+            ->orderBy('fname')
+            ->orderBy('lname')
+            ->get();
 
-        $summaryQuery = $this->buildSummaryQuery($selectedMonth, $employee);
+        $summaryQuery = $this->buildSummaryQuery($selectedMonth, $employee, $employeeId);
         $summaryRecords = $summaryQuery->get();
+        $employeeSummaries = $this->buildEmployeeSummaries($summaryRecords, $selectedMonth, $employee, $employeeId);
 
-        $employeeSummaries = $summaryRecords
-            ->groupBy('user_id')
-            ->map(function ($records) {
-                $first = $records->first();
-                $totalHours = (float) $records->sum(fn ($record) => $this->resolveAttendanceHours($record));
-
-                return (object) [
-                    'user_id' => $first->user_id,
-                    'employee_code' => $first->user->employee_code ?? 'N/A',
-                    'employee_name' => trim(($first->user->fname ?? '') . ' ' . ($first->user->lname ?? '')),
-                    'position' => $first->user->position ?? 'N/A',
-                    'present_count' => $records->where('status', 'Present')->count(),
-                    'late_count' => $records->where('status', 'Late')->count(),
-                    'absent_count' => $records->where('status', 'Absent')->count(),
-                    'total_hours' => $totalHours,
-                    'records' => $records,
-                ];
-            })
-            ->sortBy('employee_name')
-            ->values();
-
-        return view('attendance.summary', compact('selectedMonth', 'employee', 'employeeSummaries'));
+        return view('attendance.summary', compact('selectedMonth', 'employee', 'employeeId', 'employeeSummaries', 'employees'));
     }
 
     public function summaryExcel(Request $request)
@@ -261,37 +246,18 @@ class AttendanceController extends Controller
     {
         $selectedMonth = $request->input('month', now()->format('Y-m'));
         $employee = $request->input('employee');
+        $employeeId = $request->input('user_id');
 
-        $summaryRecords = $this->buildSummaryQuery($selectedMonth, $employee)->get();
+        $summaryRecords = $this->buildSummaryQuery($selectedMonth, $employee, $employeeId)->get();
+        $employeeSummaries = $this->buildEmployeeSummaries($summaryRecords, $selectedMonth, $employee, $employeeId);
 
-        $employeeSummaries = $summaryRecords
-            ->groupBy('user_id')
-            ->map(function ($records) {
-                $first = $records->first();
-                $totalHours = (float) $records->sum(fn ($record) => $this->resolveAttendanceHours($record));
-
-                return (object) [
-                    'user_id' => $first->user_id,
-                    'employee_code' => $first->user->employee_code ?? 'N/A',
-                    'employee_name' => trim(($first->user->fname ?? '') . ' ' . ($first->user->lname ?? '')),
-                    'position' => $first->user->position ?? 'N/A',
-                    'present_count' => $records->where('status', 'Present')->count(),
-                    'late_count' => $records->where('status', 'Late')->count(),
-                    'absent_count' => $records->where('status', 'Absent')->count(),
-                    'total_hours' => $totalHours,
-                    'records' => $records,
-                ];
-            })
-            ->sortBy('employee_name')
-            ->values();
-
-        $pdf = Pdf::loadView('attendance.summary-pdf', compact('selectedMonth', 'employee', 'employeeSummaries'))
+        $pdf = Pdf::loadView('attendance.summary-pdf', compact('selectedMonth', 'employee', 'employeeId', 'employeeSummaries'))
             ->setPaper('a4', 'landscape');
 
         return $pdf->download('attendance_summary_' . $selectedMonth . '.pdf');
     }
 
-    private function buildSummaryQuery(?string $selectedMonth, ?string $employee)
+    private function buildSummaryQuery(?string $selectedMonth, ?string $employee, $employeeId = null)
     {
         $query = Attendance::with('user')
             ->orderBy('user_id')
@@ -303,7 +269,9 @@ class AttendanceController extends Controller
                 ->whereMonth('date', $monthDate->month);
         }
 
-        if ($employee) {
+        if ($employeeId) {
+            $query->where('user_id', $employeeId);
+        } elseif ($employee) {
             $query->whereHas('user', function ($q) use ($employee) {
                 $q->where('fname', 'like', '%' . $employee . '%')
                     ->orWhere('lname', 'like', '%' . $employee . '%')
@@ -312,6 +280,70 @@ class AttendanceController extends Controller
         }
 
         return $query;
+    }
+
+    private function buildEmployeeSummaries($summaryRecords, string $selectedMonth, ?string $employee, $employeeId = null)
+    {
+        $monthDate = Carbon::createFromFormat('Y-m', $selectedMonth);
+        $monthPeriod = collect(CarbonPeriod::create($monthDate->copy()->startOfMonth(), $monthDate->copy()->endOfMonth()));
+        $recordsByUser = $summaryRecords->groupBy('user_id');
+
+        $employees = User::where('status', '!=', 0)
+            ->when($employeeId, fn ($query) => $query->where('id', $employeeId))
+            ->when(!$employeeId && $employee, function ($query) use ($employee) {
+                $query->where(function ($userQuery) use ($employee) {
+                    $userQuery->where('fname', 'like', '%' . $employee . '%')
+                        ->orWhere('lname', 'like', '%' . $employee . '%')
+                        ->orWhere('employee_code', 'like', '%' . $employee . '%');
+                });
+            })
+            ->orderBy('fname')
+            ->orderBy('lname')
+            ->get();
+
+        if ($employees->isEmpty() && $recordsByUser->isNotEmpty()) {
+            $employees = $summaryRecords->pluck('user')->filter()->unique('id')->values();
+        }
+
+        return $employees->map(function ($employeeRecord) use ($recordsByUser, $monthPeriod) {
+            $existingRecords = $recordsByUser->get($employeeRecord->id, collect())
+                ->keyBy(fn ($record) => $record->date->format('Y-m-d'));
+
+            $completeRecords = $monthPeriod->map(function ($date) use ($existingRecords, $employeeRecord) {
+                $dateKey = $date->format('Y-m-d');
+                $record = $existingRecords->get($dateKey);
+
+                if ($record) {
+                    return $record;
+                }
+
+                $placeholder = new Attendance();
+                $placeholder->user_id = $employeeRecord->id;
+                $placeholder->date = $date->copy();
+                $placeholder->time_in = null;
+                $placeholder->time_out = null;
+                $placeholder->total_hours = 0.0;
+                $placeholder->status = 'Absent';
+                $placeholder->remarks = null;
+                $placeholder->setRelation('user', $employeeRecord);
+
+                return $placeholder;
+            });
+
+            $totalHours = (float) $completeRecords->sum(fn ($record) => $this->resolveAttendanceHours($record));
+
+            return (object) [
+                'user_id' => $employeeRecord->id,
+                'employee_code' => $employeeRecord->employee_code ?? 'N/A',
+                'employee_name' => trim(($employeeRecord->fname ?? '') . ' ' . ($employeeRecord->lname ?? '')),
+                'position' => $employeeRecord->position ?? 'N/A',
+                'present_count' => $completeRecords->where('status', 'Present')->count(),
+                'late_count' => $completeRecords->where('status', 'Late')->count(),
+                'absent_count' => $completeRecords->where('status', 'Absent')->count(),
+                'total_hours' => $totalHours,
+                'records' => $completeRecords,
+            ];
+        })->values();
     }
 
     private function resolveAttendanceHours(Attendance $attendance): float
