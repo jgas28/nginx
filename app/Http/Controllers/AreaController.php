@@ -10,24 +10,28 @@ class AreaController extends Controller
     //
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the regions table
-        $regions = Area::when($search, function ($query, $search) {
+        $areas = Area::when($search, function ($query, $search) {
             return $query->where('area_code', 'like', '%' . $search . '%')
                         ->orWhere('area_name', 'like', '%' . $search . '%');
         })
-        ->orderBy('area_code') // Sort by region_code in ascending order
-        ->paginate(10);
+        ->orderBy('area_name')
+        ->paginate($perPage)
+        ->appends($request->query());
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('areas.table', compact('regions'))->render());
+            return response()->json([
+                'html' => view('areas.table', compact('areas', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $areas->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('areas.index', compact('regions', 'search'));
+        return view('areas.index', compact('areas', 'search', 'perPage'));
     }
 
 
@@ -44,21 +48,19 @@ class AreaController extends Controller
      */
     public function store(Request $request)
     {
-        // Validate the request data
         $request->validate([
             'area_code' => 'required',
             'area_name' => 'required',
         ]);
 
-        // Create new region
-        $region = new Area([
+        $area = new Area([
             'area_code' => $request->area_code,
             'area_name' => $request->area_name,
         ]);
 
-        $region->save();
+        $area->save();
 
-        return redirect()->route('areas.index')->with('success', 'Region created successfully.');
+        return redirect()->route('areas.index')->with('success', 'Area created successfully.');
     }
 
     /**
@@ -82,13 +84,11 @@ class AreaController extends Controller
      */
     public function update(Request $request, Area $area)
     {
-        // Validate the request data
         $request->validate([
             'area_code' => 'required',
             'area_name' => 'required',
         ]);
 
-        // Update the region details
         $area->area_code = $request->area_code;
         $area->area_name = $request->area_name;
         $area->save();

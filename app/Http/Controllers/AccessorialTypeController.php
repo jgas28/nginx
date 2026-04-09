@@ -13,23 +13,28 @@ class AccessorialTypeController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the add_on_rates table
         $accessorialTypes = AccessorialType::when($search, function ($query, $search) {
             return $query->where('accessorial_types_code', 'like', '%' . $search . '%')
                          ->orWhere('accessorial_types_name', 'like', '%' . $search . '%');
         })
-        ->paginate(5);
+        ->orderBy('accessorial_types_name')
+        ->paginate($perPage)
+        ->appends($request->query());
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('accessorialTypes.table', compact('accessorialTypes'))->render());
+            return response()->json([
+                'html' => view('accessorialTypes.table', compact('accessorialTypes', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $accessorialTypes->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('accessorialTypes.index', compact('accessorialTypes', 'search'));
+        return view('accessorialTypes.index', compact('accessorialTypes', 'search', 'perPage'));
     }
 
     /**

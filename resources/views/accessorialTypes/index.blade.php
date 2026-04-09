@@ -1,54 +1,26 @@
 @extends('layouts.app')
 
-@section('title', 'FCZCNYX')
+@section('title', 'Accessorial Types')
 
 @section('content')
-    <!-- Container to hold both elements in a row -->
-    <div class="flex justify-between items-center mb-4">
-        <!-- Search Form (aligned to the left) -->
-        <form method="GET" action="{{ route('accessorialTypes.index') }}" class="flex items-center flex-grow space-x-4">
-            <!-- Search Input (Longer Input) -->
-            <input type="text" id="search" name="search" value="{{ $search ?? '' }}" class="px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-2/3 md:w-3/4 lg:w-1/2 xl:w-1/2" placeholder="Search Accessorial Types...">
-        </form>
+<div class="min-h-screen bg-slate-50 py-6">
+    <div class="mx-auto max-w-7xl px-4">
+        <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight text-slate-900">Accessorial Types</h1>
+                <p class="mt-1 text-sm text-slate-500">Manage accessorial type records with a cleaner searchable and responsive table.</p>
+            </div>
+            <a href="{{ route('accessorialTypes.create') }}" class="inline-flex w-auto items-center justify-center gap-2 self-start rounded-full bg-gradient-to-r from-blue-600 to-blue-700 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-blue-600/20 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-blue-600/30 sm:self-auto">
+                <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/20"><i class="fas fa-plus text-xs"></i></span>
+                Add Accessorial Type
+            </a>
+        </div>
 
-        <!-- Create New Accessorial Type Button (aligned to the right) -->
-        <a href="{{ route('accessorialTypes.create') }}" class="btn btn-primary bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-4 whitespace-nowrap">
-            Create New Accessorial Type
-        </a>
+        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div id="accessorial-types-table" data-fast-table data-endpoint="{{ route('accessorialTypes.index') }}" data-search-selector="#accessorial-types-search" data-per-page-selector="#accessorial-types-per-page" data-pagination-selector=".accessorial-types-pagination a">
+                @include('accessorialTypes.table', ['accessorialTypes' => $accessorialTypes, 'search' => $search, 'perPage' => $perPage])
+            </div>
+        </div>
     </div>
-
-    <!-- Accessorial Type Rates Table -->
-    <div id="accessorial-types-table" class="bg-white shadow-md rounded-lg overflow-hidden">
-        @include('accessorialTypes.table', ['accessorialTypes' => $accessorialTypes])
-    </div>
-
-@endsection
-
-@section('scripts')
-    <!-- Add jQuery from CDN -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    <script>
-        // Listen for input changes in the search field
-        document.getElementById('search').addEventListener('input', function () {
-            let searchQuery = this.value;
-
-            // Fetch the filtered Accessorial Types
-            fetchAccessorialTypes(searchQuery);
-        });
-
-        // Function to fetch Accessorial Types using AJAX
-        function fetchAccessorialTypes(searchQuery) {
-            // Use the Fetch API to send a GET request with the search query
-            fetch(`{{ route('accessorialTypes.index') }}?search=${searchQuery}`)
-                .then(response => response.text())
-                .then(data => {
-                    // Replace the content of the Accessorial Types rates table with the new data
-                    document.getElementById('accessorial-types-table').innerHTML = data;
-                })
-                .catch(error => {
-                    console.error('Error fetching accessorial types:', error);
-                });
-        }
-    </script>
+</div>
 @endsection

@@ -3,114 +3,84 @@
 @section('title', 'Rejected Approval')
 
 @section('content')
-<div class="max-w-7xl mx-auto p-6 bg-white shadow rounded">
-    <h1 class="text-2xl font-bold mb-6 text-gray-800">Rejected Cash Vouchers</h1>
-
-    @if ($cashVouchers->isEmpty())
-        <p class="text-gray-600">No rejected cash vouchers found.</p>
-    @else
-        <form id="batchPrintForm" method="GET" action="{{ route('cashVoucherRequests.rejectPrintViewMultiple') }}" target="_blank">
+<div class="mx-auto max-w-7xl space-y-6 py-8">
+    <div class="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <button type="submit"
-                        class="mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition"
-                        style="display: none;">
-                    Batch Print Selected
-                </button>
+                <div class="inline-flex items-center gap-2 rounded-full bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 ring-1 ring-rose-100">
+                    <i class="fas fa-octagon-xmark text-sm"></i>
+                    Rejected Delivery CVRs
+                </div>
+                <h1 class="mt-4 text-3xl font-bold tracking-tight text-slate-900">Rejected Cash Vouchers</h1>
+                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+                    Review rejected delivery-related cash vouchers with faster search, compact actions, and batch printing.
+                </p>
             </div>
-            <table class="min-w-full border border-collapse border-gray-300 text-sm text-left">
-                <thead>
-                    <tr class="bg-gray-100 text-gray-700">
-                        <th class="border px-4 py-2">
-                            <input type="checkbox" id="selectAll">
-                        </th>
-                        <th class="border px-4 py-2">CVR Number</th>
-                        <th class="border px-4 py-2 text-right">Amount</th>
-                        <th class="border px-4 py-2">Reject Remarks</th>
-                        <th class="border px-4 py-2">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($cashVouchers as $voucher)
-                        @php
-                            $formattedCvrNumber = preg_replace('/\/\d+$/', '', $voucher->cvr_number);
-                            $truckId = optional(optional($voucher->matched_allocation)->truck)->truck_name ?? 'N/A';
-                            $companyId = optional(optional($voucher->deliveryRequest)->company)->company_code ?? 'N/A';
-                            $expenseTypeId = optional(optional($voucher->deliveryRequest)->expenseType)->expense_code ?? 'N/A';
-                            $remarks = json_decode($voucher->reject_remarks, true);
-                        @endphp
-                        <tr class="hover:bg-gray-50">
-                            <td class="border px-4 py-2">
-                                <input type="checkbox" name="ids[]" value="{{ $voucher->id }}" class="select-checkbox">
-                            </td>
-                            <td class="border px-4 py-2">
-                                {{ $formattedCvrNumber }}-{{ $truckId }}-{{ $companyId }}{{ $expenseTypeId }}
-                            </td>
-                            <td class="border px-4 py-2 text-right">
-                                ₱{{ number_format($voucher->amount, 2) }}
-                            </td>
-                            <td class="border px-4 py-2">
-                                @if (is_array($remarks))
-                                    <ul class="list-disc pl-5 space-y-1">
-                                        @foreach ($remarks as $remark)
-                                            <li>{{ $remark }}</li>
-                                        @endforeach
-                                    </ul>
-                                @else
-                                    <span>{{ $voucher->reject_remarks }}</span>
-                                @endif
-                            </td>
-                            <td class="border px-4 py-2">
-                                <a href="{{ route('cashVoucherRequests.editCVR', $voucher->id) }}"
-                                class="inline-block bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs transition">
-                                    Edit
-                                </a>
-                                <a href="{{ route('cashVoucherRequests.rejectPrintView', ['id' => $voucher->id, 'cvr_number' => $voucher->dr_id, 'cvr_type' => $voucher->cvr_type]) }}"
-                                target="_blank"
-                                class="inline-block bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-xs transition">
-                                    Print
-                                </a>
-                            </td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </form>
-    @endif
+        </div>
+    </div>
+
+    <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+        <div id="cash-voucher-reject-table"
+             data-fast-table
+             data-endpoint="{{ route('cashVoucherRequests.rejectView', ['search' => $search ?? '', 'per_page' => $perPage ?? 10]) }}"
+             data-base-endpoint="{{ route('cashVoucherRequests.rejectView') }}"
+             data-search-selector="#cash-voucher-reject-search"
+             data-per-page-selector="#cash-voucher-reject-per-page"
+             data-pagination-selector=".cash-voucher-reject-pagination a">
+            @include('cashVoucherRequests.partials.rejectView-table', [
+                'cashVouchers' => $cashVouchers,
+                'search' => $search ?? '',
+                'perPage' => $perPage ?? 10,
+            ])
+        </div>
+    </div>
 </div>
+
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const selectAll = document.getElementById("selectAll");
-        const checkboxes = document.querySelectorAll(".select-checkbox");
-        const batchPrintBtn = document.querySelector("#batchPrintForm button[type='submit']");
-
-        // Initial button state
-        toggleButton();
-
-        // Select all logic
-        selectAll.addEventListener("change", function () {
-            checkboxes.forEach(cb => cb.checked = selectAll.checked);
-            toggleButton();
-        });
-
-        // Individual checkbox change logic
-        checkboxes.forEach(cb => {
-            cb.addEventListener("change", () => {
-                // Uncheck "select all" if any item is unchecked
-                if (!cb.checked) selectAll.checked = false;
-
-                // If all are checked manually, check "select all"
-                if ([...checkboxes].every(c => c.checked)) {
-                    selectAll.checked = true;
-                }
-
-                toggleButton();
-            });
-        });
-
-        function toggleButton() {
-            const anyChecked = [...checkboxes].some(cb => cb.checked);
-            batchPrintBtn.style.display = anyChecked ? "inline-block" : "none";
+    (() => {
+        const root = document.getElementById('cash-voucher-reject-table');
+        if (!root) {
+            return;
         }
-    });
+
+        function syncBulkPrintState(scope = root) {
+            const form = scope.querySelector('#cash-voucher-reject-batch-form');
+            const printBtn = scope.querySelector('#cash-voucher-reject-batch-btn');
+            const selectAll = scope.querySelector('#cash-voucher-reject-select-all');
+            const checkboxes = Array.from(scope.querySelectorAll('.cash-voucher-reject-checkbox'));
+
+            if (!form || !printBtn || !selectAll) {
+                return;
+            }
+
+            const toggle = () => {
+                const anyChecked = checkboxes.some((checkbox) => checkbox.checked);
+                printBtn.classList.toggle('hidden', !anyChecked);
+            };
+
+            selectAll.addEventListener('change', () => {
+                checkboxes.forEach((checkbox) => {
+                    checkbox.checked = selectAll.checked;
+                });
+                toggle();
+            });
+
+            checkboxes.forEach((checkbox) => {
+                checkbox.addEventListener('change', () => {
+                    if (!checkbox.checked) {
+                        selectAll.checked = false;
+                    } else if (checkboxes.length && checkboxes.every((item) => item.checked)) {
+                        selectAll.checked = true;
+                    }
+                    toggle();
+                });
+            });
+
+            toggle();
+        }
+
+        syncBulkPrintState(root);
+        root.addEventListener('fast-table:loaded', () => syncBulkPrintState(root));
+    })();
 </script>
 @endsection

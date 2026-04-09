@@ -38,6 +38,11 @@ class DeliveryRequest extends Model
         return $this->belongsTo(DeliveryType::class, 'delivery_type', 'delivery_type_code');
     }
 
+    public function truckType()
+    {
+        return $this->belongsTo(TruckType::class, 'truck_type_id');
+    }
+
     public function lineItems()
     {
         return $this->hasMany(DeliveryRequestLineItem::class, 'dr_id', 'id');

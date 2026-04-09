@@ -27,18 +27,52 @@ class AdminController extends Controller
     //
     public function index(Request $request)
     {
-        $search = $request->get('search');
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Fetch related delivery line items by joining with the correct table name
-        $cashVouchers = CashVoucher::with(['company', 'suppliers', 'expenseTypes','employee'])
-        ->when($search, function ($query, $search) {
-            return $query->where('cvr_type', 'like', '%' . $search . '%');
-        })
-        ->whereNotIn('cvr_type', ['delivery', 'pullout', 'accessorial'])
-        ->where('status', '=', '1')
-        ->paginate(10);
+        $cashVouchers = CashVoucher::with(['company', 'suppliers', 'expenseTypes', 'employee', 'trucks', 'cvrTypes'])
+            ->whereNotIn('cvr_type', ['delivery', 'pullout', 'accessorial'])
+            ->where('status', 1)
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('cvr_number', 'like', '%' . $search . '%')
+                        ->orWhere('cvr_type', 'like', '%' . $search . '%')
+                        ->orWhere('voucher_type', 'like', '%' . $search . '%')
+                        ->orWhereHas('company', function ($companyQuery) use ($search) {
+                            $companyQuery->where('company_code', 'like', '%' . $search . '%')
+                                ->orWhere('company_name', 'like', '%' . $search . '%');
+                        })
+                        ->orWhereHas('suppliers', function ($supplierQuery) use ($search) {
+                            $supplierQuery->where('supplier_code', 'like', '%' . $search . '%')
+                                ->orWhere('supplier_name', 'like', '%' . $search . '%');
+                        })
+                        ->orWhereHas('expenseTypes', function ($expenseQuery) use ($search) {
+                            $expenseQuery->where('expense_code', 'like', '%' . $search . '%')
+                                ->orWhere('expense_name', 'like', '%' . $search . '%');
+                        })
+                        ->orWhereHas('trucks', function ($truckQuery) use ($search) {
+                            $truckQuery->where('truck_name', 'like', '%' . $search . '%');
+                        })
+                        ->orWhereHas('cvrTypes', function ($typeQuery) use ($search) {
+                            $typeQuery->where('request_type', 'like', '%' . $search . '%');
+                        });
+                });
+            })
+            ->latest()
+            ->paginate($perPage)
+            ->appends($request->query());
 
-        return view('admin.index', compact('cashVouchers'));
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('admin.table', compact('cashVouchers', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $cashVouchers->total(),
+            ]);
+        }
+
+        return view('admin.index', compact('cashVouchers', 'search', 'perPage'));
 
     }
 
@@ -189,14 +223,59 @@ class AdminController extends Controller
         return view('admin.show', compact('voucher'));
     }
 
-    public function approvals()
+    public function approvals(Request $request)
     {
-        $cashVouchers = CashVoucher::with(['company', 'suppliers', 'expenseTypes','employee'])
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
+        $cvrType = trim((string) $request->input('cvr_type', ''));
+
+        $query = CashVoucher::with(['company', 'suppliers', 'expenseTypes', 'employee', 'trucks'])
             ->whereIn('cvr_type', ['admin', 'rpm'])
-            ->where('status', 1)
-            ->paginate(10);
- 
-        return view('adminCV.approval', compact('cashVouchers'));
+            ->where('status', 1);
+
+        if ($cvrType !== '') {
+            $query->where('cvr_type', $cvrType);
+        }
+
+        if ($search !== '') {
+            $query->where(function ($cashVoucherQuery) use ($search) {
+                $cashVoucherQuery->where('cvr_number', 'like', '%' . $search . '%')
+                    ->orWhere('cvr_type', 'like', '%' . $search . '%')
+                    ->orWhereHas('company', function ($companyQuery) use ($search) {
+                        $companyQuery->where('company_code', 'like', '%' . $search . '%')
+                            ->orWhere('company_name', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('suppliers', function ($supplierQuery) use ($search) {
+                        $supplierQuery->where('supplier_code', 'like', '%' . $search . '%')
+                            ->orWhere('supplier_name', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('expenseTypes', function ($expenseQuery) use ($search) {
+                        $expenseQuery->where('expense_code', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('trucks', function ($truckQuery) use ($search) {
+                        $truckQuery->where('truck_name', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+
+        $cashVouchers = $query
+            ->latest()
+            ->paginate($perPage)
+            ->appends($request->query());
+
+        $availableTypes = collect(['admin', 'rpm']);
+
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('adminCV.partials.approval-table', compact('cashVouchers', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $cashVouchers->total(),
+            ]);
+        }
+
+        return view('adminCV.approval', compact('cashVouchers', 'search', 'perPage', 'cvrType', 'availableTypes'));
     }
 
     public function edit($id)
@@ -459,16 +538,48 @@ class AdminController extends Controller
         return redirect()->back()->with('error', 'Cash Voucher not found.');
     }
 
-    public function rejectView()
+    public function rejectView(Request $request)
     {
         $user = Auth::user();
         $employeeCode = $user->id;
-        $cashVouchers = CashVoucher::where('status', 3) 
-            ->whereIn('cvr_type', ['admin','rpm'])
-            // ->where('created_by', $employeeCode)
-            ->get();
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 10);
+        $allowedPerPage = [5, 10, 25, 50];
 
-        return view('adminCV.rejectView', compact('cashVouchers'));
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 10;
+        }
+
+        $cashVouchers = CashVoucher::query()
+            ->where('status', 3)
+            ->whereIn('cvr_type', ['admin', 'rpm'])
+            // ->where('created_by', $employeeCode)
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('cvr_number', 'like', "%{$search}%")
+                        ->orWhere('cvr_type', 'like', "%{$search}%")
+                        ->orWhere('reject_remarks', 'like', "%{$search}%")
+                        ->orWhere('amount', 'like', "%{$search}%");
+                });
+            })
+            ->latest('updated_at')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('adminCV.partials.rejectView-table', [
+                    'cashVouchers' => $cashVouchers,
+                    'search' => $search,
+                    'perPage' => $perPage,
+                ])->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $cashVouchers->total(),
+            ]);
+        }
+
+        return view('adminCV.rejectView', compact('cashVouchers', 'search', 'perPage'));
     }
 
     public function editCVR($id)
@@ -709,26 +820,74 @@ class AdminController extends Controller
 
 
     public function cvrList(Request $request)
-    { 
-        // Get the search query from the request
-        $search = $request->get('search');
-    
-        // Fetch related delivery line items by joining with the correct table name
-        $cashVoucherRequests = cvr_approval::with('cashVoucher')
-        ->whereHas('cashVoucher', function ($query) {
-            $query->whereIn('cvr_type', ['admin', 'rpm'])
-                ->where('status', 2)
-                ->orderBy('print_status', 'asc');
-        })
-        ->paginate(10);
+    {
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
+        $cvrType = trim((string) $request->input('cvr_type', ''));
 
-        // Check if the request expects an AJAX response
-        if ($request->ajax()) {
-            return view('adminCV.cvrList_table', compact('cashVoucherRequests'))->render();
+        $query = cvr_approval::with([
+            'cashVoucher.company',
+            'cashVoucher.suppliers',
+            'cashVoucher.expenseTypes',
+            'cashVoucher.trucks',
+            'cashVoucher.print_name',
+        ])
+            ->whereHas('cashVoucher', function ($cashVoucherQuery) use ($cvrType) {
+                $cashVoucherQuery->whereIn('cvr_type', ['admin', 'rpm'])
+                    ->where('status', 2);
+
+                if ($cvrType !== '') {
+                    $cashVoucherQuery->where('cvr_type', $cvrType);
+                }
+            });
+
+        if ($search !== '') {
+            $query->where(function ($approvalQuery) use ($search) {
+                $approvalQuery->where('cvr_number', 'like', '%' . $search . '%')
+                    ->orWhere('reference_number', 'like', '%' . $search . '%')
+                    ->orWhereHas('cashVoucher', function ($cashVoucherQuery) use ($search) {
+                        $cashVoucherQuery->where('cvr_number', 'like', '%' . $search . '%')
+                            ->orWhere('cvr_type', 'like', '%' . $search . '%')
+                            ->orWhereHas('company', function ($companyQuery) use ($search) {
+                                $companyQuery->where('company_code', 'like', '%' . $search . '%')
+                                    ->orWhere('company_name', 'like', '%' . $search . '%');
+                            })
+                            ->orWhereHas('suppliers', function ($supplierQuery) use ($search) {
+                                $supplierQuery->where('supplier_code', 'like', '%' . $search . '%')
+                                    ->orWhere('supplier_name', 'like', '%' . $search . '%');
+                            })
+                            ->orWhereHas('expenseTypes', function ($expenseQuery) use ($search) {
+                                $expenseQuery->where('expense_code', 'like', '%' . $search . '%');
+                            })
+                            ->orWhereHas('trucks', function ($truckQuery) use ($search) {
+                                $truckQuery->where('truck_name', 'like', '%' . $search . '%');
+                            })
+                            ->orWhereHas('print_name', function ($printUserQuery) use ($search) {
+                                $printUserQuery->where('fname', 'like', '%' . $search . '%')
+                                    ->orWhere('lname', 'like', '%' . $search . '%');
+                            });
+                    });
+            });
         }
-    
-        // For the normal view
-        return view('adminCV.cvrList', compact('cashVoucherRequests', 'search'));
+
+        $cashVoucherRequests = $query
+            ->latest()
+            ->paginate($perPage)
+            ->appends($request->query());
+
+        $availableTypes = collect(['admin', 'rpm']);
+
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('adminCV.cvrList_table', compact('cashVoucherRequests', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $cashVoucherRequests->total(),
+            ]);
+        }
+
+        return view('adminCV.cvrList', compact('cashVoucherRequests', 'search', 'perPage', 'cvrType', 'availableTypes'));
     } 
 
     public function convertAmountToWords($amount)

@@ -13,22 +13,27 @@ class CustomerController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the customers table
         $customers = Customer::when($search, function ($query, $search) {
             return $query->where('name', 'like', '%' . $search . '%');
         })
-        ->paginate(5);
+        ->orderBy('name')
+        ->paginate($perPage)
+        ->appends($request->query());
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('customers.table', compact('customers'))->render());
+            return response()->json([
+                'html' => view('customers.table', compact('customers', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $customers->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('customers.index', compact('customers', 'search'));
+        return view('customers.index', compact('customers', 'search', 'perPage'));
     }
 
 

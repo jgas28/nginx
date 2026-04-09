@@ -52,15 +52,15 @@
                             $details = "-$truckName-$companyCode$expenseCodeVal";
 
                         } elseif ($cvrType === 'admin') {
-                            $companyId = $cashVoucher->company->company_code ?? 'N/A';
-                            $expenseCodeVal = $cashVoucher->expenseTypes->expense_code ?? 'N/A';
+                            $companyId = optional($cashVoucher->company)->company_code ?? 'N/A';
+                            $expenseCodeVal = optional($cashVoucher->expenseTypes)->expense_code ?? 'N/A';
 
                             $details = "-$companyId$expenseCodeVal";
 
                         } elseif (in_array($cvrType, ['delivery', 'pullout', 'accessorial', 'freight', 'others'])) {
-                            $truckId = optional($liquidation->allocation->truck)->truck_name ?? 'N/A';
-                            $companyId = optional($liquidation->deliveryRequest->company)->company_code ?? 'N/A';
-                            $expenseCodeVal = optional($liquidation->deliveryRequest->expenseType)->expense_code ?? 'N/A';
+                            $truckId = optional(optional($liquidation->allocation)->truck)->truck_name ?? 'N/A';
+                            $companyId = optional(optional($liquidation->deliveryRequest)->company)->company_code ?? 'N/A';
+                            $expenseCodeVal = optional(optional($liquidation->deliveryRequest)->expenseType)->expense_code ?? 'N/A';
 
                             $details = "-$truckId-$companyId$expenseCodeVal";
                         }

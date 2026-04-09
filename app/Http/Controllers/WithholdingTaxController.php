@@ -14,23 +14,29 @@ class WithholdingTaxController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the employees table
         $taxes = WithholdingTax::when($search, function ($query, $search) {
             return $query->where('description', 'like', '%' . $search . '%')
                         ->orWhere('percentage', 'like', '%' . $search . '%');
         })
-        ->paginate(5);
+        ->orderBy('description')
+        ->paginate($perPage)
+        ->appends($request->query());
 
         // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('taxes.table', compact('taxes'))->render());
+            return response()->json([
+                'html' => view('taxes.table', compact('taxes', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $taxes->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('taxes.index', compact('taxes', 'search'));
+        return view('taxes.index', compact('taxes', 'search', 'perPage'));
     }
 
 
@@ -108,7 +114,7 @@ class WithholdingTaxController extends Controller
     {
         $tax->delete();
 
-        return redirect()->route('taxes.index')->with('success', 'taxes deleted successfully.');
+        return redirect()->route('taxes.index')->with('success', 'Tax deleted successfully.');
     }
 
 }

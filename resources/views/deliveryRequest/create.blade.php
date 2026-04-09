@@ -1,7 +1,29 @@
 @extends('layouts.app')
 
 @section('content')
-    <form action="{{ route('deliveryRequest.store') }}" method="POST">
+    <style>
+        #delivery-request-create-form input[type="text"],
+        #delivery-request-create-form input[type="date"],
+        #delivery-request-create-form input[type="number"],
+        #delivery-request-create-form select {
+            min-height: 48px;
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+
+        #delivery-request-create-form .searchable-select-source + [data-searchable-select-wrapper] > button {
+            min-height: 48px;
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+        }
+
+        #delivery-request-create-form .searchable-select-source + [data-searchable-select-wrapper] > button > span:first-child {
+            height: 2rem;
+            width: 2rem;
+        }
+    </style>
+
+    <form action="{{ route('deliveryRequest.store') }}" method="POST" id="delivery-request-create-form">
         @csrf
         <div class="border bg-white p-4 rounded shadow-sm">
             <!-- Row 1 -->
@@ -434,143 +456,288 @@
         </button>
     </form>
 
+    <style>
+        .searchable-select-source {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .searchable-select-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .searchable-select-panel::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+    </style>
+
     <script>
         let currentIndex = 2;
         let multiDropIndex = 2;
+        const form = document.getElementById('delivery-request-create-form');
+        const regularFields = document.getElementById('regular-fields');
+        const multiDropFields = document.getElementById('multi-drop-fields');
+        const multiPickupFields = document.getElementById('multi-pickup-fields');
+        const deliveryTypeSelect = document.getElementById('delivery_type');
+        const areaSelect = document.getElementById('area_id');
+        const regionSelect = document.getElementById('region_id');
+        const warehouseTemplateHtml = document.getElementById('multi_pickup_0_warehouse_id')?.innerHTML ?? '';
 
-        // JavaScript code to handle dynamic field visibility and adding new items
-        document.getElementById('delivery_type').addEventListener('change', function() {
-            const selectedOption = this.options[this.selectedIndex];
-            const deliveryType = selectedOption.getAttribute('data-type');
-            
-            console.log('Selected Delivery Type:', deliveryType); // Log the selected type for debugging
-            
-            // Hide all additional fields
-            document.getElementById('regular-fields').style.display = 'none';
-            document.getElementById('multi-drop-fields').style.display = 'none';
-            document.getElementById('multi-pickup-fields').style.display = 'none';
+        function getSelectIcon(select) {
+            const lookup = `${select.id} ${select.name}`.toLowerCase();
+            if (lookup.includes('company')) return 'fa-building';
+            if (lookup.includes('customer')) return 'fa-users';
+            if (lookup.includes('truck_type')) return 'fa-truck-ramp-box';
+            if (lookup.includes('expense_type')) return 'fa-file-invoice-dollar';
+            if (lookup.includes('area_id')) return 'fa-map';
+            if (lookup.includes('region_id')) return 'fa-location-dot';
+            if (lookup.includes('warehouse')) return 'fa-warehouse';
+            if (lookup.includes('delivery_status')) return 'fa-signal';
+            if (lookup.includes('delivery_type')) return 'fa-shapes';
+            if (lookup.includes('add_on_rate')) return 'fa-tags';
+            return 'fa-circle-chevron-down';
+        }
 
-            clearFormFields('regular-fields');
-            clearFormFields('multi-drop-fields');
-            clearFormFields('multi-pickup-fields');
-            
-            // Show fields based on selected delivery type
-            if (deliveryType === 'Regular') {
-                document.getElementById('regular-fields').style.display = 'block';
-            } 
-            else if (deliveryType === 'Multi-Drop') {
-                document.getElementById('multi-drop-fields').style.display = 'block';
-            } 
-            else if (deliveryType === 'Multi Pick-Up') {
-                document.getElementById('multi-pickup-fields').style.display = 'block';
+        function closeAllSearchableSelects(except = null) {
+            form.querySelectorAll('[data-searchable-select-wrapper]').forEach((wrapper) => {
+                if (wrapper === except) return;
+                wrapper.dataset.open = 'false';
+                wrapper.querySelector('[data-searchable-select-panel]')?.classList.add('hidden');
+            });
+        }
+
+        function updateSearchableSelectLabel(select) {
+            if (!select._searchableSelect) return;
+            const selectedOption = select.options[select.selectedIndex];
+            const placeholder = select.dataset.placeholder || select.querySelector('option[value=""]')?.text || 'Select an option';
+            select._searchableSelect.label.textContent = selectedOption && selectedOption.value !== '' ? selectedOption.textContent.trim() : placeholder;
+        }
+
+        function renderSearchableSelectOptions(select, term = '') {
+            if (!select._searchableSelect) return;
+            const { list, emptyState, searchInput } = select._searchableSelect;
+            const normalizedTerm = term.trim().toLowerCase();
+            const options = Array.from(select.options);
+            list.innerHTML = '';
+            let visibleCount = 0;
+
+            options.forEach((option) => {
+                if (!option.value && normalizedTerm) return;
+                if (normalizedTerm && !option.textContent.toLowerCase().includes(normalizedTerm)) return;
+                visibleCount += 1;
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${option.selected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700 hover:bg-slate-100'}`;
+                button.innerHTML = `
+                    <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${option.selected ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}">
+                        <i class="fas ${getSelectIcon(select)} text-xs"></i>
+                    </span>
+                    <span class="min-w-0 flex-1 truncate">${option.textContent.trim()}</span>
+                    ${option.selected ? '<i class="fas fa-check text-xs text-indigo-500"></i>' : ''}
+                `;
+                button.addEventListener('click', () => {
+                    select.value = option.value;
+                    select.dispatchEvent(new Event('change', { bubbles: true }));
+                    updateSearchableSelectLabel(select);
+                    renderSearchableSelectOptions(select, searchInput.value);
+                    closeAllSearchableSelects();
+                });
+                list.appendChild(button);
+            });
+
+            emptyState.classList.toggle('hidden', visibleCount > 0);
+        }
+
+        function refreshSearchableSelect(select) {
+            if (!select) return;
+            if (!select._searchableSelect) {
+                enhanceSearchableSelect(select);
+                return;
             }
-        });
+            updateSearchableSelectLabel(select);
+            renderSearchableSelectOptions(select, select._searchableSelect.searchInput.value);
+        }
+
+        function enhanceSearchableSelect(select) {
+            if (!select || select.dataset.searchableReady === 'true') {
+                refreshSearchableSelect(select);
+                return;
+            }
+
+            select.dataset.searchableReady = 'true';
+            select.classList.add('searchable-select-source');
+
+            const wrapper = document.createElement('div');
+            wrapper.dataset.searchableSelectWrapper = 'true';
+            wrapper.dataset.open = 'false';
+            wrapper.className = 'relative mt-1';
+            wrapper.innerHTML = `
+                <button type="button" class="flex w-full items-center gap-3 rounded-xl border border-slate-300 bg-white px-3 py-3 text-left text-sm text-slate-700 shadow-sm transition hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                        <i class="fas ${getSelectIcon(select)} text-sm"></i>
+                    </span>
+                    <span class="min-w-0 flex-1 truncate" data-searchable-select-label></span>
+                    <span class="text-slate-400"><i class="fas fa-chevron-down text-xs"></i></span>
+                </button>
+                <div data-searchable-select-panel class="searchable-select-panel absolute left-0 right-0 z-30 mt-2 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
+                    <div class="border-b border-slate-200 p-3">
+                        <div class="relative">
+                            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                <i class="fas fa-magnifying-glass text-xs"></i>
+                            </span>
+                            <input type="text" data-searchable-select-input placeholder="Search option..." class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-100">
+                        </div>
+                    </div>
+                    <div data-searchable-select-list class="max-h-56 overflow-y-auto p-2"></div>
+                    <div data-searchable-select-empty class="hidden px-4 py-3 text-sm text-slate-500">No matching options found.</div>
+                </div>
+            `;
+
+            select.insertAdjacentElement('afterend', wrapper);
+            const trigger = wrapper.querySelector('button');
+            const panel = wrapper.querySelector('[data-searchable-select-panel]');
+            const searchInput = wrapper.querySelector('[data-searchable-select-input]');
+            const list = wrapper.querySelector('[data-searchable-select-list]');
+            const emptyState = wrapper.querySelector('[data-searchable-select-empty]');
+            const label = wrapper.querySelector('[data-searchable-select-label]');
+
+            select._searchableSelect = { wrapper, panel, searchInput, list, emptyState, label };
+
+            trigger.addEventListener('click', () => {
+                const shouldOpen = wrapper.dataset.open !== 'true';
+                closeAllSearchableSelects(wrapper);
+                wrapper.dataset.open = shouldOpen ? 'true' : 'false';
+                panel.classList.toggle('hidden', !shouldOpen);
+                if (shouldOpen) {
+                    searchInput.value = '';
+                    renderSearchableSelectOptions(select);
+                    setTimeout(() => searchInput.focus(), 0);
+                }
+            });
+
+            searchInput.addEventListener('input', () => {
+                renderSearchableSelectOptions(select, searchInput.value);
+            });
+
+            select.addEventListener('change', () => {
+                updateSearchableSelectLabel(select);
+                renderSearchableSelectOptions(select, searchInput.value);
+            });
+
+            updateSearchableSelectLabel(select);
+            renderSearchableSelectOptions(select);
+        }
+
+        function initializeSearchableSelects(root = form) {
+            root.querySelectorAll('select').forEach((select) => enhanceSearchableSelect(select));
+        }
 
         function clearFormFields(sectionId) {
             const section = document.getElementById(sectionId);
-            if (section) {
-                const inputs = section.querySelectorAll('input, select, textarea');
-                inputs.forEach(input => {
-                    if (input.type === 'checkbox' || input.type === 'radio') {
-                        input.checked = false;
-                    } else {
-                        input.value = '';
-                    }
-                });
-            }
+            if (!section) return;
+            section.querySelectorAll('input, select, textarea').forEach((input) => {
+                if (input.type === 'checkbox' || input.type === 'radio') {
+                    input.checked = false;
+                } else if (input.tagName === 'SELECT') {
+                    input.selectedIndex = 0;
+                    refreshSearchableSelect(input);
+                } else {
+                    input.value = '';
+                }
+            });
         }
 
-        // Function to handle adding more fields for multi-pickup
+        function handleDeliveryTypeChange(resetHiddenSections = true) {
+            const deliveryType = deliveryTypeSelect.options[deliveryTypeSelect.selectedIndex]?.getAttribute('data-type') || '';
+            [regularFields, multiDropFields, multiPickupFields].forEach((section) => section.classList.add('hidden'));
+            if (resetHiddenSections) {
+                clearFormFields('regular-fields');
+                clearFormFields('multi-drop-fields');
+                clearFormFields('multi-pickup-fields');
+            }
+            if (deliveryType === 'Regular') regularFields.classList.remove('hidden');
+            if (deliveryType === 'Multi-Drop') multiDropFields.classList.remove('hidden');
+            if (deliveryType === 'Multi Pick-Up') multiPickupFields.classList.remove('hidden');
+        }
+
+        function deleteRow(index) {
+            document.getElementById(`multi-pickup-row-${index}`)?.remove();
+            for (let i = index + 1; i < currentIndex; i += 1) {
+                const rowToShift = document.getElementById(`multi-pickup-row-${i}`);
+                if (!rowToShift) continue;
+                rowToShift.id = `multi-pickup-row-${i - 1}`;
+                rowToShift.querySelectorAll('[name]').forEach((field) => {
+                    field.name = field.name.replace(`[${i}]`, `[${i - 1}]`);
+                    if (field.id) field.id = field.id.replace(`_${i}_`, `_${i - 1}_`);
+                });
+            }
+            currentIndex -= 1;
+            initializeSearchableSelects(document.getElementById('multi-pickup-items'));
+        }
+
+        function deleteDropRow(index) {
+            document.getElementById(`multi-drop-row-${index}`)?.remove();
+            for (let i = index + 1; i < multiDropIndex; i += 1) {
+                const rowToShift = document.getElementById(`multi-drop-row-${i}`);
+                if (!rowToShift) continue;
+                rowToShift.id = `multi-drop-row-${i - 1}`;
+                rowToShift.querySelectorAll('[name]').forEach((field) => {
+                    field.name = field.name.replace(`[${i}]`, `[${i - 1}]`);
+                    if (field.id) field.id = field.id.replace(`_${i}`, `_${i - 1}`);
+                });
+            }
+            multiDropIndex -= 1;
+        }
+
+        window.deleteRow = deleteRow;
+        window.deleteDropRow = deleteDropRow;
+        window.refreshSearchableSelect = refreshSearchableSelect;
+
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('[data-searchable-select-wrapper]')) closeAllSearchableSelects();
+        });
+
+        deliveryTypeSelect.addEventListener('change', () => handleDeliveryTypeChange(true));
+
         document.querySelector('.add-more-pickup').addEventListener('click', function() {
             const newRow = document.createElement('div');
             newRow.classList.add('multi-pickup-row');
             newRow.id = `multi-pickup-row-${currentIndex}`;
-
             newRow.innerHTML = `
                 <div class="flex flex-wrap -mx-2 mb-4">
                     <div class="w-full md:w-1/6 px-2 mb-4 md:mb-0">
                         <label for="multi_pickup_${currentIndex}_warehouse_id" class="block text-sm font-medium text-gray-700">Warehouse</label>
                         <select name="multi_pickup[${currentIndex}][warehouse_id]" id="multi_pickup_${currentIndex}_warehouse_id" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                            <!-- JS-rendered options -->
+                            ${warehouseTemplateHtml}
                         </select>
-                        <!-- Error placeholder -->
                         <div class="text-red-600 text-sm mt-1 hidden" id="error_multi_pickup_${currentIndex}_warehouse_id"></div>
                     </div>
-
                     <div class="w-full md:w-1/3 px-2 mb-4 md:mb-0">
                         <label for="multi_pickup_${currentIndex}_delivery_number" class="block text-sm font-medium text-gray-700">Delivery Number</label>
                         <input type="text" name="multi_pickup[${currentIndex}][delivery_number]" id="multi_pickup_${currentIndex}_delivery_number" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <div class="text-red-600 text-sm mt-1 hidden" id="error_multi_pickup_${currentIndex}_delivery_number"></div>
                     </div>
-
                     <div class="w-full md:w-1/12 px-2 flex items-end justify-center">
-                        <button type="button" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700" onclick="deleteRow(${currentIndex})">Delete</button>
+                        <button type="button" class="inline-flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-white hover:bg-red-700" onclick="deleteRow(${currentIndex})">
+                            <i class="fas fa-trash text-xs"></i>
+                            Delete
+                        </button>
                     </div>
                 </div>
             `;
-
-            // Get the reference to the second row element (multi-pickup-row-1)
             const secondRow = document.getElementById('multi-pickup-row-1');
-            
-            // Insert the new row after the second row
             document.getElementById('multi-pickup-items').insertBefore(newRow, secondRow.nextSibling);
-
-            // Increment the index for the next row
+            initializeSearchableSelects(newRow);
             currentIndex++;
         });
 
-        // Function to delete a row and decrement indices
-        function deleteRow(index) {
-            const row = document.getElementById(`multi-pickup-row-${index}`);
-            row.remove();
-
-            // Decrement the index for subsequent rows
-            for (let i = index + 1; i < currentIndex; i++) {
-                const rowToShift = document.getElementById(`multi-pickup-row-${i}`);
-                rowToShift.id = `multi-pickup-row-${i - 1}`; // Shift the ID of the row
-                // Update the name and ID attributes for all form fields
-                rowToShift.querySelectorAll('[name]').forEach(field => {
-                    const name = field.name;
-                    const newName = name.replace(`[${i}]`, `[${i - 1}]`);
-                    field.name = newName;
-                    field.id = newName;
-                });
-            }
-
-            // Decrement the currentIndex as we have removed a row
-            currentIndex--;
-        }
-
-        // JavaScript code to handle dynamic field visibility and adding new items
-        document.getElementById('delivery_type').addEventListener('change', function() {
-            const selectedOption = this.options[this.selectedIndex];
-            const deliveryType = selectedOption.getAttribute('data-type');
-            
-            console.log('Selected Delivery Type:', deliveryType); // Log the selected type for debugging
-            
-            // Hide all additional fields
-            document.getElementById('regular-fields').style.display = 'none';
-            document.getElementById('multi-drop-fields').style.display = 'none';
-            document.getElementById('multi-pickup-fields').style.display = 'none';
-            
-            // Show fields based on selected delivery type
-            if (deliveryType === 'Regular') {
-                document.getElementById('regular-fields').style.display = 'block';
-            } 
-            else if (deliveryType === 'Multi-Drop') {
-                document.getElementById('multi-drop-fields').style.display = 'block';
-            } 
-            else if (deliveryType === 'Multi Pick-Up') {
-                document.getElementById('multi-pickup-fields').style.display = 'block';
-            }
-        });
-
-        // Function to handle adding more fields for multi-drop
         document.querySelector('.add-more-drop').addEventListener('click', function() {
             const newRow = document.createElement('div');
             newRow.classList.add('row');
             newRow.id = `multi-drop-row-${multiDropIndex}`;
-
             newRow.innerHTML = `
                 <div class="flex flex-wrap -mx-2 mb-4">
                     <div class="w-full md:w-2/12 px-2 mb-4 md:mb-0">
@@ -578,80 +745,52 @@
                         <input type="text" name="multi_drop[${multiDropIndex}][site_name]" id="site_name_${multiDropIndex}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <div class="text-red-600 text-sm mt-1 hidden" id="error_multi_drop_${multiDropIndex}_site_name"></div>
                     </div>
-
                     <div class="w-full md:w-3/12 px-2 mb-4 md:mb-0">
                         <label for="delivery_number_${multiDropIndex}" class="block text-sm font-medium text-gray-700">Delivery Number</label>
                         <input type="text" name="multi_drop[${multiDropIndex}][delivery_number]" id="delivery_number_${multiDropIndex}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <div class="text-red-600 text-sm mt-1 hidden" id="error_multi_drop_${multiDropIndex}_delivery_number"></div>
                     </div>
-
                     <div class="w-full md:w-3/12 px-2 mb-4 md:mb-0">
                         <label for="delivery_address_${multiDropIndex}" class="block text-sm font-medium text-gray-700">Delivery Address</label>
                         <textarea name="multi_drop[${multiDropIndex}][delivery_address]" id="delivery_address_${multiDropIndex}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
                         <div class="text-red-600 text-sm mt-1 hidden" id="error_multi_drop_${multiDropIndex}_delivery_address"></div>
                     </div>
-
                     <div class="w-full md:w-1/12 px-2 flex items-center justify-center">
-                        <button type="button" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded" onclick="deleteDropRow(${multiDropIndex})">Delete</button>
+                        <button type="button" class="inline-flex items-center gap-2 rounded-md bg-red-600 px-3 py-2 text-white hover:bg-red-700" onclick="deleteDropRow(${multiDropIndex})">
+                            <i class="fas fa-trash text-xs"></i>
+                            Delete
+                        </button>
                     </div>
-                    </div>
+                </div>
             `;
-
-            // Get the reference to the second row element (multi-drop-row-1)
             const secondRow = document.getElementById('multi-drop-row-1');
-            
-            // Insert the new row after the second row
             document.getElementById('multi-drop-items').insertBefore(newRow, secondRow.nextSibling);
-
-
-            // Increment the index for the next row
             multiDropIndex++;
         });
 
-        // Function to delete a multi-drop row and decrement indices
-        function deleteDropRow(index) {
-            const row = document.getElementById(`multi-drop-row-${index}`);
-            row.remove();
-
-            // Decrement the index for subsequent rows
-            for (let i = index + 1; i < multiDropIndex; i++) {
-                const rowToShift = document.getElementById(`multi-drop-row-${i}`);
-                rowToShift.id = `multi-drop-row-${i - 1}`; // Shift the ID of the row
-                // Update the name and ID attributes for all form fields
-                rowToShift.querySelectorAll('[name]').forEach(field => {
-                    const name = field.name;
-                    const newName = name.replace(`[${i}]`, `[${i - 1}]`);
-                    field.name = newName;
-                    field.id = newName;
-                });
-            }
-
-            // Decrement the multiDropIndex as we have removed a row
-            multiDropIndex--;
-        }
-
-        document.getElementById('area_id').addEventListener('change', function () {
+        areaSelect.addEventListener('change', function () {
             const areaId = this.value;
-            const regionSelect = document.getElementById('region_id');
-
-            if (areaId) {
-                fetch(`/regions/by-area/${areaId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        regionSelect.innerHTML = '<option value="">Select Province</option>';
-                        data.forEach(region => {
-                            const option = document.createElement('option');
-                            option.value = region.id;
-                            option.text = region.province;
-                            regionSelect.appendChild(option);
-                        });
-                    })
-                    .catch(() => alert('Unable to fetch regions.'));
-            } else {
+            if (!areaId) {
                 regionSelect.innerHTML = '<option value="">Select Province</option>';
+                refreshSearchableSelect(regionSelect);
+                return;
             }
+            fetch(`/regions/by-area/${areaId}`)
+                .then(response => response.json())
+                .then(data => {
+                    regionSelect.innerHTML = '<option value="">Select Province</option>';
+                    data.forEach(region => {
+                        const option = document.createElement('option');
+                        option.value = region.id;
+                        option.textContent = region.province;
+                        regionSelect.appendChild(option);
+                    });
+                    refreshSearchableSelect(regionSelect);
+                })
+                .catch(() => alert('Unable to fetch regions.'));
         });
 
-
+        initializeSearchableSelects();
+        handleDeliveryTypeChange(false);
     </script>
 @endsection

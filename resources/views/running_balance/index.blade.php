@@ -52,11 +52,11 @@
                 <div class="p-4 border rounded shadow-sm bg-white">
                     <div class="text-sm text-gray-600">{{ $approver->name }}</div>
                     <div class="text-lg font-bold {{ ($runningTotalsByApprover[$approver->id] ?? 0) < 0 ? 'text-red-600' : 'text-green-600' }}">
-                        ₱{{ number_format($runningTotalsByApprover[$approver->id] ?? 0, 2) }}
+                        PHP {{ number_format($runningTotalsByApprover[$approver->id] ?? 0, 2) }}
                     </div>
                     @if (isset($uncollectedByApprover[$approver->id]) && $uncollectedByApprover[$approver->id] != 0)
                         <div class="text-sm text-red-600 mt-1">
-                            Uncollected: ₱{{ number_format($uncollectedByApprover[$approver->id], 2) }}
+                            Uncollected: PHP {{ number_format($uncollectedByApprover[$approver->id], 2) }}
                         </div>
                     @endif
                 </div>
@@ -117,9 +117,13 @@
                     </td>
                     <td class="px-4 py-2">{{ $balance->description }}</td>
                     <td class="px-4 py-2">
-                        {{ $balance->employee->fname ?? $balance->suppliers->supplier_name ?? 'N/A' }}
+                        @php
+                            $employeeName = trim((optional($balance->employee)->fname ?? '') . ' ' . (optional($balance->employee)->lname ?? ''));
+                            $creatorName = trim((optional($balance->creator)->fname ?? '') . ' ' . (optional($balance->creator)->lname ?? ''));
+                        @endphp
+                        {{ $employeeName !== '' ? $employeeName : (optional($balance->suppliers)->supplier_name ?? 'N/A') }}
                     </td>
-                    <td class="px-4 py-2">{{ $balance->creator->fname ?? 'N/A' }}</td>
+                    <td class="px-4 py-2">{{ $creatorName !== '' ? $creatorName : 'N/A' }}</td>
                 </tr>
                 @endforeach
             </tbody>

@@ -10,24 +10,28 @@ class TruckTypeController extends Controller
     //
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the trucks table
         $trucks = TruckType::when($search, function ($query, $search) {
             return $query->where('truck_code', 'like', '%' . $search . '%')
                         ->orWhere('truck_type', 'like', '%' . $search . '%');
         })
         ->orderBy('truck_code')
-        ->paginate(10);
+        ->paginate($perPage)
+        ->appends($request->query());
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('trucksTypes.table', compact('trucks'))->render());
+            return response()->json([
+                'html' => view('trucksTypes.table', compact('trucks', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $trucks->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('trucksTypes.index', compact('trucks', 'search'));
+        return view('trucksTypes.index', compact('trucks', 'search', 'perPage'));
     }
 
 
@@ -44,13 +48,11 @@ class TruckTypeController extends Controller
      */
     public function store(Request $request)
     {
-        // Validate the request data
         $request->validate([
-            'truck_code' => 'required|unique:trucks,truck_code',
+            'truck_code' => 'required|unique:truck_types,truck_code',
             'truck_type' => 'required',
         ]);
 
-        // Create new employee
         $truck = new TruckType([
             'truck_code' => $request->truck_code,
             'truck_type' => $request->truck_type,
@@ -58,7 +60,7 @@ class TruckTypeController extends Controller
 
         $truck->save();
 
-        return redirect()->route('trucksTypes.index')->with('success', 'Truck created successfully.');
+        return redirect()->route('trucksTypes.index')->with('success', 'Truck type created successfully.');
     }
 
     /**
@@ -82,19 +84,17 @@ class TruckTypeController extends Controller
      */
     public function update(Request $request, TruckType $trucksType)
     {
-        // Validate the request data
         $request->validate([
             'truck_code' => 'required|unique:truck_types,truck_code,' . $trucksType->id,
             'truck_type' => 'required',
         ]);
 
-        // Update the employee details
         $trucksType->truck_code = $request->truck_code;
         $trucksType->truck_type = $request->truck_type;
 
         $trucksType->save();
 
-        return redirect()->route('trucksTypes.index')->with('success', 'Truck updated successfully.');
+        return redirect()->route('trucksTypes.index')->with('success', 'Truck type updated successfully.');
     }
 
 
@@ -105,6 +105,6 @@ class TruckTypeController extends Controller
     {
         $trucksType->delete();
 
-        return redirect()->route('trucksTypes.index')->with('success', 'Truck deleted successfully.');
+        return redirect()->route('trucksTypes.index')->with('success', 'Truck type deleted successfully.');
     }
 }

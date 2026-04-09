@@ -9,10 +9,10 @@ class TruckController extends Controller
 {
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the trucks table
         $trucks = Truck::when($search, function ($query, $search) {
             return $query->where('truck_code', 'like', '%' . $search . '%')
                         ->orWhere('truck_name', 'like', '%' . $search . '%')
@@ -20,15 +20,19 @@ class TruckController extends Controller
                         ->orWhere('truck_type', 'like', '%' . $search . '%');
         })
         ->orderBy('truck_code')
-        ->paginate(10);
+        ->paginate($perPage)
+        ->appends($request->query());
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('trucks.table', compact('trucks'))->render());
+            return response()->json([
+                'html' => view('trucks.table', compact('trucks', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $trucks->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('trucks.index', compact('trucks', 'search'));
+        return view('trucks.index', compact('trucks', 'search', 'perPage'));
     }
 
 

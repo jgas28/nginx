@@ -1,69 +1,142 @@
 @extends('layouts.app')
 
-@section('title', 'FCZCNYX')
+@section('title', 'Allocation Request')
 
 @section('content')
-    <!-- Page Header -->
-    <h1 class="text-2xl font-semibold mb-4 text-gray-700">Allocation Request</h1>
+<div class="min-h-screen bg-slate-50 py-6">
+    <div class="mx-auto max-w-7xl px-4">
+        <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <h1 class="text-2xl font-bold tracking-tight text-slate-900">Allocation Request</h1>
+                <p class="mt-1 text-sm text-slate-500">Review ready-for-allocation delivery requests in a compact, searchable queue.</p>
+            </div>
+            <a href="{{ route('allocation.drlist') }}" class="inline-flex items-center justify-center gap-2 self-start rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow sm:self-auto">
+                <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-blue-600"><i class="fas fa-list-ul text-xs"></i></span>
+                Delivery Request List
+            </a>
+        </div>
 
-    <!-- Container to hold both elements in a row -->
-    <div class="flex justify-between items-center mb-4">
-        <!-- Search Form (aligned to the left) -->
-        <form method="GET" action="{{ route('allocations.index') }}" class="flex items-center flex-grow space-x-4">
-            <!-- Search Input (Longer Input) -->
-            <input type="text" id="search" name="search" value="{{ $search ?? '' }}" class="px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-2/3 md:w-3/4 lg:w-1/2 xl:w-1/2" placeholder="Search employees...">
-        </form>
-
-        <!-- Create New Employee Button (aligned to the right) -->
-        <!-- <a href="{{ route('deliveryRequest.create') }}" class="btn btn-primary bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-4 whitespace-nowrap">
-            Create New Delivery Request
-        </a> -->
-
-        <!-- <a type="button" class="btn btn-primary bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-4 whitespace-nowrap" id="btnCreate" onlick="alert(test)">
-            Create New Employee1
-        </a> -->
+        <div class="rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div id="allocation-requests-table">
+                @include('allocations.table', ['deliveryRequests' => $deliveryRequests, 'search' => $search, 'perPage' => $perPage])
+            </div>
+        </div>
     </div>
-
-    <!-- Employees Table -->
-    <div id="delivery-requests-table" class="bg-white shadow-md rounded-lg overflow-hidden">
-        @include('allocations.table', ['deliveryRequests' => $deliveryRequests])
-    </div>
-
+</div>
 @endsection
 
 @section('scripts')
-
-
-<!-- Add jQuery from CDN -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
 <script>
+document.addEventListener('DOMContentLoaded', function () {
+    const table = document.getElementById('allocation-requests-table');
+    let debounceTimer = null;
 
-document.getElementById('btnCreate').addEventListener('click', function () {
+    function bindEvents() {
+        const searchInput = document.getElementById('allocation-search');
+        const perPageInput = document.getElementById('allocation-per-page');
+        const selectAll = document.getElementById('select-all-allocation');
+        const checkboxes = table.querySelectorAll('.allocation-select-item');
+        const allocateButton = document.getElementById('allocate-selected-button');
 
-});
+        searchInput?.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => loadTable({
+                search: this.value,
+                per_page: perPageInput?.value || 10
+            }), 250);
+        });
 
-    // Listen for input changes in the search field
-    document.getElementById('search-input').addEventListener('input', function () {
-        let searchQuery = this.value;
+        perPageInput?.addEventListener('change', function () {
+            loadTable({
+                search: searchInput?.value || '',
+                per_page: this.value
+            });
+        });
 
-        // Fetch the filtered employees
-        fetchDeliveryRequests(searchQuery);
-    });
+        table.querySelectorAll('.allocation-pagination a').forEach((link) => {
+            link.addEventListener('click', function (event) {
+                event.preventDefault();
+                loadFromUrl(this.href);
+            });
+        });
 
-    // Function to fetch employees using AJAX
-    function fetchDeliveryRequests(searchQuery) {
-        // Use the Fetch API to send a GET request with the search query
-        fetch(`{{ route('deliveryRequest.index') }}?search=${searchQuery}`)
-            .then(response => response.text())
-            .then(data => {
-                // Replace the content of the employee table with the new data
-                document.getElementById('delivery-requests-table').innerHTML = data;
+        selectAll?.addEventListener('change', function () {
+            checkboxes.forEach((checkbox) => {
+                checkbox.checked = this.checked;
+            });
+            toggleAllocateButton();
+        });
+
+        checkboxes.forEach((checkbox) => {
+            checkbox.addEventListener('change', function () {
+                if (!this.checked && selectAll) {
+                    selectAll.checked = false;
+                }
+
+                if (selectAll && checkboxes.length > 0 && Array.from(checkboxes).every((item) => item.checked)) {
+                    selectAll.checked = true;
+                }
+
+                toggleAllocateButton();
+            });
+        });
+
+        allocateButton?.addEventListener('click', function () {
+            const selectedIds = Array.from(table.querySelectorAll('.allocation-select-item:checked')).map((checkbox) => checkbox.value);
+
+            if (!selectedIds.length) {
+                return;
+            }
+
+            window.location.href = @json(route('allocations.allocate')) + '?ids=' + selectedIds.join(',');
+        });
+
+        toggleAllocateButton();
+    }
+
+    function toggleAllocateButton() {
+        const allocateBar = document.getElementById('allocate-action-bar');
+        const countLabel = document.getElementById('allocation-selected-count');
+        const checkedCount = table.querySelectorAll('.allocation-select-item:checked').length;
+
+        if (!allocateBar || !countLabel) {
+            return;
+        }
+
+        allocateBar.classList.toggle('hidden', checkedCount === 0);
+        countLabel.textContent = checkedCount;
+    }
+
+    function loadTable(params) {
+        const url = new URL(@json(route('allocations.index')));
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== null && value !== undefined && value !== '') {
+                url.searchParams.set(key, value);
+            }
+        });
+        loadFromUrl(url.toString());
+    }
+
+    function loadFromUrl(url) {
+        table.classList.add('opacity-60');
+
+        fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then((response) => response.text())
+            .then((html) => {
+                table.innerHTML = html;
+                table.classList.remove('opacity-60');
+                bindEvents();
+                window.history.replaceState({}, '', url);
             })
-            .catch(error => {
-                console.error('Error fetching employees:', error);
+            .catch((error) => {
+                table.classList.remove('opacity-60');
+                console.error('Error fetching allocation requests:', error);
             });
     }
-</script>
 
+    bindEvents();
+});
+</script>
 @endsection

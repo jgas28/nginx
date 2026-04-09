@@ -30,53 +30,105 @@ class DeliveryRequestController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the search term if it exists
-        $search = $request->input('search');
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
+        $companyId = $request->input('company_id');
+        $deliveryStatusId = $request->input('delivery_status');
 
-        // Query the Delivery Request table
-        $deliveryRequests = DeliveryRequest::with([
+        $query = DeliveryRequest::with([
             'company',
             'region',
             'truckType',
             'area',
+            'customer',
+            'deliveryStatus',
             'lineItems' => function ($query) {
-                $query->where('status', '!=', 0); // Filter out line items with status = 0
+                $query->where('status', '!=', 0);
             },
             'lineItems.deliveryStatus',
             'lineItems.addOnRate',
         ])
-        ->when($search, function ($query, $search) {
+        ->when($search !== '', function ($query) use ($search) {
             return $query->where(function ($q) use ($search) {
                 $q->where('mtm', 'like', '%' . $search . '%')
-                    ->orWhere('customer_id', 'like', '%' . $search . '%')
                     ->orWhere('booking_date', 'like', '%' . $search . '%')
                     ->orWhere('delivery_date', 'like', '%' . $search . '%')
                     ->orWhere('delivery_type', 'like', '%' . $search . '%')
                     ->orWhere('delivery_rate', 'like', '%' . $search . '%')
-                    ->orWhereHas('company', function ($companyQuery) use ($search) {
-                        $companyQuery->where('company_code', 'like', '%' . $search . '%');
-                    })
                     ->orWhere('project_name', 'like', '%' . $search . '%')
-                    ->orWhereHas('region', function ($companyQuery) use ($search) {
-                        $companyQuery->where('region_code', 'like', '%' . $search . '%');
+                    ->orWhereHas('company', function ($companyQuery) use ($search) {
+                        $companyQuery->where('company_code', 'like', '%' . $search . '%')
+                            ->orWhere('company_name', 'like', '%' . $search . '%');
                     })
-                    ->orWhereHas('area', function ($companyQuery) use ($search) {
-                        $companyQuery->where('area_code', 'like', '%' . $search . '%');
+                    ->orWhereHas('customer', function ($customerQuery) use ($search) {
+                        $customerQuery->where('name', 'like', '%' . $search . '%');
                     })
-                    ->orWhere('status', 'like', '%' . $search . '%');
+                    ->orWhereHas('region', function ($regionQuery) use ($search) {
+                        $regionQuery->where('region_code', 'like', '%' . $search . '%')
+                            ->orWhere('province', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('area', function ($areaQuery) use ($search) {
+                        $areaQuery->where('area_code', 'like', '%' . $search . '%')
+                            ->orWhere('area_name', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('truckType', function ($truckTypeQuery) use ($search) {
+                        $truckTypeQuery->where('truck_code', 'like', '%' . $search . '%')
+                            ->orWhere('truck_type', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('deliveryStatus', function ($statusQuery) use ($search) {
+                        $statusQuery->where('status_name', 'like', '%' . $search . '%')
+                            ->orWhere('status_code', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('lineItems', function ($lineItemQuery) use ($search) {
+                        $lineItemQuery->where('delivery_number', 'like', '%' . $search . '%')
+                            ->orWhere('site_name', 'like', '%' . $search . '%');
+                    });
             });
         })
-        ->where('status', '!=', 0)
-        ->paginate(10);
-               
+        ->when($companyId, function ($query) use ($companyId) {
+            $query->where('company_id', $companyId);
+        })
+        ->when($deliveryStatusId, function ($query) use ($deliveryStatusId) {
+            $query->where('delivery_status', $deliveryStatusId);
+        })
+        ->where('status', '!=', 0);
 
-        // Check if it's an AJAX request
+        $summaryBaseQuery = clone $query;
+        $overview = [
+            'total' => (clone $summaryBaseQuery)->count(),
+            'regular' => (clone $summaryBaseQuery)->where('delivery_type', 'Regular')->count(),
+            'multi_drop' => (clone $summaryBaseQuery)->where('delivery_type', 'Multi-Drop')->count(),
+            'multi_pickup' => (clone $summaryBaseQuery)->where('delivery_type', 'Multi Pick-Up')->count(),
+        ];
+
+        $deliveryRequests = $query
+            ->latest()
+            ->paginate($perPage)
+            ->appends($request->query());
+
+        $companies = Company::orderBy('company_name')->get();
+        $deliveryStatuses = DeliveryStatus::orderBy('status_name')->get();
+
         if ($request->ajax()) {
-            return response()->json(view('deliveryRequest.table', compact('deliveryRequests'))->render());
+            return response()->json([
+                'html' => view('deliveryRequest.partials.index-table', compact('deliveryRequests', 'search', 'perPage', 'overview'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $deliveryRequests->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('deliveryRequest.index', compact('deliveryRequests', 'search'));
+        return view('deliveryRequest.index', compact(
+            'deliveryRequests',
+            'search',
+            'perPage',
+            'companies',
+            'deliveryStatuses',
+            'companyId',
+            'deliveryStatusId',
+            'overview'
+        ));
     }
 
     /**

@@ -10,24 +10,31 @@ class DeliveryRequestTypeController extends Controller
     //
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the regions table
         $deliveryRequestType = DeliveryRequestType::when($search, function ($query, $search) {
             return $query->where('code', 'like', '%' . $search . '%')
                         ->orWhere('description', 'like', '%' . $search . '%');
         })
-        ->orderBy('code') // Sort by region_code in ascending order
-        ->paginate(10);
+        ->orderBy('code')
+        ->paginate($perPage)
+        ->appends([
+            'search' => $search,
+            'per_page' => $perPage,
+        ]);
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('deliveryRequestType.table', compact('deliveryRequestType'))->render());
+            return response()->json([
+                'html' => view('deliveryRequestType.table', compact('deliveryRequestType', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $deliveryRequestType->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('deliveryRequestType.index', compact('deliveryRequestType', 'search'));
+        return view('deliveryRequestType.index', compact('deliveryRequestType', 'search', 'perPage'));
     }
 
 

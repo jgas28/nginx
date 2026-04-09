@@ -12,23 +12,28 @@ class DeliveryTypeController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the DeliveryType table
         $deliveryTypes = DeliveryType::when($search, function ($query, $search) {
             return $query->where('delivery_type_code', 'like', '%' . $search . '%')
                         ->orWhere('delivery_type_name', 'like', '%' . $search . '%');
         })
-        ->paginate(5);
+        ->orderBy('delivery_type_name')
+        ->paginate($perPage)
+        ->appends($request->query());
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('deliveryTypes.table', compact('deliveryTypes'))->render());
+            return response()->json([
+                'html' => view('deliveryTypes.table', compact('deliveryTypes', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $deliveryTypes->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('deliveryTypes.index', compact('deliveryTypes', 'search'));
+        return view('deliveryTypes.index', compact('deliveryTypes', 'search', 'perPage'));
     }
 
 

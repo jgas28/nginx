@@ -155,7 +155,9 @@
         <h1 style="font-size:15px">Cash Voucher Request</h1>
         <div class="series-no">
             <div style="font-size:12px">Series No</div>
-            <div style="font-size:12px">{{ preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number ?? 'N/A') }}-{{$allocations->truck->truck_name}}-{{$deliveryRequest->company->company_code}}{{$deliveryRequest->expenseType->expense_code}}</div>
+            <div style="font-size:12px">
+                {{ preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number ?? 'N/A') }}-{{ optional(optional($allocations)->truck)->truck_name ?? 'N/A' }}-{{ optional(optional($deliveryRequest)->company)->company_code ?? 'N/A' }}{{ optional(optional($deliveryRequest)->expenseType)->expense_code ?? 'N/A' }}
+            </div>
         </div>
     </div>
 
@@ -179,7 +181,7 @@
                 @endphp
 
                 {{-- Grouped Delivery Items --}}
-                @if (in_array($deliveryRequest->name, ['ADM', 'FE', 'ND', 'OPS-INC']))
+                @if (in_array($deliveryRequest->name ?? '', ['ADM', 'FE', 'ND', 'OPS-INC']))
                     <tr>
                        <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
                             @foreach($deliveryLineItems as $item)
@@ -246,7 +248,7 @@
                             {{-- Driver & Fleet Info --}}
                             @if(
                                 $drivers->employee_code === 'NONE' || 
-                                in_array($deliveryRequest->name, ['ADM', 'FE', 'ND', 'OPS-INC'])
+                                in_array($deliveryRequest->name ?? '', ['ADM', 'FE', 'ND', 'OPS-INC'])
                             )
                                 DRIVER: N/A
                             @elseif(empty($fleets->account_name))
@@ -301,7 +303,7 @@
                             {{-- Driver & Fleet Info --}}
                             @if(
                                 $drivers->employee_code === 'NONE' || 
-                                in_array($deliveryRequest->name, ['ADM', 'FE', 'ND', 'OPS-INC'])
+                                in_array($deliveryRequest->name ?? '', ['ADM', 'FE', 'ND', 'OPS-INC'])
                             )
                                 DRIVER: N/A
                             @elseif(empty($fleets->account_name))
@@ -361,7 +363,7 @@
                     <div style="font-size: 10px;">Approver</div>
                 </td>
                 <td>
-                    <div style="font-size: 10px; text-align:left;">RECEIVED from {{$deliveryRequest->company->company_name}} the amount of</div>
+                    <div style="font-size: 10px; text-align:left;">RECEIVED from {{ optional(optional($deliveryRequest)->company)->company_name ?? 'N/A' }} the amount of</div>
                     <div style="font-size: 10px; text-align: left; text-transform: uppercase;">
                       <strong><u>{{ $amountInWords == 'N/A' ? 'Zero' : ($amountInWords ?? 'Zero') }}</u></strong>
                     </div>

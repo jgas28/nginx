@@ -12,24 +12,29 @@ class FleetCardController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the employees table
         $fleetCards = FleetCard::when($search, function ($query, $search) {
             return $query->where('account', 'like', '%' . $search . '%')
                         ->orWhere('account_name', 'like', '%' . $search . '%')
                         ->orWhere('account_number', 'like', '%' . $search . '%');
         })
-        ->paginate(5);
+        ->orderBy('account_name')
+        ->paginate($perPage)
+        ->appends($request->query());
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('fleetCards.table', compact('fleetCards'))->render());
+            return response()->json([
+                'html' => view('fleetCards.table', compact('fleetCards', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $fleetCards->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('fleetCards.index', compact('fleetCards', 'search'));
+        return view('fleetCards.index', compact('fleetCards', 'search', 'perPage'));
     }
 
 

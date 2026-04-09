@@ -1,55 +1,38 @@
 @extends('layouts.app')
 
-@section('title', 'FCZCNYX')
+@section('title', 'Cash Voucher Request')
 
 @section('content')
-    <!-- Page Header -->
-    <h1 class="text-2xl font-semibold mb-4 text-gray-700">Cash Voucher Request</h1>
-
-    <!-- Container to hold both elements in a row -->
-    <div class="flex justify-between items-center mb-4">
-        <!-- Search Form (aligned to the left) -->
-        <form method="GET" action="{{ route('cashVoucherRequests.index') }}" class="flex items-center flex-grow space-x-4">
-            <!-- Search Input (Longer Input) -->
-            <input type="text" id="search" name="search" value="{{ $search ?? '' }}" class="px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-2/3 md:w-3/4 lg:w-1/2 xl:w-1/2" placeholder="Search MTM...">
-        </form>
-
-        <!-- Create New Employee Button (aligned to the right) -->
-        <!-- <a href="{{ route('cashVoucherRequests.create') }}" class="btn btn-primary bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 ml-4 whitespace-nowrap">
-            Request Cash Voucher
-        </a> -->
+<div class="mx-auto max-w-7xl space-y-6 py-8">
+    <div class="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <div class="inline-flex items-center gap-2 rounded-full bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 ring-1 ring-amber-100">
+                    <i class="fas fa-wallet text-sm"></i>
+                    Cash Voucher Requests
+                </div>
+                <h1 class="mt-4 text-3xl font-bold tracking-tight text-slate-900">Delivery Request Voucher Queue</h1>
+                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+                    Review approved delivery requests that are ready for cash voucher creation with a faster searchable queue.
+                </p>
+            </div>
+        </div>
     </div>
 
-    <!-- Employees Table -->
-    <div id="cashVoucherRequests-table" class="bg-white shadow-md rounded-lg overflow-hidden">
-        @include('cashVoucherRequests.table', ['deliveryRequests' => $deliveryRequests])  <!-- Pass the correct variable -->
+    <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
+        <div id="cash-voucher-request-table"
+             data-fast-table
+             data-endpoint="{{ route('cashVoucherRequests.index', ['search' => $search ?? '', 'per_page' => $perPage ?? 10]) }}"
+             data-base-endpoint="{{ route('cashVoucherRequests.index') }}"
+             data-search-selector="#cash-voucher-request-search"
+             data-per-page-selector="#cash-voucher-request-per-page"
+             data-pagination-selector=".cash-voucher-request-pagination a">
+            @include('cashVoucherRequests.table', [
+                'deliveryRequests' => $deliveryRequests,
+                'search' => $search ?? '',
+                'perPage' => $perPage ?? 10,
+            ])
+        </div>
     </div>
-
-@endsection
-
-@section('scripts')
-
-<script>
-    // Listen for input changes in the search field
-    document.getElementById('search').addEventListener('input', function () {
-        let searchQuery = this.value;
-
-        // Fetch the filtered delivery requests using AJAX
-        fetchcashVoucherRequests(searchQuery);
-    });
-
-    // Function to fetch filtered delivery requests via AJAX
-    function fetchcashVoucherRequests(searchQuery) {
-        // Use the Fetch API to send a GET request with the search query
-        fetch(`{{ route('cashVoucherRequests.index') }}?search=${searchQuery}`)
-            .then(response => response.text())
-            .then(data => {
-                // Replace the content of the employee table with the new data
-                document.getElementById('cashVoucherRequests-table').innerHTML = data;
-            })
-            .catch(error => {
-                console.error('Error fetching delivery requests:', error);
-            });
-    }
-</script>
+</div>
 @endsection

@@ -29,33 +29,57 @@ class CashVoucherController extends Controller
     //
     public function index(Request $request)
     {
-        // Get the search query from the request
-        $search = $request->get('search');
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Fetch related delivery line items by joining with the correct table name
-       $deliveryRequests = DeliveryRequest::with(['lineItems', 'region', 'company'])
-        ->when($search, function ($query, $search) {
-            return $query->where('mtm', 'like', '%' . $search . '%');
-        })
-        ->where('status', 1)
-        ->whereHas('lineItems', function ($query) {
-            $query->where('delivery_status', '"9"'); // or simply 9 if stored as number
-        })
-        ->paginate(10);
+        $deliveryRequests = DeliveryRequest::with(['lineItems.deliveryStatus', 'region', 'company'])
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('mtm', 'like', '%' . $search . '%')
+                        ->orWhereHas('company', function ($companyQuery) use ($search) {
+                            $companyQuery->where('company_code', 'like', '%' . $search . '%')
+                                ->orWhere('company_name', 'like', '%' . $search . '%');
+                        })
+                        ->orWhereHas('region', function ($regionQuery) use ($search) {
+                            $regionQuery->where('province', 'like', '%' . $search . '%');
+                        })
+                        ->orWhereHas('lineItems', function ($lineItemQuery) use ($search) {
+                            $lineItemQuery->where('delivery_number', 'like', '%' . $search . '%')
+                                ->orWhere('site_name', 'like', '%' . $search . '%');
+                        });
+                });
+            })
+            ->where('status', 1)
+            ->whereHas('lineItems', function ($query) {
+                $query->where('delivery_status', '"9"');
+            })
+            ->latest('created_at')
+            ->paginate($perPage)
+            ->appends($request->query());
 
-        // Get employees for the view (you can use it for dropdowns or other use cases)
         $employees = User::where('status', '!=', 0)->get();
 
-        return view('cashVoucherRequests.index', compact('deliveryRequests', 'employees', 'search'));
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('cashVoucherRequests.table', compact('deliveryRequests', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $deliveryRequests->total(),
+            ]);
+        }
+
+        return view('cashVoucherRequests.index', compact('deliveryRequests', 'employees', 'search', 'perPage'));
     }
 
     public function approval(Request $request)
-    { 
-        // Get the search query from the request
-        $search = $request->get('search');
-    
-        // Fetch related delivery line items by joining with the correct table name
-        $deliveryRequests = CashVoucher::with([
+    {
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
+        $cvrType = trim((string) $request->input('cvr_type', ''));
+
+        $query = CashVoucher::with([
             'deliveryRequest.deliveryAllocations' => function ($query) {
                 $query->orderBy('sequence');
             },
@@ -63,16 +87,43 @@ class CashVoucherController extends Controller
             'deliveryRequest.accessorialAllocations',
             'deliveryRequest.othersAllocations',
             'deliveryRequest.freightAllocations',
-            'cvrTypes'
+            'deliveryRequest.company',
+            'deliveryRequest.expenseType',
+            'cvrTypes',
         ])
-        ->when($search, function ($query, $search) {
-            return $query->whereHas('deliveryRequest', function ($q) use ($search) {
-                $q->where('mtm', 'like', '%' . $search . '%');
+            ->where('status', 1)
+            ->whereNotIn('cvr_type', ['admin', 'rpm']);
+
+        if ($cvrType !== '') {
+            $query->where('cvr_type', $cvrType);
+        }
+
+        if ($search !== '') {
+            $query->where(function ($cashVoucherQuery) use ($search) {
+                $cashVoucherQuery->where('cvr_number', 'like', '%' . $search . '%')
+                    ->orWhere('mtm', 'like', '%' . $search . '%')
+                    ->orWhere('cvr_type', 'like', '%' . $search . '%')
+                    ->orWhereHas('cvrTypes', function ($requestTypeQuery) use ($search) {
+                        $requestTypeQuery->where('request_type', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('deliveryRequest', function ($deliveryRequestQuery) use ($search) {
+                        $deliveryRequestQuery->where('mtm', 'like', '%' . $search . '%')
+                            ->orWhere('project_name', 'like', '%' . $search . '%')
+                            ->orWhereHas('company', function ($companyQuery) use ($search) {
+                                $companyQuery->where('company_code', 'like', '%' . $search . '%')
+                                    ->orWhere('company_name', 'like', '%' . $search . '%');
+                            })
+                            ->orWhereHas('expenseType', function ($expenseTypeQuery) use ($search) {
+                                $expenseTypeQuery->where('expense_code', 'like', '%' . $search . '%');
+                            });
+                    });
             });
-        })
-        ->where('status', 1)
-        ->whereNotIn('cvr_type', ['admin', 'rpm'])
-        ->paginate(10);
+        }
+
+        $deliveryRequests = $query
+            ->latest()
+            ->paginate($perPage)
+            ->appends($request->query());
 
         foreach ($deliveryRequests as $cashVoucher) {
             $allAllocations = collect([
@@ -92,13 +143,25 @@ class CashVoucherController extends Controller
             // Add this to the model temporarily so you can access in the view
             $cashVoucher->matched_allocation = $matchedAllocation;
         }
-        // Check if the request expects an AJAX response
+
+        $availableTypes = CashVoucher::query()
+            ->where('status', 1)
+            ->whereNotIn('cvr_type', ['admin', 'rpm'])
+            ->whereNotNull('cvr_type')
+            ->distinct()
+            ->orderBy('cvr_type')
+            ->pluck('cvr_type');
+
         if ($request->ajax()) {
-            return view('cashVoucherRequests.approval', compact('deliveryRequests'))->render();
+            return response()->json([
+                'html' => view('cashVoucherRequests.partials.approval-table', compact('deliveryRequests', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $deliveryRequests->total(),
+            ]);
         }
 
-        // For the normal view
-        return view('cashVoucherRequests.approval', compact('deliveryRequests', 'search'));
+        return view('cashVoucherRequests.approval', compact('deliveryRequests', 'search', 'perPage', 'cvrType', 'availableTypes'));
     }    
 
     public function accessorial(Request $request) 
@@ -659,27 +722,57 @@ class CashVoucherController extends Controller
 
     public function cvrList(Request $request)
     {
-        $search = $request->get('search');
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
+        $cvrType = trim((string) $request->input('cvr_type', ''));
 
-        $cashVoucherRequests = CashVoucher::with([
+        $query = CashVoucher::with([
             'deliveryRequest.deliveryAllocations',
             'deliveryRequest.pulloutAllocations',
             'deliveryRequest.accessorialAllocations',
             'deliveryRequest.othersAllocations',
             'deliveryRequest.freightAllocations',
+            'deliveryRequest.company',
+            'deliveryRequest.expenseType',
             'cvrTypes',
-            'cvrApprovals'  
-        ]) 
-        ->when($search, function ($query, $search) {
-            return $query->whereHas('deliveryRequest', function ($q) use ($search) {
-                $q->where('mtm', 'like', '%' . $search . '%');
+            'cvrApprovals',
+            'print_name',
+        ])
+            ->where('status', 2)
+            ->whereNotIn('cvr_type', ['admin', 'rpm']);
+
+        if ($cvrType !== '') {
+            $query->where('cvr_type', $cvrType);
+        }
+
+        if ($search !== '') {
+            $query->where(function ($cashVoucherQuery) use ($search) {
+                $cashVoucherQuery->where('cvr_number', 'like', '%' . $search . '%')
+                    ->orWhere('mtm', 'like', '%' . $search . '%')
+                    ->orWhere('cvr_type', 'like', '%' . $search . '%')
+                    ->orWhereHas('deliveryRequest', function ($deliveryRequestQuery) use ($search) {
+                        $deliveryRequestQuery->where('mtm', 'like', '%' . $search . '%')
+                            ->orWhereHas('company', function ($companyQuery) use ($search) {
+                                $companyQuery->where('company_code', 'like', '%' . $search . '%')
+                                    ->orWhere('company_name', 'like', '%' . $search . '%');
+                            })
+                            ->orWhereHas('expenseType', function ($expenseTypeQuery) use ($search) {
+                                $expenseTypeQuery->where('expense_code', 'like', '%' . $search . '%');
+                            });
+                    })
+                    ->orWhereHas('print_name', function ($printUserQuery) use ($search) {
+                        $printUserQuery->where('fname', 'like', '%' . $search . '%')
+                            ->orWhere('lname', 'like', '%' . $search . '%');
+                    });
             });
-        })
-        ->where('status', 2)
-        ->whereNotIn('cvr_type', ['admin', 'rpm'])
-        ->orderBy('print_status', 'asc')
-        ->orderBy('cvr_number')
-        ->paginate(10);
+        }
+
+        $cashVoucherRequests = $query
+            ->orderBy('print_status', 'asc')
+            ->orderBy('cvr_number')
+            ->paginate($perPage)
+            ->appends($request->query());
 
         // Add matched_allocation to each cash voucher
         foreach ($cashVoucherRequests as $cashVoucher) {
@@ -701,11 +794,24 @@ class CashVoucherController extends Controller
             $cashVoucher->matched_allocation = $matchedAllocation;
         }
 
+        $availableTypes = CashVoucher::query()
+            ->where('status', 2)
+            ->whereNotIn('cvr_type', ['admin', 'rpm'])
+            ->whereNotNull('cvr_type')
+            ->distinct()
+            ->orderBy('cvr_type')
+            ->pluck('cvr_type');
+
         if ($request->ajax()) {
-            return view('cashVoucherRequests.cvrList_table', compact('cashVoucherRequests'))->render();
+            return response()->json([
+                'html' => view('cashVoucherRequests.cvrList_table', compact('cashVoucherRequests', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $cashVoucherRequests->total(),
+            ]);
         }
 
-        return view('cashVoucherRequests.cvrList', compact('cashVoucherRequests', 'search'));
+        return view('cashVoucherRequests.cvrList', compact('cashVoucherRequests', 'search', 'perPage', 'cvrType', 'availableTypes'));
     }
 
     public function printMultiple(Request $request)
@@ -1348,45 +1454,84 @@ class CashVoucherController extends Controller
             return ucfirst($amountInWords) . ' ' . $currency;
         }
 
-        public function rejectView()
+        public function rejectView(Request $request)
         {
             $user = Auth::user();
             $employeeCode = $user->id;
+            $search = trim((string) $request->input('search', ''));
+            $perPage = (int) $request->input('per_page', 10);
+            $allowedPerPage = [5, 10, 25, 50];
+
+            if (!in_array($perPage, $allowedPerPage, true)) {
+                $perPage = 10;
+            }
 
             $cashVouchers = CashVoucher::with([
-                'deliveryRequest.deliveryAllocations',
-                'deliveryRequest.pulloutAllocations',
-                'deliveryRequest.accessorialAllocations',
-                'deliveryRequest.freightAllocations',
-                'deliveryRequest.othersAllocations',
+                'deliveryRequest.deliveryAllocations.truck',
+                'deliveryRequest.pulloutAllocations.truck',
+                'deliveryRequest.accessorialAllocations.truck',
+                'deliveryRequest.freightAllocations.truck',
+                'deliveryRequest.othersAllocations.truck',
                 'deliveryRequest.company',
                 'deliveryRequest.expenseType',
             ])
             ->where('status', 3)
             ->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial', 'freight', 'others'])
             // ->where('created_by', $employeeCode)
-            ->get();
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('cvr_number', 'like', "%{$search}%")
+                        ->orWhere('mtm', 'like', "%{$search}%")
+                        ->orWhere('cvr_type', 'like', "%{$search}%")
+                        ->orWhere('reject_remarks', 'like', "%{$search}%")
+                        ->orWhere('amount', 'like', "%{$search}%")
+                        ->orWhereHas('deliveryRequest.company', function ($companyQuery) use ($search) {
+                            $companyQuery->where('company_name', 'like', "%{$search}%")
+                                ->orWhere('company_code', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('deliveryRequest.expenseType', function ($expenseQuery) use ($search) {
+                            $expenseQuery->where('expense_name', 'like', "%{$search}%")
+                                ->orWhere('expense_code', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->latest('updated_at')
+            ->paginate($perPage)
+            ->withQueryString();
 
-            // Attach matched allocation dynamically
             foreach ($cashVouchers as $cashVoucher) {
+                $deliveryRequest = $cashVoucher->deliveryRequest;
                 $allAllocations = collect([
-                    ...($cashVoucher->deliveryRequest->deliveryAllocations ?? []),
-                    ...($cashVoucher->deliveryRequest->pulloutAllocations ?? []),
-                    ...($cashVoucher->deliveryRequest->accessorialAllocations ?? []),
-                    ...($cashVoucher->deliveryRequest->othersAllocations ?? []),
-                    ...($cashVoucher->deliveryRequest->freightAllocations ?? []),
+                    ...(optional($deliveryRequest)->deliveryAllocations?->all() ?? []),
+                    ...(optional($deliveryRequest)->pulloutAllocations?->all() ?? []),
+                    ...(optional($deliveryRequest)->accessorialAllocations?->all() ?? []),
+                    ...(optional($deliveryRequest)->othersAllocations?->all() ?? []),
+                    ...(optional($deliveryRequest)->freightAllocations?->all() ?? []),
                 ]);
 
                 $matchedAllocation = $allAllocations->first(function ($allocation) use ($cashVoucher) {
                     return $allocation->dr_id == $cashVoucher->dr_id &&
-                        strtolower($allocation->trip_type) === strtolower($cashVoucher->cvr_type) &&
+                        strtolower((string) $allocation->trip_type) === strtolower((string) $cashVoucher->cvr_type) &&
                         $allocation->sequence == $cashVoucher->sequence;
                 });
 
                 $cashVoucher->matched_allocation = $matchedAllocation;
             }
 
-            return view('cashVoucherRequests.rejectView', compact('cashVouchers'));
+            if ($request->ajax()) {
+                return response()->json([
+                    'html' => view('cashVoucherRequests.partials.rejectView-table', [
+                        'cashVouchers' => $cashVouchers,
+                        'search' => $search,
+                        'perPage' => $perPage,
+                    ])->render(),
+                    'search' => $search,
+                    'per_page' => $perPage,
+                    'total' => $cashVouchers->total(),
+                ]);
+            }
+
+            return view('cashVoucherRequests.rejectView', compact('cashVouchers', 'search', 'perPage'));
         }
 
         public function editCVR($id)
@@ -1478,7 +1623,7 @@ class CashVoucherController extends Controller
         ->where('delivery_request_line_items.mtm', $cashVoucherRequest->mtm)
         ->get();
 
-        $deliveryRequest = DeliveryRequest::with('company','customer')
+        $deliveryRequest = DeliveryRequest::with('company','customer', 'expenseType')
         ->where('id', $cashVoucherRequest->dr_id)
         ->first();
     

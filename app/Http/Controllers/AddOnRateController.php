@@ -12,10 +12,10 @@ class AddOnRateController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the add_on_rates table
         $addOnRates = AddOnRate::when($search, function ($query, $search) {
             return $query->where('add_on_rate_type_code', 'like', '%' . $search . '%')
                          ->orWhere('add_on_rate_type_name', 'like', '%' . $search . '%')
@@ -24,15 +24,20 @@ class AddOnRateController extends Controller
                          ->orWhere('percent_rate', 'like', '%' . $search . '%')
                          ->orWhere('delivery_type', 'like', '%' . $search . '%');
         })
-        ->paginate(5);
+        ->orderBy('add_on_rate_type_name')
+        ->paginate($perPage)
+        ->appends($request->query());
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('addOnRates.table', compact('addOnRates'))->render());
+            return response()->json([
+                'html' => view('addOnRates.table', compact('addOnRates', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $addOnRates->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('addOnRates.index', compact('addOnRates', 'search'));
+        return view('addOnRates.index', compact('addOnRates', 'search', 'perPage'));
     }
 
     /**

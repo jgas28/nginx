@@ -12,23 +12,28 @@ class DistanceTypeController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the Distance Type table
-        $distanceType = DistanceType::when($search, function ($query, $search) {
+        $distanceTypes = DistanceType::when($search, function ($query, $search) {
             return $query->where('distance_type_code', 'like', '%' . $search . '%')
                         ->orWhere('distance_type_name', 'like', '%' . $search . '%');
         })
-        ->paginate(5);
+        ->orderBy('distance_type_name')
+        ->paginate($perPage)
+        ->appends($request->query());
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('distanceTypes.table', compact('distanceTypes'))->render());
+            return response()->json([
+                'html' => view('distanceTypes.table', compact('distanceTypes', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $distanceTypes->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('distanceTypes.index', compact('distanceType', 'search'));
+        return view('distanceTypes.index', compact('distanceTypes', 'search', 'perPage'));
     }
 
 
@@ -106,6 +111,6 @@ class DistanceTypeController extends Controller
     {
         $distanceType->delete();
 
-        return redirect()->route('distanceTypes.index')->with('success', 'Distance Types deleted successfully.');
+        return redirect()->route('distanceTypes.index')->with('success', 'Distance Type deleted successfully.');
     }
 }

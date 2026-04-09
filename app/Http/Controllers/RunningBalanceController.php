@@ -15,7 +15,7 @@ class RunningBalanceController extends Controller
     public function index(Request $request)
     {
         // Base query with relationships
-        $query = RunningBalance::with(['approver', 'employee', 'creator']);
+        $query = RunningBalance::with(['approver', 'employee', 'creator', 'suppliers']);
 
         // Apply date filter if provided
         if ($request->filled('start_date') && $request->filled('end_date')) {
@@ -97,7 +97,7 @@ class RunningBalanceController extends Controller
         // Determine the correct approver_id from the route logic
         $approverId = $request->approver_id;
 
-        $query = RunningBalance::with(['approver', 'employee', 'creator'])
+        $query = RunningBalance::with(['approver', 'employee', 'creator', 'suppliers'])
             ->where('approver_id', $approverId); // Always filter by fixed approver
 
         if ($request->filled('start_date') && $request->filled('end_date')) {

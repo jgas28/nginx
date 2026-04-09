@@ -12,24 +12,30 @@ class CVR_Request_TypeController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the cvr_request_types table
         $cvr_request_types = cvr_request_type::when($search, function ($query, $search) {
             return $query->where('request_code', 'like', '%' . $search . '%')
                          ->orWhere('request_type', 'like', '%' . $search . '%')
                          ->orWhere('group_type', 'like', '%' . $search . '%');
         })
-        ->paginate(5);
+        ->orderBy('request_type')
+        ->paginate($perPage)
+        ->appends($request->query());
 
         // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('cvr_request_types.table', compact('cvr_request_types'))->render());
+            return response()->json([
+                'html' => view('cvr_request_types.table', compact('cvr_request_types', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $cvr_request_types->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('cvr_request_types.index', compact('cvr_request_types', 'search'));
+        return view('cvr_request_types.index', compact('cvr_request_types', 'search', 'perPage'));
     }
 
     /**

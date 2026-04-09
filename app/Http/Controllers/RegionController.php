@@ -10,10 +10,10 @@ class RegionController extends Controller
 {
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the regions table
         $regions = Region::with('area')
         ->when($search, function ($query, $search) {
             return $query->where('region_code', 'like', '%' . $search . '%')
@@ -21,15 +21,19 @@ class RegionController extends Controller
                          ->orWhere('province', 'like', '%' . $search . '%');
         })
         ->orderBy('region_code')
-        ->paginate(10);
+        ->paginate($perPage)
+        ->appends($request->query());
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('regions.table', compact('regions'))->render());
+            return response()->json([
+                'html' => view('regions.table', compact('regions', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $regions->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('regions.index', compact('regions', 'search'));
+        return view('regions.index', compact('regions', 'search', 'perPage'));
     }
 
 

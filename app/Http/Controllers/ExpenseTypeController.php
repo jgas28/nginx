@@ -11,25 +11,30 @@ class ExpenseTypeController extends Controller
     //
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the regions table
         $expenseTypes = Expense_Type::with('deliveryRequestType') // Eager load relationship
         ->when($search, function ($query, $search) {
             return $query->where('expense_code', 'like', '%' . $search . '%')
                          ->orWhere('expense_name', 'like', '%' . $search . '%');
         })
         ->orderBy('expense_code')
-        ->paginate(10);
+        ->paginate($perPage)
+        ->appends($request->query());
 
         // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('expenseTypes.table', compact('expenseTypes'))->render());
+            return response()->json([
+                'html' => view('expenseTypes.table', compact('expenseTypes', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $expenseTypes->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('expenseTypes.index', compact('expenseTypes', 'search'));
+        return view('expenseTypes.index', compact('expenseTypes', 'search', 'perPage'));
     }
 
 

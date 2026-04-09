@@ -3,49 +3,133 @@
 @section('title', 'FCZCNYX - Cash Voucher Request List')
 
 @section('content')
-    <!-- Page Header -->
-    <h1 class="text-2xl font-semibold mb-4 text-gray-700">Cash Voucher Request List</h1>
-
-    <!-- Container to hold both elements in a row -->
-    <div class="flex justify-between items-center mb-4">
-        <!-- Search Form (aligned to the left) -->
-        <form method="GET" action="{{ route('cashVoucherRequests.cvrList') }}" class="flex items-center flex-grow space-x-4">
-            <!-- Search Input (Longer Input) -->
-            <input type="text" id="search" name="search" value="{{ $search ?? '' }}" class="px-4 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-2/3 md:w-3/4 lg:w-1/2 xl:w-1/2" placeholder="Search MTM...">
-        </form> 
+<div class="mx-auto max-w-7xl space-y-6 py-8">
+    <div class="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+        <div class="inline-flex items-center gap-2 rounded-full bg-fuchsia-50 px-4 py-2 text-sm font-semibold text-fuchsia-700 ring-1 ring-fuchsia-100">
+            <i class="fas fa-list-ul text-sm"></i>
+            Cash Voucher List
+        </div>
+        <h1 class="mt-4 text-3xl font-bold tracking-tight text-slate-900">Delivery CVR Print Queue</h1>
+        <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">Search prepared vouchers faster, filter by voucher type, and print or review them from one compact table.</p>
     </div>
 
-    <!-- Cash Voucher Requests Table -->
-    <div id="cashVoucherRequests-table" class="bg-white shadow-md rounded-lg overflow-hidden">
-        @include('cashVoucherRequests.cvrList_table', ['cashVoucherRequests' => $cashVoucherRequests])
+    <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+        <form action="{{ route('cashVoucherRequests.cvrList') }}" method="GET" id="cash-voucher-list-filter-form" class="grid gap-4 lg:grid-cols-[minmax(0,1fr),auto,auto]">
+            <div class="min-w-0">
+                <label for="cvr_type" class="mb-1.5 block text-sm font-semibold text-slate-700">Voucher Type</label>
+                <select name="cvr_type" id="cvr_type" data-placeholder="All Voucher Types" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-fuchsia-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-100">
+                    <option value="">All Voucher Types</option>
+                    @foreach ($availableTypes as $type)
+                        <option value="{{ $type }}" {{ $cvrType === $type ? 'selected' : '' }}>{{ strtoupper($type) }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="flex flex-wrap items-end gap-3">
+                <button type="submit" class="inline-flex items-center gap-2 rounded-2xl bg-fuchsia-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-fuchsia-700"><span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15"><i class="fas fa-filter text-xs"></i></span>Apply Filters</button>
+                <a href="{{ route('cashVoucherRequests.cvrList') }}" id="cash-voucher-list-filter-reset" class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"><span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500"><i class="fas fa-rotate-left text-xs"></i></span>Reset</a>
+            </div>
+        </form>
     </div>
+
+    <div id="cash-voucher-list-table" class="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm" data-fast-table data-endpoint="{{ route('cashVoucherRequests.cvrList', array_filter(['cvr_type' => $cvrType], fn ($value) => $value !== null && $value !== '')) }}" data-base-endpoint="{{ route('cashVoucherRequests.cvrList') }}" data-search-selector="#cash-voucher-list-search" data-per-page-selector="#cash-voucher-list-per-page" data-pagination-selector=".cash-voucher-list-pagination a">
+        @include('cashVoucherRequests.cvrList_table', ['cashVoucherRequests' => $cashVoucherRequests, 'search' => $search, 'perPage' => $perPage])
+    </div>
+</div>
+
+<style>
+.searchable-select-source{position:absolute;left:-9999px;opacity:0;pointer-events:none}.searchable-select-panel::-webkit-scrollbar{width:6px}.searchable-select-panel::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:9999px}
+</style>
 @endsection
 
 @section('scripts')
-    <!-- Add jQuery from CDN -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+(() => {
+    const form = document.getElementById('cash-voucher-list-filter-form');
+    const select = document.getElementById('cvr_type');
+    const table = document.getElementById('cash-voucher-list-table');
+    const resetLink = document.getElementById('cash-voucher-list-filter-reset');
+    if (!form || !select || !table) return;
 
-    <script>
-        // Listen for input changes in the search field
-        document.getElementById('search').addEventListener('input', function () {
-            let searchQuery = this.value;
-
-            // Fetch the filtered delivery requests using AJAX
-            fetchCashVoucherRequests(searchQuery);
-        });
-
-        // Function to fetch filtered cash voucher requests via AJAX
-        function fetchCashVoucherRequests(searchQuery) {
-            // Use the Fetch API to send a GET request with the search query
-            fetch(`{{ route('cashVoucherRequests.cvrList') }}?search=${searchQuery}`)
-                .then(response => response.text())
-                .then(data => {
-                    // Replace the content of the employee table with the new data
-                    document.getElementById('cashVoucherRequests-table').innerHTML = data;
-                })
-                .catch(error => {
-                    console.error('Error fetching cash voucher requests:', error);
-                });
+    const baseEndpoint = table.dataset.baseEndpoint || form.action;
+    const syncPrintButtonVisibility = () => {
+        const button = document.getElementById('cash-voucher-print-selected');
+        const checkboxes = document.querySelectorAll('.cash-voucher-print-checkbox');
+        if (button) button.classList.toggle('hidden', !Array.from(checkboxes).some((checkbox) => checkbox.checked));
+    };
+    const loadFilteredTable = async () => {
+        const url = new URL(baseEndpoint, window.location.origin);
+        if (select.value) url.searchParams.set('cvr_type', select.value);
+        table.dataset.endpoint = url.toString();
+        table.classList.add('opacity-60', 'pointer-events-none', 'transition-opacity');
+        try {
+            const response = await fetch(url.toString(), {headers: {'X-Requested-With': 'XMLHttpRequest','Accept': 'application/json'}});
+            const payload = await response.json();
+            table.innerHTML = payload.html || '';
+            window.history.replaceState({}, '', url.toString());
+            syncPrintButtonVisibility();
+        } finally {
+            table.classList.remove('opacity-60', 'pointer-events-none');
         }
-    </script>
+    };
+
+    select.classList.add('searchable-select-source');
+    const wrapper = document.createElement('div');
+    wrapper.dataset.open = 'false';
+    wrapper.className = 'relative mt-1';
+    wrapper.innerHTML = `<button type="button" class="flex w-full items-center gap-3 rounded-2xl border border-slate-300 bg-white px-3 py-3 text-left text-sm text-slate-700 shadow-sm transition hover:border-fuchsia-300 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"><span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-fuchsia-50 text-fuchsia-600"><i class="fas fa-layer-group text-sm"></i></span><span class="min-w-0 flex-1 truncate" data-select-label></span><span class="text-slate-400"><i class="fas fa-chevron-down text-xs"></i></span></button><div class="searchable-select-panel absolute left-0 right-0 z-30 mt-2 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10"><div class="border-b border-slate-200 p-3"><div class="relative"><span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fas fa-magnifying-glass text-xs"></i></span><input type="text" placeholder="Search voucher type..." class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-fuchsia-300 focus:bg-white focus:ring-2 focus:ring-fuchsia-100" data-select-search></div></div><div class="max-h-56 overflow-y-auto p-2" data-select-list></div><div class="hidden px-4 py-3 text-sm text-slate-500" data-select-empty>No matching voucher types found.</div></div>`;
+    select.insertAdjacentElement('afterend', wrapper);
+    const trigger = wrapper.querySelector('button');
+    const panel = wrapper.querySelector('.searchable-select-panel');
+    const label = wrapper.querySelector('[data-select-label]');
+    const searchInput = wrapper.querySelector('[data-select-search]');
+    const list = wrapper.querySelector('[data-select-list]');
+    const emptyState = wrapper.querySelector('[data-select-empty]');
+    const closePanel = () => { wrapper.dataset.open = 'false'; panel.classList.add('hidden'); };
+    const updateLabel = () => { const option = select.options[select.selectedIndex]; label.textContent = option && option.value !== '' ? option.textContent.trim() : 'All Voucher Types'; };
+    const renderOptions = (term = '') => {
+        const normalized = term.trim().toLowerCase(); list.innerHTML = ''; let visible = 0;
+        Array.from(select.options).forEach((option) => {
+            if (!option.value && normalized) return;
+            if (normalized && !option.textContent.toLowerCase().includes(normalized)) return;
+            visible += 1;
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${option.selected ? 'bg-fuchsia-50 text-fuchsia-700' : 'text-slate-700 hover:bg-slate-100'}`;
+            button.innerHTML = `<span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${option.selected ? 'bg-fuchsia-100 text-fuchsia-600' : 'bg-slate-100 text-slate-500'}"><i class="fas fa-layer-group text-xs"></i></span><span class="min-w-0 flex-1 truncate">${option.textContent.trim()}</span>${option.selected ? '<i class="fas fa-check text-xs text-fuchsia-500"></i>' : ''}`;
+            button.addEventListener('click', () => { select.value = option.value; updateLabel(); renderOptions(searchInput.value); closePanel(); loadFilteredTable(); });
+            list.appendChild(button);
+        });
+        emptyState.classList.toggle('hidden', visible !== 0);
+    };
+
+    trigger.addEventListener('click', () => {
+        const open = wrapper.dataset.open !== 'true';
+        wrapper.dataset.open = open ? 'true' : 'false';
+        panel.classList.toggle('hidden', !open);
+        if (open) { searchInput.value = ''; renderOptions(); setTimeout(() => searchInput.focus(), 0); }
+    });
+    searchInput.addEventListener('input', () => renderOptions(searchInput.value));
+    document.addEventListener('click', (event) => { if (!wrapper.contains(event.target)) closePanel(); });
+    form.addEventListener('submit', (event) => { event.preventDefault(); loadFilteredTable(); });
+    if (resetLink) resetLink.addEventListener('click', (event) => { event.preventDefault(); select.value = ''; updateLabel(); renderOptions(); loadFilteredTable(); });
+    document.addEventListener('change', (event) => {
+        if (event.target.id === 'cash-voucher-select-all') document.querySelectorAll('.cash-voucher-print-checkbox').forEach((checkbox) => checkbox.checked = event.target.checked);
+        if (event.target.id === 'cash-voucher-select-all' || event.target.classList.contains('cash-voucher-print-checkbox')) syncPrintButtonVisibility();
+    });
+    document.addEventListener('submit', (event) => {
+        if (event.target.id !== 'cash-voucher-print-form') return;
+        const formElement = event.target;
+        formElement.querySelectorAll('.dynamic-cvr-input').forEach((element) => element.remove());
+        document.querySelectorAll('.cash-voucher-print-checkbox:checked').forEach((checkbox) => {
+            const idInput = document.createElement('input');
+            idInput.type = 'hidden'; idInput.name = 'cvr_ids[]'; idInput.value = checkbox.dataset.cvrId; idInput.className = 'dynamic-cvr-input';
+            const typeInput = document.createElement('input');
+            typeInput.type = 'hidden'; typeInput.name = `cvr_types[${checkbox.dataset.cvrId}]`; typeInput.value = checkbox.dataset.cvrType; typeInput.className = 'dynamic-cvr-input';
+            formElement.appendChild(idInput); formElement.appendChild(typeInput);
+        });
+    });
+    table.addEventListener('fast-table:loaded', syncPrintButtonVisibility);
+    updateLabel(); renderOptions(); syncPrintButtonVisibility();
+})();
+</script>
 @endsection

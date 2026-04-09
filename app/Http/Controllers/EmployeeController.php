@@ -14,25 +14,31 @@ class EmployeeController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the employees table
-        $employees = User::when($search, function ($query, $search) {
+        $employees = User::with('roles')->when($search, function ($query, $search) {
             return $query->where('employee_code', 'like', '%' . $search . '%')
                         ->orWhere('fname', 'like', '%' . $search . '%')
                         ->orWhere('lname', 'like', '%' . $search . '%')
                         ->orWhere('position', 'like', '%' . $search . '%');
         })
-        ->paginate(5);
+        ->orderBy('fname')
+        ->orderBy('lname')
+        ->paginate($perPage)
+        ->appends($request->query());
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('employees.table', compact('employees'))->render());
+            return response()->json([
+                'html' => view('employees.table', compact('employees', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $employees->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('employees.index', compact('employees', 'search'));
+        return view('employees.index', compact('employees', 'search', 'perPage'));
     }
 
 

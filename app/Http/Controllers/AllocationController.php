@@ -27,6 +27,8 @@ class AllocationController extends Controller
     public function index(Request $request)
     {
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
         $deliveryRequests = DeliveryRequest::with([
             'company',
@@ -44,21 +46,23 @@ class AllocationController extends Controller
         ->when($search, function ($query, $search) {
             $query->where(function ($q) use ($search) {
                 $q->where('mtm', 'like', '%' . $search . '%')
+                ->orWhereHas('company', fn($company) => $company->where('company_name', 'like', "%{$search}%")->orWhere('company_code', 'like', "%{$search}%"))
                 ->orWhereHas('region', fn($r) => $r->where('province', 'like', "%{$search}%"))
                 ->orWhereHas('area', fn($a) => $a->where('area_name', 'like', "%{$search}%"))
                 ->orWhere('delivery_date', 'like', '%' . $search . '%');
             });
         })
         ->orderBy('created_at', 'desc')
-        ->paginate(10);
+        ->paginate($perPage)
+        ->appends($request->query());
 
         if ($request->ajax()) {
-            return response()->json(
-                view('allocations.table', compact('deliveryRequests'))->render()
+            return response(
+                view('allocations.table', compact('deliveryRequests', 'search', 'perPage'))->render()
             );
         }
 
-        return view('allocations.index', compact('deliveryRequests', 'search'));
+        return view('allocations.index', compact('deliveryRequests', 'search', 'perPage'));
     }
 
 
@@ -181,12 +185,12 @@ class AllocationController extends Controller
 
     public function DRList(Request $request)
     {
-        // $query = DeliveryRequest::with(['lineItems', 'creator'])
-        //     ->select('id', 'mtm', 'delivery_rate', 'delivery_date', 'created_at', 'created_by', 'company_id', 'area_id', 'region_id');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
         $query = DeliveryRequest::with(['lineItems' => function ($q) {
             $q->where('status', '!=', 0);
-        }, 'creator'])
+        }, 'creator', 'company', 'area', 'region'])
         ->select('id', 'mtm', 'delivery_rate', 'delivery_date', 'created_at', 'created_by', 'company_id', 'area_id', 'region_id');
 
         // Default filter: show current month ONLY if no filters at all are applied
@@ -227,10 +231,13 @@ class AllocationController extends Controller
             $query->where('created_by', $request->created_by);
         }
 
-        $drList = $query->get();
+        $drList = $query
+            ->orderByDesc('created_at')
+            ->paginate($perPage)
+            ->appends($request->query());
 
         // Add computed fields
-        $drList->transform(function ($dr) {
+        $drList->getCollection()->transform(function ($dr) {
             $accessorialTotal = $dr->lineItems->sum(function ($item) {
                 return is_array($item->accessorial_rate)
                     ? collect($item->accessorial_rate)->sum()
@@ -258,7 +265,11 @@ class AllocationController extends Controller
         ->orderBy('lname')
         ->get();
 
-        return view('allocations.drlist', compact('drList', 'companies', 'areas', 'regions', 'users'));
+        if ($request->ajax()) {
+            return response(view('allocations.drlist-table', compact('drList', 'perPage'))->render());
+        }
+
+        return view('allocations.drlist', compact('drList', 'companies', 'areas', 'regions', 'users', 'perPage'));
     } 
 
 

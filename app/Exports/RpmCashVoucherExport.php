@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\CashVoucher;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -19,40 +20,80 @@ class RpmCashVoucherExport implements FromCollection, WithHeadings, WithMapping
 
     public function collection()
     {
-        // Start the query with CashVouchers and related models
-        $query = CashVoucher::with(['cvrApprovals', 'liquidations', 'suppliers', 'cvrTypes'])
-            ->where('cvr_type', 'rpm'); // Filter by rpm type
+        $currentMonth = Carbon::now()->month;
+        $currentYear = Carbon::now()->year;
+        $search = trim((string) ($this->filters['search'] ?? ''));
 
-        // Apply filters based on the request
-        if (isset($this->filters['start_date']) && isset($this->filters['end_date'])) {
+        $query = CashVoucher::with([
+                'cvrApprovals',
+                'liquidations',
+                'suppliers',
+                'cvrTypes',
+                'trucks',
+                'company',
+                'expenseTypes',
+            ])
+            ->where('cvr_type', 'rpm');
+
+        if (
+            !empty($this->filters['start_date']) &&
+            !empty($this->filters['end_date'])
+        ) {
             $query->whereBetween('created_at', [
                 Carbon::parse($this->filters['start_date'])->startOfDay(),
                 Carbon::parse($this->filters['end_date'])->endOfDay()
             ]);
+        } elseif (empty($this->filters['start_date']) && empty($this->filters['end_date'])) {
+            $query->whereMonth('created_at', $currentMonth)
+                ->whereYear('created_at', $currentYear);
         }
 
-        // Apply CVR Type filter if provided
         if (isset($this->filters['cvr_type']) && $this->filters['cvr_type']) {
             $query->where('request_type', $this->filters['cvr_type']);
         }
 
-        // Apply Supplier filter if provided
         if (isset($this->filters['supplier']) && $this->filters['supplier']) {
             $query->whereHas('suppliers', function ($q) {
                 $q->where('supplier_id', $this->filters['supplier']);
             });
         }
 
-        // Execute the query and get the results
+        if ($search !== '') {
+            $query->where(function ($inner) use ($search) {
+                $inner->where('cvr_number', 'like', "%{$search}%")
+                    ->orWhere('amount', 'like', "%{$search}%")
+                    ->orWhereHas('cvrTypes', function ($typeQuery) use ($search) {
+                        $typeQuery->where('request_type', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('suppliers', function ($supplierQuery) use ($search) {
+                        $supplierQuery->where('supplier_name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('trucks', function ($truckQuery) use ($search) {
+                        $truckQuery->where('truck_name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('company', function ($companyQuery) use ($search) {
+                        $companyQuery->where('company_name', 'like', "%{$search}%")
+                            ->orWhere('company_code', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('expenseTypes', function ($expenseQuery) use ($search) {
+                        $expenseQuery->where('expense_name', 'like', "%{$search}%")
+                            ->orWhere('expense_code', 'like', "%{$search}%");
+                    });
+            });
+        }
+
         $cashVouchers = $query->get();
 
-        // Process the results and map them to a collection of rows for export
+        if (!empty($this->filters['status'])) {
+            $cashVouchers = $cashVouchers->filter(function ($voucher) {
+                return $this->getVoucherStatus($voucher) === $this->filters['status'];
+            })->values();
+        }
+
         return $cashVouchers->map(function ($voucher) {
-            // Calculate liquidation cash and card totals from related liquidations
             $totalCash = 0;
             $totalCard = 0;
 
-            // Sum the fields for 'others', 'gasoline', and 'rfid' within the liquidations relationship
             $voucher->liquidations->each(function ($liquidation) use (&$totalCash, &$totalCard) {
                 $othersTotal = $this->sumJsonOrArray($liquidation->others);
                 $gasolineTotal = $this->sumJsonOrArray($liquidation->gasoline, 'cash');
@@ -60,16 +101,12 @@ class RpmCashVoucherExport implements FromCollection, WithHeadings, WithMapping
                 $gasolineCardTotal = $this->sumJsonOrArray($liquidation->gasoline, 'card');
                 $rfidCardTotal = $this->sumJsonOrArray($liquidation->rfid, 'card');
 
-                // Accumulate the totals
                 $totalCash += $othersTotal + $gasolineTotal + $rfidTotal;
                 $totalCard += $gasolineCardTotal + $rfidCardTotal;
             });
 
-            // Add the liquidation cash and card totals to the voucher object
             $voucher->liquidation_cash = $totalCash;
             $voucher->liquidation_card = $totalCard;
-
-            // Add the status text using the helper function
             $voucher->status_text = $this->getVoucherStatus($voucher);
 
             return $voucher;
@@ -96,7 +133,6 @@ class RpmCashVoucherExport implements FromCollection, WithHeadings, WithMapping
                  ($voucher->trucks->truck_name ?? '') . '-' . 
                  ($voucher->company->company_code ?? '') . 
                  ($voucher->expenseTypes->expense_code ?? '');
-        // Return the mapped data for each row in the export
         return [
             $voucherId,
             $voucher->cvrTypes->request_type ?? '',

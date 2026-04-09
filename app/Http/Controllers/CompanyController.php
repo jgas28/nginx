@@ -14,24 +14,29 @@ class CompanyController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the companies table
         $companies = Company::when($search, function ($query, $search) {
             return $query->where('company_code', 'like', '%' . $search . '%')
                         ->orWhere('company_name', 'like', '%' . $search . '%')
                         ->orWhere('company_location', 'like', '%' . $search . '%');
         })
-        ->paginate(5);
+        ->orderBy('company_name')
+        ->paginate($perPage)
+        ->appends($request->query());
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('companies.table', compact('companies'))->render());
+            return response()->json([
+                'html' => view('companies.table', compact('companies', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $companies->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('companies.index', compact('companies', 'search'));
+        return view('companies.index', compact('companies', 'search', 'perPage'));
     }
 
     /**

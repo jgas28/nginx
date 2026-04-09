@@ -18,6 +18,7 @@ use App\Exports\CashVoucherReportExport;
 use App\Exports\RpmCashVoucherExport;
 use App\Models\Company;
 use App\Models\Customer;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class ReportsController extends Controller
 {
@@ -276,24 +277,58 @@ class ReportsController extends Controller
     
     public function rpmCashVoucherReport(Request $request)
     {
-        // Get the current month and year
         $currentMonth = Carbon::now()->month;
         $currentYear = Carbon::now()->year;
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 10);
+        $allowedPerPage = [5, 10, 25, 50];
+
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 10;
+        }
 
         $suppliers = Supplier::all();
         $cvrTypes = cvr_request_type::all();
 
-        // Start the query with CashVouchers and related models
-        $query = CashVoucher::with('cvrApprovals', 'liquidations')  // Load liquidations relationship
-            ->where('cvr_type', 'rpm');  // Change cvr_type to 'rpm'
+        $query = CashVoucher::with([
+                'cvrApprovals',
+                'liquidations',
+                'cvrTypes',
+                'suppliers',
+                'trucks',
+                'company',
+                'expenseTypes',
+            ])
+            ->where('cvr_type', 'rpm')
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('cvr_number', 'like', "%{$search}%")
+                        ->orWhere('amount', 'like', "%{$search}%")
+                        ->orWhereHas('cvrTypes', function ($typeQuery) use ($search) {
+                            $typeQuery->where('request_type', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('suppliers', function ($supplierQuery) use ($search) {
+                            $supplierQuery->where('supplier_name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('trucks', function ($truckQuery) use ($search) {
+                            $truckQuery->where('truck_name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('company', function ($companyQuery) use ($search) {
+                            $companyQuery->where('company_name', 'like', "%{$search}%")
+                                ->orWhere('company_code', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('expenseTypes', function ($expenseQuery) use ($search) {
+                            $expenseQuery->where('expense_name', 'like', "%{$search}%")
+                                ->orWhere('expense_code', 'like', "%{$search}%");
+                        });
+                });
+            });
 
-        // Apply filters for current month and year if no date range is provided
         if (!$request->filled('start_date') && !$request->filled('end_date')) {
             $query->whereMonth('created_at', $currentMonth)
                 ->whereYear('created_at', $currentYear);
         }
 
-        // Apply date filters if provided
         if ($request->filled('start_date')) {
             $startDate = Carbon::parse($request->start_date);
             $query->whereDate('created_at', '>=', $startDate);
@@ -316,28 +351,20 @@ class ReportsController extends Controller
             });
         }
 
-        // Execute the query to fetch the results
         $rpmCV = $query->get();
 
-        // Filter by status AFTER fetching the results
         if ($request->filled('status')) {
             $rpmCV = $rpmCV->filter(function ($voucher) use ($request) {
-                // Map through and apply status logic
                 $status = $this->getVoucherStatus($voucher);
                 return $status === $request->status;
-            });
+            })->values();
         }
 
-        // Map through the vouchers and assign a single combined status text
         $voucherStatuses = $rpmCV->map(function ($voucher) {
-            // Default status
             $status = $this->getVoucherStatus($voucher);
-
-            // Calculate liquidation cash and card totals from related liquidations
             $totalCash = 0;
-            $totalCard = 0; // New variable to hold the total for card type
+            $totalCard = 0;
 
-            // Sum the fields for 'others', 'gasoline', and 'rfid' within the liquidations relationship
             $voucher->liquidations->each(function ($liquidation) use (&$totalCash, &$totalCard) {
                 $othersTotal = $this->sumJsonOrArray($liquidation->others);
                 $gasolineTotal = $this->sumJsonOrArray($liquidation->gasoline, 'cash');
@@ -345,29 +372,54 @@ class ReportsController extends Controller
                 $gasolineCardTotal = $this->sumJsonOrArray($liquidation->gasoline, 'card');
                 $rfidCardTotal = $this->sumJsonOrArray($liquidation->rfid, 'card');
 
-                // Accumulate the totals
                 $totalCash += $othersTotal + $gasolineTotal + $rfidTotal;
                 $totalCard += $gasolineCardTotal + $rfidCardTotal;
             });
 
-            // Add other non-JSON fields if necessary
             $fieldsToSum = ['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense', 'cashcharge'];
             foreach ($fieldsToSum as $field) {
                 $totalCash += (float) ($voucher->$field ?? 0);
             }
 
-            // Add the totalCash to the voucher object
             $voucher->liquidation_cash = $totalCash;
             $voucher->liquidation_card = $totalCard;
-
-            // Assign the status text to the voucher object
             $voucher->status_text = $status;
 
             return $voucher;
-        });
+        })->values();
 
-        // Pass the vouchers to the view
-        return view('reports.rpmCashVoucher', compact('voucherStatuses', 'suppliers', 'cvrTypes'));
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $paginatedStatuses = new LengthAwarePaginator(
+            $voucherStatuses->forPage($currentPage, $perPage)->values(),
+            $voucherStatuses->count(),
+            $perPage,
+            $currentPage,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('reports.partials.rpmCashVoucher-table', [
+                    'voucherStatuses' => $paginatedStatuses,
+                    'search' => $search,
+                    'perPage' => $perPage,
+                ])->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $paginatedStatuses->total(),
+            ]);
+        }
+
+        return view('reports.rpmCashVoucher', [
+            'voucherStatuses' => $paginatedStatuses,
+            'suppliers' => $suppliers,
+            'cvrTypes' => $cvrTypes,
+            'search' => $search,
+            'perPage' => $perPage,
+        ]);
     }
 
     public function RPMexport(Request $request)

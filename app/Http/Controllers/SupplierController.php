@@ -13,23 +13,28 @@ class SupplierController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the companies table
         $suppliers = Supplier::when($search, function ($query, $search) {
             return $query->where('supplier_code', 'like', '%' . $search . '%')
                         ->orWhere('supplier_name', 'like', '%' . $search . '%');
         })
-        ->paginate(5);
+        ->orderBy('supplier_name')
+        ->paginate($perPage)
+        ->appends($request->query());
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('suppliers.table', compact('suppliers'))->render());
+            return response()->json([
+                'html' => view('suppliers.table', compact('suppliers', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $suppliers->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('suppliers.index', compact('suppliers', 'search'));
+        return view('suppliers.index', compact('suppliers', 'search', 'perPage'));
     }
 
     /**
@@ -59,7 +64,7 @@ class SupplierController extends Controller
 
         $supplier->save();
 
-        return redirect()->route('suppliers.index')->with('success', 'supplier created successfully.');
+        return redirect()->route('suppliers.index')->with('success', 'Supplier created successfully.');
     }
 
     /**
@@ -95,7 +100,7 @@ class SupplierController extends Controller
 
         $supplier->save();
 
-        return redirect()->route('suppliers.index')->with('success', 'supplier updated successfully.');
+        return redirect()->route('suppliers.index')->with('success', 'Supplier updated successfully.');
     }
 
     /**
@@ -103,9 +108,8 @@ class SupplierController extends Controller
      */
     public function destroy(Supplier $supplier)
     {
-        // Delete the company itself
         $supplier->delete();
     
-        return redirect()->route('suppliers.index')->with('success', 'suppliers deleted successfully.');
+        return redirect()->route('suppliers.index')->with('success', 'Supplier deleted successfully.');
     }
 }

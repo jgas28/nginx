@@ -1,0 +1,167 @@
+@php
+    $showExtended = $showExtended ?? false;
+    $dashboardTitle = $dashboardTitle ?? 'Owner Dashboard';
+    $dashboardSubtitle = $dashboardSubtitle ?? 'Track finances, delivery health, and approver balances in one place.';
+    $periodLabel = request('month', now()->format('Y-m'));
+    $metricCards = [
+        ['label' => 'Total Profit', 'value' => $totalDeliveryRates + $totalAccessorialRates, 'color' => 'emerald', 'icon' => 'fa-chart-line', 'iconBg' => 'from-emerald-100 to-green-100', 'iconText' => 'text-emerald-700', 'isMoney' => true],
+        ['label' => 'Admin Expenses', 'value' => $totals->admin_rpm_total ?? 0, 'color' => 'amber', 'icon' => 'fa-wallet', 'iconBg' => 'from-amber-100 to-yellow-100', 'iconText' => 'text-amber-700', 'isMoney' => true],
+        ['label' => 'Operational Expenses', 'value' => $totals->operation_total ?? 0, 'color' => 'orange', 'icon' => 'fa-gears', 'iconBg' => 'from-orange-100 to-rose-100', 'iconText' => 'text-orange-700', 'isMoney' => true],
+        ['label' => 'Pending Deliveries', 'value' => $totalPendingDeliveries ?? 0, 'color' => 'blue', 'icon' => 'fa-hourglass-half', 'iconBg' => 'from-blue-100 to-cyan-100', 'iconText' => 'text-blue-700', 'isMoney' => false],
+        ['label' => 'Delivered Today', 'value' => $totalDelivered ?? 0, 'color' => 'green', 'icon' => 'fa-circle-check', 'iconBg' => 'from-lime-100 to-emerald-100', 'iconText' => 'text-green-700', 'isMoney' => false],
+        ['label' => 'Truck Allocated', 'value' => $totalTruckAllocated ?? 0, 'color' => 'violet', 'icon' => 'fa-truck', 'iconBg' => 'from-violet-100 to-fuchsia-100', 'iconText' => 'text-violet-700', 'isMoney' => false],
+    ];
+    if ($showExtended) {
+        $metricCards[] = ['label' => 'CVR Approvals', 'value' => $totalCVRapproval ?? 0, 'color' => 'fuchsia', 'icon' => 'fa-file-signature', 'iconBg' => 'from-fuchsia-100 to-pink-100', 'iconText' => 'text-fuchsia-700', 'isMoney' => false];
+        $metricCards[] = ['label' => 'Liquidations', 'value' => $totalLiquidation ?? 0, 'color' => 'teal', 'icon' => 'fa-file-invoice-dollar', 'iconBg' => 'from-teal-100 to-cyan-100', 'iconText' => 'text-teal-700', 'isMoney' => false];
+    }
+    $chartMax = max(
+        $totalDeliveryRates + $totalAccessorialRates,
+        $totals->admin_rpm_total ?? 0,
+        $totals->operation_total ?? 0,
+        1
+    );
+@endphp
+
+<div class="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eff6ff_18%,#f8fafc_44%,#e0f2fe_72%,#ecfeff_100%)] py-4">
+    <div class="mx-auto max-w-7xl px-4">
+        <div class="mb-6 flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+                <div class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-50 to-cyan-50 px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-blue-100 shadow-sm">
+                    <i class="fas fa-gauge-high"></i>
+                    Executive Overview
+                </div>
+                <h1 class="mt-4 text-3xl font-bold tracking-tight text-slate-900">{{ $dashboardTitle }}</h1>
+                <p class="mt-2 max-w-2xl text-sm text-slate-500">{{ $dashboardSubtitle }}</p>
+            </div>
+
+            <form method="GET" action="{{ route('dashboard') }}" class="grid gap-2.5 rounded-3xl border border-white/70 bg-white/90 p-3.5 shadow-sm backdrop-blur sm:grid-cols-2 xl:min-w-[620px] xl:grid-cols-5">
+                <div class="sm:col-span-2 xl:col-span-1">
+                    <label for="month" class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Month</label>
+                    <input type="month" id="month" name="month" value="{{ request('month', now()->format('Y-m')) }}" class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100">
+                </div>
+                <div class="sm:col-span-1 xl:col-span-2">
+                    <label for="start_date" class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Start Date</label>
+                    <input type="date" id="start_date" name="start_date" value="{{ request('start_date', now()->startOfMonth()->toDateString()) }}" class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100">
+                </div>
+                <div class="sm:col-span-1 xl:col-span-2">
+                    <label for="end_date" class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">End Date</label>
+                    <div class="flex gap-2">
+                        <input type="date" id="end_date" name="end_date" value="{{ request('end_date', now()->toDateString()) }}" class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100">
+                        <button type="submit" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-blue-600/30">
+                            <i class="fas fa-filter text-xs"></i>
+                            Apply
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            @foreach ($metricCards as $metric)
+                <div class="rounded-3xl border border-white/70 bg-gradient-to-br from-white via-white to-{{ $metric['color'] }}-50/60 p-4 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur transition hover:-translate-y-0.5 hover:shadow-[0_20px_45px_rgba(37,99,235,0.10)]">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{{ $metric['label'] }}</p>
+                            <p class="mt-2.5 text-2xl font-bold text-slate-900">
+                                @if ($metric['isMoney'])
+                                    PHP {{ number_format($metric['value'], 2) }}
+                                @else
+                                    {{ number_format($metric['value']) }}
+                                @endif
+                            </p>
+                            <p class="mt-1 text-xs text-slate-400">Period {{ $periodLabel }}</p>
+                        </div>
+                        <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br {{ $metric['iconBg'] }} {{ $metric['iconText'] }} ring-1 ring-white shadow-sm">
+                            <i class="fas {{ $metric['icon'] }}"></i>
+                        </span>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        <div class="mb-6 grid gap-4 xl:grid-cols-[1.25fr,0.95fr]">
+            <div class="rounded-3xl border border-white/70 bg-gradient-to-br from-white via-white to-sky-50/70 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur">
+                <div class="mb-4 flex items-center gap-3">
+                    <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-blue-100 text-sky-700 ring-1 ring-sky-200 shadow-sm">
+                        <i class="fas fa-chart-column"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">Financial Split</h2>
+                        <p class="text-sm text-slate-500">Profit versus expense breakdown for the selected period.</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    @foreach ([
+                        ['label' => 'Profit', 'value' => $totalDeliveryRates + $totalAccessorialRates, 'bar' => 'from-emerald-500 to-green-500', 'text' => 'text-emerald-600'],
+                        ['label' => 'Admin Expenses', 'value' => $totals->admin_rpm_total ?? 0, 'bar' => 'from-amber-500 to-yellow-500', 'text' => 'text-amber-600'],
+                        ['label' => 'Operational Expenses', 'value' => $totals->operation_total ?? 0, 'bar' => 'from-orange-500 to-red-500', 'text' => 'text-orange-600'],
+                    ] as $bar)
+                        @php $width = min(100, ($bar['value'] / $chartMax) * 100); @endphp
+                        <div>
+                            <div class="mb-1.5 flex items-center justify-between text-sm">
+                                <span class="font-medium text-slate-600">{{ $bar['label'] }}</span>
+                                <span class="font-semibold {{ $bar['text'] }}">PHP {{ number_format($bar['value'], 2) }}</span>
+                            </div>
+                            <div class="h-3 rounded-full bg-slate-100">
+                                <div class="h-3 rounded-full bg-gradient-to-r {{ $bar['bar'] }}" style="width: {{ $width }}%"></div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+
+            <div class="rounded-3xl border border-white/70 bg-gradient-to-br from-white via-white to-fuchsia-50/60 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur">
+                <div class="mb-4 flex items-center gap-3">
+                    <span class="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-gradient-to-br from-fuchsia-100 to-violet-100 text-fuchsia-700 ring-1 ring-fuchsia-200 shadow-sm">
+                        <i class="fas fa-wallet"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">Approver Snapshot</h2>
+                        <p class="text-sm text-slate-500">Top running totals and uncollected balances.</p>
+                    </div>
+                </div>
+
+                <div class="space-y-2.5">
+                    @forelse ($approvers as $approver)
+                        <div class="rounded-2xl border border-slate-200 bg-gradient-to-r from-white via-slate-50/90 to-violet-50/60 p-4 transition hover:border-blue-200 hover:bg-white hover:shadow-sm">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex items-center gap-3">
+                                    <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-fuchsia-100 text-violet-700 ring-1 ring-violet-200 shadow-sm">
+                                        <i class="fas fa-user-shield text-sm"></i>
+                                    </span>
+                                    <div>
+                                        <p class="font-semibold text-slate-900">{{ $approver->name }}</p>
+                                        <p class="mt-1 text-xs uppercase tracking-[0.16em] text-slate-400">Approver</p>
+                                    </div>
+                                </div>
+                                <span class="inline-flex min-h-[2.5rem] min-w-[2.5rem] items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 px-3 text-sm font-bold text-orange-700 ring-1 ring-orange-200 shadow-sm">
+                                    {{ $loop->iteration }}
+                                </span>
+                            </div>
+                            <div class="mt-3 grid grid-cols-2 gap-3">
+                                <div class="rounded-2xl bg-emerald-50/80 px-3 py-2.5 ring-1 ring-emerald-100">
+                                    <p class="text-[11px] uppercase tracking-[0.14em] text-emerald-500">Running</p>
+                                    <p class="mt-1 text-sm font-semibold text-emerald-600">PHP {{ number_format($runningTotalsByApprover[$approver->id] ?? 0, 2) }}</p>
+                                </div>
+                                <div class="rounded-2xl bg-rose-50/80 px-3 py-2.5 ring-1 ring-rose-100">
+                                    <p class="text-[11px] uppercase tracking-[0.14em] text-rose-500">Uncollected</p>
+                                    <p class="mt-1 text-sm font-semibold text-rose-600">PHP {{ number_format($uncollectedByApprover[$approver->id] ?? 0, 2) }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center text-slate-500">
+                            <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-400 ring-1 ring-slate-200">
+                                <i class="fas fa-chart-line text-lg"></i>
+                            </div>
+                            <p class="mt-3 font-medium text-slate-700">No approver data available</p>
+                            <p class="mt-1 text-sm">Approver balances will appear here once records exist.</p>
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

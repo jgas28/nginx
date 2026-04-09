@@ -1,15 +1,35 @@
 @extends('layouts.app')
 
 @section('content')
-    <!-- <h1>Edit Delivery Request</h1> -->
-
+    <div class="mx-auto max-w-7xl space-y-6 py-8">
     @if(session('error'))
-        <div class="alert alert-danger">
+        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 shadow-sm">
             {{ session('error') }}
         </div>
     @endif
 
-    <form action="{{ route('deliveryRequest.update', $deliveryRequest) }}" method="POST">
+    <div class="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+        <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <div class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-50 to-cyan-50 px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-blue-100 shadow-sm">
+                    <i class="fas fa-pen-to-square"></i>
+                    Update Delivery Request
+                </div>
+                <h1 class="mt-4 text-3xl font-bold tracking-tight text-slate-900">Edit Delivery Request</h1>
+                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+                    Update request details, keep line items organized, and use searchable selects for faster editing.
+                </p>
+            </div>
+            <a href="{{ route('deliveryRequest.index') }}" class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900">
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                    <i class="fas fa-arrow-left text-xs"></i>
+                </span>
+                Back to Delivery Requests
+            </a>
+        </div>
+    </div>
+
+    <form id="delivery-request-edit-form" action="{{ route('deliveryRequest.update', $deliveryRequest) }}" method="POST">
         @csrf
         @method('PUT')
 
@@ -589,13 +609,192 @@
         @endif
     @endif
 
-        <button type="submit" class="btn btn-primary my-4">Update Delivery Request</button>
+        <div class="flex flex-wrap items-center justify-end gap-3 py-4">
+            <a href="{{ route('deliveryRequest.index') }}" class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900">
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                    <i class="fas fa-xmark text-xs"></i>
+                </span>
+                Cancel
+            </a>
+            <button type="submit" class="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-blue-600/30">
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+                    <i class="fas fa-floppy-disk text-xs"></i>
+                </span>
+                Update Delivery Request
+            </button>
+        </div>
     </form>
-    
+
+    <style>
+        #delivery-request-edit-form input:not([type="hidden"]),
+        #delivery-request-edit-form select,
+        #delivery-request-edit-form textarea {
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+        }
+
+        #delivery-request-edit-form input:not([type="hidden"]),
+        #delivery-request-edit-form select {
+            min-height: 48px;
+        }
+
+        #delivery-request-edit-form textarea {
+            min-height: 112px;
+        }
+
+        #delivery-request-edit-form .searchable-select-source {
+            position: absolute;
+            left: -9999px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #delivery-request-edit-form .searchable-select-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #delivery-request-edit-form .searchable-select-panel::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+    </style>
+
     <script>
+        function initializeEditSearchableSelects(root = document) {
+            const selects = Array.from(root.querySelectorAll('#delivery-request-edit-form select'))
+                .filter((select) => !select.dataset.searchableReady && !select.multiple);
+
+            selects.forEach((select) => {
+                select.dataset.searchableReady = 'true';
+                select.classList.add('searchable-select-source');
+
+                const iconClass = select.id.includes('company') ? 'fa-building'
+                    : select.id.includes('customer') ? 'fa-user-group'
+                    : select.id.includes('truck') ? 'fa-truck'
+                    : select.id.includes('expense') ? 'fa-file-invoice-dollar'
+                    : select.id.includes('delivery_status') ? 'fa-signal'
+                    : select.id.includes('delivery_type') ? 'fa-shapes'
+                    : select.id.includes('region') || select.id.includes('area') ? 'fa-location-dot'
+                    : select.name.includes('[warehouse_id]') ? 'fa-warehouse'
+                    : select.name.includes('[accessorial_type]') ? 'fa-screwdriver-wrench'
+                    : 'fa-list';
+
+                const wrapper = document.createElement('div');
+                wrapper.dataset.open = 'false';
+                wrapper.setAttribute('data-searchable-select-wrapper', 'true');
+                wrapper.className = 'relative mt-1';
+                wrapper.innerHTML = `
+                    <button type="button" class="flex min-h-[48px] w-full items-center gap-3 rounded-md border border-gray-300 bg-white px-3 py-2 text-left text-sm text-slate-700 shadow-sm transition hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                            <i class="fas ${iconClass} text-sm"></i>
+                        </span>
+                        <span class="min-w-0 flex-1 truncate" data-select-label></span>
+                        <span class="text-slate-400">
+                            <i class="fas fa-chevron-down text-xs"></i>
+                        </span>
+                    </button>
+                    <div class="searchable-select-panel absolute left-0 right-0 z-30 mt-2 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
+                        <div class="border-b border-slate-200 p-3">
+                            <div class="relative">
+                                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                    <i class="fas fa-magnifying-glass text-xs"></i>
+                                </span>
+                                <input type="text" placeholder="Search..." class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-100" data-select-search>
+                            </div>
+                        </div>
+                        <div class="max-h-56 overflow-y-auto p-2" data-select-list></div>
+                        <div class="hidden px-4 py-3 text-sm text-slate-500" data-select-empty>No matching options found.</div>
+                    </div>
+                `;
+
+                select.insertAdjacentElement('afterend', wrapper);
+
+                const trigger = wrapper.querySelector('button');
+                const panel = wrapper.querySelector('.searchable-select-panel');
+                const label = wrapper.querySelector('[data-select-label]');
+                const searchInput = wrapper.querySelector('[data-select-search]');
+                const list = wrapper.querySelector('[data-select-list]');
+                const emptyState = wrapper.querySelector('[data-select-empty]');
+
+                function closePanel() {
+                    wrapper.dataset.open = 'false';
+                    panel.classList.add('hidden');
+                }
+
+                function updateLabel() {
+                    const selectedOption = select.options[select.selectedIndex];
+                    label.textContent = selectedOption && selectedOption.value !== '' ? selectedOption.textContent.trim() : 'Select option';
+                }
+
+                function renderOptions(term = '') {
+                    const normalizedTerm = term.trim().toLowerCase();
+                    list.innerHTML = '';
+                    let visibleCount = 0;
+
+                    Array.from(select.options).forEach((option) => {
+                        if (!option.value && normalizedTerm) {
+                            return;
+                        }
+
+                        if (normalizedTerm && !option.textContent.toLowerCase().includes(normalizedTerm)) {
+                            return;
+                        }
+
+                        visibleCount += 1;
+                        const button = document.createElement('button');
+                        button.type = 'button';
+                        button.className = `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${option.selected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700 hover:bg-slate-100'}`;
+                        button.innerHTML = `
+                            <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${option.selected ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}">
+                                <i class="fas ${iconClass} text-xs"></i>
+                            </span>
+                            <span class="min-w-0 flex-1 truncate">${option.textContent.trim()}</span>
+                            ${option.selected ? '<i class="fas fa-check text-xs text-indigo-500"></i>' : ''}
+                        `;
+
+                        button.addEventListener('click', () => {
+                            select.value = option.value;
+                            updateLabel();
+                            renderOptions(searchInput.value);
+                            closePanel();
+                            select.dispatchEvent(new Event('change', { bubbles: true }));
+                        });
+
+                        list.appendChild(button);
+                    });
+
+                    emptyState.classList.toggle('hidden', visibleCount !== 0);
+                }
+
+                trigger.addEventListener('click', () => {
+                    const shouldOpen = wrapper.dataset.open !== 'true';
+                    wrapper.dataset.open = shouldOpen ? 'true' : 'false';
+                    panel.classList.toggle('hidden', !shouldOpen);
+
+                    if (shouldOpen) {
+                        searchInput.value = '';
+                        renderOptions();
+                        setTimeout(() => searchInput.focus(), 0);
+                    }
+                });
+
+                searchInput.addEventListener('input', () => renderOptions(searchInput.value));
+
+                document.addEventListener('click', (event) => {
+                    if (!wrapper.contains(event.target)) {
+                        closePanel();
+                    }
+                });
+
+                updateLabel();
+                renderOptions();
+            });
+        }
+
         let multiDropIndex, currentIndex;
 
         document.addEventListener('DOMContentLoaded', function () {
+            initializeEditSearchableSelects();
             // Get initial values from hidden inputs
             var MultiDropIndexCount = document.querySelector('input[name="multi_drop_count"]');
             var MultiPickUpIndexCount = document.querySelector('input[name="multi_pickup_count"]');
@@ -697,6 +896,7 @@
 
                     // Append the new row for multi-drop fields
                     document.getElementById('multi-drop-items').appendChild(newRow);
+                    initializeEditSearchableSelects(newRow);
 
                     // Increment the index for the next multi-drop row
                     multiDropIndex++;
@@ -779,6 +979,7 @@
 
                     // Append the new row for multi-pickup fields
                     document.getElementById('multi-pickup-items').appendChild(newRow);
+                    initializeEditSearchableSelects(newRow);
 
                     // Increment the index for the next multi-pickup row
                     currentIndex++;
@@ -814,5 +1015,5 @@
         }
     </script>
 
-
+    </div>
 @endsection

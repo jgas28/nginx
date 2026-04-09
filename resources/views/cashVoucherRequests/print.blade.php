@@ -216,7 +216,7 @@
                 @endphp
 
                 {{-- Grouped Delivery Items --}}
-                @if (in_array($deliveryRequest->name, ['ADM', 'FE', 'ND', 'OPS-INC']))
+                @if (in_array($deliveryRequest->name ?? '', ['ADM', 'FE', 'ND', 'OPS-INC']))
                     <tr>
                         <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
                             @foreach($deliveryLineItems as $item)
@@ -246,7 +246,7 @@
                             {{-- Driver & Fleet Info --}}
                             @if(
                                 $drivers->employee_code === 'NONE' || 
-                                in_array($deliveryRequest->name, ['ADM', 'FE', 'ND', 'OPS-INC'])
+                                in_array($deliveryRequest->name ?? '', ['ADM', 'FE', 'ND', 'OPS-INC'])
                             )
                                 DRIVER: N/A
                             @elseif(empty($fleets->account_name))
@@ -313,7 +313,7 @@
                             {{-- Driver & Fleet Info --}}
                             @if(
                                 $drivers->employee_code === 'NONE' || 
-                                in_array($deliveryRequest->name, ['ADM', 'FE', 'ND', 'OPS-INC'])
+                                in_array($deliveryRequest->name ?? '', ['ADM', 'FE', 'ND', 'OPS-INC'])
                             )
                                 DRIVER: N/A
                             @elseif(empty($fleets->account_name))

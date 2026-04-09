@@ -9,24 +9,32 @@ class WarehouseController extends Controller
 {
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
-        // Query the warehouses table
         $warehouses = Warehouse::when($search, function ($query, $search) {
             return $query->where('warehouse_code', 'like', '%' . $search . '%')
                         ->orWhere('warehouse_name', 'like', '%' . $search . '%')
                         ->orWhere('warehouse_location', 'like', '%' . $search . '%');
         })
-        ->paginate(5);
+        ->orderBy('warehouse_name')
+        ->paginate($perPage)
+        ->appends([
+            'search' => $search,
+            'per_page' => $perPage,
+        ]);
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('warehouses.table', compact('warehouses'))->render());
+            return response()->json([
+                'html' => view('warehouses.table', compact('warehouses', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $warehouses->total(),
+            ]);
         }
 
-        // For non-AJAX requests, just return the view
-        return view('warehouses.index', compact('warehouses', 'search'));
+        return view('warehouses.index', compact('warehouses', 'search', 'perPage'));
     }
 
 
