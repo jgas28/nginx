@@ -14,9 +14,9 @@
     </div>
 
     <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-        <form action="{{ route('cashVoucherRequests.cvrList') }}" method="GET" id="cash-voucher-list-filter-form" class="grid gap-4 lg:grid-cols-[minmax(0,1fr),auto,auto]">
-            <div class="min-w-0">
-                <label for="cvr_type" class="mb-1.5 block text-sm font-semibold text-slate-700">Voucher Type</label>
+        <form action="{{ route('cashVoucherRequests.cvrList') }}" method="GET" id="cash-voucher-list-filter-form" class="flex items-end justify-between gap-4">
+            <div class="min-w-0 flex-1 max-w-[420px]">
+                <label for="cvr_type" class="sr-only">Voucher Type</label>
                 <select name="cvr_type" id="cvr_type" data-placeholder="All Voucher Types" class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-fuchsia-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-100">
                     <option value="">All Voucher Types</option>
                     @foreach ($availableTypes as $type)
@@ -24,7 +24,7 @@
                     @endforeach
                 </select>
             </div>
-            <div class="flex flex-wrap items-end gap-3">
+            <div class="flex shrink-0 items-end justify-end gap-3">
                 <button type="submit" class="inline-flex items-center gap-2 rounded-2xl bg-fuchsia-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-fuchsia-700"><span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15"><i class="fas fa-filter text-xs"></i></span>Apply Filters</button>
                 <a href="{{ route('cashVoucherRequests.cvrList') }}" id="cash-voucher-list-filter-reset" class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"><span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500"><i class="fas fa-rotate-left text-xs"></i></span>Reset</a>
             </div>
@@ -75,8 +75,8 @@
     select.classList.add('searchable-select-source');
     const wrapper = document.createElement('div');
     wrapper.dataset.open = 'false';
-    wrapper.className = 'relative mt-1';
-    wrapper.innerHTML = `<button type="button" class="flex w-full items-center gap-3 rounded-2xl border border-slate-300 bg-white px-3 py-3 text-left text-sm text-slate-700 shadow-sm transition hover:border-fuchsia-300 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"><span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-fuchsia-50 text-fuchsia-600"><i class="fas fa-layer-group text-sm"></i></span><span class="min-w-0 flex-1 truncate" data-select-label></span><span class="text-slate-400"><i class="fas fa-chevron-down text-xs"></i></span></button><div class="searchable-select-panel absolute left-0 right-0 z-30 mt-2 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10"><div class="border-b border-slate-200 p-3"><div class="relative"><span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fas fa-magnifying-glass text-xs"></i></span><input type="text" placeholder="Search voucher type..." class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-fuchsia-300 focus:bg-white focus:ring-2 focus:ring-fuchsia-100" data-select-search></div></div><div class="max-h-56 overflow-y-auto p-2" data-select-list></div><div class="hidden px-4 py-3 text-sm text-slate-500" data-select-empty>No matching voucher types found.</div></div>`;
+    wrapper.className = 'relative w-full max-w-[420px]';
+    wrapper.innerHTML = `<button type="button" class="flex w-full items-center gap-3 rounded-2xl border border-slate-300 bg-white px-3 py-3 text-left text-sm text-slate-700 shadow-sm transition hover:border-fuchsia-300 focus:outline-none focus:ring-2 focus:ring-fuchsia-500"><span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-fuchsia-50 text-fuchsia-600"><i class="fas fa-layer-group text-sm"></i></span><span class="min-w-0 flex-1 truncate" data-select-label></span><span class="text-slate-400"><i class="fas fa-chevron-down text-xs"></i></span></button><div class="searchable-select-panel absolute left-0 right-0 z-30 mt-2 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10" style="max-width:420px;"><div class="border-b border-slate-200 p-3"><div class="relative"><span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"><i class="fas fa-magnifying-glass text-xs"></i></span><input type="text" placeholder="Search voucher type..." class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-fuchsia-300 focus:bg-white focus:ring-2 focus:ring-fuchsia-100" data-select-search></div></div><div class="max-h-56 overflow-y-auto p-2" data-select-list></div><div class="hidden px-4 py-3 text-sm text-slate-500" data-select-empty>No matching voucher types found.</div></div>`;
     select.insertAdjacentElement('afterend', wrapper);
     const trigger = wrapper.querySelector('button');
     const panel = wrapper.querySelector('.searchable-select-panel');

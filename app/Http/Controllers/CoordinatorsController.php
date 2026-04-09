@@ -49,8 +49,17 @@ class CoordinatorsController extends Controller
     {
         $tab = $request->input('tab', 'list');
         $query = $this->getFilteredQuery($request, true)[$tab] ?? collect();
+        $html = view('coordinators.partials.' . $tab, ['data' => $query])->render();
 
-        return view('coordinators.partials.' . $tab, ['data' => $query])->render();
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => $html,
+                'tab' => $tab,
+                'total' => method_exists($query, 'total') ? $query->total() : 0,
+            ]);
+        }
+
+        return $html;
     }
 
     private function getFilteredQuery(Request $request, bool $singleTab = false)
@@ -61,6 +70,8 @@ class CoordinatorsController extends Controller
         $mtm = $request->input('mtm');
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
         $tab = $request->input('tab', 'list');
         $privilegedUserIds = [53, 54];
         $tabs = [
@@ -112,7 +123,7 @@ class CoordinatorsController extends Controller
 
             return [
                 $tab => $query->orderBy('created_at', 'desc')
-                    ->paginate(10, ['*'], $tab . '_page')
+                    ->paginate($perPage, ['*'], $tab . '_page')
                     ->withPath(route('coordinators.index'))
                     ->appends([
                         ...$request->except($tab . '_page'),
@@ -155,7 +166,7 @@ class CoordinatorsController extends Controller
             }
 
             $results[$tabKey] = $query->orderBy('created_at', 'desc')
-                ->paginate(10, ['*'], $tabKey . '_page')
+                ->paginate($perPage, ['*'], $tabKey . '_page')
                 ->appends([
                     ...$request->except($tabKey . '_page'),
                     'tab' => $tabKey

@@ -6,7 +6,7 @@
 @endphp
 
 <div class="space-y-5 p-5">
-    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
         <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
             <div class="flex items-center gap-3">
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-600">
@@ -53,8 +53,21 @@
         </div>
     </div>
 
-    <div class="flex flex-col gap-4 rounded-[24px] border border-slate-200 bg-white p-4 lg:flex-row lg:items-center lg:justify-between">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+    <div class="grid items-center gap-4 rounded-[24px] border border-slate-200 bg-white p-4" style="grid-template-columns: minmax(0, 620px) auto; justify-content: space-between;">
+        <div class="relative min-w-0 max-w-[620px]">
+            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                <i class="fas fa-magnifying-glass text-sm"></i>
+            </span>
+            <input
+                type="text"
+                id="admin-cv-approval-search"
+                value="{{ $search }}"
+                placeholder="Search CVR, company, supplier, truck..."
+                class="w-full rounded-2xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
+            >
+        </div>
+
+        <div class="flex items-center justify-end gap-3 whitespace-nowrap">
             <label for="admin-cv-approval-per-page" class="text-sm font-medium text-slate-600">Show</label>
             <select id="admin-cv-approval-per-page" class="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100">
                 @foreach ([5, 10, 25, 50] as $size)
@@ -62,21 +75,6 @@
                 @endforeach
             </select>
             <span class="text-sm text-slate-500">entries</span>
-        </div>
-
-        <div class="flex w-full items-center gap-3 lg:max-w-md">
-            <div class="relative flex-1">
-                <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                    <i class="fas fa-magnifying-glass text-sm"></i>
-                </span>
-                <input
-                    type="text"
-                    id="admin-cv-approval-search"
-                    value="{{ $search }}"
-                    placeholder="Search CVR, company, supplier, truck..."
-                    class="w-full rounded-2xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100"
-                >
-            </div>
         </div>
     </div>
 

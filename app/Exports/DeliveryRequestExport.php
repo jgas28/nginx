@@ -20,36 +20,70 @@ class DeliveryRequestExport implements FromCollection, WithHeadings, WithMapping
 
     public function collection()
     {
-        // Prepare the query with relationships (lineItems, area, and deliveryStatus)
-        $query = DeliveryRequest::with(['lineItems', 'area', 'deliveryStatus']);
+        $query = DeliveryRequest::with(['lineItems', 'area', 'deliveryStatus', 'company', 'customer']);
 
-        // Apply date filters if provided
-        if (isset($this->filters['date_from']) && isset($this->filters['date_to'])) {
+        if (isset($this->filters['date_from']) && isset($this->filters['date_to']) && $this->filters['date_from'] && $this->filters['date_to']) {
             $dateFrom = Carbon::parse($this->filters['date_from'])->startOfDay();
             $dateTo = Carbon::parse($this->filters['date_to'])->endOfDay();
             $query->whereBetween('created_at', [$dateFrom, $dateTo]);
         }
 
-        // Apply other filters (MTM, Area, Status, Customer) based on the request
         $query->when(isset($this->filters['mtm']) && $this->filters['mtm'], function ($query) {
             return $query->where('mtm', 'like', '%' . $this->filters['mtm'] . '%');
         })
+        ->when(isset($this->filters['delivery_date']) && $this->filters['delivery_date'], function ($query) {
+            return $query->whereDate('delivery_date', $this->filters['delivery_date']);
+        })
         ->when(isset($this->filters['area']) && $this->filters['area'], function ($query) {
-            return $query->whereHas('area', function ($query) {
-                $query->where('area_code', 'like', '%' . $this->filters['area'] . '%');
+            if (is_numeric($this->filters['area'])) {
+                return $query->where('area_id', $this->filters['area']);
+            }
+
+            return $query->whereHas('area', function ($areaQuery) {
+                $areaQuery->where('area_code', 'like', '%' . $this->filters['area'] . '%');
             });
         })
         ->when(isset($this->filters['status']) && $this->filters['status'], function ($query) {
-            return $query->whereHas('deliveryStatus', function ($query) {
-                $query->where('status_name', 'like', '%' . $this->filters['status'] . '%');
+            if (is_numeric($this->filters['status'])) {
+                return $query->where('delivery_status', $this->filters['status']);
+            }
+
+            return $query->whereHas('deliveryStatus', function ($statusQuery) {
+                $statusQuery->where('status_name', 'like', '%' . $this->filters['status'] . '%');
             });
         })
         ->when(isset($this->filters['customer_id']) && $this->filters['customer_id'], function ($query) {
             return $query->where('customer_id', '=', $this->filters['customer_id']);
+        })
+        ->when(isset($this->filters['company_id']) && $this->filters['company_id'], function ($query) {
+            return $query->where('company_id', '=', $this->filters['company_id']);
+        })
+        ->when(isset($this->filters['search']) && $this->filters['search'], function ($query) {
+            $search = $this->filters['search'];
+
+            return $query->where(function ($inner) use ($search) {
+                $inner->where('mtm', 'like', "%{$search}%")
+                    ->orWhere('project_name', 'like', "%{$search}%")
+                    ->orWhere('delivery_type', 'like', "%{$search}%")
+                    ->orWhereHas('company', function ($companyQuery) use ($search) {
+                        $companyQuery->where('company_name', 'like', "%{$search}%")
+                            ->orWhere('company_code', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('customer', function ($customerQuery) use ($search) {
+                        $customerQuery->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('area', function ($areaQuery) use ($search) {
+                        $areaQuery->where('area_name', 'like', "%{$search}%")
+                            ->orWhere('area_code', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('deliveryStatus', function ($statusQuery) use ($search) {
+                        $statusQuery->where('status_name', 'like', "%{$search}%");
+                    });
+            });
         });
 
         // Fetch the filtered data
-        $deliveryRequests = $query->get();
+        $deliveryRequests = $query->orderByDesc('created_at')->get();
 
         // Calculate total accessorial rate for each delivery request
         foreach ($deliveryRequests as $request) {

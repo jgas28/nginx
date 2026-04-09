@@ -2,221 +2,332 @@
 
 @section('title', 'FCZCNYX')
 
+@php
+    $tabs = [
+        'list' => ['label' => 'List', 'icon' => 'fas fa-list-ul', 'accent' => 'from-blue-500/15 to-sky-500/10 text-blue-700'],
+        'status4' => ['label' => 'Pull Out', 'icon' => 'fas fa-truck-ramp-box', 'accent' => 'from-orange-500/15 to-amber-500/10 text-orange-700'],
+        'status8' => ['label' => 'For Allocation', 'icon' => 'fas fa-diagram-project', 'accent' => 'from-violet-500/15 to-fuchsia-500/10 text-violet-700'],
+        'status9' => ['label' => 'Allocated', 'icon' => 'fas fa-location-crosshairs', 'accent' => 'from-teal-500/15 to-cyan-500/10 text-teal-700'],
+        'status10' => ['label' => 'Delivered', 'icon' => 'fas fa-circle-check', 'accent' => 'from-emerald-500/15 to-lime-500/10 text-emerald-700'],
+        'status11' => ['label' => 'Hold / Cancel', 'icon' => 'fas fa-ban', 'accent' => 'from-rose-500/15 to-red-500/10 text-rose-700'],
+        'staging' => ['label' => 'Staging', 'icon' => 'fas fa-warehouse', 'accent' => 'from-slate-500/15 to-zinc-500/10 text-slate-700'],
+        'accessorial' => ['label' => 'Accessorial', 'icon' => 'fas fa-screwdriver-wrench', 'accent' => 'from-indigo-500/15 to-blue-500/10 text-indigo-700'],
+    ];
+    $activeTab = $activeTab ?? request('tab', 'list');
+@endphp
+
 @section('content')
-<div class="container mx-auto px-4 py-6">
-    <!-- Filter Form -->
-    <form method="GET" id="filter-form" class="mb-4 flex flex-col md:flex-row md:flex-wrap gap-4">
-        <input type="text" name="mtm" placeholder="Search MTM" value="{{ request('mtm') }}"
-            class="border rounded px-4 py-2 w-full md:w-auto">
+<div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div class="overflow-hidden rounded-[30px] border border-slate-200/80 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.07)]">
+        <div class="border-b border-slate-200/80 bg-gradient-to-r from-slate-50 via-white to-blue-50/60 px-6 py-7 sm:px-8">
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                <div class="space-y-4">
+                    <div class="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white">
+                            <i class="fas fa-user-tie text-sm"></i>
+                        </span>
+                        Coordinator Queue
+                    </div>
+                    <div class="space-y-2">
+                        <h1 class="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">Coordinator Requests</h1>
+                        <p class="max-w-3xl text-[15px] leading-7 text-slate-600 sm:text-base">
+                            Monitor MTM requests with faster filters, lighter tab loading, and a cleaner table view per delivery stage.
+                        </p>
+                    </div>
+                </div>
 
-        <input
-            type="date"
-            name="date_from"
-            value="{{ request()->filled('date_from') ? \Carbon\Carbon::parse(request('date_from'))->format('Y-m-d') : '' }}"
-            class="border rounded px-4 py-2 w-full md:w-auto"
-            autocomplete="off">
+                <a
+                    href="{{ route('coordinators.create') }}"
+                    class="inline-flex items-center justify-center gap-3 rounded-2xl bg-blue-600 px-5 py-3 text-[15px] font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.22)] transition hover:-translate-y-0.5 hover:bg-blue-700"
+                >
+                    <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
+                        <i class="fas fa-plus"></i>
+                    </span>
+                    Create Delivery Request
+                </a>
+            </div>
+        </div>
 
-        <input
-            type="date"
-            name="date_to"
-            value="{{ request()->filled('date_to') ? \Carbon\Carbon::parse(request('date_to'))->format('Y-m-d') : '' }}"
-            class="border rounded px-4 py-2 w-full md:w-auto"
-            autocomplete="off">
+        <div class="px-6 py-6 sm:px-8">
+            <form id="filter-form" method="GET" class="rounded-[28px] border border-slate-200 bg-slate-50/80 p-5 shadow-inner shadow-slate-100">
+                <input type="hidden" name="tab" id="active-tab" value="{{ $activeTab }}">
 
-        <input type="hidden" name="tab" id="active-tab" value="{{ request('tab', 'list') }}">
-    </form>
+                <div class="grid gap-4 lg:grid-cols-3 lg:items-end">
+                    <label class="block">
+                        <span class="mb-2 flex items-center gap-2 text-[15px] font-semibold text-slate-800">
+                            <i class="fas fa-hashtag text-violet-600"></i>
+                            MTM
+                        </span>
+                        <input
+                            type="text"
+                            name="mtm"
+                            value="{{ request('mtm') }}"
+                            placeholder="Filter MTM"
+                            class="h-[56px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-[15px] text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        >
+                    </label>
 
-    <!-- Tabs -->
-    <div class="flex overflow-x-auto space-x-4 border-b pb-2 mb-4" id="tabs">
-        @foreach ([
-            'list' => 'List',
-            'status4' => 'Pull Out',
-            'status8' => 'For Allocation',
-            'status9' => 'Allocated',
-            'status10' => 'Delivered',
-            'status11' => 'Hold/Cancel',
-            'staging' => 'Staging',
-            'accessorial' => 'Accessorial',
-        ] as $tabKey => $tabLabel)
-            <button class="tab-button border-b-2 px-4 py-2 text-sm whitespace-nowrap text-gray-600 hover:text-blue-600"
-                    data-tab="{{ $tabKey }}">{{ $tabLabel }}</button>
-        @endforeach
-    </div>
+                    <label class="block">
+                        <span class="mb-2 flex items-center gap-2 text-[15px] font-semibold text-slate-800">
+                            <i class="fas fa-calendar-day text-emerald-600"></i>
+                            Date From
+                        </span>
+                        <input
+                            type="date"
+                            name="date_from"
+                            value="{{ request()->filled('date_from') ? \Carbon\Carbon::parse(request('date_from'))->format('Y-m-d') : '' }}"
+                            class="h-[56px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-[15px] text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            autocomplete="off"
+                        >
+                    </label>
 
-    <!-- Tab Content -->
-    <div class="tab-container">
-        <div id="tab-list" class="tab-content"></div>
-        <div id="tab-status4" class="tab-content hidden"></div>
-        <div id="tab-status8" class="tab-content hidden"></div>
-        <div id="tab-status9" class="tab-content hidden"></div>
-        <div id="tab-status10" class="tab-content hidden"></div>
-        <div id="tab-status11" class="tab-content hidden"></div>
-        <div id="tab-staging" class="tab-content hidden"></div>
-        <div id="tab-accessorial" class="tab-content hidden"></div>
+                    <label class="block">
+                        <span class="mb-2 flex items-center gap-2 text-[15px] font-semibold text-slate-800">
+                            <i class="fas fa-calendar-check text-amber-600"></i>
+                            Date To
+                        </span>
+                        <input
+                            type="date"
+                            name="date_to"
+                            value="{{ request()->filled('date_to') ? \Carbon\Carbon::parse(request('date_to'))->format('Y-m-d') : '' }}"
+                            class="h-[56px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-[15px] text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            autocomplete="off"
+                        >
+                    </label>
+                </div>
+
+                <div class="mt-4 flex items-center justify-between gap-4 border-t border-slate-200 pt-4">
+                    <div class="min-w-0 flex-1 max-w-[720px]">
+                        <div class="relative">
+                            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input
+                                type="text"
+                                name="search"
+                                value="{{ request('search') }}"
+                                placeholder="Search MTM, area, province, company..."
+                                class="h-[52px] w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-[15px] text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="ml-auto flex flex-none items-center gap-3">
+                        <span class="whitespace-nowrap text-[15px] font-semibold text-slate-700">Show</span>
+                        <select
+                            name="per_page"
+                            class="h-[52px] w-[160px] rounded-2xl border border-slate-200 bg-white px-4 text-[15px] font-medium text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        >
+                            @foreach ([5, 10, 25, 50] as $size)
+                                <option value="{{ $size }}" {{ (int) request('per_page', 10) === $size ? 'selected' : '' }}>{{ $size }} rows</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+            </form>
+
+            <div class="mt-6 flex gap-3 overflow-x-auto pb-2" id="tabs">
+                @foreach ($tabs as $tabKey => $tab)
+                    <button
+                        type="button"
+                        class="tab-button inline-flex min-w-max items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-[15px] font-semibold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-700"
+                        data-tab="{{ $tabKey }}"
+                    >
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br {{ $tab['accent'] }}">
+                            <i class="{{ $tab['icon'] }}"></i>
+                        </span>
+                        <span>{{ $tab['label'] }}</span>
+                    </button>
+                @endforeach
+            </div>
+
+            <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
+                <div class="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-5 py-4">
+                    <div class="flex items-center gap-3">
+                        <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                            <i class="fas fa-table-columns text-lg"></i>
+                        </span>
+                        <div>
+                            <h2 id="tab-heading" class="text-lg font-bold text-slate-900">{{ $tabs[$activeTab]['label'] ?? 'List' }}</h2>
+                            <p class="text-sm text-slate-500">Only the active tab reloads to keep the queue fast.</p>
+                        </div>
+                    </div>
+                    <div id="tab-loading-indicator" class="hidden items-center gap-2 rounded-full bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        Loading...
+                    </div>
+                </div>
+
+                <div id="tab-container" class="min-h-[240px] bg-white">
+                    @foreach (array_keys($tabs) as $tabKey)
+                        <div id="tab-{{ $tabKey }}" class="tab-content {{ $tabKey === $activeTab ? '' : 'hidden' }}"></div>
+                    @endforeach
+                </div>
+            </div>
+        </div>
     </div>
 </div>
+@endsection
 
-<!-- Scripts -->
+@section('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const tabButtons = document.querySelectorAll('.tab-button');
-        const tabContents = document.querySelectorAll('.tab-content');
-        const filterForm = document.getElementById('filter-form');
-        const tabHiddenInput = document.getElementById('active-tab');
-        let debounceTimer;
+document.addEventListener('DOMContentLoaded', () => {
+    const tabs = @json($tabs);
+    const filterForm = document.getElementById('filter-form');
+    const tabHiddenInput = document.getElementById('active-tab');
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const loadingIndicator = document.getElementById('tab-loading-indicator');
+    const tabHeading = document.getElementById('tab-heading');
+    let debounceTimer;
 
-        function syncPageParam(url, tabName) {
-            const pageParam = tabName + '_page';
-            const pageValue = url.searchParams.get(pageParam);
-
-            // Remove existing page inputs
-            document
-                .querySelectorAll(`input[name$="_page"]`)
-                .forEach(el => el.remove());
-
-            // Add page input if present
-            if (pageValue) {
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = pageParam;
-                input.value = pageValue;
-                filterForm.appendChild(input);
-            }
+    function setLoading(visible) {
+        if (!loadingIndicator) {
+            return;
         }
 
-        function syncInitialPageFromUrl() {
-            const url = new URL(window.location.href);
-            const tab = url.searchParams.get('tab') || 'list';
-            const pageParam = tab + '_page';
-            const pageValue = url.searchParams.get(pageParam);
+        loadingIndicator.classList.toggle('hidden', !visible);
+        loadingIndicator.classList.toggle('flex', visible);
+    }
 
-            if (pageValue) {
-                // Remove old page inputs
-                document
-                    .querySelectorAll(`input[name$="_page"]`)
-                    .forEach(el => el.remove());
+    function setActiveTab(tabName) {
+        tabHiddenInput.value = tabName;
 
-                // Inject correct page into the form
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = pageParam;
-                input.value = pageValue;
-                filterForm.appendChild(input);
-            }
-        }
-
-        function activateTab(tabName) {
-            tabContents.forEach(content => content.classList.add('hidden'));
-            tabButtons.forEach(btn => {
-                btn.classList.remove('border-blue-500', 'text-blue-600');
-                btn.classList.add('text-gray-600');
-            });
-
-            const targetTab = document.getElementById('tab-' + tabName);
-            const targetButton = document.querySelector(`.tab-button[data-tab="${tabName}"]`);
-
-            if (targetTab && targetButton) {
-                targetTab.classList.remove('hidden');
-                targetButton.classList.add('border-blue-500', 'text-blue-600');
-            }
-
-            tabHiddenInput.value = tabName;
-            fetchTabData(tabName);
-        }
-
-        function fetchTabData(tabName) {
-            const formData = new FormData(filterForm);
-            formData.set('tab', tabName);
-
-            const query = new URLSearchParams(formData).toString();
-
-            fetch("{{ route('coordinators.loadTabData') }}?" + query, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            })
-            .then(res => res.text())
-            .then(html => {
-                const targetTab = document.getElementById('tab-' + tabName);
-                if (targetTab) {
-                    targetTab.innerHTML = html;
-                    targetTab.scrollIntoView({ behavior: 'smooth' });
-                    initializeFilterInputs(); // Rebind events
-                }
-            });
-        }
-
-        function handleFilterInput() {
-            clearTimeout(debounceTimer);
-
-            // ✅ Reset pagination FIRST
-            document
-                .querySelectorAll(`input[name$="_page"]`)
-                .forEach(el => el.remove());
-
-            debounceTimer = setTimeout(() => {
-                const tab = tabHiddenInput.value || 'list';
-                fetchTabData(tab);
-            }, 400);
-        }
-
-        function initializeFilterInputs() {
-            const inputs = filterForm.querySelectorAll('input');
-            inputs.forEach(input => {
-                input.removeEventListener('input', handleFilterInput);
-                input.removeEventListener('change', handleFilterInput);
-
-                if (input.type === 'date') {
-                    input.addEventListener('change', handleFilterInput);
-                } else {
-                    input.addEventListener('input', handleFilterInput);
-                }
-            });
-        }
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
-                const tab = button.dataset.tab;
-                tabHiddenInput.value = tab;
-                const url = new URL(window.location);
-                url.searchParams.set('tab', tab);
-                window.history.replaceState({}, '', url);
-                activateTab(tab);
-            });
+        tabContents.forEach((content) => {
+            content.classList.toggle('hidden', content.id !== `tab-${tabName}`);
         });
 
-        document.addEventListener('click', function (e) {
-            const paginationLink = e.target.closest('.pagination a');
-            if (paginationLink) {
-                e.preventDefault();
-
-                const url = new URL(paginationLink.href);
-                const tab = url.searchParams.get('tab') || tabHiddenInput.value || 'list';
-
-                syncPageParam(url, tab);
-
-                fetch(url, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                })
-                .then(res => res.text())
-                .then(html => {
-                    const targetTab = document.getElementById('tab-' + tab);
-                    if (targetTab) {
-                        targetTab.innerHTML = html;
-                        initializeFilterInputs();
-                    }
-                });
-            }
+        tabButtons.forEach((button) => {
+            const active = button.dataset.tab === tabName;
+            button.classList.toggle('border-blue-300', active);
+            button.classList.toggle('bg-blue-50', active);
+            button.classList.toggle('text-blue-700', active);
+            button.classList.toggle('shadow-[0_10px_24px_rgba(59,130,246,0.12)]', active);
+            button.classList.toggle('border-slate-200', !active);
+            button.classList.toggle('bg-white', !active);
+            button.classList.toggle('text-slate-600', !active);
         });
 
+        if (tabs[tabName] && tabHeading) {
+            tabHeading.textContent = tabs[tabName].label;
+        }
+    }
 
-        const initialTab = new URLSearchParams(window.location.search).get('tab') || 'list';
+    function resetTabPagination() {
+        filterForm
+            .querySelectorAll('input[name$="_page"]')
+            .forEach((input) => input.remove());
+    }
 
-        // 🔥 IMPORTANT: sync page first
-        syncInitialPageFromUrl();
+    function syncPageInput(url, tabName) {
+        resetTabPagination();
 
-        activateTab(initialTab);
-        initializeFilterInputs();
+        const pageParam = `${tabName}_page`;
+        const pageValue = url.searchParams.get(pageParam);
+        if (!pageValue) {
+            return;
+        }
+
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = pageParam;
+        input.value = pageValue;
+        filterForm.appendChild(input);
+    }
+
+    function buildQuery(tabName) {
+        const formData = new FormData(filterForm);
+        formData.set('tab', tabName);
+        return new URLSearchParams(formData).toString();
+    }
+
+    async function fetchTabData(tabName, pushState = true) {
+        setActiveTab(tabName);
+        setLoading(true);
+
+        const url = `{{ route('coordinators.loadTabData') }}?${buildQuery(tabName)}`;
+
+        try {
+            const response = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+
+            const contentType = response.headers.get('content-type') || '';
+            let html = '';
+
+            if (contentType.includes('application/json')) {
+                const payload = await response.json();
+                html = payload.html || '';
+            } else {
+                html = await response.text();
+            }
+
+            const target = document.getElementById(`tab-${tabName}`);
+            if (target) {
+                target.innerHTML = html;
+            }
+
+            if (pushState) {
+                const historyUrl = new URL(window.location.href);
+                historyUrl.search = buildQuery(tabName);
+                window.history.replaceState({}, '', historyUrl);
+            }
+
+            document.dispatchEvent(new CustomEvent('fast-table:loaded'));
+        } catch (error) {
+            const target = document.getElementById(`tab-${tabName}`);
+            if (target) {
+                target.innerHTML = `
+                    <div class="p-6">
+                        <div class="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-[15px] text-rose-700">
+                            Unable to load this tab right now. Please try again.
+                        </div>
+                    </div>
+                `;
+            }
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function handleFilterChange() {
+        clearTimeout(debounceTimer);
+        resetTabPagination();
+        debounceTimer = setTimeout(() => {
+            fetchTabData(tabHiddenInput.value || 'list');
+        }, 350);
+    }
+
+    filterForm.querySelectorAll('input, select').forEach((field) => {
+        const eventName = field.tagName === 'SELECT' || field.type === 'date' ? 'change' : 'input';
+        field.addEventListener(eventName, handleFilterChange);
     });
+
+    tabButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            resetTabPagination();
+            fetchTabData(button.dataset.tab);
+        });
+    });
+
+    document.addEventListener('click', async (event) => {
+        const link = event.target.closest('.pagination a');
+        if (!link) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const url = new URL(link.href);
+        const tabName = url.searchParams.get('tab') || tabHiddenInput.value || 'list';
+        syncPageInput(url, tabName);
+        await fetchTabData(tabName, true);
+    });
+
+    const initialTab = new URLSearchParams(window.location.search).get('tab') || '{{ $activeTab }}';
+    const initialUrl = new URL(window.location.href);
+    syncPageInput(initialUrl, initialTab);
+    fetchTabData(initialTab, false);
+});
 </script>
 @endsection

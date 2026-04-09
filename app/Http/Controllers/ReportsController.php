@@ -19,75 +19,132 @@ use App\Exports\RpmCashVoucherExport;
 use App\Models\Company;
 use App\Models\Customer;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 
 class ReportsController extends Controller
 {
     public function deliveryRequestReport(Request $request)
     {
-        // Get the current date and start of the month
-        $currentDate = Carbon::now();
-        $startOfMonth = $currentDate->copy()->startOfMonth()->format('Y-m-d');
-        $endOfMonth = $currentDate->copy()->endOfMonth()->format('Y-m-d');
+        $search = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 10);
+        $allowedPerPage = [5, 10, 25, 50];
 
-        // Fetch area, status, and customer options for dropdowns
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 10;
+        }
+
+        $currentDate = Carbon::now();
+        $startOfMonth = $request->input('date_from', $currentDate->copy()->startOfMonth()->format('Y-m-d'));
+        $endOfMonth = $request->input('date_to', $currentDate->copy()->endOfMonth()->format('Y-m-d'));
+
         $areas = Area::all();
         $statuses = DeliveryStatus::all();
         $customers = Customer::all();
         $companies = Company::all();
 
-        // Prepare the query builder
-        $query = DeliveryRequest::with(['lineItems' => function ($query) {
-            $query->where('status', '!=', 0); // Line items filter
-        }]);
+        $query = $this->buildDeliveryRequestReportQuery($request, $search, $startOfMonth, $endOfMonth);
 
-        // Apply date filters if they exist, otherwise default to current month range
-        if ($request->date_from && $request->date_to) {
-            $dateFrom = Carbon::parse($request->date_from)->startOfDay()->format('Y-m-d H:i:s');
-            $dateTo = Carbon::parse($request->date_to)->endOfDay()->format('Y-m-d H:i:s');
-            $query->whereBetween('created_at', [$dateFrom, $dateTo]);
-        } else {
-            // Default to the current month's date range
-            $query->whereBetween('created_at', [
-                Carbon::parse($startOfMonth)->startOfDay(),
-                Carbon::parse($endOfMonth)->endOfDay()
+        $overviewRecords = (clone $query)->get(['id', 'delivery_type']);
+        $overview = [
+            'visible_requests' => $overviewRecords->count(),
+            'regular' => $overviewRecords->where('delivery_type', 'Regular')->count(),
+            'multi_drop' => $overviewRecords->where('delivery_type', 'Multi-Drop')->count(),
+            'multi_pickup' => $overviewRecords->where('delivery_type', 'Multi Pick-Up')->count(),
+        ];
+
+        $deliveryRequests = $query
+            ->orderByDesc('created_at')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('reports.partials.deliveryRequest-table', [
+                    'deliveryRequests' => $deliveryRequests,
+                    'search' => $search,
+                    'perPage' => $perPage,
+                    'overview' => $overview,
+                ])->render(),
             ]);
         }
 
-        // Apply additional filters (MTM, Delivery Date, Area, Status, Customer) independently
-        $query->when($request->mtm, function ($query) use ($request) {
-            return $query->where('mtm', 'like', '%' . $request->mtm . '%');
-        })
-        ->when($request->delivery_date, function ($query) use ($request) {
-            return $query->where('delivery_date', '=', $request->delivery_date);
-        })
-        ->when($request->area, function ($query) use ($request) {
-            return $query->whereHas('area', function ($query) use ($request) {
-                $query->where('area_code', 'like', '%' . $request->area . '%');
-            });
-        })
-        ->when($request->status, function ($query) use ($request) {
-            return $query->whereHas('deliveryStatus', function ($query) use ($request) {
-                $query->where('status_name', 'like', '%' . $request->status . '%');
-            });
-        })
-        ->when($request->customer_id, function ($query) use ($request) {
-            return $query->where('customer_id', '=', $request->customer_id);
-        })
-        ->when($request->company_id, function ($query) use ($request) {
-            return $query->where('company_id', $request->company_id);
-        });
-
-        // Get the filtered data
-        $deliveryRequests = $query->get();
-
-        // Calculate the total accessorial rate for each delivery request
-        foreach ($deliveryRequests as $request) {
-            $request->total_accessorial_rate = $request->lineItems->sum('accessorial_rate');
-        }
-
-        // Return the view with the filtered delivery requests data and dropdown data
-        return view('reports.deliveryRequest', compact('deliveryRequests', 'areas', 'statuses', 'customers','companies'));
+        return view('reports.deliveryRequest', compact(
+            'deliveryRequests',
+            'areas',
+            'statuses',
+            'customers',
+            'companies',
+            'search',
+            'perPage',
+            'overview',
+            'startOfMonth',
+            'endOfMonth'
+        ));
     } 
+
+    private function buildDeliveryRequestReportQuery(Request $request, string $search = '', ?string $startOfMonth = null, ?string $endOfMonth = null): Builder
+    {
+        $startOfMonth = $startOfMonth ?: Carbon::now()->startOfMonth()->format('Y-m-d');
+        $endOfMonth = $endOfMonth ?: Carbon::now()->endOfMonth()->format('Y-m-d');
+
+        return DeliveryRequest::query()
+            ->with([
+                'area',
+                'deliveryStatus',
+                'company',
+                'customer',
+                'deliveryType',
+            ])
+            ->withSum([
+                'lineItems as total_accessorial_rate' => function ($query) {
+                    $query->where('status', '!=', 0);
+                }
+            ], 'accessorial_rate')
+            ->whereBetween('created_at', [
+                Carbon::parse($request->input('date_from', $startOfMonth))->startOfDay(),
+                Carbon::parse($request->input('date_to', $endOfMonth))->endOfDay(),
+            ])
+            ->when($request->filled('mtm'), function ($query) use ($request) {
+                $query->where('mtm', 'like', '%' . $request->input('mtm') . '%');
+            })
+            ->when($request->filled('delivery_date'), function ($query) use ($request) {
+                $query->whereDate('delivery_date', $request->input('delivery_date'));
+            })
+            ->when($request->filled('area'), function ($query) use ($request) {
+                $query->where('area_id', $request->input('area'));
+            })
+            ->when($request->filled('status'), function ($query) use ($request) {
+                $query->where('delivery_status', $request->input('status'));
+            })
+            ->when($request->filled('customer_id'), function ($query) use ($request) {
+                $query->where('customer_id', $request->input('customer_id'));
+            })
+            ->when($request->filled('company_id'), function ($query) use ($request) {
+                $query->where('company_id', $request->input('company_id'));
+            })
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($inner) use ($search) {
+                    $inner->where('mtm', 'like', "%{$search}%")
+                        ->orWhere('project_name', 'like', "%{$search}%")
+                        ->orWhere('delivery_type', 'like', "%{$search}%")
+                        ->orWhere('delivery_rate', 'like', "%{$search}%")
+                        ->orWhereHas('company', function ($companyQuery) use ($search) {
+                            $companyQuery->where('company_name', 'like', "%{$search}%")
+                                ->orWhere('company_code', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('customer', function ($customerQuery) use ($search) {
+                            $customerQuery->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('area', function ($areaQuery) use ($search) {
+                            $areaQuery->where('area_name', 'like', "%{$search}%")
+                                ->orWhere('area_code', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('deliveryStatus', function ($statusQuery) use ($search) {
+                            $statusQuery->where('status_name', 'like', "%{$search}%");
+                        });
+                });
+            });
+    }
 
     public function export(Request $request)
     {
@@ -105,7 +162,7 @@ class ReportsController extends Controller
         }
 
         // Pass the filters from the request (which come from the view) to the export class
-        $filters = $request->only(['mtm', 'date_from', 'date_to', 'area', 'status', 'customer_id']);
+        $filters = $request->only(['mtm', 'date_from', 'date_to', 'delivery_date', 'area', 'status', 'customer_id', 'company_id', 'search']);
         
         // Pass filters to the export class and generate the Excel file
         return Excel::download(new DeliveryRequestExport($filters), 'delivery_requests.xlsx');

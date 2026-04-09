@@ -1,9 +1,9 @@
 @php
     $overviewCards = [
-        ['label' => 'Pending Review', 'value' => number_format($overview['total'] ?? 0), 'icon' => 'fa-clipboard-list', 'bg' => 'from-cyan-100 to-sky-100', 'text' => 'text-cyan-700'],
+        ['label' => 'For Collection', 'value' => number_format($overview['total'] ?? 0), 'icon' => 'fa-hand-holding-dollar', 'bg' => 'from-emerald-100 to-green-100', 'text' => 'text-emerald-700'],
         ['label' => 'Admin', 'value' => number_format($overview['admin'] ?? 0), 'icon' => 'fa-user-shield', 'bg' => 'from-blue-100 to-indigo-100', 'text' => 'text-blue-700'],
         ['label' => 'RPM', 'value' => number_format($overview['rpm'] ?? 0), 'icon' => 'fa-gas-pump', 'bg' => 'from-amber-100 to-yellow-100', 'text' => 'text-amber-700'],
-        ['label' => 'Delivery Related', 'value' => number_format($overview['delivery_related'] ?? 0), 'icon' => 'fa-truck-fast', 'bg' => 'from-emerald-100 to-green-100', 'text' => 'text-emerald-700'],
+        ['label' => 'Delivery Related', 'value' => number_format($overview['delivery_related'] ?? 0), 'icon' => 'fa-truck-fast', 'bg' => 'from-cyan-100 to-sky-100', 'text' => 'text-cyan-700'],
     ];
 @endphp
 
@@ -31,16 +31,16 @@
             </span>
             <input
                 type="text"
-                id="liquidations-review-search"
+                id="liquidations-validated-search"
                 value="{{ $search }}"
-                placeholder="Search CVR, company, supplier, requestor, expense..."
-                class="w-full rounded-2xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-100"
+                placeholder="Search CVR, company, supplier, collector, expense..."
+                class="w-full rounded-2xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100"
             >
         </div>
 
         <div class="flex items-center justify-end gap-3 whitespace-nowrap">
-            <label for="liquidations-review-per-page" class="text-sm font-medium text-slate-600">Show</label>
-            <select id="liquidations-review-per-page" class="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-100">
+            <label for="liquidations-validated-per-page" class="text-sm font-medium text-slate-600">Show</label>
+            <select id="liquidations-validated-per-page" class="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100">
                 @foreach ([5, 10, 25, 50] as $size)
                     <option value="{{ $size }}" {{ (int) $perPage === $size ? 'selected' : '' }}>{{ $size }}</option>
                 @endforeach
@@ -56,7 +56,7 @@
                     <tr>
                         <th class="px-6 py-4">CVR Number</th>
                         <th class="px-6 py-4">Voucher Type</th>
-                        <th class="px-6 py-4">Prepared / Noted By</th>
+                        <th class="px-6 py-4">Prepared / Noted / Collector</th>
                         <th class="px-6 py-4">Created</th>
                         <th class="px-6 py-4 text-right">Actions</th>
                     </tr>
@@ -75,32 +75,34 @@
                                 $expenseCodeVal = optional($cashVoucher->expenseTypes)->expense_code ?? 'N/A';
                                 $details = "-$truckName-$companyCode$expenseCodeVal";
                             } elseif ($cvrType === 'admin') {
-                                $companyId = optional($cashVoucher->company)->company_code ?? 'N/A';
+                                $companyCode = optional($cashVoucher->company)->company_code ?? 'N/A';
                                 $expenseCodeVal = optional($cashVoucher->expenseTypes)->expense_code ?? 'N/A';
-                                $details = "-$companyId$expenseCodeVal";
+                                $details = "-$companyCode$expenseCodeVal";
                             } elseif (in_array($cvrType, ['delivery', 'pullout', 'accessorial', 'freight', 'others'])) {
-                                $truckId = optional(optional($liquidation->allocation)->truck)->truck_name ?? 'N/A';
-                                $companyId = optional(optional($liquidation->deliveryRequest)->company)->company_code ?? 'N/A';
+                                $truckName = optional(optional($liquidation->allocation)->truck)->truck_name ?? 'N/A';
+                                $companyCode = optional(optional($liquidation->deliveryRequest)->company)->company_code ?? 'N/A';
                                 $expenseCodeVal = optional(optional($liquidation->deliveryRequest)->expenseType)->expense_code ?? 'N/A';
-                                $details = "-$truckId-$companyId$expenseCodeVal";
+                                $details = "-$truckName-$companyCode$expenseCodeVal";
                             }
 
                             $typeStyle = match (strtolower((string) $cvrType)) {
                                 'admin' => 'bg-blue-50 text-blue-700 ring-blue-100',
                                 'rpm' => 'bg-amber-50 text-amber-700 ring-amber-100',
-                                'delivery', 'pullout', 'accessorial', 'freight', 'others' => 'bg-emerald-50 text-emerald-700 ring-emerald-100',
+                                'delivery', 'pullout', 'accessorial', 'freight', 'others' => 'bg-cyan-50 text-cyan-700 ring-cyan-100',
                                 default => 'bg-slate-100 text-slate-700 ring-slate-200',
                             };
                         @endphp
                         <tr class="hover:bg-slate-50">
                             <td class="px-6 py-4 align-top">
                                 <div class="flex items-start gap-3">
-                                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600">
-                                        <i class="fas fa-file-invoice text-sm"></i>
+                                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                                        <i class="fas fa-file-invoice-dollar text-sm"></i>
                                     </span>
                                     <div class="min-w-0">
                                         <div class="font-semibold text-slate-900">{{ $cvrNumber }}{!! $details !!}</div>
-                                        <div class="mt-1 text-xs text-slate-500">{{ optional($cashVoucher->company)->company_name ?? optional(optional($cashVoucher->deliveryRequest)->company)->company_name ?? 'N/A' }}</div>
+                                        <div class="mt-1 text-xs text-slate-500">
+                                            {{ optional($cashVoucher->company)->company_name ?? optional(optional($cashVoucher->deliveryRequest)->company)->company_name ?? 'N/A' }}
+                                        </div>
                                     </div>
                                 </div>
                             </td>
@@ -123,6 +125,12 @@
                                         </span>
                                         <span>{{ trim(($liquidation->notedBy->fname ?? '') . ' ' . ($liquidation->notedBy->lname ?? '')) ?: 'N/A' }}</span>
                                     </div>
+                                    <div class="flex items-center gap-2 text-sm text-slate-700">
+                                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                                            <i class="fas fa-hand-holding-dollar text-xs"></i>
+                                        </span>
+                                        <span>{{ trim(($liquidation->collector->fname ?? '') . ' ' . ($liquidation->collector->lname ?? '')) ?: 'N/A' }}</span>
+                                    </div>
                                 </div>
                             </td>
                             <td class="px-6 py-4 align-top text-slate-500">
@@ -130,11 +138,11 @@
                             </td>
                             <td class="px-6 py-4 align-top">
                                 <div class="flex justify-end">
-                                    <a href="{{ route('liquidations.review', $liquidation->id) }}" class="inline-flex min-w-[140px] items-center justify-center gap-2 rounded-2xl border px-4 py-2.5 text-xs font-semibold shadow-md transition" style="background-color:#0891b2;color:#ffffff;border-color:#0e7490;">
-                                        <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-cyan-700" style="background-color:#ffffff;color:#0e7490;">
-                                            <i class="fas fa-circle-check text-[11px]"></i>
+                                    <a href="{{ route('liquidations.validated', $liquidation->id) }}" class="inline-flex min-w-[140px] items-center justify-center gap-2 rounded-2xl border px-4 py-2.5 text-xs font-semibold shadow-md transition" style="background-color:#059669;border-color:#047857;color:#ffffff;">
+                                        <span class="inline-flex h-7 w-7 items-center justify-center rounded-full" style="background-color:#ffffff;color:#047857;">
+                                            <i class="fas fa-money-bill-transfer text-[11px]"></i>
                                         </span>
-                                        <span style="color:#ffffff;">Validate</span>
+                                        <span style="color:#ffffff;">Collect</span>
                                     </a>
                                 </div>
                             </td>
@@ -145,7 +153,7 @@
                                 <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                                     <i class="fas fa-folder-open text-lg"></i>
                                 </div>
-                                <p class="mt-3 font-medium text-slate-700">No liquidations found</p>
+                                <p class="mt-3 font-medium text-slate-700">No validated liquidations found</p>
                                 <p class="mt-1 text-sm">Try a different search term or voucher type.</p>
                             </td>
                         </tr>
@@ -164,7 +172,7 @@
                 <span class="font-semibold text-slate-700">{{ $liquidations->total() }}</span>
                 entries
             </p>
-            <div class="liquidations-review-pagination">
+            <div class="liquidations-validated-pagination">
                 {{ $liquidations->links('pagination::tailwind') }}
             </div>
         </div>

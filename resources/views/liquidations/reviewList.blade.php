@@ -20,8 +20,8 @@
     </div>
 
     <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-        <form action="{{ route('liquidations.reviewList') }}" method="GET" id="liquidations-review-filter-form" class="flex items-center gap-3 overflow-x-auto">
-            <div class="min-w-0 w-full max-w-[380px] flex-1">
+        <form action="{{ route('liquidations.reviewList') }}" method="GET" id="liquidations-review-filter-form" class="flex items-end justify-between gap-4">
+            <div class="min-w-0 flex-1 max-w-[420px]">
                 <label for="cvr_type" class="sr-only">Voucher Type</label>
                 <select
                     name="cvr_type"
@@ -38,7 +38,7 @@
                 </select>
             </div>
 
-            <div class="flex items-center gap-3 whitespace-nowrap">
+            <div class="flex shrink-0 items-end justify-end gap-3 whitespace-nowrap">
                 <button type="submit" class="inline-flex items-center gap-2 rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-cyan-700">
                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
                         <i class="fas fa-filter text-xs"></i>
@@ -109,7 +109,7 @@
 
         const wrapper = document.createElement('div');
         wrapper.dataset.open = 'false';
-        wrapper.className = 'relative w-full max-w-[380px]';
+        wrapper.className = 'relative w-full max-w-[420px]';
         wrapper.innerHTML = `
             <button type="button" class="flex w-full items-center gap-3 rounded-2xl border border-slate-300 bg-white px-3 py-3 text-left text-sm text-slate-700 shadow-sm transition hover:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-500">
                 <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cyan-50 text-cyan-600">
@@ -118,7 +118,7 @@
                 <span class="min-w-0 flex-1 truncate" data-select-label></span>
                 <span class="text-slate-400"><i class="fas fa-chevron-down text-xs"></i></span>
             </button>
-            <div class="searchable-select-panel absolute left-0 right-0 z-30 mt-2 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
+            <div class="searchable-select-panel absolute left-0 right-0 z-30 mt-2 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10" style="max-width:420px;">
                 <div class="border-b border-slate-200 p-3">
                     <div class="relative">
                         <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">

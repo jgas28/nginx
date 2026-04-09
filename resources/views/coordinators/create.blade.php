@@ -1,9 +1,126 @@
 @extends('layouts.app')
 
 @section('content')
-    <form action="{{ route('coordinators.store') }}" method="POST">
+<style>
+    #coordinator-create-form select.searchable-select-source {
+        position: absolute;
+        left: -9999px;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    #coordinator-create-form .searchable-select-panel::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    #coordinator-create-form .searchable-select-panel::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 9999px;
+    }
+
+    #coordinator-create-form [data-searchable-select-wrapper] {
+        position: relative;
+        z-index: 1;
+    }
+
+    #coordinator-create-form [data-searchable-select-wrapper][data-open="true"] {
+        z-index: 90;
+    }
+
+    #coordinator-create-form label {
+        margin-bottom: 0.5rem;
+        display: block;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    #coordinator-create-form input[type="text"],
+    #coordinator-create-form input[type="date"],
+    #coordinator-create-form input[type="number"],
+    #coordinator-create-form select,
+    #coordinator-create-form textarea {
+        min-height: 3.5rem;
+        width: 100%;
+        border-radius: 1rem;
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        padding: 0.9rem 1rem;
+        font-size: 1rem;
+        color: #1e293b;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+    }
+
+    #coordinator-create-form textarea {
+        min-height: 7rem;
+    }
+
+    #coordinator-create-form input:focus,
+    #coordinator-create-form select:focus,
+    #coordinator-create-form textarea:focus {
+        border-color: #4f46e5;
+        outline: none;
+        box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+    }
+
+    #coordinator-create-form .section-card {
+        border: 1px solid #e2e8f0;
+        background: #fff;
+        border-radius: 1.75rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    #coordinator-create-form .pill-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        min-height: 3rem;
+        border-radius: 1rem;
+        padding: 0.75rem 1.1rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        transition: all .2s ease;
+    }
+
+    #coordinator-create-form #regular-fields,
+    #coordinator-create-form #multi-drop-fields,
+    #coordinator-create-form #multi-pickup-fields {
+        border: 1px solid #e2e8f0 !important;
+        background: #ffffff !important;
+        border-radius: 1.75rem !important;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        padding: 1.5rem !important;
+    }
+</style>
+
+<div class="mx-auto max-w-7xl space-y-6 py-8">
+    <div class="section-card px-6 py-6 sm:px-8">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <div class="inline-flex items-center gap-2 rounded-full bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 ring-1 ring-violet-100">
+                    <i class="fas fa-route text-sm"></i>
+                    Coordinator Request
+                </div>
+                <h1 class="mt-4 text-3xl font-bold tracking-tight text-slate-900">Create Delivery Request</h1>
+                <p class="mt-2 max-w-3xl text-base leading-7 text-slate-500">
+                    Build a delivery request with cleaner sections, searchable pickers, and aligned fields for regular, multi-drop, or multi pick-up workflows.
+                </p>
+            </div>
+            <a href="{{ route('coordinators.index') }}"
+               class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-6 text-base font-semibold text-slate-700 shadow-sm transition hover:border-slate-400 hover:text-slate-900">
+                <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                    <i class="fas fa-arrow-left text-xs"></i>
+                </span>
+                Back to Requests
+            </a>
+        </div>
+    </div>
+
+    <form action="{{ route('coordinators.store') }}" method="POST" id="coordinator-create-form" class="space-y-6">
         @csrf
-        <div class="border bg-white p-4 rounded shadow-sm">
+        <div class="section-card p-6">
             <!-- Row 1 -->
             <div class="flex flex-wrap -mx-2">
                 <div class="w-full md:w-1/3 px-2 mb-4">
@@ -424,14 +541,186 @@
                 </div>
             </div>
         </div>
-        <button type="submit" class="mt-4 float-right inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            Create Delivery Request
-        </button>
+        <div class="section-card p-6">
+            <div class="flex flex-col gap-4 border-t border-slate-200 pt-4 md:flex-row md:items-center md:justify-between">
+                <p class="text-base text-slate-500">Double-check the delivery type and line-item details before creating the request.</p>
+                <div class="flex flex-wrap items-center justify-end gap-3">
+                    <a href="{{ route('coordinators.index') }}"
+                       class="inline-flex h-12 min-w-[160px] items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 text-base font-semibold text-slate-600 shadow-sm transition hover:border-slate-400 hover:text-slate-900">
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                            <i class="fas fa-xmark text-xs"></i>
+                        </span>
+                        Cancel
+                    </a>
+                    <button type="submit" class="inline-flex h-12 min-w-[240px] items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-6 text-base font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+                            <i class="fas fa-floppy-disk text-xs"></i>
+                        </span>
+                        Create Delivery Request
+                    </button>
+                </div>
+            </div>
+        </div>
     </form>
+</div>
 
     <script>
         let currentIndex = 2;
         let multiDropIndex = 2;
+
+        function closeAllSearchableSelects() {
+            document.querySelectorAll('#coordinator-create-form [data-searchable-select-wrapper]').forEach((wrapper) => {
+                wrapper.dataset.open = 'false';
+                wrapper.querySelector('[data-searchable-select-panel]')?.classList.add('hidden');
+            });
+        }
+
+        function mountSearchableSelect(select, config = {}) {
+            if (!select || select.dataset.searchableMounted === 'true') {
+                return;
+            }
+
+            select.dataset.searchableMounted = 'true';
+            select.classList.add('searchable-select-source');
+
+            const placeholder = config.placeholder || select.options[0]?.textContent?.trim() || 'Select option';
+            const icon = config.icon || 'fa-circle-dot';
+
+            const wrapper = document.createElement('div');
+            wrapper.dataset.searchableSelectWrapper = 'true';
+            wrapper.dataset.open = 'false';
+            wrapper.className = 'relative';
+            wrapper.innerHTML = `
+                <button type="button" class="flex h-14 w-full items-center gap-3 rounded-2xl border border-slate-300 bg-white px-4 text-left text-base text-slate-700 shadow-sm transition hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                        <i class="fas ${icon} text-sm"></i>
+                    </span>
+                    <span class="min-w-0 flex-1 truncate" data-searchable-select-label></span>
+                    <span class="text-slate-400"><i class="fas fa-chevron-down text-xs"></i></span>
+                </button>
+                <div data-searchable-select-panel class="searchable-select-panel absolute left-0 right-0 z-[95] mt-2 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
+                    <div class="border-b border-slate-200 p-3">
+                        <div class="relative">
+                            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                <i class="fas fa-magnifying-glass text-xs"></i>
+                            </span>
+                            <input type="text" data-searchable-select-input placeholder="Search option..." class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-100">
+                        </div>
+                    </div>
+                    <div data-searchable-select-list class="max-h-56 overflow-y-auto p-2"></div>
+                    <div data-searchable-select-empty class="hidden px-4 py-3 text-sm text-slate-500">No matching options found.</div>
+                </div>
+            `;
+
+            select.insertAdjacentElement('afterend', wrapper);
+
+            const trigger = wrapper.querySelector('button');
+            const panel = wrapper.querySelector('[data-searchable-select-panel]');
+            const searchInput = wrapper.querySelector('[data-searchable-select-input]');
+            const list = wrapper.querySelector('[data-searchable-select-list]');
+            const emptyState = wrapper.querySelector('[data-searchable-select-empty]');
+            const label = wrapper.querySelector('[data-searchable-select-label]');
+
+            function updateLabel() {
+                const selectedOption = select.options[select.selectedIndex];
+                label.textContent = selectedOption && selectedOption.value !== '' ? selectedOption.textContent.trim() : placeholder;
+            }
+
+            function renderOptions(term = '') {
+                const normalizedTerm = term.trim().toLowerCase();
+                list.innerHTML = '';
+                let visibleCount = 0;
+
+                Array.from(select.options).forEach((option) => {
+                    if (!option.value && normalizedTerm) {
+                        return;
+                    }
+
+                    if (normalizedTerm && !option.textContent.toLowerCase().includes(normalizedTerm)) {
+                        return;
+                    }
+
+                    visibleCount += 1;
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${option.selected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700 hover:bg-slate-100'}`;
+                    button.innerHTML = `
+                        <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${option.selected ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}">
+                            <i class="fas ${icon} text-xs"></i>
+                        </span>
+                        <span class="min-w-0 flex-1 truncate">${option.textContent.trim()}</span>
+                        ${option.selected ? '<i class="fas fa-check text-xs text-indigo-500"></i>' : ''}
+                    `;
+
+                    button.addEventListener('click', () => {
+                        select.value = option.value;
+                        updateLabel();
+                        renderOptions(searchInput.value);
+                        panel.classList.add('hidden');
+                        wrapper.dataset.open = 'false';
+                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                    });
+
+                    list.appendChild(button);
+                });
+
+                emptyState.classList.toggle('hidden', visibleCount !== 0);
+            }
+
+            trigger.addEventListener('click', () => {
+                const shouldOpen = wrapper.dataset.open !== 'true';
+                closeAllSearchableSelects();
+                wrapper.dataset.open = shouldOpen ? 'true' : 'false';
+                panel.classList.toggle('hidden', !shouldOpen);
+
+                if (shouldOpen) {
+                    searchInput.value = '';
+                    renderOptions();
+                    setTimeout(() => searchInput.focus(), 0);
+                }
+            });
+
+            searchInput.addEventListener('input', () => renderOptions(searchInput.value));
+            updateLabel();
+            renderOptions();
+        }
+
+        function mountCoordinatorSearchableSelects(root = document) {
+            const configs = {
+                truck_type_id: { placeholder: 'Select Truck Type', icon: 'fa-truck-ramp-box' },
+                company_id: { placeholder: 'Select Company', icon: 'fa-building' },
+                expense_type_id: { placeholder: 'Select Expense Type', icon: 'fa-receipt' },
+                area_id: { placeholder: 'Select Region', icon: 'fa-map-location-dot' },
+                region_id: { placeholder: 'Select Province', icon: 'fa-map-pin' },
+                customer_id: { placeholder: 'Select Customer', icon: 'fa-user-group' },
+                delivery_status: { placeholder: 'Select Status', icon: 'fa-truck-fast' },
+                delivery_type: { placeholder: 'Select Delivery Type', icon: 'fa-route' },
+                regular_warehouse_id: { placeholder: 'Select Warehouse', icon: 'fa-warehouse' },
+                multi_drop_0_warehouse_id: { placeholder: 'Select Warehouse', icon: 'fa-warehouse' },
+                add_on_rate_0: { placeholder: 'Select Add-on Rate', icon: 'fa-plus-circle' },
+                multi_pickup_0_warehouse_id: { placeholder: 'Select Warehouse', icon: 'fa-warehouse' },
+                multi_pickup_1_warehouse_id: { placeholder: 'Select Warehouse', icon: 'fa-warehouse' },
+            };
+
+            Object.entries(configs).forEach(([id, config]) => {
+                const select = root.querySelector(`#${id}`);
+                if (select) {
+                    mountSearchableSelect(select, config);
+                }
+            });
+
+            root.querySelectorAll('select[id^="multi_pickup_"][id$="_warehouse_id"]').forEach((select) => {
+                mountSearchableSelect(select, { placeholder: 'Select Warehouse', icon: 'fa-warehouse' });
+            });
+
+            root.querySelectorAll('select[id^="multi_drop_"][id$="_warehouse_id"]').forEach((select) => {
+                mountSearchableSelect(select, { placeholder: 'Select Warehouse', icon: 'fa-warehouse' });
+            });
+
+            root.querySelectorAll('select[id^="add_on_rate_"]').forEach((select) => {
+                mountSearchableSelect(select, { placeholder: 'Select Add-on Rate', icon: 'fa-plus-circle' });
+            });
+        }
 
         // JavaScript code to handle dynamic field visibility and adding new items
         document.getElementById('delivery_type').addEventListener('change', function() {
@@ -640,13 +929,43 @@
                             option.text = region.province;
                             regionSelect.appendChild(option);
                         });
+                        regionSelect.dataset.searchableMounted = 'false';
+                        regionSelect.nextElementSibling?.remove();
+                        mountSearchableSelect(regionSelect, { placeholder: 'Select Province', icon: 'fa-map-pin' });
                     })
                     .catch(() => alert('Unable to fetch regions.'));
             } else {
                 regionSelect.innerHTML = '<option value="">Select Province</option>';
+                regionSelect.dataset.searchableMounted = 'false';
+                regionSelect.nextElementSibling?.remove();
+                mountSearchableSelect(regionSelect, { placeholder: 'Select Province', icon: 'fa-map-pin' });
             }
         });
 
+        mountCoordinatorSearchableSelects();
+
+        const dynamicObserver = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1) {
+                        mountCoordinatorSearchableSelects(node);
+                    }
+                });
+            });
+        });
+
+        ['multi-drop-items', 'multi-pickup-items', 'regular-fields'].forEach((id) => {
+            const target = document.getElementById(id);
+            if (target) {
+                dynamicObserver.observe(target, { childList: true, subtree: true });
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!event.target.closest('[data-searchable-select-wrapper]')) {
+                closeAllSearchableSelects();
+            }
+        });
 
     </script>
 @endsection

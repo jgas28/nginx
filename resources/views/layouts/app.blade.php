@@ -6,6 +6,25 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', config('app.name', 'FCZCNYX'))</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <style>
+        [data-searchable-select-wrapper] {
+            position: relative;
+            z-index: 1;
+        }
+
+        [data-searchable-select-wrapper][data-open="true"] {
+            z-index: 120;
+        }
+
+        .searchable-select-panel {
+            z-index: 130 !important;
+        }
+
+        select:focus {
+            position: relative;
+            z-index: 20;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 text-gray-900" x-data="{ sidebarOpen: true }">
 

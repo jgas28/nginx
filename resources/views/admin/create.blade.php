@@ -19,6 +19,25 @@
         background: #cbd5e1;
         border-radius: 9999px;
     }
+
+    #admin-create-form [data-searchable-select-wrapper] {
+        z-index: 1;
+    }
+
+    #admin-create-form [data-searchable-select-wrapper][data-open="true"] {
+        z-index: 90;
+    }
+
+    #admin-create-form input[type="radio"].peer:checked + span {
+        border-color: #2563eb !important;
+        background: #2563eb !important;
+        color: #ffffff !important;
+        box-shadow: 0 10px 25px -15px rgba(37, 99, 235, 0.9);
+    }
+
+    #admin-create-form input[type="radio"].peer:checked + span i {
+        color: #ffffff !important;
+    }
 </style>
 
 <div class="mx-auto max-w-7xl space-y-6 py-8" id="admin-create-form">
@@ -30,7 +49,7 @@
                     New Admin Voucher
                 </div>
                 <h1 class="mt-4 text-3xl font-bold tracking-tight text-slate-900">Create Admin Cash Voucher</h1>
-                <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+                <p class="mt-2 max-w-3xl text-base leading-7 text-slate-500">
                     Create an internal or RPM cash voucher with cleaner sections, searchable lists, and balanced request details.
                 </p>
             </div>
@@ -55,8 +74,8 @@
                             <i class="fas fa-sitemap"></i>
                         </span>
                         <div>
-                            <div class="text-base font-semibold text-slate-900">Voucher Source</div>
-                            <div class="text-sm text-slate-500">Choose whether this request is for Admin or RPM.</div>
+                            <div class="text-lg font-semibold text-slate-900">Voucher Source</div>
+                            <div class="text-base text-slate-500">Choose whether this request is for Admin or RPM.</div>
                         </div>
                     </div>
                     <div class="mt-4 grid grid-cols-2 gap-3">
@@ -83,8 +102,8 @@
                             <i class="fas fa-file-signature"></i>
                         </span>
                         <div>
-                            <div class="text-base font-semibold text-slate-900">Voucher Computation</div>
-                            <div class="text-sm text-slate-500">Pick regular computation or enable withholding tax.</div>
+                            <div class="text-lg font-semibold text-slate-900">Voucher Computation</div>
+                            <div class="text-base text-slate-500">Pick regular computation or enable withholding tax.</div>
                         </div>
                     </div>
                     <div class="mt-4 grid grid-cols-2 gap-3">
@@ -113,20 +132,20 @@
                     <i class="fas fa-scale-balanced"></i>
                 </span>
                 <div>
-                    <h2 class="text-lg font-semibold text-slate-900">Tax Details</h2>
-                    <p class="text-sm text-slate-500">Provide the tax base amount and select the withholding setup.</p>
+                    <h2 class="text-xl font-semibold text-slate-900">Tax Details</h2>
+                    <p class="text-base text-slate-500">Provide the tax base amount and select the withholding setup.</p>
                 </div>
             </div>
             <div class="grid gap-4 md:grid-cols-2">
                 <div>
-                    <label for="tax_base_amount" class="mb-1.5 block text-[15px] font-semibold text-slate-700">Tax Base Amount</label>
+                    <label for="tax_base_amount" class="mb-1.5 block text-[18px] font-semibold text-slate-700">Tax Base Amount</label>
                     <input type="number" name="tax_base_amount" id="tax_base_amount" step="0.01"
-                           class="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-[18px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                           class="h-[58px] w-full rounded-2xl border border-slate-300 bg-white px-5 text-[20px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
                 </div>
                 <div>
-                    <label for="withholding_tax" class="mb-1.5 block text-[15px] font-semibold text-slate-700">Withholding Tax</label>
+                    <label for="withholding_tax" class="mb-1.5 block text-[18px] font-semibold text-slate-700">Withholding Tax</label>
                     <select name="withholding_tax" id="withholding_tax"
-                            class="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-[18px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                            class="h-[58px] w-full rounded-2xl border border-slate-300 bg-white px-5 text-[20px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
                         <option value="">Select Withholding Tax</option>
                         @foreach($taxes as $tax)
                             <option value="{{ $tax->id }}">{{ $tax->description }}% - {{ $tax->percentage }}</option>
@@ -142,20 +161,20 @@
                     <i class="fas fa-circle-info"></i>
                 </span>
                 <div>
-                    <h2 class="text-xl font-semibold text-slate-900">Voucher Information</h2>
+                    <h2 class="text-[32px] font-semibold text-slate-900">Voucher Information</h2>
                     <p class="text-base text-slate-500">All text inputs and select pickers are aligned to one consistent size.</p>
                 </div>
             </div>
             <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <div>
-                    <label for="cvr_number" class="mb-1.5 block text-[15px] font-semibold text-slate-700">CVR Number</label>
+                    <label for="cvr_number" class="mb-1.5 block text-[18px] font-semibold text-slate-700">CVR Number</label>
                     <input type="text" name="cvr_number" id="cvr_number" readonly
-                           class="h-12 w-full rounded-2xl border border-slate-300 bg-slate-100 px-4 text-[18px] text-slate-700 shadow-sm">
+                           class="h-[58px] w-full rounded-2xl border border-slate-300 bg-slate-100 px-5 text-[20px] text-slate-700 shadow-sm">
                 </div>
                 <div>
-                    <label for="company_id" class="mb-1.5 block text-[15px] font-semibold text-slate-700">Company</label>
+                    <label for="company_id" class="mb-1.5 block text-[18px] font-semibold text-slate-700">Company</label>
                     <select name="company_id" id="company_id"
-                            class="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-[18px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            class="h-[58px] w-full rounded-2xl border border-slate-300 bg-white px-5 text-[20px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             required>
                         <option value="">Select Company</option>
                         @foreach($companies as $company)
@@ -164,9 +183,9 @@
                     </select>
                 </div>
                 <div>
-                    <label for="supplier_id" class="mb-1.5 block text-[15px] font-semibold text-slate-700">Supplier</label>
+                    <label for="supplier_id" class="mb-1.5 block text-[18px] font-semibold text-slate-700">Supplier</label>
                     <select name="supplier_id" id="supplier_id"
-                            class="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-[18px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            class="h-[58px] w-full rounded-2xl border border-slate-300 bg-white px-5 text-[20px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             required>
                         <option value="">Select Supplier</option>
                         @foreach($suppliers as $supplier)
@@ -175,9 +194,9 @@
                     </select>
                 </div>
                 <div>
-                    <label for="expense_type_id" class="mb-1.5 block text-[15px] font-semibold text-slate-700">Expense Type</label>
+                    <label for="expense_type_id" class="mb-1.5 block text-[18px] font-semibold text-slate-700">Expense Type</label>
                     <select name="expense_type_id" id="expense_type_id"
-                            class="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-[18px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            class="h-[58px] w-full rounded-2xl border border-slate-300 bg-white px-5 text-[20px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             required>
                         <option value="">Select Expense Type</option>
                         @foreach($expenseTypes as $expenseType)
@@ -186,9 +205,9 @@
                     </select>
                 </div>
                 <div>
-                    <label for="request_type" class="mb-1.5 block text-[15px] font-semibold text-slate-700">Request Type</label>
+                    <label for="request_type" class="mb-1.5 block text-[18px] font-semibold text-slate-700">Request Type</label>
                     <select name="request_type" id="request_type"
-                            class="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-[18px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            class="h-[58px] w-full rounded-2xl border border-slate-300 bg-white px-5 text-[20px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                             required>
                         <option value="">Select Request Type</option>
                         @foreach($cvrTypes as $cvrType)
@@ -197,9 +216,9 @@
                     </select>
                 </div>
                 <div id="truck-field-container" class="hidden">
-                    <label for="truck_id" class="mb-1.5 block text-[15px] font-semibold text-slate-700">Truck</label>
+                    <label for="truck_id" class="mb-1.5 block text-[18px] font-semibold text-slate-700">Truck</label>
                     <select name="truck_id" id="truck_id"
-                            class="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-[18px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                            class="h-[58px] w-full rounded-2xl border border-slate-300 bg-white px-5 text-[20px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
                         <option value="">Select Truck</option>
                         @foreach($trucks as $truck)
                             <option value="{{ $truck->id }}">{{ $truck->truck_name }}</option>
@@ -217,8 +236,8 @@
                             <i class="fas fa-list-ul"></i>
                         </span>
                         <div>
-                            <h2 class="text-xl font-semibold text-slate-900">Request Lines</h2>
-                            <p class="text-base text-slate-500">Add one or more request descriptions and amounts.</p>
+                            <h2 class="text-[30px] font-semibold text-slate-900">Request Lines</h2>
+                            <p class="text-lg text-slate-500">Add one or more request descriptions and amounts.</p>
                         </div>
                     </div>
                     <button type="button" id="add_line"
@@ -237,8 +256,8 @@
                             <i class="fas fa-note-sticky"></i>
                         </span>
                         <div>
-                            <h2 class="text-xl font-semibold text-slate-900">Remarks</h2>
-                            <p class="text-base text-slate-500">Add optional notes for reviewers and processors.</p>
+                            <h2 class="text-[30px] font-semibold text-slate-900">Remarks</h2>
+                            <p class="text-lg text-slate-500">Add optional notes for reviewers and processors.</p>
                         </div>
                     </div>
                     <button type="button" id="add_remarks"
@@ -314,24 +333,24 @@
             wrapper.dataset.open = 'false';
             wrapper.className = 'relative';
             wrapper.innerHTML = `
-                <button type="button" class="flex h-12 w-full items-center gap-3 rounded-2xl border border-slate-300 bg-white px-3 text-left text-[18px] text-slate-700 shadow-sm transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
-                        <i class="fas ${icon} text-sm"></i>
+                <button type="button" class="flex h-[58px] w-full items-center gap-3 rounded-2xl border border-slate-300 bg-white px-5 text-left text-[20px] text-slate-700 shadow-sm transition hover:border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                        <i class="fas ${icon} text-base"></i>
                     </span>
                     <span class="min-w-0 flex-1 truncate" data-searchable-select-label></span>
                     <span class="text-slate-400"><i class="fas fa-chevron-down text-xs"></i></span>
                 </button>
-                <div data-searchable-select-panel class="searchable-select-panel absolute left-0 right-0 z-30 mt-2 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
+                <div data-searchable-select-panel class="searchable-select-panel absolute left-0 right-0 z-[95] mt-2 hidden overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/10">
                     <div class="border-b border-slate-200 p-3">
                         <div class="relative">
                             <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
-                                <i class="fas fa-magnifying-glass text-xs"></i>
+                                <i class="fas fa-magnifying-glass text-sm"></i>
                             </span>
-                            <input type="text" data-searchable-select-input placeholder="Search option..." class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100">
+                            <input type="text" data-searchable-select-input placeholder="Search option..." class="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-base text-slate-700 outline-none transition focus:border-blue-300 focus:bg-white focus:ring-2 focus:ring-blue-100">
                         </div>
                     </div>
                     <div data-searchable-select-list class="max-h-56 overflow-y-auto p-2"></div>
-                    <div data-searchable-select-empty class="hidden px-4 py-3 text-sm text-slate-500">No matching options found.</div>
+                    <div data-searchable-select-empty class="hidden px-4 py-3 text-base text-slate-500">No matching options found.</div>
                 </div>
             `;
 
@@ -366,10 +385,10 @@
                     visibleCount += 1;
                     const button = document.createElement('button');
                     button.type = 'button';
-                    button.className = `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${option.selected ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-100'}`;
+                    button.className = `flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-base transition ${option.selected ? 'bg-blue-50 text-blue-700' : 'text-slate-700 hover:bg-slate-100'}`;
                     button.innerHTML = `
                         <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${option.selected ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'}">
-                            <i class="fas ${icon} text-xs"></i>
+                            <i class="fas ${icon} text-sm"></i>
                         </span>
                         <span class="min-w-0 flex-1 truncate">${option.textContent.trim()}</span>
                         ${option.selected ? '<i class="fas fa-check text-xs text-blue-500"></i>' : ''}
@@ -414,14 +433,14 @@
             wrapper.innerHTML = `
                 <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_220px_120px] md:items-end">
                     <div>
-                        <label class="mb-1.5 block text-sm font-semibold text-slate-700">Description</label>
-                        <input type="text" name="description[]" class="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-[18px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" placeholder="Enter description" required>
+                        <label class="mb-1.5 block text-[18px] font-semibold text-slate-700">Description</label>
+                        <input type="text" name="description[]" class="h-[58px] w-full rounded-2xl border border-slate-300 bg-white px-5 text-[20px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" placeholder="Enter description" required>
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-sm font-semibold text-slate-700">Amount</label>
-                        <input type="number" name="amount_details[]" class="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-[18px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" placeholder="0.00" step="0.01" required>
+                        <label class="mb-1.5 block text-[18px] font-semibold text-slate-700">Amount</label>
+                        <input type="number" name="amount_details[]" class="h-[58px] w-full rounded-2xl border border-slate-300 bg-white px-5 text-[20px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" placeholder="0.00" step="0.01" required>
                     </div>
-                    <button type="button" class="remove_line inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 text-base font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100">
+                    <button type="button" class="remove_line inline-flex h-[58px] items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 text-lg font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100">
                         <i class="fas fa-trash text-xs"></i>
                         Remove
                     </button>
@@ -436,10 +455,10 @@
             wrapper.innerHTML = `
                 <div class="grid gap-4 md:grid-cols-[minmax(0,1fr)_120px] md:items-end">
                     <div>
-                        <label class="mb-1.5 block text-sm font-semibold text-slate-700">Remark</label>
-                        <input type="text" name="remarks[]" class="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-[18px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" placeholder="Enter remark">
+                        <label class="mb-1.5 block text-[18px] font-semibold text-slate-700">Remark</label>
+                        <input type="text" name="remarks[]" class="h-[58px] w-full rounded-2xl border border-slate-300 bg-white px-5 text-[20px] text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100" placeholder="Enter remark">
                     </div>
-                    <button type="button" class="remove_remarks inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 text-base font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100">
+                    <button type="button" class="remove_remarks inline-flex h-[58px] items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 text-lg font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100">
                         <i class="fas fa-trash text-xs"></i>
                         Remove
                     </button>
