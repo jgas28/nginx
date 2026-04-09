@@ -16,6 +16,9 @@ class RunningBalanceController extends Controller
     {
         // Base query with relationships
         $query = RunningBalance::with(['approver', 'employee', 'creator', 'suppliers']);
+        $search = trim((string) $request->input('search'));
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
         // Apply date filter if provided
         if ($request->filled('start_date') && $request->filled('end_date')) {
@@ -34,11 +37,44 @@ class RunningBalanceController extends Controller
             $query->where('adjustment_type', $request->adjustment_type);
         }
 
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', "%{$search}%")
+                    ->orWhere('cvr_number', 'like', "%{$search}%")
+                    ->orWhereHas('approver', function ($approver) use ($search) {
+                        $approver->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('employee', function ($employee) use ($search) {
+                        $employee->whereRaw("CONCAT(COALESCE(fname, ''), ' ', COALESCE(lname, '')) like ?", ["%{$search}%"]);
+                    })
+                    ->orWhereHas('creator', function ($creator) use ($search) {
+                        $creator->whereRaw("CONCAT(COALESCE(fname, ''), ' ', COALESCE(lname, '')) like ?", ["%{$search}%"]);
+                    })
+                    ->orWhereHas('suppliers', function ($supplier) use ($search) {
+                        $supplier->where('supplier_name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
         // Sorting
         $sort = $request->get('sort', 'created_at');
         $direction = $request->get('direction', 'desc');
+        if (!in_array($sort, ['created_at', 'amount', 'type', 'adjustment_type'], true)) {
+            $sort = 'created_at';
+        }
+        if (!in_array($direction, ['asc', 'desc'], true)) {
+            $direction = 'desc';
+        }
 
-        $balances = $query->orderBy($sort, $direction)->get();
+        $summaryQuery = clone $query;
+        $visibleCount = (clone $summaryQuery)->count();
+        $visibleAmount = (clone $summaryQuery)->sum('amount');
+        $inCount = (clone $summaryQuery)->where('adjustment_type', 'In')->count();
+        $outCount = (clone $summaryQuery)->where('adjustment_type', 'Out')->count();
+
+        $balances = $query->orderBy($sort, $direction)
+            ->paginate($perPage)
+            ->appends($request->query());
 
         $approvers = Approver::all();
         $employees = User::where('status', '!=', 0)->get();
@@ -66,6 +102,21 @@ class RunningBalanceController extends Controller
         ->groupBy('approver_id')
         ->pluck('total', 'approver_id');
 
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('running_balance.partials.index-table', compact(
+                    'balances',
+                    'approvers',
+                    'runningTotalsByApprover',
+                    'uncollectedByApprover',
+                    'visibleCount',
+                    'visibleAmount',
+                    'inCount',
+                    'outCount'
+                ))->render(),
+            ]);
+        }
+
         return view('running_balance.index', compact(
             'balances',
             'approvers',
@@ -73,7 +124,11 @@ class RunningBalanceController extends Controller
             'runningTotalsByApprover',
             'salaryDeductions',
             'uncollectedByApprover',
-            'suppliers'
+            'suppliers',
+            'visibleCount',
+            'visibleAmount',
+            'inCount',
+            'outCount'
         ));
     }
 
@@ -100,6 +155,10 @@ class RunningBalanceController extends Controller
         $query = RunningBalance::with(['approver', 'employee', 'creator', 'suppliers'])
             ->where('approver_id', $approverId); // Always filter by fixed approver
 
+        $search = trim((string) $request->input('search'));
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
+
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $query->whereBetween('created_at', [
                 $request->start_date . ' 00:00:00',
@@ -111,10 +170,43 @@ class RunningBalanceController extends Controller
             $query->where('adjustment_type', $request->adjustment_type);
         }
 
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', "%{$search}%")
+                    ->orWhere('cvr_number', 'like', "%{$search}%")
+                    ->orWhereHas('approver', function ($approver) use ($search) {
+                        $approver->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('employee', function ($employee) use ($search) {
+                        $employee->whereRaw("CONCAT(COALESCE(fname, ''), ' ', COALESCE(lname, '')) like ?", ["%{$search}%"]);
+                    })
+                    ->orWhereHas('creator', function ($creator) use ($search) {
+                        $creator->whereRaw("CONCAT(COALESCE(fname, ''), ' ', COALESCE(lname, '')) like ?", ["%{$search}%"]);
+                    })
+                    ->orWhereHas('suppliers', function ($supplier) use ($search) {
+                        $supplier->where('supplier_name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
         $sort = $request->get('sort', 'created_at');
         $direction = $request->get('direction', 'desc');
+        if (!in_array($sort, ['created_at', 'amount', 'type', 'adjustment_type'], true)) {
+            $sort = 'created_at';
+        }
+        if (!in_array($direction, ['asc', 'desc'], true)) {
+            $direction = 'desc';
+        }
 
-        $balances = $query->orderBy($sort, $direction)->get();
+        $summaryQuery = clone $query;
+        $visibleCount = (clone $summaryQuery)->count();
+        $visibleAmount = (clone $summaryQuery)->sum('amount');
+        $inCount = (clone $summaryQuery)->where('adjustment_type', 'In')->count();
+        $outCount = (clone $summaryQuery)->where('adjustment_type', 'Out')->count();
+
+        $balances = $query->orderBy($sort, $direction)
+            ->paginate($perPage)
+            ->appends($request->query());
 
         $approvers = Approver::all();
         $employees = User::where('status', '!=', 0)->get();
@@ -137,13 +229,40 @@ class RunningBalanceController extends Controller
             ->groupBy('approver_id')
             ->pluck('total', 'approver_id');
 
+        $locationLabel = $viewName === 'davaoFunds' ? 'Davao' : 'Laguna';
+        $partialView = 'running_balance.partials.funds-table';
+
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view($partialView, compact(
+                    'balances',
+                    'approverId',
+                    'locationLabel'
+                ))->render(),
+                'summary' => [
+                    'visible_count' => $visibleCount,
+                    'visible_amount' => $visibleAmount,
+                    'in_count' => $inCount,
+                    'out_count' => $outCount,
+                    'running_total' => $runningTotalsByApprover[$approverId] ?? 0,
+                    'uncollected_total' => $uncollectedByApprover[$approverId] ?? 0,
+                ],
+            ]);
+        }
+
         return view("running_balance.{$viewName}", compact(
             'balances',
             'approvers',
             'employees',
             'runningTotalsByApprover',
             'salaryDeductions', 
-            'uncollectedByApprover'
+            'uncollectedByApprover',
+            'approverId',
+            'locationLabel',
+            'visibleCount',
+            'visibleAmount',
+            'inCount',
+            'outCount'
         ));
     }
     

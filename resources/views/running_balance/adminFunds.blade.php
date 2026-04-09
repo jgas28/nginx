@@ -1,112 +1,202 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-    {{-- Filter form: No approver select, fixed to approver 2 --}}
-    <form method="GET" action="{{ route('running_balance.adminFunds') }}" class="mb-6">
-        <div class="grid grid-cols-1 sm:grid-cols-5 gap-4">
-            <input type="date" name="start_date" value="{{ request('start_date') }}" class="border rounded px-4 py-2 w-full">
-            <input type="date" name="end_date" value="{{ request('end_date') }}" class="border rounded px-4 py-2 w-full">
-
-            <input type="hidden" name="approver_id" value="2"> {{-- Fixed approver_id --}}
-            
-            <select name="adjustment_type" class="border rounded px-4 py-2 w-full">
-                <option value="">All Movement Types</option>
-                <option value="In" {{ request('adjustment_type') == 'In' ? 'selected' : '' }}>In</option>
-                <option value="Out" {{ request('adjustment_type') == 'Out' ? 'selected' : '' }}>Out</option>
-                <option value="Float" {{ request('adjustment_type') == 'Float' ? 'selected' : '' }}>Float</option>
-            </select>
-
-            <select name="sort" class="border rounded px-4 py-2 w-full">
-                <option value="created_at" {{ request('sort') == 'created_at' ? 'selected' : '' }}>Sort by Date</option>
-                <option value="amount" {{ request('sort') == 'amount' ? 'selected' : '' }}>Sort by Amount</option>
-            </select>
-
-            <select name="direction" class="border rounded px-4 py-2 w-full">
-                <option value="desc" {{ request('direction') == 'desc' ? 'selected' : '' }}>Desc</option>
-                <option value="asc" {{ request('direction') == 'asc' ? 'selected' : '' }}>Asc</option>
-            </select>
-
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">Filter</button>
-        </div>
-    </form>
-
-    {{-- Summary Card for Laguna Only --}}
-    <div class="mb-6">
-        <h3 class="text-xl font-semibold mb-2">Running Balance - Laguna</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            @php $id = 2; @endphp
-            <div class="p-4 border rounded shadow-sm bg-white">
-                <div class="text-sm text-gray-600">{{ $approvers->firstWhere('id', $id)->name ?? 'Laguna Funds' }}</div>
-                <div class="text-lg font-bold {{ ($runningTotalsByApprover[$id] ?? 0) < 0 ? 'text-red-600' : 'text-green-600' }}">
-                    PHP {{ number_format($runningTotalsByApprover[$id] ?? 0, 2) }}
-                </div>
-                @if (isset($uncollectedByApprover[$id]) && $uncollectedByApprover[$id] != 0)
-                    <div class="text-sm text-red-600 mt-1">
-                        Uncollected: PHP {{ number_format($uncollectedByApprover[$id], 2) }}
+<div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div class="overflow-hidden rounded-[30px] border border-slate-200/80 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.07)]">
+        <div class="border-b border-slate-200/80 bg-gradient-to-r from-slate-50 via-white to-emerald-50/70 px-6 py-7 sm:px-8">
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                <div class="space-y-4">
+                    <div class="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white">
+                            <i class="fas fa-location-dot text-sm"></i>
+                        </span>
+                        Running Balance - Laguna
                     </div>
-                @endif
+                    <div class="space-y-2">
+                        <h1 class="text-3xl font-black tracking-tight text-slate-900 sm:text-4xl">Laguna Funds Tracker</h1>
+                        <p class="max-w-3xl text-[15px] leading-7 text-slate-600 sm:text-base">
+                            Review Laguna running balance movements with faster filters, searchable records, and a lighter transaction table.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-6 py-6 sm:px-8">
+            <form id="running-balance-filter-form" method="GET" action="{{ route('running_balance.adminFunds') }}" data-skip-inline-filter-enhancer class="rounded-[28px] border border-slate-200 bg-slate-50/80 p-5 shadow-inner shadow-slate-100">
+                <input type="hidden" name="approver_id" value="2">
+
+                <div style="display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:1rem; align-items:end;">
+                    <label class="block" style="min-width:0;">
+                        <span class="mb-2 flex items-center gap-2 text-[15px] font-semibold text-slate-800">
+                            <i class="fas fa-calendar-day text-emerald-600"></i>
+                            Start Date
+                        </span>
+                        <input
+                            type="date"
+                            name="start_date"
+                            value="{{ request('start_date') }}"
+                            class="h-[56px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-[15px] text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        >
+                    </label>
+
+                    <label class="block" style="min-width:0;">
+                        <span class="mb-2 flex items-center gap-2 text-[15px] font-semibold text-slate-800">
+                            <i class="fas fa-calendar-check text-amber-600"></i>
+                            End Date
+                        </span>
+                        <input
+                            type="date"
+                            name="end_date"
+                            value="{{ request('end_date') }}"
+                            class="h-[56px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-[15px] text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        >
+                    </label>
+
+                    <label class="block" style="min-width:0;">
+                        <span class="mb-2 flex items-center gap-2 text-[15px] font-semibold text-slate-800">
+                            <i class="fas fa-right-left text-violet-600"></i>
+                            Movement Type
+                        </span>
+                        <select
+                            name="adjustment_type"
+                            class="h-[56px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-[15px] text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        >
+                            <option value="">All Movement Types</option>
+                            <option value="In" {{ request('adjustment_type') === 'In' ? 'selected' : '' }}>In</option>
+                            <option value="Out" {{ request('adjustment_type') === 'Out' ? 'selected' : '' }}>Out</option>
+                            <option value="Float" {{ request('adjustment_type') === 'Float' ? 'selected' : '' }}>Float</option>
+                        </select>
+                    </label>
+
+                    <label class="block" style="min-width:0;">
+                        <span class="mb-2 flex items-center gap-2 text-[15px] font-semibold text-slate-800">
+                            <i class="fas fa-arrow-down-wide-short text-cyan-600"></i>
+                            Sort
+                        </span>
+                        <select
+                            name="sort"
+                            class="h-[56px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-[15px] text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        >
+                            <option value="created_at" {{ request('sort', 'created_at') === 'created_at' ? 'selected' : '' }}>Date</option>
+                            <option value="amount" {{ request('sort') === 'amount' ? 'selected' : '' }}>Amount</option>
+                            <option value="type" {{ request('sort') === 'type' ? 'selected' : '' }}>Type</option>
+                            <option value="adjustment_type" {{ request('sort') === 'adjustment_type' ? 'selected' : '' }}>Movement</option>
+                        </select>
+                    </label>
+
+                    <label class="block" style="min-width:0;">
+                        <span class="mb-2 flex items-center gap-2 text-[15px] font-semibold text-slate-800">
+                            <i class="fas fa-arrow-up-short-wide text-rose-600"></i>
+                            Direction
+                        </span>
+                        <select
+                            name="direction"
+                            class="h-[56px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-[15px] text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        >
+                            <option value="desc" {{ request('direction', 'desc') === 'desc' ? 'selected' : '' }}>Descending</option>
+                            <option value="asc" {{ request('direction') === 'asc' ? 'selected' : '' }}>Ascending</option>
+                        </select>
+                    </label>
+                </div>
+            </form>
+
+            <div id="running-balance-results" class="mt-6">
+                @include('running_balance.partials.funds-table', [
+                    'balances' => $balances,
+                    'approverId' => $approverId,
+                    'locationLabel' => $locationLabel,
+                    'runningTotalsByApprover' => $runningTotalsByApprover,
+                    'uncollectedByApprover' => $uncollectedByApprover,
+                    'visibleCount' => $visibleCount,
+                    'visibleAmount' => $visibleAmount,
+                    'inCount' => $inCount,
+                    'outCount' => $outCount,
+                ])
             </div>
         </div>
     </div>
-
-    {{-- Transactions Table --}}
-    <div class="overflow-x-auto">
-        <table class="min-w-full border text-sm text-left">
-            <thead class="bg-gray-100 text-gray-700 uppercase font-bold">
-                <tr>
-                    <th class="border px-4 py-2">Date</th>
-                    <th class="border px-4 py-2">Source</th>
-                    <th class="border px-4 py-2">Type</th>
-                    <th class="border px-4 py-2">Movement Type</th>
-                    <th class="border px-4 py-2">Amount</th>
-                    <th class="border px-4 py-2">Description</th>
-                    <th class="border px-4 py-2">Employee</th>
-                    <th class="border px-4 py-2">Created By</th>
-                </tr>
-            </thead>
-            <tbody class="bg-white">
-                @forelse($balances as $balance)
-                <tr class="border-t hover:bg-gray-50">
-                    <td class="px-4 py-2">{{ $balance->created_at->format('Y-m-d') }}</td>
-                    <td class="px-4 py-2">{{ $balance->approver->name ?? 'N/A' }}</td>
-                    <td class="px-4 py-2">
-                        @switch($balance->type)
-                            @case(1) Top-up @break
-                            @case(2) Collected @break
-                            @case(3) Refund @break
-                            @case(4) Uncollected Funds @break
-                            @case(5) Salary Deduction @break
-                            @case(6) Liquidated Amount @break
-                            @case(7) Transfer @break
-                            @case(8) Release Approved Amount @break
-                            @case(10) Transfer @break
-                            @case(11) Adjustment @break
-                            @case(12) Adjustment for Uncollected @break
-                            @default Reimbursement
-                        @endswitch
-                    </td>
-                    <td class="px-4 py-2">{{ $balance->adjustment_type }}</td>
-                    <td class="px-4 py-2 font-semibold {{ $balance->amount < 0 ? 'text-red-600' : 'text-green-600' }}">
-                        {{ number_format($balance->amount, 2) }}
-                    </td>
-                    <td class="px-4 py-2">{{ $balance->description }}</td>
-                    <td class="px-4 py-2">
-                        @php
-                            $employeeName = trim((optional($balance->employee)->fname ?? '') . ' ' . (optional($balance->employee)->lname ?? ''));
-                            $creatorName = trim((optional($balance->creator)->fname ?? '') . ' ' . (optional($balance->creator)->lname ?? ''));
-                        @endphp
-                        {{ $employeeName !== '' ? $employeeName : (optional($balance->suppliers)->supplier_name ?? 'N/A') }}
-                    </td>
-                    <td class="px-4 py-2">{{ $creatorName !== '' ? $creatorName : 'N/A' }}</td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="8" class="text-center py-4">No transactions found for this filter.</td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('running-balance-filter-form');
+    const results = document.getElementById('running-balance-results');
+    let debounceTimer;
+
+    function buildQuery() {
+        const formData = new FormData(form);
+        return new URLSearchParams(formData).toString();
+    }
+
+    async function loadResults(pushState = true) {
+        if (!results) {
+            return;
+        }
+
+        results.classList.add('opacity-70');
+
+        try {
+            const response = await fetch(`${form.action}?${buildQuery()}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const payload = await response.json();
+            results.innerHTML = payload.html || '';
+
+            if (pushState) {
+                const nextUrl = new URL(window.location.href);
+                nextUrl.search = buildQuery();
+                window.history.replaceState({}, '', nextUrl);
+            }
+
+            document.dispatchEvent(new CustomEvent('fast-table:loaded'));
+        } catch (error) {
+            results.innerHTML = `
+                <div class="rounded-[28px] border border-rose-200 bg-rose-50 px-5 py-4 text-[15px] text-rose-700">
+                    Unable to load the Laguna running balance right now. Please try again.
+                </div>
+            `;
+        } finally {
+            results.classList.remove('opacity-70');
+        }
+    }
+
+    function bindFilters() {
+        form.querySelectorAll('input, select').forEach((field) => {
+            const eventName = field.tagName === 'SELECT' || field.type === 'date' ? 'change' : 'input';
+            field.addEventListener(eventName, () => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => loadResults(true), 300);
+            });
+        });
+    }
+
+    document.addEventListener('click', async (event) => {
+        const link = event.target.closest('#running-balance-results .pagination a');
+        if (!link) {
+            return;
+        }
+
+        event.preventDefault();
+        const url = new URL(link.href);
+        const page = url.searchParams.get('page');
+        if (page) {
+            let pageInput = form.querySelector('input[name="page"]');
+            if (!pageInput) {
+                pageInput = document.createElement('input');
+                pageInput.type = 'hidden';
+                pageInput.name = 'page';
+                form.appendChild(pageInput);
+            }
+            pageInput.value = page;
+        }
+
+        await loadResults(true);
+    });
+
+    bindFilters();
+});
+</script>
 @endsection

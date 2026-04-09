@@ -761,6 +761,10 @@
 
         function enhanceInlineFilterForms(root = document) {
             root.querySelectorAll('form[id$="filter-form"], form#filter-form').forEach((form) => {
+                if (form.hasAttribute('data-skip-inline-filter-enhancer')) {
+                    return;
+                }
+
                 const directChildren = Array.from(form.children).filter((child) => child instanceof HTMLElement);
 
                 if (directChildren.length !== 2) {
