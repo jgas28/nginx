@@ -2,6 +2,16 @@
 
 @section('content')
 <style>
+    #coordinator-create-form {
+        --coordinator-field-height: 3.25rem;
+        --coordinator-field-radius: 0.9rem;
+        --coordinator-field-font-size: 0.95rem;
+        --coordinator-field-padding-y: 0.75rem;
+        --coordinator-field-padding-x: 0.9rem;
+        --coordinator-label-font-size: 0.95rem;
+        --coordinator-label-color: #334155;
+    }
+
     #coordinator-create-form select.searchable-select-source {
         position: absolute;
         left: -9999px;
@@ -30,23 +40,26 @@
     #coordinator-create-form label {
         margin-bottom: 0.5rem;
         display: block;
-        font-size: 0.95rem;
+        font-size: var(--coordinator-label-font-size);
         font-weight: 600;
-        color: #334155;
+        color: var(--coordinator-label-color);
     }
 
     #coordinator-create-form input[type="text"],
     #coordinator-create-form input[type="date"],
     #coordinator-create-form input[type="number"],
+    #coordinator-create-form input[type="email"],
+    #coordinator-create-form input[type="time"],
     #coordinator-create-form select,
     #coordinator-create-form textarea {
-        min-height: 3.25rem;
+        min-height: var(--coordinator-field-height);
         width: 100%;
-        border-radius: 0.9rem;
+        border-radius: var(--coordinator-field-radius);
         border: 1px solid #cbd5e1;
         background: #fff;
-        padding: 0.75rem 0.9rem;
-        font-size: 0.95rem;
+        padding: var(--coordinator-field-padding-y) var(--coordinator-field-padding-x);
+        font-size: var(--coordinator-field-font-size);
+        line-height: 1.45;
         color: #1e293b;
         box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
         transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
@@ -57,10 +70,11 @@
     }
 
     #coordinator-create-form .searchable-select-trigger {
-        min-height: 3.25rem;
-        border-radius: 0.9rem;
-        padding: 0.75rem 0.9rem;
-        font-size: 0.95rem;
+        min-height: var(--coordinator-field-height);
+        border-radius: var(--coordinator-field-radius);
+        padding: var(--coordinator-field-padding-y) var(--coordinator-field-padding-x);
+        font-size: var(--coordinator-field-font-size);
+        line-height: 1.45;
     }
 
     #coordinator-create-form .searchable-select-trigger-icon {
@@ -72,19 +86,26 @@
     #coordinator-create-form .searchable-select-panel input {
         min-height: 2.75rem;
         border-radius: 0.85rem;
-        font-size: 0.95rem;
+        font-size: var(--coordinator-field-font-size);
     }
 
     #coordinator-create-form .searchable-select-option {
         border-radius: 0.85rem;
         padding: 0.6rem 0.75rem;
-        font-size: 0.95rem;
+        font-size: var(--coordinator-field-font-size);
+        line-height: 1.4;
     }
 
     #coordinator-create-form .searchable-select-option-icon {
         height: 1.9rem;
         width: 1.9rem;
         border-radius: 9999px;
+    }
+
+    #coordinator-create-form .text-red-600.text-sm.mt-1,
+    #coordinator-create-form .text-red-600.text-sm {
+        font-size: 0.875rem !important;
+        line-height: 1.4;
     }
 
     #coordinator-create-form input:focus,

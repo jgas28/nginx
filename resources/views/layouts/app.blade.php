@@ -7,6 +7,16 @@
     <title>@yield('title', config('app.name', 'FCZCNYX'))</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
+        :root {
+            --app-field-height: 3.25rem;
+            --app-field-radius: 0.9rem;
+            --app-field-font-size: 0.95rem;
+            --app-field-padding-y: 0.75rem;
+            --app-field-padding-x: 0.9rem;
+            --app-label-font-size: 0.95rem;
+            --app-label-color: #334155;
+        }
+
         [data-searchable-select-wrapper] {
             position: relative;
             z-index: 1;
@@ -18,6 +28,149 @@
 
         .searchable-select-panel {
             z-index: 130 !important;
+        }
+
+        main form label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: var(--app-label-font-size);
+            font-weight: 600;
+            color: var(--app-label-color);
+        }
+
+        main form input[type="text"],
+        main form input[type="date"],
+        main form input[type="number"],
+        main form input[type="email"],
+        main form input[type="time"],
+        main form input[type="password"],
+        main form input[type="search"],
+        main form input[type="url"],
+        main form input[type="tel"],
+        main form select,
+        main form textarea {
+            min-height: var(--app-field-height);
+            width: 100%;
+            border-radius: var(--app-field-radius);
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            padding: var(--app-field-padding-y) var(--app-field-padding-x);
+            font-size: var(--app-field-font-size);
+            line-height: 1.45;
+            color: #1e293b;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+            transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+        }
+
+        main form textarea {
+            min-height: 6.5rem;
+        }
+
+        main form input:focus,
+        main form select:focus,
+        main form textarea:focus {
+            border-color: #4f46e5;
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+        }
+
+        main .searchable-select-trigger {
+            min-height: var(--app-field-height);
+            border-radius: var(--app-field-radius);
+            padding: var(--app-field-padding-y) var(--app-field-padding-x);
+            font-size: var(--app-field-font-size);
+            line-height: 1.45;
+        }
+
+        main .searchable-select-source + [data-searchable-select-wrapper] > button,
+        main .searchable-select-source + .relative > button {
+            min-height: var(--app-field-height) !important;
+            border-radius: var(--app-field-radius) !important;
+            padding: var(--app-field-padding-y) var(--app-field-padding-x) !important;
+            font-size: var(--app-field-font-size) !important;
+            line-height: 1.45 !important;
+        }
+
+        main .searchable-select-trigger-icon {
+            height: 2rem;
+            width: 2rem;
+            border-radius: 9999px;
+        }
+
+        main .searchable-select-source + [data-searchable-select-wrapper] > button > span:first-child,
+        main .searchable-select-source + .relative > button > span:first-child {
+            height: 2rem !important;
+            width: 2rem !important;
+            border-radius: 9999px !important;
+        }
+
+        main .searchable-select-panel input {
+            min-height: 2.75rem;
+            border-radius: 0.85rem;
+            font-size: var(--app-field-font-size);
+        }
+
+        main .searchable-select-option {
+            border-radius: 0.85rem;
+            padding: 0.6rem 0.75rem;
+            font-size: var(--app-field-font-size);
+            line-height: 1.4;
+        }
+
+        main .searchable-select-panel [data-select-list] > button,
+        main .searchable-select-panel [data-searchable-select-list] > button {
+            border-radius: 0.85rem !important;
+            padding: 0.6rem 0.75rem !important;
+            font-size: var(--app-field-font-size) !important;
+            line-height: 1.4 !important;
+        }
+
+        main .searchable-select-panel [data-select-list] > button > span:first-child,
+        main .searchable-select-panel [data-searchable-select-list] > button > span:first-child {
+            height: 1.9rem !important;
+            width: 1.9rem !important;
+            border-radius: 9999px !important;
+        }
+
+        main .searchable-select-option-icon {
+            height: 1.9rem;
+            width: 1.9rem;
+            border-radius: 9999px;
+        }
+
+        main .dataTables_wrapper .dataTables_filter input,
+        main .dataTables_wrapper .dataTables_length select,
+        main [data-fast-table] input[id$="-search"],
+        main [data-fast-table] select[id$="-per-page"] {
+            min-height: var(--app-field-height) !important;
+            border-radius: var(--app-field-radius) !important;
+            border: 1px solid #cbd5e1 !important;
+            background: #fff !important;
+            padding: var(--app-field-padding-y) var(--app-field-padding-x) !important;
+            font-size: var(--app-field-font-size) !important;
+            line-height: 1.45 !important;
+            color: #1e293b !important;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+            transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease !important;
+        }
+
+        main .dataTables_wrapper .dataTables_filter input:focus,
+        main .dataTables_wrapper .dataTables_length select:focus,
+        main [data-fast-table] input[id$="-search"]:focus,
+        main [data-fast-table] select[id$="-per-page"]:focus {
+            border-color: #4f46e5 !important;
+            outline: none !important;
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12) !important;
+        }
+
+        main .dataTables_wrapper .dataTables_filter input {
+            min-width: 260px;
+        }
+
+        main .dataTables_wrapper .dataTables_length select,
+        main [data-fast-table] select[id$="-per-page"] {
+            min-width: 88px;
+            padding-right: 2.25rem !important;
         }
 
         select:focus {
