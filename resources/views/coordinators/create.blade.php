@@ -40,20 +40,51 @@
     #coordinator-create-form input[type="number"],
     #coordinator-create-form select,
     #coordinator-create-form textarea {
-        min-height: 3.5rem;
+        min-height: 3.25rem;
         width: 100%;
-        border-radius: 1rem;
+        border-radius: 0.9rem;
         border: 1px solid #cbd5e1;
         background: #fff;
-        padding: 0.9rem 1rem;
-        font-size: 1rem;
+        padding: 0.75rem 0.9rem;
+        font-size: 0.95rem;
         color: #1e293b;
         box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
         transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
     }
 
     #coordinator-create-form textarea {
-        min-height: 7rem;
+        min-height: 6.5rem;
+    }
+
+    #coordinator-create-form .searchable-select-trigger {
+        min-height: 3.25rem;
+        border-radius: 0.9rem;
+        padding: 0.75rem 0.9rem;
+        font-size: 0.95rem;
+    }
+
+    #coordinator-create-form .searchable-select-trigger-icon {
+        height: 2rem;
+        width: 2rem;
+        border-radius: 9999px;
+    }
+
+    #coordinator-create-form .searchable-select-panel input {
+        min-height: 2.75rem;
+        border-radius: 0.85rem;
+        font-size: 0.95rem;
+    }
+
+    #coordinator-create-form .searchable-select-option {
+        border-radius: 0.85rem;
+        padding: 0.6rem 0.75rem;
+        font-size: 0.95rem;
+    }
+
+    #coordinator-create-form .searchable-select-option-icon {
+        height: 1.9rem;
+        width: 1.9rem;
+        border-radius: 9999px;
     }
 
     #coordinator-create-form input:focus,
@@ -591,8 +622,8 @@
             wrapper.dataset.open = 'false';
             wrapper.className = 'relative';
             wrapper.innerHTML = `
-                <button type="button" class="flex h-14 w-full items-center gap-3 rounded-2xl border border-slate-300 bg-white px-4 text-left text-base text-slate-700 shadow-sm transition hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                <button type="button" class="searchable-select-trigger flex w-full items-center gap-3 border border-slate-300 bg-white text-left text-slate-700 shadow-sm transition hover:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                    <span class="searchable-select-trigger-icon inline-flex shrink-0 items-center justify-center bg-indigo-50 text-indigo-600">
                         <i class="fas ${icon} text-sm"></i>
                     </span>
                     <span class="min-w-0 flex-1 truncate" data-searchable-select-label></span>
@@ -604,7 +635,7 @@
                             <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                                 <i class="fas fa-magnifying-glass text-xs"></i>
                             </span>
-                            <input type="text" data-searchable-select-input placeholder="Search option..." class="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-100">
+                            <input type="text" data-searchable-select-input placeholder="Search option..." class="w-full border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-slate-700 outline-none transition focus:border-indigo-300 focus:bg-white focus:ring-2 focus:ring-indigo-100">
                         </div>
                     </div>
                     <div data-searchable-select-list class="max-h-56 overflow-y-auto p-2"></div>
@@ -643,9 +674,9 @@
                     visibleCount += 1;
                     const button = document.createElement('button');
                     button.type = 'button';
-                    button.className = `flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${option.selected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700 hover:bg-slate-100'}`;
+                    button.className = `searchable-select-option flex w-full items-center gap-3 text-left transition ${option.selected ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700 hover:bg-slate-100'}`;
                     button.innerHTML = `
-                        <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${option.selected ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}">
+                        <span class="searchable-select-option-icon inline-flex shrink-0 items-center justify-center ${option.selected ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-100 text-slate-500'}">
                             <i class="fas ${icon} text-xs"></i>
                         </span>
                         <span class="min-w-0 flex-1 truncate">${option.textContent.trim()}</span>

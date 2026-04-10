@@ -19,6 +19,10 @@ class DashboardController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
         $user->load('roles');
 
         $roleIds = $user->roles->pluck('id')->toArray();

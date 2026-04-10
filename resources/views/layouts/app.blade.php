@@ -712,6 +712,91 @@
         gap: 0.75rem !important;
         white-space: nowrap;
     }
+
+    .global-datatable-footer {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 1rem !important;
+        width: 100% !important;
+        flex-direction: row !important;
+    }
+
+    .global-datatable-footer > :first-child {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0;
+        flex: 1 1 auto;
+        text-align: left !important;
+        margin: 0 !important;
+        justify-self: start !important;
+        align-self: center !important;
+    }
+
+    .global-datatable-footer > :last-child {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        margin-left: auto !important;
+        flex: 0 0 auto;
+        text-align: right !important;
+        white-space: nowrap !important;
+        width: auto !important;
+    }
+
+    .global-datatable-footer > :first-child p,
+    .global-datatable-footer > :first-child span,
+    .global-datatable-footer > :first-child {
+        text-align: left !important;
+    }
+
+    .global-datatable-footer nav,
+    .global-datatable-footer nav > div,
+    .global-datatable-footer nav > div > div:last-child,
+    .global-datatable-footer nav .relative.z-0,
+    .global-datatable-footer nav .inline-flex {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+    }
+
+    .global-datatable-footer nav {
+        justify-content: flex-end !important;
+    }
+
+    .global-datatable-footer nav > div > div:first-child {
+        display: none !important;
+    }
+
+    .global-datatable-footer nav > div > div:last-child {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        margin: 0 !important;
+        width: auto !important;
+    }
+
+    .global-datatable-footer nav > div > div:last-child > div:first-child {
+        display: none !important;
+    }
+
+    .global-datatable-footer nav > div > div:last-child > div:last-child {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 0.75rem !important;
+    }
+
+    .global-datatable-footer > :last-child p {
+        display: none !important;
+    }
+
+    .global-datatable-footer > :last-child .sm\:flex-1,
+    .global-datatable-footer > :last-child .sm\:items-center,
+    .global-datatable-footer > :last-child .sm\:justify-between {
+        justify-content: flex-end !important;
+    }
 </style>
 
 <script>
@@ -791,10 +876,34 @@
             });
         }
 
+        function enhanceDataTableFooters(root = document) {
+            root.querySelectorAll('div').forEach((element) => {
+                if (!(element instanceof HTMLElement)) {
+                    return;
+                }
+
+                const children = Array.from(element.children).filter((child) => child instanceof HTMLElement);
+                if (children.length !== 2) {
+                    return;
+                }
+
+                const [leftChild, rightChild] = children;
+                const hasShowingText = /showing\s+\d+/i.test((leftChild.textContent || '').trim());
+                const hasPagination = !!rightChild.querySelector('.pagination, nav[role="navigation"], a[href*="page="]');
+
+                if (!hasShowingText || !hasPagination) {
+                    return;
+                }
+
+                element.classList.add('global-datatable-footer');
+            });
+        }
+
         function enhancePage(root = document) {
             enhanceDataTableLayout(root);
             enhanceEditButtons(root);
             enhanceInlineFilterForms(root);
+            enhanceDataTableFooters(root);
         }
 
         if (document.readyState === 'loading') {

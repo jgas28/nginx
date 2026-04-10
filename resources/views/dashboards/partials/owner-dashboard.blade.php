@@ -3,18 +3,18 @@
     $dashboardTitle = $dashboardTitle ?? 'Owner Dashboard';
     $dashboardSubtitle = $dashboardSubtitle ?? 'Track finances, delivery health, and approver balances in one place.';
     $periodLabel = request('month', now()->format('Y-m'));
-    $metricCards = [
-        ['label' => 'Total Profit', 'value' => $totalDeliveryRates + $totalAccessorialRates, 'color' => 'emerald', 'icon' => 'fa-chart-line', 'iconBg' => 'from-emerald-100 to-green-100', 'iconText' => 'text-emerald-700', 'isMoney' => true],
-        ['label' => 'Admin Expenses', 'value' => $totals->admin_rpm_total ?? 0, 'color' => 'amber', 'icon' => 'fa-wallet', 'iconBg' => 'from-amber-100 to-yellow-100', 'iconText' => 'text-amber-700', 'isMoney' => true],
-        ['label' => 'Operational Expenses', 'value' => $totals->operation_total ?? 0, 'color' => 'orange', 'icon' => 'fa-gears', 'iconBg' => 'from-orange-100 to-rose-100', 'iconText' => 'text-orange-700', 'isMoney' => true],
-        ['label' => 'Pending Deliveries', 'value' => $totalPendingDeliveries ?? 0, 'color' => 'blue', 'icon' => 'fa-hourglass-half', 'iconBg' => 'from-blue-100 to-cyan-100', 'iconText' => 'text-blue-700', 'isMoney' => false],
-        ['label' => 'Delivered Today', 'value' => $totalDelivered ?? 0, 'color' => 'green', 'icon' => 'fa-circle-check', 'iconBg' => 'from-lime-100 to-emerald-100', 'iconText' => 'text-green-700', 'isMoney' => false],
-        ['label' => 'Truck Allocated', 'value' => $totalTruckAllocated ?? 0, 'color' => 'violet', 'icon' => 'fa-truck', 'iconBg' => 'from-violet-100 to-fuchsia-100', 'iconText' => 'text-violet-700', 'isMoney' => false],
+    $primaryMetricCards = [
+        ['label' => 'Total Profit', 'value' => $totalDeliveryRates + $totalAccessorialRates, 'tone' => 'from-emerald-500/18 via-green-500/10 to-lime-500/10', 'border' => 'border-emerald-200/80', 'icon' => 'fa-chart-line', 'iconBg' => 'from-emerald-100 to-green-100', 'iconText' => 'text-emerald-700', 'valueText' => 'text-emerald-700', 'isMoney' => true],
+        ['label' => 'Operational Expenses', 'value' => $totals->operation_total ?? 0, 'tone' => 'from-orange-500/18 via-amber-500/10 to-rose-500/10', 'border' => 'border-orange-200/80', 'icon' => 'fa-gears', 'iconBg' => 'from-orange-100 to-amber-100', 'iconText' => 'text-orange-700', 'valueText' => 'text-orange-700', 'isMoney' => true],
+        ['label' => 'Delivered Today', 'value' => $totalDelivered ?? 0, 'tone' => 'from-sky-500/18 via-cyan-500/10 to-blue-500/10', 'border' => 'border-sky-200/80', 'icon' => 'fa-circle-check', 'iconBg' => 'from-sky-100 to-blue-100', 'iconText' => 'text-sky-700', 'valueText' => 'text-sky-700', 'isMoney' => false],
+        ['label' => 'CVR Approvals', 'value' => $totalCVRapproval ?? 0, 'tone' => 'from-fuchsia-500/18 via-pink-500/10 to-rose-500/10', 'border' => 'border-fuchsia-200/80', 'icon' => 'fa-file-signature', 'iconBg' => 'from-fuchsia-100 to-pink-100', 'iconText' => 'text-fuchsia-700', 'valueText' => 'text-fuchsia-700', 'isMoney' => false],
     ];
-    if ($showExtended) {
-        $metricCards[] = ['label' => 'CVR Approvals', 'value' => $totalCVRapproval ?? 0, 'color' => 'fuchsia', 'icon' => 'fa-file-signature', 'iconBg' => 'from-fuchsia-100 to-pink-100', 'iconText' => 'text-fuchsia-700', 'isMoney' => false];
-        $metricCards[] = ['label' => 'Liquidations', 'value' => $totalLiquidation ?? 0, 'color' => 'teal', 'icon' => 'fa-file-invoice-dollar', 'iconBg' => 'from-teal-100 to-cyan-100', 'iconText' => 'text-teal-700', 'isMoney' => false];
-    }
+    $secondaryMetricCards = [
+        ['label' => 'Admin Expenses', 'value' => $totals->admin_rpm_total ?? 0, 'tone' => 'from-amber-500/18 via-yellow-500/10 to-orange-500/10', 'border' => 'border-amber-200/80', 'icon' => 'fa-wallet', 'iconBg' => 'from-amber-100 to-yellow-100', 'iconText' => 'text-amber-700', 'valueText' => 'text-amber-700', 'isMoney' => true],
+        ['label' => 'Pending Deliveries', 'value' => $totalPendingDeliveries ?? 0, 'tone' => 'from-rose-500/18 via-red-500/10 to-pink-500/10', 'border' => 'border-rose-200/80', 'icon' => 'fa-hourglass-half', 'iconBg' => 'from-rose-100 to-red-100', 'iconText' => 'text-rose-700', 'valueText' => 'text-rose-700', 'isMoney' => false],
+        ['label' => 'Truck Allocated', 'value' => $totalTruckAllocated ?? 0, 'tone' => 'from-violet-500/18 via-indigo-500/10 to-fuchsia-500/10', 'border' => 'border-violet-200/80', 'icon' => 'fa-truck', 'iconBg' => 'from-violet-100 to-indigo-100', 'iconText' => 'text-violet-700', 'valueText' => 'text-violet-700', 'isMoney' => false],
+        ['label' => 'Liquidations', 'value' => $totalLiquidation ?? 0, 'tone' => 'from-teal-500/18 via-cyan-500/10 to-sky-500/10', 'border' => 'border-teal-200/80', 'icon' => 'fa-file-invoice-dollar', 'iconBg' => 'from-teal-100 to-cyan-100', 'iconText' => 'text-teal-700', 'valueText' => 'text-teal-700', 'isMoney' => false],
+    ];
     $chartMax = max(
         $totalDeliveryRates + $totalAccessorialRates,
         $totals->admin_rpm_total ?? 0,
@@ -57,25 +57,29 @@
             </form>
         </div>
 
-        <div class="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            @foreach ($metricCards as $metric)
-                <div class="rounded-3xl border border-white/70 bg-gradient-to-br from-white via-white to-{{ $metric['color'] }}-50/60 p-4 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur transition hover:-translate-y-0.5 hover:shadow-[0_20px_45px_rgba(37,99,235,0.10)]">
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{{ $metric['label'] }}</p>
-                            <p class="mt-2.5 text-2xl font-bold text-slate-900">
-                                @if ($metric['isMoney'])
-                                    PHP {{ number_format($metric['value'], 2) }}
-                                @else
-                                    {{ number_format($metric['value']) }}
-                                @endif
-                            </p>
-                            <p class="mt-1 text-xs text-slate-400">Period {{ $periodLabel }}</p>
+        <div class="mb-6 space-y-4">
+            @foreach ([$primaryMetricCards, $secondaryMetricCards] as $metricRow)
+                <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:0.75rem;">
+                    @foreach ($metricRow as $metric)
+                        <div class="rounded-3xl border {{ $metric['border'] }} bg-gradient-to-br from-white via-white {{ $metric['tone'] }} p-4 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur transition hover:-translate-y-0.5 hover:shadow-[0_20px_45px_rgba(37,99,235,0.10)]">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{{ $metric['label'] }}</p>
+                                    <p class="mt-2.5 text-2xl font-bold {{ $metric['valueText'] }}">
+                                        @if ($metric['isMoney'])
+                                            PHP {{ number_format($metric['value'], 2) }}
+                                        @else
+                                            {{ number_format($metric['value']) }}
+                                        @endif
+                                    </p>
+                                    <p class="mt-1 text-xs text-slate-400">Period {{ $periodLabel }}</p>
+                                </div>
+                                <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br {{ $metric['iconBg'] }} {{ $metric['iconText'] }} shadow-sm ring-1 ring-white/80">
+                                    <i class="fas {{ $metric['icon'] }}"></i>
+                                </span>
+                            </div>
                         </div>
-                        <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br {{ $metric['iconBg'] }} {{ $metric['iconText'] }} ring-1 ring-white shadow-sm">
-                            <i class="fas {{ $metric['icon'] }}"></i>
-                        </span>
-                    </div>
+                    @endforeach
                 </div>
             @endforeach
         </div>

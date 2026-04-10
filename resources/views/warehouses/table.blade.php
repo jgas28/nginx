@@ -1,6 +1,12 @@
 <div class="space-y-4">
-    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between" data-warehouse-toolbar>
-        <div class="flex items-center gap-3 text-sm text-slate-600">
+    <div data-warehouse-toolbar style="display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:1rem; align-items:center;">
+        <div class="relative w-full max-w-md" style="min-width:0;">
+            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                <i class="fas fa-search"></i>
+            </span>
+            <input type="text" value="{{ $search ?? '' }}" data-warehouse-search placeholder="Search code, name, or location..." class="w-full rounded-2xl border border-slate-300 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100">
+        </div>
+        <div class="ml-auto flex items-center gap-3 text-sm text-slate-600" style="justify-self:end; white-space:nowrap;">
             <span>Show</span>
             <select data-warehouse-per-page class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
                 @foreach([5, 10, 25, 50] as $size)
@@ -8,12 +14,6 @@
                 @endforeach
             </select>
             <span>entries</span>
-        </div>
-        <div class="relative w-full max-w-md">
-            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                <i class="fas fa-search"></i>
-            </span>
-            <input type="text" value="{{ $search ?? '' }}" data-warehouse-search placeholder="Search code, name, or location..." class="w-full rounded-2xl border border-slate-300 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100">
         </div>
     </div>
 
