@@ -23,7 +23,7 @@
                 <button
                     type="button"
                     onclick="openModal()"
-                    class="inline-flex items-center justify-center gap-3 rounded-2xl bg-indigo-600 px-5 py-3 text-[15px] font-semibold text-white shadow-[0_12px_24px_rgba(79,70,229,0.22)] transition hover:-translate-y-0.5 hover:bg-indigo-700"
+                    class="inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-indigo-600 px-5 py-3 text-[15px] font-semibold text-white shadow-[0_12px_24px_rgba(79,70,229,0.22)] transition hover:-translate-y-0.5 hover:bg-indigo-700 sm:w-auto"
                 >
                     <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
                         <i class="fas fa-plus"></i>
@@ -35,7 +35,7 @@
 
         <div class="px-6 py-6 sm:px-8">
             <form id="running-balance-filter-form" method="GET" action="{{ route('running_balance.index') }}" data-skip-inline-filter-enhancer class="rounded-[28px] border border-slate-200 bg-slate-50/80 p-5 shadow-inner shadow-slate-100">
-                <div style="display:grid; grid-template-columns:repeat(6, minmax(0, 1fr)); gap:1rem; align-items:end;">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
                     <label class="block" style="min-width:0;">
                         <span class="mb-2 flex items-center gap-2 text-[15px] font-semibold text-slate-800">
                             <i class="fas fa-calendar-day text-emerald-600"></i>
@@ -123,7 +123,7 @@
 
     <div id="transactionModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
         <div class="relative w-full max-w-4xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.22)]">
-            <div class="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-6 py-5">
+            <div class="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-4 py-5 sm:px-6">
                 <button onclick="closeModal()" class="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600">
                     <i class="fas fa-times"></i>
                 </button>
@@ -137,7 +137,7 @@
                 </div>
             </div>
 
-            <form method="POST" action="{{ route('running_balance.store') }}" class="px-6 py-6">
+            <form method="POST" action="{{ route('running_balance.store') }}" class="px-4 py-6 sm:px-6">
                 @csrf
                 <div class="grid gap-4 sm:grid-cols-2">
                     <label class="block">
@@ -193,11 +193,11 @@
                     </label>
                 </div>
 
-                <div class="mt-6 flex justify-end gap-3">
-                    <button type="button" onclick="closeModal()" class="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-[15px] font-semibold text-slate-700 transition hover:bg-slate-50">
+                <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button type="button" onclick="closeModal()" class="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-[15px] font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto">
                         Cancel
                     </button>
-                    <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-[15px] font-semibold text-white transition hover:bg-indigo-700">
+                    <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 py-3 text-[15px] font-semibold text-white transition hover:bg-indigo-700 sm:w-auto">
                         <i class="fas fa-save"></i>
                         Submit
                     </button>

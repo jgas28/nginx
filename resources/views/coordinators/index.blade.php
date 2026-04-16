@@ -38,7 +38,7 @@
 
                 <a
                     href="{{ route('coordinators.create') }}"
-                    class="inline-flex items-center justify-center gap-3 rounded-2xl bg-blue-600 px-5 py-3 text-[15px] font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.22)] transition hover:-translate-y-0.5 hover:bg-blue-700"
+                    class="inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 px-5 py-3 text-[15px] font-semibold text-white shadow-[0_12px_24px_rgba(37,99,235,0.22)] transition hover:-translate-y-0.5 hover:bg-blue-700 sm:w-auto"
                 >
                     <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
                         <i class="fas fa-plus"></i>
@@ -96,8 +96,8 @@
                     </label>
                 </div>
 
-                <div class="mt-4 flex items-center justify-between gap-4 border-t border-slate-200 pt-4">
-                    <div class="min-w-0 flex-1 max-w-[720px]">
+                <div class="mt-4 flex flex-col gap-4 border-t border-slate-200 pt-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="min-w-0 w-full flex-1 max-w-[720px]">
                         <div class="relative">
                             <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                                 <i class="fas fa-search"></i>
@@ -112,11 +112,11 @@
                         </div>
                     </div>
 
-                    <div class="ml-auto flex flex-none items-center gap-3">
+                    <div class="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end lg:w-auto">
                         <span class="whitespace-nowrap text-[15px] font-semibold text-slate-700">Show</span>
                         <select
                             name="per_page"
-                            class="h-[52px] w-[160px] rounded-2xl border border-slate-200 bg-white px-4 text-[15px] font-medium text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            class="h-[52px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-[15px] font-medium text-slate-700 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 sm:w-[160px]"
                         >
                             @foreach ([5, 10, 25, 50] as $size)
                                 <option value="{{ $size }}" {{ (int) request('per_page', 10) === $size ? 'selected' : '' }}>{{ $size }} rows</option>
@@ -126,11 +126,11 @@
                 </div>
             </form>
 
-            <div class="mt-6 flex gap-3 overflow-x-auto pb-2" id="tabs">
+            <div class="mt-6 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:overflow-visible pb-2" id="tabs">
                 @foreach ($tabs as $tabKey => $tab)
                     <button
                         type="button"
-                        class="tab-button inline-flex min-w-max items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-[15px] font-semibold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-700"
+                        class="tab-button inline-flex w-full min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-[15px] font-semibold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-700 sm:w-auto sm:min-w-max"
                         data-tab="{{ $tabKey }}"
                     >
                         <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br {{ $tab['accent'] }}">
@@ -142,7 +142,7 @@
             </div>
 
             <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
-                <div class="flex items-center justify-between border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-5 py-4">
+                <div class="flex flex-col gap-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                     <div class="flex items-center gap-3">
                         <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
                             <i class="fas fa-table-columns text-lg"></i>
@@ -152,7 +152,7 @@
                             <p class="text-sm text-slate-500">Only the active tab reloads to keep the queue fast.</p>
                         </div>
                     </div>
-                    <div id="tab-loading-indicator" class="hidden items-center gap-2 rounded-full bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700">
+                    <div id="tab-loading-indicator" class="hidden items-center gap-2 self-start rounded-full bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 sm:self-auto">
                         <i class="fas fa-spinner fa-spin"></i>
                         Loading...
                     </div>

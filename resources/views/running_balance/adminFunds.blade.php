@@ -26,7 +26,7 @@
             <form id="running-balance-filter-form" method="GET" action="{{ route('running_balance.adminFunds') }}" data-skip-inline-filter-enhancer class="rounded-[28px] border border-slate-200 bg-slate-50/80 p-5 shadow-inner shadow-slate-100">
                 <input type="hidden" name="approver_id" value="2">
 
-                <div style="display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:1rem; align-items:end;">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
                     <label class="block" style="min-width:0;">
                         <span class="mb-2 flex items-center gap-2 text-[15px] font-semibold text-slate-800">
                             <i class="fas fa-calendar-day text-emerald-600"></i>
