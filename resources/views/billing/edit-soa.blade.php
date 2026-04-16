@@ -6,12 +6,12 @@
 <div class="min-h-screen bg-gray-100 py-8">
     <div class="max-w-6xl mx-auto px-4">
         <div class="mb-8">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900">Edit SOA</h1>
                     <p class="text-gray-600 mt-2">Update statement details for {{ $soa->soa_number ?? 'N/A' }}</p>
                 </div>
-                <a href="{{ route('billing.index') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
+                <a href="{{ route('billing.index') }}" class="inline-flex w-full items-center justify-center rounded-lg bg-gray-500 px-4 py-2 text-white hover:bg-gray-600 sm:w-auto">
                     <i class="fas fa-arrow-left mr-2"></i>Back to SOA List
                 </a>
             </div>
@@ -120,13 +120,13 @@
             </div>
 
             <div class="bg-white rounded-lg shadow-lg p-6">
-                <div class="flex justify-between items-center">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div class="text-sm text-gray-600">
                         <p id="editSelectedRequests"><strong>Selected Delivery Requests:</strong> 0</p>
                         <p id="editTotalAmount"><strong>Total Amount:</strong> P0.00</p>
                         <p><strong>Paid Amount:</strong> P{{ number_format($soa->paid_amount, 2) }}</p>
                     </div>
-                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
+                    <button type="submit" class="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 lg:w-auto">
                         <i class="fas fa-save mr-2"></i>Save Changes
                     </button>
                 </div>

@@ -7,12 +7,12 @@
     <div class="max-w-6xl mx-auto px-4">
         <!-- Page Header -->
         <div class="mb-8">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 class="text-3xl font-bold text-gray-900">Create Statement of Account</h1>
                     <p class="text-gray-600 mt-2">Generate a new SOA for billing purposes</p>
                 </div>
-                <a href="{{ route('billing.dashboard') }}" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
+                <a href="{{ route('billing.dashboard') }}" class="inline-flex w-full items-center justify-center rounded-lg bg-gray-500 px-4 py-2 text-white hover:bg-gray-600 sm:w-auto">
                     <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
                 </a>
             </div>
@@ -138,17 +138,17 @@
                 </div>
 
                 <!-- Search and Filter Controls -->
-                <div class="mb-4 flex gap-4">
+                <div class="mb-4 flex flex-col gap-4 lg:flex-row">
                     <div class="flex-1">
                         <input type="text" id="searchDeliveryRequests" placeholder="Search by MTM, site, or company..."
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                onkeyup="filterBySearch()">
                     </div>
-                    <div class="flex gap-2">
-                        <select id="filterByCompany" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="filterByCompany()">
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:w-auto">
+                        <select id="filterByCompany" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="filterByCompany()">
                             <option value="">All Companies</option>
                         </select>
-                        <select id="filterByCustomer" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="filterByCustomer()">
+                        <select id="filterByCustomer" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="filterByCustomer()">
                             <option value="">All Customers</option>
                         </select>
                     </div>
@@ -206,7 +206,7 @@
 
             <!-- Summary and Actions -->
             <div class="bg-white rounded-lg shadow-lg p-6">
-                <div class="flex justify-between items-center">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900">SOA Summary</h3>
                         <div class="mt-2 text-sm text-gray-600">
@@ -214,11 +214,11 @@
                             <p id="totalAmount">Total Amount: ₱0.00</p>
                         </div>
                     </div>
-                    <div class="flex gap-4">
-                        <button type="button" onclick="calculateTotal()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex">
+                        <button type="button" onclick="calculateTotal()" class="inline-flex w-full items-center justify-center rounded-lg bg-blue-500 px-6 py-2 text-white hover:bg-blue-600">
                             <i class="fas fa-calculator mr-2"></i>Show Summary
                         </button>
-                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg">
+                        <button type="submit" class="inline-flex w-full items-center justify-center rounded-lg bg-green-600 px-6 py-2 text-white hover:bg-green-700">
                             <i class="fas fa-save mr-2"></i>Create SOA
                         </button>
                     </div>
@@ -230,7 +230,7 @@
 
 <div id="calculateTotalModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/65 px-4 backdrop-blur-[2px]">
     <div class="w-full max-w-4xl rounded-xl bg-white shadow-[0_30px_80px_rgba(15,23,42,0.35)] ring-1 ring-slate-200/80">
-        <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+        <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-4 py-4 sm:px-6">
             <div>
                 <h3 class="text-xl font-semibold text-gray-900">Selected Delivery Request Summary</h3>
                 <p class="mt-1 text-sm text-gray-500">Review the selected delivery requests and total amount before creating the SOA.</p>
@@ -240,7 +240,7 @@
             </button>
         </div>
 
-        <div class="max-h-[70vh] overflow-y-auto px-6 py-4">
+        <div class="max-h-[70vh] overflow-y-auto px-4 py-4 sm:px-6">
             <div id="calculateTotalModalEmpty" class="hidden rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-10 text-center text-gray-500">
                 <i class="fas fa-inbox text-3xl mb-3"></i>
                 <p class="font-medium">No delivery requests selected yet.</p>
@@ -259,9 +259,9 @@
                     </div>
                 </div>
 
-                <div class="mb-3 flex items-center justify-between gap-3">
+                <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p id="calculateTotalModalPaginationText" class="text-sm text-gray-500">Showing 0 to 0 of 0 rows</p>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-2 self-start sm:self-auto">
                         <span class="text-sm text-gray-500">Rows</span>
                         <select id="calculateTotalModalPageSize" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
                             <option value="5" selected>5</option>
@@ -287,7 +287,7 @@
                     </table>
                 </div>
 
-                <div class="mt-3 flex items-center justify-end gap-2">
+                <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                     <button type="button" id="calculateTotalModalPrev" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
                         Previous
                     </button>
@@ -299,11 +299,11 @@
             </div>
         </div>
 
-        <div class="flex items-center justify-end gap-3 border-t border-gray-200 px-6 py-4">
-            <button type="button" onclick="closeCalculateTotalModal()" class="rounded-lg bg-gray-100 px-4 py-2 text-gray-700 hover:bg-gray-200">
+        <div class="flex flex-col-reverse gap-3 border-t border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:justify-end sm:px-6">
+            <button type="button" onclick="closeCalculateTotalModal()" class="inline-flex w-full items-center justify-center rounded-lg bg-gray-100 px-4 py-2 text-gray-700 hover:bg-gray-200 sm:w-auto">
                 Close
             </button>
-            <button type="button" onclick="closeCalculateTotalModal(); document.querySelector('#soaForm button[type=&quot;submit&quot;]')?.focus();" class="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+            <button type="button" onclick="closeCalculateTotalModal(); document.querySelector('#soaForm button[type=&quot;submit&quot;]')?.focus();" class="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 sm:w-auto">
                 Continue to Create SOA
             </button>
         </div>
@@ -570,7 +570,7 @@ function filterDeliveryRequests() {
                                             <div class="truncate">Customer: ${lineItem.deliveryRequest ? lineItem.deliveryRequest.customerName : 'N/A'}</div>
                                             <div class="truncate md:col-span-2">Status: ${lineItem.requestStatus || lineItem.deliveryStatusName || 'N/A'}</div>
                                         </div>
-                                        <div class="flex gap-4 mt-1 text-xs text-gray-500">
+                                        <div class="mt-1 flex flex-col gap-1 text-xs text-gray-500 sm:flex-row sm:gap-4">
                                             <span>Accessorial: ₱${lineItem.accessorialRate.toFixed(2)}</span>
                                             <span>Add-on: ₱${lineItem.addOnRate.toFixed(2)}</span>
                                         </div>

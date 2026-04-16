@@ -177,21 +177,94 @@
             position: relative;
             z-index: 20;
         }
+
+        [x-cloak] {
+            display: none !important;
+        }
+
+        @media (max-width: 1023px) {
+            body {
+                overflow: hidden;
+            }
+        }
+
+        @media (max-width: 639px) {
+            :root {
+                --app-field-height: 3rem;
+                --app-field-radius: 0.8rem;
+                --app-field-font-size: 0.9rem;
+                --app-field-padding-y: 0.7rem;
+                --app-field-padding-x: 0.8rem;
+                --app-label-font-size: 0.9rem;
+            }
+
+            main .dataTables_wrapper .dataTables_filter input {
+                min-width: 0;
+                width: 100%;
+            }
+
+            main form [class*="min-w-[220px]"] {
+                min-width: 0 !important;
+                width: 100%;
+            }
+
+            main form .border-t.border-slate-200 .inline-flex,
+            main form .border-t.border-gray-200 .inline-flex {
+                width: 100%;
+            }
+        }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-900" x-data="{ sidebarOpen: true }">
+<body
+    class="bg-gray-100 text-gray-900"
+    x-data="{
+        sidebarExpanded: window.innerWidth >= 1024,
+        mobileSidebarOpen: false,
+        isMobile: window.innerWidth < 1024,
+        init() {
+            const syncLayout = () => {
+                const mobile = window.innerWidth < 1024;
+                this.isMobile = mobile;
 
-<div class="flex h-screen">
+                if (mobile) {
+                    this.mobileSidebarOpen = false;
+                }
+            };
+
+            syncLayout();
+            window.addEventListener('resize', syncLayout);
+        },
+        toggleSidebar() {
+            if (this.isMobile) {
+                this.mobileSidebarOpen = !this.mobileSidebarOpen;
+                return;
+            }
+
+            this.sidebarExpanded = !this.sidebarExpanded;
+        }
+    }"
+>
+
+<div class="relative flex h-screen overflow-hidden">
+    <div
+        x-cloak
+        x-show="isMobile && mobileSidebarOpen"
+        x-transition.opacity
+        @click="mobileSidebarOpen = false"
+        class="fixed inset-0 z-30 bg-slate-900/50 lg:hidden"
+    ></div>
 
     {{-- Sidebar --}}
-    <aside 
-        :class="sidebarOpen ? 'w-64' : 'w-16'" 
-        class="bg-gray-800 text-white flex flex-col transition-all duration-300 ease-in-out"
+    <aside
+        :class="isMobile
+            ? (mobileSidebarOpen ? 'translate-x-0 w-[18rem] max-w-[85vw]' : '-translate-x-full w-[18rem] max-w-[85vw]')
+            : (sidebarExpanded ? 'w-64' : 'w-16')"
+        class="fixed inset-y-0 left-0 z-40 flex flex-col bg-gray-800 text-white transition-all duration-300 ease-in-out lg:static lg:translate-x-0"
     >
         <!-- Toggle + Logo -->
         <div class="flex items-center px-4 py-3 border-b border-gray-700">
             <button 
-                @click="sidebarOpen = !sidebarOpen" 
+                @click="toggleSidebar()"
                 class="focus:outline-none text-white hover:text-gray-300 transition"
                 title="Toggle Sidebar"
             >
@@ -199,9 +272,9 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
             </button>
-            <a href="{{ route('dashboard') }}" 
-            class="text-lg font-semibold text-white ml-2" 
-            x-show="sidebarOpen" 
+            <a href="{{ route('dashboard') }}"
+            class="text-lg font-semibold text-white ml-2"
+            x-show="isMobile || sidebarExpanded"
             x-transition
             >
                 FCZCNYX
@@ -225,14 +298,14 @@
                     <span class="flex h-8 w-8 items-center justify-center rounded-full bg-sky-500/15 text-sky-300">
                         <i class="fas fa-tachometer-alt text-xs"></i>
                     </span>
-                    <span x-show="sidebarOpen" x-transition class="font-medium">Dashboard</span>
+                    <span x-show="isMobile || sidebarExpanded" x-transition class="font-medium">Dashboard</span>
                 </a>
             @else
                 <a href="{{ route('no.dashboard') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-red-300 transition hover:bg-gray-700/80 hover:text-red-200">
                     <span class="flex h-8 w-8 items-center justify-center rounded-full bg-red-500/15 text-red-300">
                         <i class="fas fa-exclamation-triangle text-xs"></i>
                     </span>
-                    <span x-show="sidebarOpen" x-transition class="font-medium">No Dashboard Assigned</span>
+                    <span x-show="isMobile || sidebarExpanded" x-transition class="font-medium">No Dashboard Assigned</span>
                 </a>
             @endif
 
@@ -242,7 +315,7 @@
                     <span class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-500/15 text-violet-300">
                         <i class="fas fa-boxes-stacked text-xs"></i>
                     </span>
-                    <span x-show="sidebarOpen" x-transition class="font-medium">Delivery Details</span>
+                    <span x-show="isMobile || sidebarExpanded" x-transition class="font-medium">Delivery Details</span>
                 </a>
             @endif
 
@@ -254,13 +327,13 @@
                         <span class="flex h-8 w-8 items-center justify-center rounded-full bg-amber-500/15 text-amber-300">
                             <i class="fas fa-cogs text-xs"></i>
                         </span>
-                        <span x-show="sidebarOpen" x-transition class="font-medium">Settings</span>
+                        <span x-show="isMobile || sidebarExpanded" x-transition class="font-medium">Settings</span>
                     </div>
-                    <svg x-show="sidebarOpen" :class="open ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg x-show="isMobile || sidebarExpanded" :class="open ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
-                <div x-show="open && sidebarOpen" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
+                <div x-show="open && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
                     @if($user->hasAnyRoleId([1, 2, 3, 34]))
                         <a href="{{ route('password.change') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white">
                             <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-300">
@@ -394,13 +467,13 @@
                         <span class="flex h-8 w-8 items-center justify-center rounded-full bg-cyan-500/15 text-cyan-300">
                             <i class="fas fa-scale-balanced text-xs"></i>
                         </span>
-                        <span x-show="sidebarOpen" x-transition class="font-medium">Running Balance</span>
+                        <span x-show="isMobile || sidebarExpanded" x-transition class="font-medium">Running Balance</span>
                     </div>
-                    <svg x-show="sidebarOpen" :class="openBalance ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg x-show="isMobile || sidebarExpanded" :class="openBalance ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
-                <div x-show="openBalance && sidebarOpen" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
+                <div x-show="openBalance && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
                       @if($user->hasAnyRoleId([1, 2, 3, 43]))<a href="{{ route('running_balance.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-wallet w-4 text-center text-cyan-300"></i><span>Running Balance</span></a>@endif
                     @if($user->hasAnyRoleId([1, 2, 3, 44]))<a href="{{ route('running_balance.adminFunds') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-location-dot w-4 text-center text-emerald-300"></i><span>Running Balance - Laguna</span></a>@endif
                     @if($user->hasAnyRoleId([1, 2, 3, 45]))<a href="{{ route('running_balance.davaoFunds') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-location-dot w-4 text-center text-orange-300"></i><span>Running Balance - Davao</span></a>@endif
@@ -416,13 +489,13 @@
                         <span class="flex h-8 w-8 items-center justify-center rounded-full bg-orange-500/15 text-orange-300">
                             <i class="fas fa-truck text-xs"></i>
                         </span>
-                        <span x-show="sidebarOpen" x-transition class="font-medium">Allocation</span>
+                        <span x-show="isMobile || sidebarExpanded" x-transition class="font-medium">Allocation</span>
                     </div>
-                    <svg x-show="sidebarOpen" :class="openAllocate ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg x-show="isMobile || sidebarExpanded" :class="openAllocate ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
-                <div x-show="openAllocate && sidebarOpen" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
+                <div x-show="openAllocate && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
                     @if($user->hasAnyRoleId([8]))<a href="{{ route('allocations.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-route w-4 text-center text-orange-300"></i><span>Allocate</span></a>@endif
                     @if($user->hasAnyRoleId([9]))<a href="{{ route('allocation.drlist') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-amber-300"></i><span>List</span></a>@endif
                 </div>
@@ -437,13 +510,13 @@
                         <span class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/15 text-blue-300">
                             <i class="fas fa-box text-xs"></i>
                         </span>
-                        <span x-show="sidebarOpen" x-transition class="font-medium">Delivery Request</span>
+                        <span x-show="isMobile || sidebarExpanded" x-transition class="font-medium">Delivery Request</span>
                     </div>
-                    <svg x-show="sidebarOpen" :class="openDR ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg x-show="isMobile || sidebarExpanded" :class="openDR ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
-                <div x-show="openDR && sidebarOpen" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
+                <div x-show="openDR && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
                     @if($user->hasAnyRoleId([1, 2, 3, 6]))<a href="{{ route('deliveryRequest.create') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-plus w-4 text-center text-blue-300"></i><span>Create</span></a>@endif
                     @if($user->hasAnyRoleId([1, 2, 3, 7]))<a href="{{ route('deliveryRequest.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-cyan-300"></i><span>List</span></a>@endif
                 </div>
@@ -458,13 +531,13 @@
                         <span class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-500/15 text-violet-300">
                             <i class="fas fa-project-diagram text-xs"></i>
                         </span>
-                        <span x-show="sidebarOpen" x-transition class="font-medium">Coordinator</span>
+                        <span x-show="isMobile || sidebarExpanded" x-transition class="font-medium">Coordinator</span>
                     </div>
-                    <svg x-show="sidebarOpen" :class="openCoordinator ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg x-show="isMobile || sidebarExpanded" :class="openCoordinator ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
-                <div x-show="openCoordinator && sidebarOpen" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
+                <div x-show="openCoordinator && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
                     @if($user->hasAnyRoleId([1, 2, 3, 10]))<a href="{{ route('coordinators.create') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-plus w-4 text-center text-violet-300"></i><span>Create Request</span></a>@endif
                     @if($user->hasAnyRoleId([1, 2, 3, 11]))<a href="{{ route('coordinators.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-fuchsia-300"></i><span>List</span></a>@endif
                     @if($user->hasAnyRoleId([1, 2, 3, 11]))<a href="{{ route('reports.dr') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-column w-4 text-center text-indigo-300"></i><span>Report</span></a>@endif
@@ -480,13 +553,13 @@
                         <span class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
                             <i class="fas fa-money-bill text-xs"></i>
                         </span>
-                        <span x-show="sidebarOpen" x-transition class="font-medium">Cash Voucher</span>
+                        <span x-show="isMobile || sidebarExpanded" x-transition class="font-medium">Cash Voucher</span>
                     </div>
-                    <svg x-show="sidebarOpen" :class="openCVR ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg x-show="isMobile || sidebarExpanded" :class="openCVR ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
-                <div x-show="openCVR && sidebarOpen" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
+                <div x-show="openCVR && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
                     {{-- Add CV List Admin links here --}}
                     @if($user->hasAnyRoleId([1, 2, 3, 13]))
                         <a href="{{ route('cashVoucherRequests.approval') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-circle-check w-4 text-center text-emerald-300"></i><span>DR Approval</span></a>
@@ -527,13 +600,13 @@
                         <span class="flex h-8 w-8 items-center justify-center rounded-full bg-teal-500/15 text-teal-300">
                             <i class="fas fa-file-invoice-dollar text-xs"></i>
                         </span>
-                        <span x-show="sidebarOpen" x-transition class="font-medium">Liquidation</span>
+                        <span x-show="isMobile || sidebarExpanded" x-transition class="font-medium">Liquidation</span>
                     </div>
-                    <svg x-show="sidebarOpen" :class="openLiquidation ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg x-show="isMobile || sidebarExpanded" :class="openLiquidation ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
-                <div x-show="openLiquidation && sidebarOpen" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
+                <div x-show="openLiquidation && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
                     @if($user->hasAnyRoleId([1, 2, 3, 20]))
                         <a href="{{ route('liquidations.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-file-circle-plus w-4 text-center text-teal-300"></i><span>Liquidate - DR</span></a>
                     @endif
@@ -570,13 +643,13 @@
                         <span class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/15 text-blue-300">
                             <i class="fas fa-receipt text-xs"></i>
                         </span>
-                        <span x-show="sidebarOpen" x-transition class="font-medium">Billing</span>
+                        <span x-show="isMobile || sidebarExpanded" x-transition class="font-medium">Billing</span>
                     </div>
-                    <svg x-show="sidebarOpen" :class="openBilling ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg x-show="isMobile || sidebarExpanded" :class="openBilling ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
-                <div x-show="openBilling && sidebarOpen" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
+                <div x-show="openBilling && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
                     <a href="{{ route('billing.dashboard') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-line w-4 text-center text-blue-300"></i><span>Dashboard</span></a>
                     <a href="{{ route('billing.createSOA.form') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-file-circle-plus w-4 text-center text-cyan-300"></i><span>Create SOA</span></a>
                     <a href="{{ route('billing.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-violet-300"></i><span>SOA List</span></a>
@@ -593,13 +666,13 @@
                         <span class="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
                             <i class="fas fa-clipboard-list text-xs"></i>
                         </span>
-                        <span x-show="sidebarOpen" x-transition class="font-medium">Attendance</span>
+                        <span x-show="isMobile || sidebarExpanded" x-transition class="font-medium">Attendance</span>
                     </div>
-                    <svg x-show="sidebarOpen" :class="openAttendance ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg x-show="isMobile || sidebarExpanded" :class="openAttendance ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
-                <div x-show="openAttendance && sidebarOpen" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
+                <div x-show="openAttendance && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
                     <a href="{{ route('attendance.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-emerald-300"></i><span>Attendance List</span></a>
                     <a href="{{ route('attendance.create') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-calendar-plus w-4 text-center text-lime-300"></i><span>Add Attendance</span></a>
                     <a href="{{ route('attendance.summary') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-table-columns w-4 text-center text-cyan-300"></i><span>Summary</span></a>
@@ -615,13 +688,13 @@
                         <span class="flex h-8 w-8 items-center justify-center rounded-full bg-pink-500/15 text-pink-300">
                             <i class="fas fa-users text-xs"></i>
                         </span>
-                        <span x-show="sidebarOpen" x-transition class="font-medium">Human Resource</span>
+                        <span x-show="isMobile || sidebarExpanded" x-transition class="font-medium">Human Resource</span>
                     </div>
-                    <svg x-show="sidebarOpen" :class="openHr ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg x-show="isMobile || sidebarExpanded" :class="openHr ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
-                <div x-show="openHr && sidebarOpen" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
+                <div x-show="openHr && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
                     <a href="{{ route('hr.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-line w-4 text-center text-pink-300"></i><span>Payroll Dashboard</span></a>
                     <a href="{{ route('hr.create') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-file-circle-plus w-4 text-center text-fuchsia-300"></i><span>Create Payroll</span></a>
                     <a href="{{ route('hr.payslips.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-file-lines w-4 text-center text-rose-300"></i><span>Payslips</span></a>
@@ -638,17 +711,25 @@
                 <span class="flex h-8 w-8 items-center justify-center rounded-full bg-white/15 text-red-100">
                     <i class="fas fa-sign-out-alt text-xs"></i>
                 </span>
-                <span x-show="sidebarOpen" x-transition class="font-medium">Logout</span>
+                <span x-show="isMobile || sidebarExpanded" x-transition class="font-medium">Logout</span>
             </button>
         </form>
     </aside>
 
 
     {{-- Main Content --}}
-    <div class="flex-1 flex flex-col overflow-hidden">
+    <div class="flex min-w-0 flex-1 flex-col overflow-hidden">
         {{-- Navbar --}}
         <header class="bg-white shadow px-4 py-3 flex justify-between items-center">
-            <div>
+            <div class="flex items-center gap-3">
+                <button
+                    type="button"
+                    @click="toggleSidebar()"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:bg-slate-50 lg:hidden"
+                    title="Open Menu"
+                >
+                    <i class="fas fa-bars text-base"></i>
+                </button>
                 <h1 class="text-xl font-semibold">@yield('title', 'Dashboard')</h1>
             </div>
             <div class="flex gap-4">
@@ -684,7 +765,7 @@
     </div>
 
         {{-- Page Content --}}
-        <main class="flex-1 overflow-y-auto p-4">
+        <main class="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6">
             @yield('content')
         </main>
 
