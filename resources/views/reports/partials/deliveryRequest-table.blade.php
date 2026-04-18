@@ -8,7 +8,7 @@
 @endphp
 
 <div class="border-b border-slate-200 bg-gradient-to-r from-indigo-50 via-white to-cyan-50 px-6 py-5">
-    <div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
             <div class="flex items-center gap-3">
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600">
@@ -57,7 +57,7 @@
 </div>
 
 <div class="space-y-4 p-5">
-    <div class="grid items-center gap-4 xl:ml-auto" style="grid-template-columns: minmax(0, 720px) auto; justify-content: space-between;">
+    <div class="grid grid-cols-1 items-center gap-4 xl:ml-auto xl:grid-cols-[minmax(0,720px)_auto] xl:justify-between">
         <label class="relative block w-full max-w-[720px]">
             <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                 <i class="fas fa-magnifying-glass text-sm"></i>
@@ -70,7 +70,7 @@
                 class="h-14 w-full rounded-2xl border border-slate-300 bg-white pl-11 pr-4 text-sm text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
             >
         </label>
-        <div class="flex items-center justify-end gap-3 whitespace-nowrap">
+        <div class="flex flex-wrap items-center justify-start gap-3 xl:justify-end">
             <span class="text-sm font-medium text-slate-500">Show</span>
             <select id="delivery-request-report-per-page" class="h-14 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100">
                 @foreach ([5, 10, 25, 50] as $size)
@@ -82,7 +82,59 @@
     </div>
 
     <div class="overflow-hidden rounded-[24px] border border-slate-200">
-        <div class="overflow-x-auto">
+        <div class="space-y-3 p-4 md:hidden">
+            @forelse($deliveryRequests as $request)
+                <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">MTM / Project</p>
+                            <p class="mt-1 break-words text-sm font-semibold text-slate-900">{{ $request->mtm ?? 'N/A' }}</p>
+                            <p class="mt-1 text-sm text-slate-500">{{ $request->project_name ?: 'No project name' }}</p>
+                        </div>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Booking Date</p>
+                                <p class="mt-1 text-sm text-slate-700">{{ optional($request->booking_date ? \Carbon\Carbon::parse($request->booking_date) : null)->format('M d, Y') ?? 'N/A' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Delivery Date</p>
+                                <p class="mt-1 text-sm text-slate-700">{{ optional($request->delivery_date ? \Carbon\Carbon::parse($request->delivery_date) : null)->format('M d, Y') ?? 'N/A' }}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Type</p>
+                                <span class="mt-1 inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
+                                    <i class="fas fa-layer-group"></i>
+                                    {{ $request->delivery_type ?? 'N/A' }}
+                                </span>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Area / Status</p>
+                                <p class="mt-1 text-sm font-medium text-slate-900">{{ optional($request->area)->area_code ?? 'N/A' }}</p>
+                                <p class="mt-1 text-sm text-slate-500">{{ optional($request->deliveryStatus)->status_name ?? 'N/A' }}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Company / Customer</p>
+                            <p class="mt-1 text-sm font-medium text-slate-900">{{ optional($request->company)->company_name ?? 'N/A' }}</p>
+                            <p class="mt-1 text-sm text-slate-500">{{ optional($request->customer)->name ?? 'N/A' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Rates</p>
+                            <p class="mt-1 text-sm font-semibold text-slate-900">Delivery: PHP {{ number_format((float) ($request->delivery_rate ?? 0), 2) }}</p>
+                            <p class="mt-1 text-sm text-slate-500">Accessorial: PHP {{ number_format((float) ($request->total_accessorial_rate ?? 0), 2) }}</p>
+                        </div>
+                    </div>
+                </article>
+            @empty
+                <div class="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+                    No delivery requests available for the current filters.
+                </div>
+            @endforelse
+        </div>
+
+        <div class="hidden overflow-x-auto md:block">
             <table class="min-w-full divide-y divide-slate-200 text-sm text-slate-700">
                 <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                     <tr>

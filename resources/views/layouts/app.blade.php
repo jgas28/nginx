@@ -212,6 +212,7 @@
             main form .border-t.border-gray-200 .inline-flex {
                 width: 100%;
             }
+
         }
     </style>
 </head>
@@ -949,12 +950,12 @@
 
     .global-datatable-footer {
         display: flex !important;
-        flex-wrap: nowrap !important;
-        align-items: center !important;
+        flex-wrap: wrap !important;
+        align-items: flex-start !important;
         justify-content: space-between !important;
         gap: 1rem !important;
         width: 100% !important;
-        flex-direction: row !important;
+        flex-direction: column !important;
     }
 
     .global-datatable-footer > :first-child {
@@ -971,12 +972,12 @@
     .global-datatable-footer > :last-child {
         display: flex !important;
         align-items: center !important;
-        justify-content: flex-end !important;
-        margin-left: auto !important;
-        flex: 0 0 auto;
-        text-align: right !important;
-        white-space: nowrap !important;
-        width: auto !important;
+        justify-content: flex-start !important;
+        margin-left: 0 !important;
+        flex: 1 1 100%;
+        text-align: left !important;
+        white-space: normal !important;
+        width: 100% !important;
     }
 
     .global-datatable-footer > :first-child p,
@@ -991,12 +992,13 @@
     .global-datatable-footer nav .relative.z-0,
     .global-datatable-footer nav .inline-flex {
         display: flex !important;
-        flex-wrap: nowrap !important;
+        flex-wrap: wrap !important;
         align-items: center !important;
     }
 
     .global-datatable-footer nav {
-        justify-content: flex-end !important;
+        justify-content: flex-start !important;
+        width: 100% !important;
     }
 
     .global-datatable-footer nav > div > div:first-child {
@@ -1006,9 +1008,9 @@
     .global-datatable-footer nav > div > div:last-child {
         display: flex !important;
         align-items: center !important;
-        justify-content: flex-end !important;
+        justify-content: flex-start !important;
         margin: 0 !important;
-        width: auto !important;
+        width: 100% !important;
     }
 
     .global-datatable-footer nav > div > div:last-child > div:first-child {
@@ -1018,8 +1020,9 @@
     .global-datatable-footer nav > div > div:last-child > div:last-child {
         display: flex !important;
         align-items: center !important;
-        justify-content: flex-end !important;
+        justify-content: flex-start !important;
         gap: 0.75rem !important;
+        flex-wrap: wrap !important;
     }
 
     .global-datatable-footer > :last-child p {
@@ -1029,7 +1032,53 @@
     .global-datatable-footer > :last-child .sm\:flex-1,
     .global-datatable-footer > :last-child .sm\:items-center,
     .global-datatable-footer > :last-child .sm\:justify-between {
-        justify-content: flex-end !important;
+        justify-content: flex-start !important;
+    }
+
+    @media (min-width: 640px) {
+        .global-datatable-footer {
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            flex-direction: row !important;
+        }
+
+        .global-datatable-footer > :last-child {
+            justify-content: flex-end !important;
+            margin-left: auto !important;
+            flex: 0 0 auto;
+            text-align: right !important;
+            white-space: nowrap !important;
+            width: auto !important;
+        }
+
+        .global-datatable-footer nav,
+        .global-datatable-footer nav > div,
+        .global-datatable-footer nav > div > div:last-child,
+        .global-datatable-footer nav .relative.z-0,
+        .global-datatable-footer nav .inline-flex {
+            flex-wrap: nowrap !important;
+        }
+
+        .global-datatable-footer nav {
+            justify-content: flex-end !important;
+            width: auto !important;
+        }
+
+        .global-datatable-footer nav > div > div:last-child {
+            justify-content: flex-end !important;
+            width: auto !important;
+        }
+
+        .global-datatable-footer nav > div > div:last-child > div:last-child {
+            justify-content: flex-end !important;
+            flex-wrap: nowrap !important;
+        }
+
+        .global-datatable-footer > :last-child .sm\:flex-1,
+        .global-datatable-footer > :last-child .sm\:items-center,
+        .global-datatable-footer > :last-child .sm\:justify-between {
+            justify-content: flex-end !important;
+        }
     }
 </style>
 

@@ -8,7 +8,7 @@
 @endphp
 
 <div class="space-y-5 p-5">
-    <div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         @foreach ($overviewCards as $card)
             <div class="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 px-4 py-4 shadow-sm">
                 <div class="flex items-center gap-3">
@@ -24,7 +24,7 @@
         @endforeach
     </div>
 
-    <div class="grid items-center gap-4 rounded-[24px] border border-slate-200 bg-white p-4" style="grid-template-columns: minmax(0, 720px) auto; justify-content: space-between;">
+    <div class="grid grid-cols-1 items-center gap-4 rounded-[24px] border border-slate-200 bg-white p-4 xl:grid-cols-[minmax(0,720px)_auto] xl:justify-between">
         <div class="relative min-w-0 max-w-[720px]">
             <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                 <i class="fas fa-magnifying-glass text-sm"></i>
@@ -38,7 +38,7 @@
             >
         </div>
 
-        <div class="flex items-center justify-end gap-3 whitespace-nowrap">
+        <div class="flex flex-wrap items-center justify-start gap-3 xl:justify-end">
             <label for="liquidations-approval-per-page" class="text-sm font-medium text-slate-600">Show</label>
             <select id="liquidations-approval-per-page" class="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-100">
                 @foreach ([5, 10, 25, 50] as $size)
@@ -50,7 +50,82 @@
     </div>
 
     <div class="overflow-hidden rounded-[24px] border border-slate-200">
-        <div class="overflow-x-auto">
+        <div class="space-y-3 p-4 md:hidden">
+            @forelse ($liquidations as $liquidation)
+                @php
+                    $cashVoucher = optional($liquidation->cashVoucher);
+                    $cvrType = $cashVoucher->cvr_type ?? null;
+                    $cvrNumber = preg_replace('/\/\d+$/', '', $cashVoucher->cvr_number ?? 'N/A');
+                    $details = '';
+
+                    if ($cvrType === 'rpm') {
+                        $truckName = optional($cashVoucher->trucks)->truck_name ?? 'N/A';
+                        $companyCode = optional($cashVoucher->company)->company_code ?? 'N/A';
+                        $expenseCodeVal = optional($cashVoucher->expenseTypes)->expense_code ?? 'N/A';
+                        $details = "-$truckName-$companyCode$expenseCodeVal";
+                    } elseif ($cvrType === 'admin') {
+                        $companyCode = optional($cashVoucher->company)->company_code ?? 'N/A';
+                        $expenseCodeVal = optional($cashVoucher->expenseTypes)->expense_code ?? 'N/A';
+                        $details = "-$companyCode$expenseCodeVal";
+                    } elseif (in_array($cvrType, ['delivery', 'pullout', 'accessorial', 'freight', 'others'])) {
+                        $truckName = optional(optional($liquidation->allocation)->truck)->truck_name ?? 'N/A';
+                        $companyCode = optional(optional($liquidation->deliveryRequest)->company)->company_code ?? 'N/A';
+                        $expenseCodeVal = optional(optional($liquidation->deliveryRequest)->expenseType)->expense_code ?? 'N/A';
+                        $details = "-$truckName-$companyCode$expenseCodeVal";
+                    }
+
+                    $typeStyle = match (strtolower((string) $cvrType)) {
+                        'admin' => 'bg-blue-50 text-blue-700 ring-blue-100',
+                        'rpm' => 'bg-amber-50 text-amber-700 ring-amber-100',
+                        'delivery', 'pullout', 'accessorial', 'freight', 'others' => 'bg-cyan-50 text-cyan-700 ring-cyan-100',
+                        default => 'bg-slate-100 text-slate-700 ring-slate-200',
+                    };
+                @endphp
+                <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">CVR Number</p>
+                            <p class="mt-1 break-words text-sm font-semibold text-slate-900">{{ $cvrNumber }}{!! $details !!}</p>
+                            <p class="mt-1 text-sm text-slate-500">{{ optional($cashVoucher->company)->company_name ?? optional(optional($cashVoucher->deliveryRequest)->company)->company_name ?? 'N/A' }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Voucher Type</p>
+                            <span class="mt-1 inline-flex rounded-full px-3 py-1 text-xs font-semibold ring-1 {{ $typeStyle }}">
+                                {{ strtoupper($cvrType ?? 'N/A') }}
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Prepared By</p>
+                                <p class="mt-1 text-sm text-slate-700">{{ trim(($liquidation->preparedBy->fname ?? '') . ' ' . ($liquidation->preparedBy->lname ?? '')) ?: 'N/A' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Noted By</p>
+                                <p class="mt-1 text-sm text-slate-700">{{ trim(($liquidation->notedBy->fname ?? '') . ' ' . ($liquidation->notedBy->lname ?? '')) ?: 'N/A' }}</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Created</p>
+                                <p class="mt-1 text-sm text-slate-500">{{ optional($liquidation->created_at)->format('Y-m-d') ?? 'N/A' }}</p>
+                            </div>
+                            <a href="{{ route('liquidations.approval', $liquidation->id) }}" class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-semibold shadow-md transition sm:w-auto" style="background-color:#7c3aed;border-color:#6d28d9;color:#ffffff;">
+                                <span class="inline-flex h-7 w-7 items-center justify-center rounded-full" style="background-color:#ffffff;color:#6d28d9;">
+                                    <i class="fas fa-eye text-[11px]"></i>
+                                </span>
+                                <span style="color:#ffffff;">Review</span>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            @empty
+                <div class="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+                    No liquidations found.
+                </div>
+            @endforelse
+        </div>
+
+        <div class="hidden overflow-x-auto md:block">
             <table class="min-w-full divide-y divide-slate-200 text-sm text-slate-700">
                 <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                     <tr>

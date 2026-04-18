@@ -6,7 +6,7 @@
 @endphp
 
 <div class="space-y-5 p-5">
-    <div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
             <div class="flex items-center gap-3">
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-600">
@@ -53,7 +53,7 @@
         </div>
     </div>
 
-    <div class="grid items-center gap-4 rounded-[24px] border border-slate-200 bg-white p-4" style="grid-template-columns: minmax(0, 620px) auto; justify-content: space-between;">
+    <div class="grid grid-cols-1 items-center gap-4 rounded-[24px] border border-slate-200 bg-white p-4 xl:grid-cols-[minmax(0,620px)_auto] xl:justify-between">
         <div class="relative min-w-0 max-w-[620px]">
             <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                 <i class="fas fa-magnifying-glass text-sm"></i>
@@ -67,7 +67,7 @@
             >
         </div>
 
-        <div class="flex items-center justify-end gap-3 whitespace-nowrap">
+        <div class="flex flex-wrap items-center justify-start gap-3 xl:justify-end">
             <label for="admin-cv-approval-per-page" class="text-sm font-medium text-slate-600">Show</label>
             <select id="admin-cv-approval-per-page" class="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100">
                 @foreach ([5, 10, 25, 50] as $size)
@@ -79,7 +79,60 @@
     </div>
 
     <div class="overflow-hidden rounded-[24px] border border-slate-200">
-        <div class="overflow-x-auto">
+        <div class="space-y-3 p-4 md:hidden">
+            @forelse ($cashVouchers as $voucher)
+                @php
+                    $total = collect(json_decode($voucher->amount_details, true))->sum();
+                    $formattedCvr = preg_replace('/\/\d+$/', '', $voucher->cvr_number);
+                    $label = $voucher->cvr_type === 'admin'
+                        ? $formattedCvr . '-' . ($voucher->company->company_code ?? 'N/A') . ($voucher->expenseTypes->expense_code ?? '')
+                        : $formattedCvr . '-' . ($voucher->trucks->truck_name ?? 'N/A') . '-' . ($voucher->company->company_code ?? 'N/A') . ($voucher->expenseTypes->expense_code ?? '');
+                @endphp
+                <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div class="space-y-3">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">CVR / Company</p>
+                            <p class="mt-1 break-words text-sm font-semibold text-slate-900">{{ $label }}</p>
+                            <p class="mt-1 text-sm text-slate-500">{{ $voucher->company->company_name ?? 'N/A' }}</p>
+                        </div>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Supplier / Expense</p>
+                                <p class="mt-1 text-sm font-medium text-slate-900">{{ $voucher->suppliers->supplier_name ?? 'N/A' }}</p>
+                                <p class="mt-1 text-sm text-slate-500">Expense: {{ $voucher->expenseTypes->expense_code ?? 'N/A' }}</p>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Amount / Type</p>
+                                <span class="mt-1 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
+                                    PHP {{ number_format((float) $total, 2) }}
+                                </span>
+                                <div class="mt-2">
+                                    <span class="inline-flex rounded-full bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 ring-1 ring-sky-100">
+                                        {{ strtoupper($voucher->cvr_type) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-2 sm:flex-row">
+                            <a href="{{ route('admin.approvalRequest', $voucher->id) }}" class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-3.5 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700 sm:w-auto">
+                                <i class="fas fa-circle-check text-[11px]"></i>
+                                Confirm
+                            </a>
+                            <a href="{{ route('admin.edit', $voucher->id) }}" class="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-slate-400 hover:text-slate-900 sm:w-auto">
+                                <i class="fas fa-pen-to-square text-[11px] text-blue-600"></i>
+                                Edit
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            @empty
+                <div class="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+                    No admin or RPM cash vouchers found for the current filters.
+                </div>
+            @endforelse
+        </div>
+
+        <div class="hidden overflow-x-auto md:block">
             <table class="min-w-full divide-y divide-slate-200 text-sm text-slate-700">
                 <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                     <tr>

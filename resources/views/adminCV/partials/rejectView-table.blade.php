@@ -67,8 +67,8 @@
                 Print Selected
             </button>
 
-            <div class="grid items-center gap-4 xl:ml-auto" style="grid-template-columns: minmax(0, 760px) auto; justify-content: space-between;">
-                <label class="relative block w-full" style="max-width: 760px;">
+            <div class="grid grid-cols-1 items-center gap-4 xl:ml-auto xl:grid-cols-[minmax(0,760px)_auto] xl:justify-between">
+                <label class="relative block w-full xl:max-w-[760px]">
                     <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                         <i class="fas fa-magnifying-glass text-base"></i>
                     </span>
@@ -82,7 +82,7 @@
                     >
                 </label>
 
-                <div class="flex items-center justify-end gap-3 whitespace-nowrap">
+                <div class="flex flex-wrap items-center justify-start gap-3 xl:justify-end">
                     <span class="text-base font-medium text-slate-500">Show</span>
                     <select
                         id="admin-reject-per-page"
@@ -99,7 +99,72 @@
         </div>
 
         <div class="overflow-hidden rounded-[28px] border border-slate-200">
-            <div class="overflow-x-auto">
+            <div class="space-y-3 p-4 md:hidden">
+                @forelse ($cashVouchers as $voucher)
+                    <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <div class="space-y-3">
+                            <label class="inline-flex items-center gap-2 text-sm font-medium text-slate-600">
+                                <input type="checkbox" name="voucher_ids[]" value="{{ $voucher->id }}" class="admin-reject-voucher-checkbox h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                                Select voucher
+                            </label>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">CVR Number</p>
+                                <p class="mt-1 break-words text-sm font-semibold text-slate-900">{{ $voucher->cvr_number }}</p>
+                                <p class="mt-1 text-sm text-slate-500">Updated {{ optional($voucher->updated_at)->format('M d, Y h:i A') ?? 'N/A' }}</p>
+                            </div>
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Type</p>
+                                    <span class="mt-1 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide {{ $voucher->cvr_type === 'rpm' ? 'border-violet-200 bg-violet-50 text-violet-700' : 'border-blue-200 bg-blue-50 text-blue-700' }}">
+                                        <i class="fas {{ $voucher->cvr_type === 'rpm' ? 'fa-gas-pump' : 'fa-building' }}"></i>
+                                        {{ strtoupper($voucher->cvr_type ?? 'N/A') }}
+                                    </span>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Amount</p>
+                                    <p class="mt-1 text-sm font-semibold text-slate-900">PHP {{ number_format((float) $voucher->amount, 2) }}</p>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Reject Remarks</p>
+                                @php $remarks = json_decode($voucher->reject_remarks, true); @endphp
+                                @if (is_array($remarks) && count($remarks))
+                                    <ul class="mt-2 space-y-2">
+                                        @foreach ($remarks as $remark)
+                                            <li class="rounded-2xl bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700 ring-1 ring-rose-100">{{ $remark }}</li>
+                                        @endforeach
+                                    </ul>
+                                @else
+                                    <p class="mt-1 text-sm text-slate-500">{{ $voucher->reject_remarks ?: 'No remarks' }}</p>
+                                @endif
+                            </div>
+                            <div class="flex flex-col gap-2 sm:flex-row">
+                                <a href="{{ route('adminCV.editCVR', $voucher->id) }}"
+                                   class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-semibold text-blue-700 transition hover:border-blue-300 hover:bg-blue-100 sm:w-auto">
+                                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-blue-600 ring-1 ring-blue-100">
+                                        <i class="fas fa-pen-to-square text-xs"></i>
+                                    </span>
+                                    <span>Edit</span>
+                                </a>
+                                <a href="{{ route('adminCV.rejectPrintView', ['id' => $voucher->id]) }}"
+                                   target="_blank"
+                                   class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 sm:w-auto">
+                                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-emerald-600 ring-1 ring-emerald-100">
+                                        <i class="fas fa-print text-xs"></i>
+                                    </span>
+                                    <span>Print</span>
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+                @empty
+                    <div class="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+                        No rejected cash vouchers found.
+                    </div>
+                @endforelse
+            </div>
+
+            <div class="hidden overflow-x-auto md:block">
                 <table class="min-w-full divide-y divide-slate-200 text-sm">
                     <thead class="bg-slate-50 text-slate-700">
                         <tr>
