@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class LiquidationController extends Controller
 {
@@ -1627,19 +1628,29 @@ class LiquidationController extends Controller
 
     public function Overall(Request $request)
     {
-        // Extract the request data
-        $companyId = $request->input('company_id');
-        $dateFrom = $request->input('date_from', now()->startOfMonth()->toDateString());
-        $dateTo = $request->input('date_to', now()->endOfMonth()->toDateString());
-        $requestCode = $request->input('request_code');
-        $cvrNumber = $request->input('cvr_number');
-        $status = $request->input('status');
+        $validated = $request->validate([
+            'company_id' => ['nullable', 'integer', 'exists:companies,id'],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'request_code' => ['nullable', 'string', 'max:100'],
+            'cvr_number' => ['nullable', 'string', 'max:100'],
+            'status' => ['nullable', 'in:1,3,5,10,for_validation,for_collection,for_approval,liquidation_in_progress,for_liquidation'],
+            'page' => ['nullable', 'integer', 'min:1'],
+            'per_page' => ['nullable', 'integer', 'in:10,25,50,100'],
+        ]);
 
-        // Prepare conditions and params
+        $companyId = $validated['company_id'] ?? null;
+        $dateFrom = $validated['date_from'] ?? now()->startOfMonth()->toDateString();
+        $dateTo = $validated['date_to'] ?? now()->endOfMonth()->toDateString();
+        $requestCode = $validated['request_code'] ?? null;
+        $cvrNumber = trim((string) ($validated['cvr_number'] ?? ''));
+        $status = $validated['status'] ?? null;
+        $perPage = (int) ($validated['per_page'] ?? 25);
+        $page = (int) ($validated['page'] ?? 1);
+
         $conditions = "WHERE DATE(cv.created_at) BETWEEN ? AND ?";
         $params = [$dateFrom, $dateTo];
 
-        // Add filters dynamically
         if ($requestCode) {
             $conditions .= " AND crt.request_type = ?";
             $params[] = $requestCode;
@@ -1654,49 +1665,44 @@ class LiquidationController extends Controller
             $params[] = $companyId;
         }
 
-        if ($cvrNumber) {
+        if ($cvrNumber !== '') {
             $conditions .= " AND cv.cvr_number LIKE ?";
-            $params[] = "%$cvrNumber%";
+            $params[] = '%' . $cvrNumber . '%';
         }
 
-        // Add status filter (handled with a switch)
         if ($status) {
             switch ($status) {
-                case '1':  // Pending Cash Approval
+                case '1':
                     $conditions .= " AND cv.status = 1";
                     break;
-                case '3':  // Rejected CVR
+                case '3':
                     $conditions .= " AND cv.status = 3";
                     break;
-                case '5':  // Completed
+                case '5':
                     $conditions .= " AND l.status = 5";
                     break;
-                case '10': // Rejected Liquidation
+                case '10':
                     $conditions .= " AND l.status = 10";
                     break;
-                case 'for_validation':  // For Validation
+                case 'for_validation':
                     $conditions .= " AND l.status = 1";
                     break;
-                case 'for_collection':  // For Collection
+                case 'for_collection':
                     $conditions .= " AND l.status = 3";
                     break;
-                case 'for_approval':  // For Approval
+                case 'for_approval':
                     $conditions .= " AND l.status = 4";
                     break;
-                case 'liquidation_in_progress':  // Liquidation In Progress
+                case 'liquidation_in_progress':
                     $conditions .= " AND l.status NOT IN (1, 3, 4, 5, 10)";
                     break;
-                case 'for_liquidation':  // For Liquidation
+                case 'for_liquidation':
                     $conditions .= " AND ca.status = 1 AND l.status IS NULL";
-                    break;
-                default:
                     break;
             }
         }
 
-
-        // SQL query (fixed)
-        $sql = "
+        $baseSql = "
             SELECT
                 cv.id AS cash_voucher_id,
                 cv.cvr_type,
@@ -1808,18 +1814,79 @@ class LiquidationController extends Controller
                                                                 END
             LEFT JOIN fczcnyx.cvr_request_type crt ON crt.id = cv.request_type
             $conditions
-            ORDER BY company_id ASC, cvr_number ASC;
         ";
 
-        // Execute query
-        $cashVouchers = DB::select($sql, $params);
+        $summaryRow = DB::selectOne(
+            "
+                SELECT
+                    COUNT(*) AS total_rows,
+                    COALESCE(SUM(filtered_rows.requested_amount), 0) AS total_requested,
+                    COALESCE(SUM(filtered_rows.approved_amount), 0) AS total_approved,
+                    COALESCE(SUM(filtered_rows.liquidated_amount_cash), 0) AS total_cash,
+                    COALESCE(SUM(filtered_rows.liquidated_amount_card), 0) AS total_card
+                FROM ($baseSql) AS filtered_rows
+            ",
+            $params
+        );
 
-        Log::info("Status Filter: " . $status);
-        Log::info($request->all());
-        Log::info("SQL Query: " . $sql);
-        Log::info("Parameters: ", $params);
+        $total = (int) ($summaryRow->total_rows ?? 0);
+        $offset = max(0, ($page - 1) * $perPage);
+        $cashVouchers = DB::select(
+            "
+                SELECT * FROM ($baseSql) AS filtered_rows
+                ORDER BY filtered_rows.company_id ASC, filtered_rows.cvr_number ASC
+                LIMIT ? OFFSET ?
+            ",
+            [...$params, $perPage, $offset]
+        );
 
-        return view('liquidations.overall', compact('cashVouchers'));
+        $cashVouchers = new LengthAwarePaginator(
+            collect($cashVouchers),
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        $summary = [
+            'requested' => (float) ($summaryRow->total_requested ?? 0),
+            'approved' => (float) ($summaryRow->total_approved ?? 0),
+            'cash' => (float) ($summaryRow->total_cash ?? 0),
+            'card' => (float) ($summaryRow->total_card ?? 0),
+            'liquidated' => (float) (($summaryRow->total_cash ?? 0) + ($summaryRow->total_card ?? 0)),
+            'rows' => $total,
+        ];
+
+        $companies = Company::query()
+            ->orderBy('company_code')
+            ->get(['id', 'company_code', 'company_name']);
+
+        $requestTypes = DB::table('cvr_request_type')
+            ->orderBy('request_type')
+            ->pluck('request_type');
+
+        $statusOptions = [
+            '1' => 'Pending Cash Approval',
+            '3' => 'Rejected CVR',
+            '5' => 'Completed',
+            '10' => 'Rejected Liquidation',
+            'for_validation' => 'For Validation',
+            'for_collection' => 'For Collection',
+            'for_approval' => 'For Approval',
+            'for_liquidation' => 'For Liquidation',
+        ];
+
+        return view('liquidations.overall', compact(
+            'cashVouchers',
+            'summary',
+            'companies',
+            'requestTypes',
+            'statusOptions',
+            'perPage'
+        ));
     }
 
 
