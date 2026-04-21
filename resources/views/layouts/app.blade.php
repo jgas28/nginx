@@ -1340,6 +1340,36 @@
             URL.revokeObjectURL(downloadUrl);
         }
 
+        function hasExistingExcelAction(table) {
+            const scope = table.closest('section, main > div, .rounded-2xl, .rounded-[28px], .rounded-[30px], .bg-white') || table.parentElement;
+
+            if (!(scope instanceof HTMLElement)) {
+                return false;
+            }
+
+            const candidates = Array.from(scope.querySelectorAll('a, button'));
+
+            return candidates.some((candidate) => {
+                if (!(candidate instanceof HTMLElement)) {
+                    return false;
+                }
+
+                if (candidate.hasAttribute('data-fast-table-export-button') || candidate.closest('[data-fast-table-export-for]')) {
+                    return false;
+                }
+
+                const text = (candidate.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+                const href = candidate instanceof HTMLAnchorElement ? (candidate.getAttribute('href') || '').toLowerCase() : '';
+                const iconClass = candidate.querySelector('.fa-file-excel, .fa-file-csv');
+
+                return !!iconClass ||
+                    text.includes('export excel') ||
+                    text.includes('download excel') ||
+                    href.includes('export') ||
+                    href.includes('excel');
+            });
+        }
+
         function enhanceFastTableExports(root = document) {
             const tables = root.matches?.('[data-fast-table]')
                 ? [root]
@@ -1347,6 +1377,14 @@
 
             tables.forEach((table) => {
                 if (!(table instanceof HTMLElement) || !(table.parentElement instanceof HTMLElement)) {
+                    return;
+                }
+
+                if (hasExistingExcelAction(table)) {
+                    const existingExportBar = table.parentElement.querySelector(`[data-fast-table-export-for="${table.id}"]`);
+                    if (existingExportBar instanceof HTMLElement) {
+                        existingExportBar.remove();
+                    }
                     return;
                 }
 

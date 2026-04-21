@@ -1320,9 +1320,23 @@ class LiquidationController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Liquidation $liquidation)
+    public function edit($id)
     {
-        //
+        $approval = cvr_approval::find($id);
+
+        if ($approval) {
+            return redirect()->route('liquidations.liquidate', $approval->id);
+        }
+
+        $liquidation = Liquidation::findOrFail($id);
+
+        return match ((string) $liquidation->status) {
+            '1' => redirect()->route('liquidations.review', $liquidation->id),
+            '3' => redirect()->route('liquidations.validated', $liquidation->id),
+            '4' => redirect()->route('liquidations.approval', $liquidation->id),
+            '10' => redirect()->route('liquidations.rejectEdit', $liquidation->id),
+            default => redirect()->route('liquidations.review', $liquidation->id),
+        };
     }
 
     /**
