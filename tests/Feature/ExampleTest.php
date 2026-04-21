@@ -14,6 +14,13 @@ class ExampleTest extends TestCase
     {
         $response = $this->get('/');
 
-        $response->assertStatus(200);
+        $response->assertRedirect(route('login'));
+    }
+
+    public function test_the_login_page_is_accessible(): void
+    {
+        $response = $this->get(route('login'));
+
+        $response->assertOk();
     }
 }

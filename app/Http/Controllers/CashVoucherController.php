@@ -1536,18 +1536,37 @@ class CashVoucherController extends Controller
 
         public function editCVR($id)
         {
-            $cashVoucher = CashVoucher::where('id', $id)->first();
+            $cashVoucher = CashVoucher::with(['deliveryRequest.company', 'company'])->findOrFail($id);
 
-            $deliveryLineItems = DeliveryRequest::with(['lineItems', 'company'])
-            ->where('id', $cashVoucher->dr_id)
-            ->get();
+            $deliveryRequest = $cashVoucher->deliveryRequest;
+
+            $deliveryLineItems = DeliveryRequestLineItem::query()
+                ->when($cashVoucher->dr_id || $cashVoucher->mtm, function ($query) use ($cashVoucher) {
+                    $query->where(function ($innerQuery) use ($cashVoucher) {
+                        if (!empty($cashVoucher->dr_id)) {
+                            $innerQuery->orWhere('dr_id', $cashVoucher->dr_id);
+                        }
+
+                        if (!empty($cashVoucher->mtm)) {
+                            $innerQuery->orWhere('mtm', $cashVoucher->mtm);
+                        }
+                    });
+                })
+                ->where('status', '!=', 0)
+                ->get();
 
             $employees = User::where('status', '!=', 0)->get();
-            $approves = Approver::all();
             $taxes = WithholdingTax::all();
             $requestType = cvr_request_type::all();
 
-            return view('cashVoucherRequests.editCVR', compact('cashVoucher', 'deliveryLineItems', 'employees', 'taxes', 'requestType'));
+            return view('cashVoucherRequests.editCVR', compact(
+                'cashVoucher',
+                'deliveryRequest',
+                'deliveryLineItems',
+                'employees',
+                'taxes',
+                'requestType'
+            ));
         }
 
         public function updateCVR(Request $request)

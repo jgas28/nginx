@@ -1,64 +1,76 @@
 @extends('layouts.app')
 
-@section('title', 'FCZCNYX')
+@section('title', 'Edit CVR')
 
 @section('content')
+@php
+    $primaryLineItem = $deliveryLineItems->first();
+    $headerMtm = $cashVoucher->mtm ?: $primaryLineItem?->mtm ?: $deliveryRequest?->mtm;
+    $headerCompany = $deliveryRequest?->company?->company_name ?: $cashVoucher->company?->company_name;
+    $headerDeliveryType = $deliveryRequest?->delivery_type;
+    $existingRemarks = old('remarks', json_decode($cashVoucher->remarks, true) ?? []);
+@endphp
+
 <style>
     .btn-check:checked + .btn-cvr {
-        background-color: #0d6efd; /* Bootstrap primary */
+        background-color: #0d6efd;
         color: #fff;
         border-color: #0d6efd;
     }
 </style>
 
 <div class="bg-white shadow-lg rounded-lg">
-    <!-- Header -->
     <div class="bg-gradient-to-r from-blue-600 to-blue-500 text-white text-center py-4 rounded-t-lg">
         <h3 class="text-lg font-bold">Delivery Information</h3>
     </div>
 
-    <!-- Card Body -->
     <div class="p-6">
-        <!-- Header Section -->
         <div class="flex flex-wrap justify-center mb-6 text-center">
             <div class="w-full md:w-1/3 mb-4">
                 <p class="text-blue-600 uppercase font-semibold">MTM Number</p>
-                <p class="text-gray-600">{{ $deliveryLineItems->first()->mtm }}</p>
-                <input type="hidden" name="mtm" value="{{ $deliveryLineItems->first()->mtm }}">
+                <p class="text-gray-600">{{ $headerMtm ?: 'N/A' }}</p>
             </div>
             <div class="w-full md:w-1/3 mb-4">
                 <p class="text-blue-600 uppercase font-semibold">Company</p>
-                <p class="text-gray-600">{{ $deliveryLineItems->first()->company->company_name }}</p>
+                <p class="text-gray-600">{{ $headerCompany ?: 'N/A' }}</p>
             </div>
             <div class="w-full md:w-1/3">
                 <p class="text-blue-600 uppercase font-semibold">Delivery Type</p>
-                <p class="text-gray-600">{{ $deliveryLineItems->first()->delivery_type }}</p>
+                <p class="text-gray-600">{{ $headerDeliveryType ?: 'N/A' }}</p>
             </div>
         </div>
 
-        <!-- Line Items -->
-        @foreach($deliveryLineItems as $deliveryLineItem)
-        <div class="bg-gray-50 border rounded-lg p-4 mb-4">
-            <div class="flex flex-wrap justify-between text-center">
-                <div class="w-full md:w-1/3 mb-3">
-                    <p class="text-blue-600 uppercase font-semibold">Site Name</p>
-                    <p class="text-gray-800">{{ str_replace(['"'], '', $deliveryLineItem->site_name) }}</p>
-                </div>
-                <div class="w-full md:w-1/3 mb-3">
-                    <p class="text-blue-600 uppercase font-semibold">Delivery Number</p>
-                    <p class="text-gray-800">{{ str_replace(['"'], '', $deliveryLineItem->delivery_number) }}</p>
-                </div>
-                <div class="w-full md:w-1/3">
-                    <p class="text-blue-600 uppercase font-semibold">Delivery Address</p>
-                    <p class="text-gray-800">{{ str_replace(['"'], '', $deliveryLineItem->delivery_address) }}</p>
+        @forelse($deliveryLineItems as $deliveryLineItem)
+            <div class="bg-gray-50 border rounded-lg p-4 mb-4">
+                <div class="flex flex-wrap justify-between text-center">
+                    <div class="w-full md:w-1/3 mb-3">
+                        <p class="text-blue-600 uppercase font-semibold">Site Name</p>
+                        <p class="text-gray-800">
+                            {{ is_array($deliveryLineItem->site_name) ? implode(', ', $deliveryLineItem->site_name) : str_replace(['"'], '', (string) $deliveryLineItem->site_name) }}
+                        </p>
+                    </div>
+                    <div class="w-full md:w-1/3 mb-3">
+                        <p class="text-blue-600 uppercase font-semibold">Delivery Number</p>
+                        <p class="text-gray-800">
+                            {{ is_array($deliveryLineItem->delivery_number) ? implode(', ', $deliveryLineItem->delivery_number) : str_replace(['"'], '', (string) $deliveryLineItem->delivery_number) }}
+                        </p>
+                    </div>
+                    <div class="w-full md:w-1/3">
+                        <p class="text-blue-600 uppercase font-semibold">Delivery Address</p>
+                        <p class="text-gray-800">
+                            {{ is_array($deliveryLineItem->delivery_address) ? implode(', ', $deliveryLineItem->delivery_address) : str_replace(['"'], '', (string) $deliveryLineItem->delivery_address) }}
+                        </p>
+                    </div>
                 </div>
             </div>
-        </div>
-        @endforeach
+        @empty
+            <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-center text-sm text-amber-800">
+                No active delivery line items were found for this cash voucher. You can still update the CVR details below.
+            </div>
+        @endforelse
     </div>
 </div>
 
-<!-- Cash Voucher Request Form -->
 <div class="bg-white shadow-lg rounded-lg mt-6">
     <div class="bg-blue-600 text-white text-center py-3 rounded-t-lg">
         <h4 class="text-lg font-bold">Cash Voucher Request</h4>
@@ -74,7 +86,6 @@
             <input type="hidden" name="cvr_type" value="{{ $cashVoucher->cvr_type }}">
             <input type="hidden" name="company_id" value="{{ $cashVoucher->company_id }}">
 
-            <!-- CVR Type -->
             <fieldset class="bg-gray-100 p-4 rounded">
                 <legend class="text-blue-700 font-semibold text-sm uppercase mb-3">CVR Type</legend>
 
@@ -100,14 +111,19 @@
                     </div>
 
                     <div id="tax_base_container" class="w-full md:w-1/3 {{ $cashVoucher->voucher_type != 'with_tax' || !$cashVoucher->tax_based_amount ? 'hidden' : '' }}">
-                        <input type="number" name="tax_base_amount" class="input w-full" placeholder="Enter base amount"
-                            value="{{ old('tax_base_amount', $cashVoucher->tax_based_amount) }}" step="0.01">
+                        <input
+                            type="number"
+                            name="tax_base_amount"
+                            class="input w-full"
+                            placeholder="Enter base amount"
+                            value="{{ old('tax_base_amount', $cashVoucher->tax_based_amount) }}"
+                            step="0.01"
+                        >
                         <label class="block text-sm text-gray-600 mt-1">Tax Base Amount</label>
                     </div>
                 </div>
             </fieldset>
 
-            <!-- CVR Info -->
             <fieldset class="bg-gray-100 p-4 rounded">
                 <legend class="text-blue-700 font-semibold text-sm uppercase mb-3">CVR Information</legend>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -117,8 +133,7 @@
                     </div>
 
                     <div>
-                        <input type="number" name="amount" step="0.01" min="0" required class="input w-full"
-                            value="{{ old('amount', $cashVoucher->amount) }}">
+                        <input type="number" name="amount" step="0.01" min="0" required class="input w-full" value="{{ old('amount', $cashVoucher->amount) }}">
                         <label class="block text-sm text-gray-600 mt-1">Amount</label>
                     </div>
 
@@ -148,18 +163,13 @@
                 </div>
             </fieldset>
 
-            <!-- Remarks -->
             <fieldset class="bg-gray-100 p-4 rounded">
                 <legend class="text-blue-700 font-semibold text-sm uppercase mb-3">Remarks</legend>
                 <div id="remarks_fields" class="space-y-2">
-                    @php
-                        $existingRemarks = json_decode($cashVoucher->remarks, true) ?? [];
-                    @endphp
-
                     @foreach($existingRemarks as $remark)
                         <div class="flex gap-2 items-center">
                             <input type="text" name="remarks[]" value="{{ $remark }}" class="form-input w-full rounded border-gray-300">
-                            <button type="button" class="text-red-600 hover:text-red-800 font-bold remove_remarks">×</button>
+                            <button type="button" class="text-red-600 hover:text-red-800 font-bold remove_remarks">x</button>
                         </div>
                     @endforeach
                 </div>
@@ -168,19 +178,15 @@
                 </button>
             </fieldset>
 
-            <!-- Submit -->
             <div class="text-center mt-6">
                 <button type="submit" class="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-3 rounded-lg shadow-lg font-semibold">
                     <i class="bi bi-save"></i> Update CVR
                 </button>
             </div>
         </form>
-
     </div>
 </div>
 
-
-<!-- Custom Styles -->
 <style>
     .card {
         border-radius: 12px;
@@ -238,7 +244,6 @@
     .shadow {
         box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.15);
     }
-
 </style>
 
 <script>
@@ -248,7 +253,6 @@
         const taxSelect = document.querySelector('select[name="withholding_tax"]');
         const voucherTypeSelect = document.getElementById('voucher_type_select');
 
-        // Toggle tax fields visibility based on voucher type
         function toggleTaxFields(value) {
             const showTax = value === 'with_tax';
 
@@ -256,28 +260,25 @@
             taxBaseField.classList.toggle('hidden', !showTax);
 
             if (!showTax) {
-                // Clear tax fields if type is changed to regular
                 taxSelect.value = '';
                 const taxBaseInput = taxBaseField.querySelector('input[name="tax_base_amount"]');
-                if (taxBaseInput) taxBaseInput.value = '';
+                if (taxBaseInput) {
+                    taxBaseInput.value = '';
+                }
             }
         }
 
-        // Event listener for CVR type dropdown
         voucherTypeSelect.addEventListener('change', function () {
             toggleTaxFields(this.value);
         });
 
-        // Show tax base field only if a tax is selected
         taxSelect.addEventListener('change', function () {
             const selected = this.value !== '';
             taxBaseField.classList.toggle('hidden', !selected);
         });
 
-        // Initialize based on current state
         toggleTaxFields(voucherTypeSelect.value);
 
-        // ====== Remarks Field Add/Remove ======
         const remarksFields = document.getElementById('remarks_fields');
 
         document.getElementById('add_remarks').addEventListener('click', function () {
@@ -286,7 +287,7 @@
 
             newRemarksField.innerHTML = `
                 <input type="text" name="remarks[]" class="form-input w-full rounded border-gray-300" placeholder="Enter Remarks">
-                <button type="button" class="text-red-600 hover:text-red-800 font-bold remove_remarks">×</button>
+                <button type="button" class="text-red-600 hover:text-red-800 font-bold remove_remarks">x</button>
             `;
 
             remarksFields.appendChild(newRemarksField);
@@ -299,6 +300,4 @@
         });
     });
 </script>
-
-
 @endsection

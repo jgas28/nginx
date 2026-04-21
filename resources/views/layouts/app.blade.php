@@ -948,6 +948,52 @@
         white-space: nowrap;
     }
 
+    .global-fast-table-export {
+        display: flex;
+        justify-content: flex-end;
+        margin-bottom: 0;
+        padding: 0.5rem 1.5rem 0.75rem;
+    }
+
+    .global-export-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        border-radius: 1rem;
+        border: 1px solid #bfdbfe;
+        background: linear-gradient(135deg, #eff6ff, #dbeafe);
+        padding: 0.7rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #1d4ed8;
+        box-shadow: 0 6px 18px rgba(59, 130, 246, 0.08);
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    }
+
+    .global-export-action:hover {
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+        border-color: #93c5fd;
+        color: #1e40af;
+        transform: translateY(-1px);
+    }
+
+    .global-export-action:disabled {
+        cursor: wait;
+        opacity: 0.7;
+        transform: none;
+    }
+
+    @media (max-width: 639px) {
+        .global-fast-table-export {
+            padding: 0.5rem 1rem 0.75rem;
+        }
+
+        .global-export-action {
+            width: 100%;
+        }
+    }
+
     .global-datatable-footer {
         display: flex !important;
         flex-wrap: wrap !important;
@@ -986,53 +1032,18 @@
         text-align: left !important;
     }
 
-    .global-datatable-footer nav,
-    .global-datatable-footer nav > div,
-    .global-datatable-footer nav > div > div:last-child,
-    .global-datatable-footer nav .relative.z-0,
-    .global-datatable-footer nav .inline-flex {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        align-items: center !important;
-    }
-
-    .global-datatable-footer nav {
-        justify-content: flex-start !important;
+    .global-datatable-footer .app-pagination {
         width: 100% !important;
     }
 
-    .global-datatable-footer nav > div > div:first-child {
-        display: none !important;
-    }
-
-    .global-datatable-footer nav > div > div:last-child {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
-        margin: 0 !important;
-        width: 100% !important;
-    }
-
-    .global-datatable-footer nav > div > div:last-child > div:first-child {
-        display: none !important;
-    }
-
-    .global-datatable-footer nav > div > div:last-child > div:last-child {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: flex-start !important;
-        gap: 0.75rem !important;
+    .global-datatable-footer .app-pagination-page-list {
+        max-width: 100%;
         flex-wrap: wrap !important;
     }
 
-    .global-datatable-footer > :last-child p {
-        display: none !important;
-    }
-
-    .global-datatable-footer > :last-child .sm\:flex-1,
-    .global-datatable-footer > :last-child .sm\:items-center,
-    .global-datatable-footer > :last-child .sm\:justify-between {
-        justify-content: flex-start !important;
+    .global-datatable-footer > :last-child nav {
+        margin-left: 0 !important;
+        width: 100% !important;
     }
 
     @media (min-width: 640px) {
@@ -1051,33 +1062,13 @@
             width: auto !important;
         }
 
-        .global-datatable-footer nav,
-        .global-datatable-footer nav > div,
-        .global-datatable-footer nav > div > div:last-child,
-        .global-datatable-footer nav .relative.z-0,
-        .global-datatable-footer nav .inline-flex {
-            flex-wrap: nowrap !important;
-        }
-
-        .global-datatable-footer nav {
-            justify-content: flex-end !important;
+        .global-datatable-footer > :last-child nav,
+        .global-datatable-footer .app-pagination {
             width: auto !important;
         }
 
-        .global-datatable-footer nav > div > div:last-child {
-            justify-content: flex-end !important;
-            width: auto !important;
-        }
-
-        .global-datatable-footer nav > div > div:last-child > div:last-child {
-            justify-content: flex-end !important;
+        .global-datatable-footer .app-pagination-page-list {
             flex-wrap: nowrap !important;
-        }
-
-        .global-datatable-footer > :last-child .sm\:flex-1,
-        .global-datatable-footer > :last-child .sm\:items-center,
-        .global-datatable-footer > :last-child .sm\:justify-between {
-            justify-content: flex-end !important;
         }
     }
 </style>
@@ -1182,11 +1173,240 @@
             });
         }
 
+        function ensureFastTableId(table) {
+            if (!table.id) {
+                table.id = `fast-table-${Math.random().toString(36).slice(2, 10)}`;
+            }
+
+            return table.id;
+        }
+
+        function getExportFilename(table) {
+            const tableId = ensureFastTableId(table);
+            const heading = table.closest('section, div')?.querySelector('h1, h2, h3');
+            const label = (table.dataset.exportName || heading?.textContent || tableId || 'table')
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '');
+
+            const date = new Date();
+            const stamp = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+            return `${label || 'table'}-${stamp}.xls`;
+        }
+
+        function getCurrentTableElement(table) {
+            return table.querySelector('table');
+        }
+
+        function extractTableHeaders(tableElement) {
+            const headerCells = Array.from(tableElement.querySelectorAll('thead th'));
+
+            if (headerCells.length > 0) {
+                return headerCells.map((cell) => (cell.textContent || '').replace(/\s+/g, ' ').trim());
+            }
+
+            const firstRowCells = Array.from(tableElement.querySelectorAll('tr:first-child th, tr:first-child td'));
+            return firstRowCells.map((cell) => (cell.textContent || '').replace(/\s+/g, ' ').trim());
+        }
+
+        function extractTableRows(tableElement) {
+            return Array.from(tableElement.querySelectorAll('tbody tr'))
+                .map((row) => {
+                    const cells = Array.from(row.querySelectorAll('th, td'))
+                        .map((cell) => (cell.textContent || '').replace(/\s+/g, ' ').trim());
+
+                    if (cells.length === 0) {
+                        return null;
+                    }
+
+                    const hasVisibleData = cells.some((value) => value !== '');
+                    if (!hasVisibleData) {
+                        return null;
+                    }
+
+                    if (cells.length === 1) {
+                        const colspan = row.querySelector('td, th')?.getAttribute('colspan');
+                        if (colspan && /no\s+|try\s+|not\s+found|empty/i.test(cells[0])) {
+                            return null;
+                        }
+                    }
+
+                    return cells;
+                })
+                .filter(Boolean);
+        }
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        async function getTableHtmlFromResponse(response) {
+            const contentType = response.headers.get('content-type') || '';
+
+            if (contentType.includes('application/json')) {
+                const payload = await response.json();
+                return payload.html || '';
+            }
+
+            return await response.text();
+        }
+
+        function parseHtmlTable(html) {
+            const parser = new DOMParser();
+            const documentFragment = parser.parseFromString(html, 'text/html');
+            return documentFragment.querySelector('table');
+        }
+
+        function getTotalEntries(table) {
+            const footerText = table.textContent || '';
+            const match = footerText.match(/of\s+(\d+)\s+(entries|results)/i);
+            return match ? Number.parseInt(match[1], 10) : 0;
+        }
+
+        async function collectAllFastTableRows(table) {
+            const tableElement = getCurrentTableElement(table);
+
+            if (!(tableElement instanceof HTMLTableElement)) {
+                return { headers: [], rows: [] };
+            }
+
+            const headers = extractTableHeaders(tableElement);
+            const searchValue = getSearchInput(table)?.value || '';
+            const perPageValue = Number.parseInt(getPerPageInput(table)?.value || '10', 10) || 10;
+            const totalEntries = getTotalEntries(table);
+            const totalPages = Math.max(1, Math.ceil(totalEntries / Math.max(perPageValue, 1)));
+            const rows = [];
+
+            for (let page = 1; page <= totalPages; page += 1) {
+                const url = buildTableUrl(table, {
+                    search: searchValue,
+                    perPage: perPageValue,
+                });
+                url.searchParams.set('page', String(page));
+
+                const response = await fetch(url.toString(), {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                });
+
+                const html = await getTableHtmlFromResponse(response);
+                const remoteTable = parseHtmlTable(html);
+
+                if (!(remoteTable instanceof HTMLTableElement)) {
+                    continue;
+                }
+
+                rows.push(...extractTableRows(remoteTable));
+            }
+
+            return { headers, rows };
+        }
+
+        function downloadExcelFile(filename, headers, rows) {
+            const thead = headers.length > 0
+                ? `<thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('')}</tr></thead>`
+                : '';
+            const tbody = rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('');
+            const documentHtml = `
+                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+                    <head>
+                        <meta charset="UTF-8">
+                    </head>
+                    <body>
+                        <table border="1">
+                            ${thead}
+                            <tbody>${tbody}</tbody>
+                        </table>
+                    </body>
+                </html>
+            `;
+
+            const blob = new Blob([documentHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            const downloadUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = downloadUrl;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(downloadUrl);
+        }
+
+        function enhanceFastTableExports(root = document) {
+            const tables = root.matches?.('[data-fast-table]')
+                ? [root]
+                : Array.from(root.querySelectorAll('[data-fast-table]'));
+
+            tables.forEach((table) => {
+                if (!(table instanceof HTMLElement) || !(table.parentElement instanceof HTMLElement)) {
+                    return;
+                }
+
+                const tableId = ensureFastTableId(table);
+                let exportBar = table.parentElement.querySelector(`[data-fast-table-export-for="${tableId}"]`);
+
+                if (!(exportBar instanceof HTMLElement)) {
+                    exportBar = document.createElement('div');
+                    exportBar.className = 'global-fast-table-export';
+                    exportBar.dataset.fastTableExportFor = tableId;
+                    exportBar.innerHTML = `
+                        <button type="button" class="global-export-action" data-fast-table-export-button>
+                            <i class="fas fa-file-excel"></i>
+                            <span>Download Excel</span>
+                        </button>
+                    `;
+                    table.parentElement.insertBefore(exportBar, table);
+                }
+
+                const button = exportBar.querySelector('[data-fast-table-export-button]');
+
+                if (!(button instanceof HTMLButtonElement) || button.dataset.bound === 'true') {
+                    return;
+                }
+
+                button.dataset.bound = 'true';
+                button.addEventListener('click', async () => {
+                    const originalLabel = button.innerHTML;
+                    button.disabled = true;
+                    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Preparing Excel...</span>';
+
+                    try {
+                        const { headers, rows } = await collectAllFastTableRows(table);
+
+                        if (rows.length === 0) {
+                            button.innerHTML = '<i class="fas fa-ban"></i><span>No rows to export</span>';
+                            setTimeout(() => {
+                                button.disabled = false;
+                                button.innerHTML = originalLabel;
+                            }, 1600);
+                            return;
+                        }
+
+                        downloadExcelFile(getExportFilename(table), headers, rows);
+                    } catch (error) {
+                        console.error('Error exporting fast table:', error);
+                    } finally {
+                        button.disabled = false;
+                        button.innerHTML = originalLabel;
+                    }
+                });
+            });
+        }
+
         function enhancePage(root = document) {
             enhanceDataTableLayout(root);
             enhanceEditButtons(root);
             enhanceInlineFilterForms(root);
             enhanceDataTableFooters(root);
+            enhanceFastTableExports(root);
         }
 
         if (document.readyState === 'loading') {

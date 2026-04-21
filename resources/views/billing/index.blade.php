@@ -125,6 +125,123 @@
 
         <!-- Billing Table -->
         <div class="bg-white rounded-lg shadow overflow-hidden">
+            <style>
+                #soaTable_wrapper .billing-table-toolbar {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 1rem;
+                    padding: 1.25rem 1.5rem 0.75rem;
+                }
+
+                #soaTable_wrapper .billing-table-toolbar .dataTables_length,
+                #soaTable_wrapper .billing-table-toolbar .dataTables_filter {
+                    float: none;
+                    margin: 0;
+                }
+
+                #soaTable_wrapper .billing-table-toolbar .dataTables_length {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    color: #334155;
+                    font-size: 0.95rem;
+                }
+
+                #soaTable_wrapper .billing-table-toolbar .dataTables_length label,
+                #soaTable_wrapper .billing-table-toolbar .dataTables_filter label {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    margin: 0;
+                    font-weight: 500;
+                    color: #334155;
+                }
+
+                #soaTable_wrapper .billing-table-toolbar .dataTables_filter {
+                    margin-left: auto;
+                }
+
+                #soaTable_wrapper .billing-table-toolbar .dataTables_filter input,
+                #soaTable_wrapper .billing-table-toolbar .dataTables_length select {
+                    margin: 0;
+                    min-height: 3.1rem;
+                    border-radius: 1rem;
+                    border: 1px solid #cbd5e1;
+                    background: #fff;
+                    padding: 0.75rem 1rem;
+                    font-size: 0.95rem;
+                    color: #0f172a;
+                    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+                }
+
+                #soaTable_wrapper .billing-table-toolbar .dataTables_filter input {
+                    min-width: 320px;
+                }
+
+                #soaTable_wrapper .billing-table-toolbar .dataTables_length select {
+                    min-width: 88px;
+                    padding-right: 2.5rem;
+                }
+
+                #soaTable_wrapper .billing-table-toolbar .dataTables_filter input:focus,
+                #soaTable_wrapper .billing-table-toolbar .dataTables_length select:focus {
+                    border-color: #3b82f6;
+                    outline: none;
+                    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.14);
+                }
+
+                #soaTable_wrapper .billing-table-footer {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 1rem;
+                    padding: 0.75rem 1.5rem 1.25rem;
+                }
+
+                #soaTable_wrapper .billing-table-footer .dataTables_info,
+                #soaTable_wrapper .billing-table-footer .dataTables_paginate {
+                    float: none;
+                    margin: 0;
+                }
+
+                @media (max-width: 767px) {
+                    #soaTable_wrapper .billing-table-toolbar,
+                    #soaTable_wrapper .billing-table-footer {
+                        padding-left: 1rem;
+                        padding-right: 1rem;
+                    }
+
+                    #soaTable_wrapper .billing-table-toolbar {
+                        align-items: stretch;
+                    }
+
+                    #soaTable_wrapper .billing-table-toolbar .dataTables_filter,
+                    #soaTable_wrapper .billing-table-toolbar .dataTables_filter label,
+                    #soaTable_wrapper .billing-table-toolbar .dataTables_filter input,
+                    #soaTable_wrapper .billing-table-toolbar .dataTables_length,
+                    #soaTable_wrapper .billing-table-toolbar .dataTables_length label {
+                        width: 100%;
+                    }
+
+                    #soaTable_wrapper .billing-table-toolbar .dataTables_filter {
+                        margin-left: 0;
+                    }
+
+                    #soaTable_wrapper .billing-table-toolbar .dataTables_filter label,
+                    #soaTable_wrapper .billing-table-toolbar .dataTables_length label {
+                        justify-content: space-between;
+                    }
+
+                    #soaTable_wrapper .billing-table-toolbar .dataTables_filter input {
+                        min-width: 0;
+                        width: 100%;
+                    }
+                }
+            </style>
+
             <div class="overflow-x-auto">
                 <table id="soaTable" class="w-full text-sm text-left text-gray-600 display">
                     <thead class="bg-gray-100 text-gray-900 font-semibold">
@@ -201,6 +318,7 @@
             pageLength: 10,
             order: [[1, 'desc']],
             autoWidth: false,
+            dom: '<"billing-table-toolbar"lf>t<"billing-table-footer"ip>',
             columns: [
                 { width: '18%' },
                 { width: '12%' },

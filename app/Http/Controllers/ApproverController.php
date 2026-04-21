@@ -13,22 +13,20 @@ class ApproverController extends Controller
      */
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
 
-        // Query the employees table
         $approvers = Approver::when($search, function ($query, $search) {
             return $query->where('name', 'like', '%' . $search . '%')
                         ->orWhere('site', 'like', '%' . $search . '%');
         })
+        ->orderBy('name')
+        ->withQueryString()
         ->paginate(5);
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('approvers.table', compact('approvers'))->render());
+            return view('approvers.table', compact('approvers'));
         }
 
-        // For non-AJAX requests, just return the view
         return view('approvers.index', compact('approvers', 'search'));
     }
 
