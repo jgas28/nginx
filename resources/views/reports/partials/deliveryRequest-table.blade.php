@@ -7,9 +7,9 @@
     ];
 @endphp
 
-<div class="border-b border-slate-200 bg-gradient-to-r from-indigo-50 via-white to-cyan-50 px-6 py-5">
+<div class="border-b border-slate-200 bg-gradient-to-r from-indigo-50 via-white to-cyan-50 px-4 py-5 sm:px-6">
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <div class="flex items-center gap-3">
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600">
                     <i class="fas fa-truck-ramp-box"></i>
@@ -17,10 +17,11 @@
                 <div>
                     <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Visible Requests</div>
                     <div class="mt-1 text-2xl font-bold text-slate-900">{{ number_format($overview['visible_requests']) }}</div>
+                    <div class="mt-1 text-[11px] text-slate-400">Current filtered result set</div>
                 </div>
             </div>
         </div>
-        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <div class="flex items-center gap-3">
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
                     <i class="fas fa-route"></i>
@@ -28,10 +29,11 @@
                 <div>
                     <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Regular</div>
                     <div class="mt-1 text-2xl font-bold text-slate-900">{{ number_format($overview['regular']) }}</div>
+                    <div class="mt-1 text-[11px] text-slate-400">Single-route delivery requests</div>
                 </div>
             </div>
         </div>
-        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <div class="flex items-center gap-3">
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-600">
                     <i class="fas fa-arrow-right-arrow-left"></i>
@@ -39,10 +41,11 @@
                 <div>
                     <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Multi-Drop</div>
                     <div class="mt-1 text-2xl font-bold text-slate-900">{{ number_format($overview['multi_drop']) }}</div>
+                    <div class="mt-1 text-[11px] text-slate-400">One trip with several drop points</div>
                 </div>
             </div>
         </div>
-        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
+        <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
             <div class="flex items-center gap-3">
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-sky-100 text-sky-600">
                     <i class="fas fa-warehouse"></i>
@@ -50,13 +53,14 @@
                 <div>
                     <div class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Multi Pick-Up</div>
                     <div class="mt-1 text-2xl font-bold text-slate-900">{{ number_format($overview['multi_pickup']) }}</div>
+                    <div class="mt-1 text-[11px] text-slate-400">Several pick-up points per request</div>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="space-y-4 p-5">
+<div class="space-y-4 p-4 sm:p-5">
     <div class="grid grid-cols-1 items-center gap-4 xl:ml-auto xl:grid-cols-[minmax(0,720px)_auto] xl:justify-between">
         <label class="relative block w-full max-w-[720px]">
             <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
@@ -70,7 +74,10 @@
                 class="h-14 w-full rounded-2xl border border-slate-300 bg-white pl-11 pr-4 text-sm text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
             >
         </label>
-        <div class="flex flex-wrap items-center justify-start gap-3 xl:justify-end">
+        <div class="flex flex-wrap items-center justify-start gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3 xl:justify-end">
+            <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-200">
+                <i class="fas fa-sliders text-xs"></i>
+            </span>
             <span class="text-sm font-medium text-slate-500">Show</span>
             <select id="delivery-request-report-per-page" class="h-14 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100">
                 @foreach ([5, 10, 25, 50] as $size)
@@ -84,12 +91,17 @@
     <div class="overflow-hidden rounded-[24px] border border-slate-200">
         <div class="space-y-3 p-4 md:hidden">
             @forelse($deliveryRequests as $request)
-                <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                     <div class="space-y-3">
-                        <div>
+                        <div class="flex items-start gap-3">
+                            <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-100 text-indigo-600">
+                                <i class="fas fa-boxes-stacked"></i>
+                            </span>
+                            <div>
                             <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">MTM / Project</p>
                             <p class="mt-1 break-words text-sm font-semibold text-slate-900">{{ $request->mtm ?? 'N/A' }}</p>
                             <p class="mt-1 text-sm text-slate-500">{{ $request->project_name ?: 'No project name' }}</p>
+                            </div>
                         </div>
                         <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div>

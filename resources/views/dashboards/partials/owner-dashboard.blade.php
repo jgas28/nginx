@@ -125,12 +125,17 @@
                         </div>
                     </div>
 
-                    <div class="space-y-3">
-                        @foreach ($activityMix as $item)
+                <div class="space-y-3">
+                    @foreach ($activityMix as $item)
                             @php $width = min(100, (($item['value'] ?? 0) / $activityMixMax) * 100); @endphp
-                            <div>
-                                <div class="mb-1.5 flex items-center justify-between text-sm">
-                                    <span class="font-medium text-slate-600">{{ $item['label'] }}</span>
+                            <div class="rounded-2xl bg-white/70 px-3 py-3 ring-1 ring-white/80">
+                                <div class="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                                    <span class="inline-flex items-center gap-2 font-medium text-slate-600">
+                                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-1 ring-slate-200">
+                                            <i class="fas fa-chart-pie text-[11px]"></i>
+                                        </span>
+                                        {{ $item['label'] }}
+                                    </span>
                                     <span class="font-semibold {{ $item['text'] }}">{{ number_format($item['value']) }}</span>
                                 </div>
                                 <div class="h-3 rounded-full bg-slate-100">
@@ -157,9 +162,14 @@
                 <div class="space-y-3">
                     @foreach ($expenseMix as $item)
                         @php $width = min(100, (($item['value'] ?? 0) / $expenseMixMax) * 100); @endphp
-                        <div>
-                            <div class="mb-1.5 flex items-center justify-between text-sm">
-                                <span class="font-medium text-slate-600">{{ $item['label'] }}</span>
+                        <div class="rounded-2xl bg-white/70 px-3 py-3 ring-1 ring-white/80">
+                            <div class="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                                <span class="inline-flex items-center gap-2 font-medium text-slate-600">
+                                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-1 ring-slate-200">
+                                        <i class="fas fa-coins text-[11px]"></i>
+                                    </span>
+                                    {{ $item['label'] }}
+                                </span>
                                 <span class="font-semibold {{ $item['text'] }}">PHP {{ number_format($item['value'], 2) }}</span>
                             </div>
                             <div class="h-3 rounded-full bg-slate-100">

@@ -208,6 +208,67 @@
             max-width: 100%;
         }
 
+        main form button,
+        main form a.inline-flex,
+        main [data-fast-table] button,
+        main [data-fast-table] a.inline-flex,
+        main .dataTables_wrapper button,
+        main .dataTables_wrapper a.inline-flex {
+            transition: transform .18s ease, box-shadow .18s ease, opacity .18s ease, background-color .18s ease, border-color .18s ease;
+        }
+
+        main form button:hover,
+        main form a.inline-flex:hover,
+        main [data-fast-table] button:hover,
+        main [data-fast-table] a.inline-flex:hover,
+        main .dataTables_wrapper button:hover,
+        main .dataTables_wrapper a.inline-flex:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 12px 25px rgba(15, 23, 42, 0.10);
+        }
+
+        main form button:active,
+        main form a.inline-flex:active,
+        main [data-fast-table] button:active,
+        main [data-fast-table] a.inline-flex:active,
+        main .dataTables_wrapper button:active,
+        main .dataTables_wrapper a.inline-flex:active {
+            transform: translateY(0);
+        }
+
+        main [data-fast-table] table,
+        main .dataTables_wrapper table,
+        main table.min-w-full {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        main [data-fast-table] table tbody tr,
+        main .dataTables_wrapper table tbody tr,
+        main table.min-w-full tbody tr {
+            transition: background-color .18s ease, transform .18s ease;
+        }
+
+        main [data-fast-table] table tbody tr:hover,
+        main .dataTables_wrapper table tbody tr:hover,
+        main table.min-w-full tbody tr:hover {
+            background-color: rgba(248, 250, 252, 0.95);
+        }
+
+        main .global-table-scroll::-webkit-scrollbar {
+            height: 10px;
+        }
+
+        main .global-table-scroll::-webkit-scrollbar-track {
+            background: rgba(226, 232, 240, 0.8);
+            border-radius: 9999px;
+        }
+
+        main .global-table-scroll::-webkit-scrollbar-thumb {
+            background: linear-gradient(90deg, #94a3b8, #64748b);
+            border-radius: 9999px;
+        }
+
         [x-cloak] {
             display: none !important;
         }
@@ -241,6 +302,13 @@
             main form .border-t.border-slate-200 .inline-flex,
             main form .border-t.border-gray-200 .inline-flex {
                 width: 100%;
+            }
+
+            main form button,
+            main form a.inline-flex,
+            main [data-fast-table] button,
+            main [data-fast-table] a.inline-flex {
+                min-height: 3rem;
             }
 
             main .global-table-scroll {
