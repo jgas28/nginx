@@ -3,15 +3,15 @@
 @section('title', 'Rejected Approval')
 
 @section('content')
-<div class="mx-auto max-w-7xl space-y-6 py-8">
-    <div class="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
+<div class="mx-auto max-w-7xl space-y-6 py-6 sm:py-8">
+    <div class="rounded-[28px] border border-slate-200 bg-white px-5 py-6 shadow-sm sm:px-8">
         <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
                 <div class="inline-flex items-center gap-2 rounded-full bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 ring-1 ring-rose-100">
                     <i class="fas fa-octagon-xmark text-sm"></i>
                     Rejected Delivery CVRs
                 </div>
-                <h1 class="mt-4 text-3xl font-bold tracking-tight text-slate-900">Rejected Cash Vouchers</h1>
+                <h1 class="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Rejected Cash Vouchers</h1>
                 <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
                     Review rejected delivery-related cash vouchers with faster search, compact actions, and batch printing.
                 </p>

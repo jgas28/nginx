@@ -7,8 +7,8 @@
     ];
 @endphp
 
-<div class="border-b border-slate-200 px-6 py-4">
-    <div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+<div class="border-b border-slate-200 px-4 py-4 sm:px-6">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         @foreach ($overviewCards as $card)
             <div class="rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 px-4 py-3 shadow-sm">
                 <div class="flex items-center gap-2">
@@ -25,7 +25,7 @@
     </div>
 </div>
 
-<div class="border-b border-slate-200 px-6 py-4">
+<div class="border-b border-slate-200 px-4 py-4 sm:px-6">
     <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div class="flex items-center gap-2 text-sm text-slate-600">

@@ -18,8 +18,8 @@
     </div>
 
     <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-        <form action="{{ route('liquidations.index') }}" method="GET" id="liquidations-filter-form" class="flex items-end justify-between gap-4">
-            <div class="min-w-0 flex-1 max-w-[420px]">
+        <form action="{{ route('liquidations.index') }}" method="GET" id="liquidations-filter-form" class="flex flex-col items-stretch justify-start gap-4 md:flex-row md:items-end md:justify-between">
+            <div class="min-w-0 w-full flex-1 md:max-w-[420px]">
                 <label for="requestor" class="mb-1.5 block text-sm font-semibold text-slate-700">Requestor</label>
                 <select
                     name="requestor"
@@ -36,14 +36,14 @@
                 </select>
             </div>
 
-            <div class="flex shrink-0 items-end justify-end gap-3">
-                <button type="submit" id="liquidations-filter-submit" class="inline-flex h-[52px] min-w-[220px] items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700">
+            <div class="flex w-full shrink-0 flex-col items-stretch justify-start gap-3 sm:flex-row sm:items-end sm:justify-end md:w-auto">
+                <button type="submit" id="liquidations-filter-submit" class="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:min-w-[220px] sm:w-auto">
                         <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
                             <i class="fas fa-magnifying-glass text-xs"></i>
                         </span>
                         Filter Results
                 </button>
-                <a href="{{ route('liquidations.index') }}" id="liquidations-filter-reset" class="inline-flex h-[52px] min-w-[150px] items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900">
+                <a href="{{ route('liquidations.index') }}" id="liquidations-filter-reset" class="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900 sm:min-w-[150px] sm:w-auto">
                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
                         <i class="fas fa-rotate-left text-xs"></i>
                     </span>

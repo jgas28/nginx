@@ -11,7 +11,7 @@
                     <i class="fas fa-truck-ramp-box"></i>
                     Delivery Requests
                 </div>
-                <h1 class="mt-3 text-2xl font-bold tracking-tight text-slate-900">Delivery Request Queue</h1>
+                <h1 class="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Delivery Request Queue</h1>
                 <p class="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">
                     Manage delivery requests in a faster JSON-powered table with cleaner filters, searchable controls, and aligned actions.
                 </p>
@@ -71,7 +71,7 @@
             </div>
 
             <div class="flex items-end lg:justify-start xl:justify-end">
-                <a href="{{ route('deliveryRequest.create') }}" class="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-blue-600/30">
+                <a href="{{ route('deliveryRequest.create') }}" class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-blue-600/30 sm:w-auto">
                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15 shrink-0">
                         <i class="fas fa-plus text-xs"></i>
                     </span>

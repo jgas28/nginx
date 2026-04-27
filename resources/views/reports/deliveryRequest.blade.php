@@ -19,9 +19,9 @@
         </div>
     </div>
 
-    <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+    <div class="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         <form action="{{ route('reports.dr') }}" method="GET" id="delivery-request-report-filters" class="space-y-5">
-            <div class="grid gap-4" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div>
                     <label for="mtm" class="mb-1.5 block text-[15px] font-semibold text-slate-700">MTM</label>
                     <input type="text" id="mtm" name="mtm" value="{{ request('mtm') }}" class="h-[58px] w-full rounded-2xl border border-slate-300 bg-white px-4 text-[15px] text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100">
@@ -39,7 +39,7 @@
                     <input type="date" id="delivery_date" name="delivery_date" value="{{ request('delivery_date') }}" class="h-[58px] w-full rounded-2xl border border-slate-300 bg-white px-4 text-[15px] text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100">
                 </div>
             </div>
-            <div class="grid gap-4" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <div>
                     <label for="area" class="mb-1.5 block text-[15px] font-semibold text-slate-700">Area</label>
                     <select id="area" name="area" class="h-[58px] w-full rounded-2xl border border-slate-300 bg-white px-4 text-[15px] text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100">
@@ -85,20 +85,20 @@
                     </select>
                 </div>
             </div>
-            <div class="flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 pt-4">
-                <button type="submit" class="inline-flex h-14 min-w-[170px] items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700">
+            <div class="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                <button type="submit" class="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 sm:min-w-[170px] sm:w-auto">
                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
                         <i class="fas fa-magnifying-glass text-xs"></i>
                     </span>
                     Apply Filters
                 </button>
-                <a href="{{ route('reports.export', array_filter(array_merge(request()->query(), ['search' => $search ?? '']))) }}" class="inline-flex h-14 min-w-[178px] items-center justify-center gap-2 rounded-2xl px-5 text-sm font-semibold text-white shadow-sm transition hover:opacity-95" style="background-color:#059669;color:#ffffff;">
+                <a href="{{ route('reports.export', array_filter(array_merge(request()->query(), ['search' => $search ?? '']))) }}" class="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl px-5 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 sm:min-w-[178px] sm:w-auto" style="background-color:#059669;color:#ffffff;">
                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
                         <i class="fas fa-file-excel text-xs"></i>
                     </span>
                     Download Excel
                 </a>
-                <a href="{{ route('reports.dr') }}" id="deliveryRequestResetFilters" class="inline-flex h-14 min-w-[140px] items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-400 hover:text-slate-900">
+                <a href="{{ route('reports.dr') }}" id="deliveryRequestResetFilters" class="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-slate-400 hover:text-slate-900 sm:min-w-[140px] sm:w-auto">
                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
                         <i class="fas fa-rotate-left text-xs"></i>
                     </span>
@@ -127,6 +127,15 @@
 </div>
 
 <style>
+    #delivery-request-report-filters input,
+    #delivery-request-report-filters select {
+        min-width: 0;
+    }
+
+    #delivery-request-report-filters .relative {
+        min-width: 0;
+    }
+
     .searchable-select-source {
         position: absolute;
         left: -9999px;
@@ -141,6 +150,21 @@
     .searchable-select-panel::-webkit-scrollbar-thumb {
         background: #cbd5e1;
         border-radius: 9999px;
+    }
+
+    @media (max-width: 639px) {
+        #delivery-request-report-filters {
+            gap: 1rem;
+        }
+
+        #delivery-request-report-filters label {
+            line-height: 1.3;
+        }
+
+        #delivery-request-report-filters .searchable-select-panel {
+            left: 0;
+            right: 0;
+        }
     }
 </style>
 @endsection

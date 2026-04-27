@@ -183,6 +183,41 @@
     </style>
 </head>
 <body>
+    @php
+        $seriesNumber = preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number ?? 'N/A');
+        $truckName = data_get($allocations, 'truck.truck_name', '');
+        $companyCode = data_get($deliveryRequest, 'company.company_code', '');
+        $companyName = data_get($deliveryRequest, 'company.company_name', 'N/A');
+        $expenseCode = data_get($deliveryRequest, 'expenseType.expense_code', '');
+        $requestTypeName = data_get($cashVoucherRequest, 'cvrTypes.request_type', '');
+        $deliveryTypeName = data_get($deliveryRequest, 'name', '');
+        $employeeFirstName = data_get($employees, 'fname', 'N/A');
+        $employeeLastName = data_get($employees, 'lname', 'N/A');
+        $driverEmployeeCode = data_get($drivers, 'employee_code', '');
+        $driverFirstName = data_get($drivers, 'fname', '');
+        $driverLastName = data_get($drivers, 'lname', '');
+        $driverName = trim($driverFirstName . ' ' . $driverLastName);
+        $fleetAccountName = data_get($fleets, 'account_name', '');
+        $withholdingDescription = data_get($cashVoucherRequest, 'withholdingTax.description', 'Less Withholding Tax');
+        $approverName = data_get($approvers, 'name', 'N/A');
+        $cvrApprovalAmount = (float) data_get($cvrApprovals, 'amount', 0);
+        $cvrApprovalCharge = (float) data_get($cvrApprovals, 'charge', 0);
+        $cvrApprovalPaymentType = strtolower((string) data_get($cvrApprovals, 'payment_type', ''));
+        $cvrApprovalPaymentName = data_get($cvrApprovals, 'payment_name', '');
+        $cvrApprovalReference = data_get($cvrApprovals, 'reference_number', '');
+        $cvrApprovalId = data_get($cvrApprovals, 'id', '');
+        $isAdminDeliveryType = in_array($deliveryTypeName, ['ADM', 'FE', 'ND', 'OPS-INC']);
+
+        if ($driverEmployeeCode === 'NONE' || $driverEmployeeCode === '' || $isAdminDeliveryType) {
+            $driverDisplay = 'N/A';
+        } elseif ($fleetAccountName === '') {
+            $driverDisplay = $driverName;
+        } elseif (strtoupper($driverName) === strtoupper($fleetAccountName)) {
+            $driverDisplay = $driverName . ' W/ FLEET CARD';
+        } else {
+            $driverDisplay = $driverName . ' W/ FLEET CARD OF ' . $fleetAccountName;
+        }
+    @endphp
     <div class="container">
         <div class="header">
         <div class="date">
@@ -192,7 +227,7 @@
         <h1 style="font-size:22px">Cash Voucher Request</h1> 
         <div class="series-no">
             <div style="font-size:12px">Series No</div>
-            <div style="font-size:12px">{{ preg_replace('/\/\d+$/', '', $cashVoucherRequest->cvr_number ?? 'N/A') }}-{{$allocations->truck->truck_name ?? ''}}-{{$deliveryRequest->company->company_code}}{{$deliveryRequest->expenseType->expense_code}}</div>
+            <div style="font-size:12px">{{ $seriesNumber }}-{{ $truckName }}-{{ $companyCode }}{{ $expenseCode }}</div>
         </div>
     </div>
 
@@ -200,7 +235,7 @@
         <table>
             <thead>
                 <tr>
-                    <th colspan="2" style="text-align: left; font-size: 18px;">PAID TO: {{ $employees->fname ?? 'N/A' }} {{ $employees->lname ?? 'N/A' }}</th>
+                    <th colspan="2" style="text-align: left; font-size: 18px;">PAID TO: {{ $employeeFirstName }} {{ $employeeLastName }}</th>
                 </tr>
                 <tr>
                     <th style="width: 70%;">Particulars</th>
@@ -216,7 +251,7 @@
                 @endphp
 
                 {{-- Grouped Delivery Items --}}
-                @if (in_array($deliveryRequest->name ?? '', ['ADM', 'FE', 'ND', 'OPS-INC']))
+                @if ($isAdminDeliveryType)
                     <tr>
                         <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
                             @foreach($deliveryLineItems as $item)
@@ -230,12 +265,12 @@
                        <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
                         
                        @foreach($deliveryLineItems as $item)
-                                {{ $cashVoucherRequest->cvrTypes->request_type }} - {{ $item->site_name }}<br>
+                                {{ $requestTypeName }} - {{ $item->site_name }}<br>
                                 {{ $item->delivery_address }}<br>
                                 {{ $item->mtm }} - {{ $item->delivery_number }}<br><br>
                             @endforeach
                         </td>   
-                        <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 150px; vertical-align: top;">₱ {{ $cvrApprovals->amount }}</td>
+                        <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 150px; vertical-align: top;">₱ {{ $cvrApprovalAmount }}</td>
                     </tr>
                 @endif
 
@@ -244,18 +279,7 @@
                     <tr>
                         <td style="text-align: left; vertical-align: top; font-size: 12px; padding: 10px;">
                             {{-- Driver & Fleet Info --}}
-                            @if(
-                                $drivers->employee_code === 'NONE' || 
-                                in_array($deliveryRequest->name ?? '', ['ADM', 'FE', 'ND', 'OPS-INC'])
-                            )
-                                DRIVER: N/A
-                            @elseif(empty($fleets->account_name))
-                                DRIVER: {{ $drivers->fname }} {{ $drivers->lname }}
-                            @elseif(strtoupper($drivers->fname . ' ' . $drivers->lname) === strtoupper($fleets->account_name))
-                                DRIVER: {{ $drivers->fname }} {{ $drivers->lname }} W/ FLEET CARD
-                            @else
-                                DRIVER: {{ $drivers->fname }} {{ $drivers->lname }} W/ FLEET CARD OF {{ $fleets->account_name }}
-                            @endif
+                            DRIVER: {{ $driverDisplay }}
                             <br>
                             {{-- Remarks --}}
                             @if (!empty($remarks))
@@ -266,20 +290,20 @@
                             @endif
 
                             {{-- Transfer Charge / Cash Charge --}}
-                            @if(!empty($cvrApprovals->charge) && $cvrApprovals->charge != 0)
-                                <strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }} <br>
+                            @if($cvrApprovalCharge != 0)
+                                <strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovalCharge, 2) }} <br>
                                 <strong>Reference:</strong>
-                                @if(isset($cvrApprovals->payment_type) && strtolower($cvrApprovals->payment_type) !== 'cash')
-                                    {{ $cvrApprovals->payment_name }} /
+                                @if($cvrApprovalPaymentType !== '' && $cvrApprovalPaymentType !== 'cash')
+                                    {{ $cvrApprovalPaymentName }} /
                                 @endif
-                                {{ $cvrApprovals->reference_number }}
-                            @elseif(!empty($cvrApprovals->reference_number))
+                                {{ $cvrApprovalReference }}
+                            @elseif(!empty($cvrApprovalReference))
                                 {{-- Charge is zero, but there is a reference number --}}
                                 <strong>Reference:</strong>
-                                @if(isset($cvrApprovals->payment_type) && strtolower($cvrApprovals->payment_type) !== 'cash')
-                                    {{ $cvrApprovals->payment_name }} /
+                                @if($cvrApprovalPaymentType !== '' && $cvrApprovalPaymentType !== 'cash')
+                                    {{ $cvrApprovalPaymentName }} /
                                 @endif
-                                {{ $cvrApprovals->reference_number }}
+                                {{ $cvrApprovalReference }}
                             @endif
 
                         </td>
@@ -298,7 +322,7 @@
                                     <td style="text-align: right; padding: 4px;">₱ {{ number_format($vatAmount, 2) }}</td>
                                 </tr>
                                 <tr>
-                                    <td style="text-align: left; padding: 4px;">{{ $cashVoucherRequest->withholdingTax->description }}</td>
+                                    <td style="text-align: left; padding: 4px;">{{ $withholdingDescription }}</td>
                                     <td style="text-align: right; padding: 4px;">₱ {{ number_format($taxDeduction, 2) }}</td>
                                 </tr>
                                 <tr>
@@ -312,18 +336,7 @@
                     <tr>
                         <td style="text-align: left; vertical-align: top; font-size: 12px; padding: 10px;">
                             {{-- Driver & Fleet Info --}}
-                            @if(
-                                $drivers->employee_code === 'NONE' || 
-                                in_array($deliveryRequest->name ?? '', ['ADM', 'FE', 'ND', 'OPS-INC'])
-                            )
-                                DRIVER: N/A
-                            @elseif(empty($fleets->account_name))
-                                DRIVER: {{ $drivers->fname }} {{ $drivers->lname }}
-                            @elseif(strtoupper($drivers->fname . ' ' . $drivers->lname) === strtoupper($fleets->account_name))
-                                DRIVER: {{ $drivers->fname }} {{ $drivers->lname }} W/ FLEET CARD
-                            @else
-                                DRIVER: {{ $drivers->fname }} {{ $drivers->lname }} W/ FLEET CARD OF {{ $fleets->account_name }}
-                            @endif
+                            DRIVER: {{ $driverDisplay }}
                             <br>
                             {{-- Remarks --}}
                             @if (!empty($remarks))
@@ -334,31 +347,31 @@
                             @endif
 
                             {{-- Transfer Charge / Cash Charge --}}
-                            @if(!empty($cvrApprovals->charge) && $cvrApprovals->charge != 0)
-                                <strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovals->charge, 2) }} <br>
+                            @if($cvrApprovalCharge != 0)
+                                <strong>Transfer Charge:</strong> ₱ {{ number_format($cvrApprovalCharge, 2) }} <br>
                                 <strong>Reference:</strong>
-                                @if(isset($cvrApprovals->payment_type) && strtolower($cvrApprovals->payment_type) !== 'cash')
-                                    {{ $cvrApprovals->payment_name }} /
+                                @if($cvrApprovalPaymentType !== '' && $cvrApprovalPaymentType !== 'cash')
+                                    {{ $cvrApprovalPaymentName }} /
                                 @endif
-                                {{ $cvrApprovals->reference_number }}
-                            @elseif(!empty($cvrApprovals->reference_number))
+                                {{ $cvrApprovalReference }}
+                            @elseif(!empty($cvrApprovalReference))
                                 {{-- Charge is zero, but there is a reference number --}}
                                 <strong>Reference:</strong>
-                                @if(isset($cvrApprovals->payment_type) && strtolower($cvrApprovals->payment_type) !== 'cash')
-                                    {{ $cvrApprovals->payment_name }} /
+                                @if($cvrApprovalPaymentType !== '' && $cvrApprovalPaymentType !== 'cash')
+                                    {{ $cvrApprovalPaymentName }} /
                                 @endif
-                                {{ $cvrApprovals->reference_number }}
+                                {{ $cvrApprovalReference }}
                             @endif
                         </td>
                         <td style="padding: 0;">
                             <table style="width: 100%; border-collapse: collapse; font-size: 10px;">
                                 <tr>
                                     <td style="text-align: left; padding: 4px;">Subtotal</td>
-                                    <td style="text-align: right; padding: 4px;">₱ {{ number_format($cvrApprovals->amount, 2) }}</td>
+                                    <td style="text-align: right; padding: 4px;">₱ {{ number_format($cvrApprovalAmount, 2) }}</td>
                                 </tr>
                                 <tr>
                                     <td style="text-align: left; padding: 4px;">Net Amount</td>
-                                    <td style="text-align: right; padding: 4px;">₱ {{ number_format($cvrApprovals->amount, 2) }}</td>
+                                    <td style="text-align: right; padding: 4px;">₱ {{ number_format($cvrApprovalAmount, 2) }}</td>
                                 </tr>
                                 <tr>
                                     <td style="text-align: left; padding: 4px;">VAT (12%)</td>
@@ -370,7 +383,7 @@
                                 </tr>
                                 <tr>
                                     <td style="text-align: left; font-weight: bold; padding: 4px; color: red;">Total</td>
-                                    <td style="text-align: right; font-weight: bold; color: red; padding: 4px;">₱ {{ number_format($cvrApprovals->amount, 2) }}</td>
+                                    <td style="text-align: right; font-weight: bold; color: red; padding: 4px;">₱ {{ number_format($cvrApprovalAmount, 2) }}</td>
                                 </tr>
                             </table>
                         </td>
@@ -384,11 +397,11 @@
             <tr>
                 <td>
                     <div style="font-size: 10px;">_________________________</div>
-                    <div style="font-size: 10px;">{{$approvers->name}}</div>
+                    <div style="font-size: 10px;">{{ $approverName }}</div>
                     <div style="font-size: 10px;">Approver</div>
                 </td>
                 <td>
-                    <div style="font-size: 10px; text-align:left;">RECEIVED from {{$deliveryRequest->company->company_name}} the amount of</div>
+                    <div style="font-size: 10px; text-align:left;">RECEIVED from {{ $companyName }} the amount of</div>
                     <div style="font-size: 10px; text-align: left; text-transform: uppercase;">
         
                    <strong><u>{{ $amountInWords == 'N/A' ? 'Zero' : ($amountInWords ?? 'Zero') }}</u></strong>
@@ -397,7 +410,7 @@
                 </td>
                 <td>
                     <div style="font-size: 10px;">_________________________</div>
-                    <div style="font-size: 10px;">{{ $employees->fname ?? 'N/A' }} {{ $employees->lname ?? 'N/A' }}</div>
+                    <div style="font-size: 10px;">{{ $employeeFirstName }} {{ $employeeLastName }}</div>
                     <div style="font-size: 10px;">REQUEST BY:</div>
                 </td>
             </tr>
@@ -408,7 +421,7 @@
             <button 
                 onclick="printAndUpdateStatusSingle(this);" 
                 class="btn"
-                data-cvr-id="{{$cvrApprovals->id}}" 
+                data-cvr-id="{{ $cvrApprovalId }}" 
                 data-voucher-id="{{$cashVoucherRequest->id}}"> Print
             </button>
         </div>

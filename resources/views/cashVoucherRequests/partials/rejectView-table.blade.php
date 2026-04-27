@@ -4,8 +4,8 @@
     $visibleAmount = collect($cashVouchers->items())->sum('amount');
 @endphp
 
-<div class="border-b border-slate-200 bg-gradient-to-r from-rose-50 via-white to-orange-50 px-6 py-5">
-    <div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+<div class="border-b border-slate-200 bg-gradient-to-r from-rose-50 via-white to-orange-50 px-4 py-5 sm:px-6">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
             <div class="flex items-center gap-3">
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">
@@ -53,20 +53,20 @@
     </div>
 </div>
 
-<div class="space-y-5 p-5">
+<div class="space-y-5 p-4 sm:p-5">
     <form id="cash-voucher-reject-batch-form" method="GET" action="{{ route('cashVoucherRequests.rejectPrintViewMultiple') }}" target="_blank" class="space-y-4">
         <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <button type="submit"
                     id="cash-voucher-reject-batch-btn"
-                    class="hidden inline-flex items-center gap-2 rounded-2xl bg-rose-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-rose-700">
+                    class="hidden inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-rose-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-rose-700 sm:w-auto">
                 <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
                     <i class="fas fa-print text-xs"></i>
                 </span>
                 Batch Print Selected
             </button>
 
-            <div class="grid items-center gap-4 xl:ml-auto" style="grid-template-columns: minmax(0, 720px) auto; justify-content: space-between;">
-                <label class="relative block w-full max-w-[720px]">
+            <div class="grid gap-4 xl:ml-auto xl:grid-cols-[minmax(0,720px)_auto] xl:items-center xl:justify-between">
+                <label class="relative block w-full xl:max-w-[720px]">
                     <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                         <i class="fas fa-magnifying-glass text-sm"></i>
                     </span>
@@ -78,7 +78,7 @@
                         class="h-14 w-full rounded-2xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-100"
                     >
                 </label>
-                <div class="flex items-center justify-end gap-3 whitespace-nowrap">
+                <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
                     <span class="text-sm font-medium text-slate-500">Show</span>
                     <select id="cash-voucher-reject-per-page" class="h-14 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-100">
                         @foreach ([5, 10, 25, 50] as $size)

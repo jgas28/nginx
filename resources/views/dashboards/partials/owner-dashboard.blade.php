@@ -46,9 +46,9 @@
                 </div>
                 <div class="sm:col-span-1 xl:col-span-2">
                     <label for="end_date" class="mb-1 block text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">End Date</label>
-                    <div class="flex gap-2">
+                    <div class="flex flex-col gap-2 sm:flex-row">
                         <input type="date" id="end_date" name="end_date" value="{{ request('end_date', now()->toDateString()) }}" class="w-full rounded-2xl border border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100">
-                        <button type="submit" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-blue-600/30">
+                        <button type="submit" class="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 hover:shadow-blue-600/30 sm:w-auto">
                             <i class="fas fa-filter text-xs"></i>
                             Apply
                         </button>
@@ -59,23 +59,23 @@
 
         <div class="mb-6 space-y-4">
             @foreach ([$primaryMetricCards, $secondaryMetricCards] as $metricRow)
-                <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:0.75rem;">
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                     @foreach ($metricRow as $metric)
                         <div class="rounded-3xl border {{ $metric['border'] }} bg-gradient-to-br from-white via-white {{ $metric['tone'] }} p-4 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur transition hover:-translate-y-0.5 hover:shadow-[0_20px_45px_rgba(37,99,235,0.10)]">
-                            <div class="flex items-start justify-between gap-4">
+                            <div class="flex items-start justify-between gap-3">
                                 <div>
-                                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{{ $metric['label'] }}</p>
-                                    <p class="mt-2.5 text-2xl font-bold {{ $metric['valueText'] }}">
+                                    <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 sm:text-xs sm:tracking-[0.16em]">{{ $metric['label'] }}</p>
+                                    <p class="mt-2 text-xl font-bold leading-tight {{ $metric['valueText'] }} sm:mt-2.5 sm:text-2xl">
                                         @if ($metric['isMoney'])
                                             PHP {{ number_format($metric['value'], 2) }}
                                         @else
                                             {{ number_format($metric['value']) }}
                                         @endif
                                     </p>
-                                    <p class="mt-1 text-xs text-slate-400">Period {{ $periodLabel }}</p>
+                                    <p class="mt-1 text-[11px] text-slate-400 sm:text-xs">Period {{ $periodLabel }}</p>
                                 </div>
-                                <span class="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br {{ $metric['iconBg'] }} {{ $metric['iconText'] }} shadow-sm ring-1 ring-white/80">
-                                    <i class="fas {{ $metric['icon'] }}"></i>
+                                <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br {{ $metric['iconBg'] }} {{ $metric['iconText'] }} shadow-sm ring-1 ring-white/80 sm:h-12 sm:w-12">
+                                    <i class="fas {{ $metric['icon'] }} text-sm sm:text-base"></i>
                                 </span>
                             </div>
                         </div>

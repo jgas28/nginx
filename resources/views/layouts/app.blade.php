@@ -178,6 +178,36 @@
             z-index: 20;
         }
 
+        main .global-table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 1rem;
+        }
+
+        main .global-table-scroll > table,
+        main [data-fast-table] table,
+        main .dataTables_wrapper table {
+            min-width: 100%;
+        }
+
+        main [data-fast-table] table th,
+        main [data-fast-table] table td,
+        main .dataTables_wrapper table th,
+        main .dataTables_wrapper table td,
+        main table.min-w-full th,
+        main table.min-w-full td {
+            padding: 0.85rem 0.9rem !important;
+            vertical-align: top;
+        }
+
+        main [data-fast-table] table td > .inline-flex,
+        main .dataTables_wrapper table td > .inline-flex,
+        main table.min-w-full td > .inline-flex {
+            max-width: 100%;
+        }
+
         [x-cloak] {
             display: none !important;
         }
@@ -210,6 +240,76 @@
 
             main form .border-t.border-slate-200 .inline-flex,
             main form .border-t.border-gray-200 .inline-flex {
+                width: 100%;
+            }
+
+            main .global-table-scroll {
+                margin-inline: -0.15rem;
+                padding-bottom: 0.15rem;
+            }
+
+            main [data-fast-table] table,
+            main .dataTables_wrapper table,
+            main table.min-w-full {
+                min-width: 640px;
+            }
+
+            main [data-fast-table] table th,
+            main [data-fast-table] table td,
+            main .dataTables_wrapper table th,
+            main .dataTables_wrapper table td,
+            main table.min-w-full th,
+            main table.min-w-full td {
+                padding: 0.7rem 0.75rem !important;
+                font-size: 0.83rem;
+            }
+
+            main [data-fast-table] table td .text-sm,
+            main [data-fast-table] table th .text-sm,
+            main table.min-w-full td .text-sm,
+            main table.min-w-full th .text-sm {
+                font-size: 0.82rem !important;
+                line-height: 1.35;
+            }
+
+            .balanced-datatable-toolbar {
+                grid-template-columns: 1fr !important;
+                align-items: stretch !important;
+            }
+
+            .balanced-datatable-meta-column {
+                justify-self: stretch !important;
+                width: 100%;
+                flex-wrap: wrap !important;
+                white-space: normal;
+                justify-content: space-between !important;
+            }
+
+            .global-inline-filter-form {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                justify-content: flex-start !important;
+            }
+
+            .global-inline-filter-primary,
+            .global-inline-filter-actions {
+                max-width: none;
+                width: 100%;
+            }
+
+            .global-inline-filter-primary {
+                flex: 0 0 auto !important;
+            }
+
+            .global-inline-filter-actions {
+                flex: 0 0 auto !important;
+            }
+
+            .global-inline-filter-actions {
+                justify-content: stretch !important;
+            }
+
+            .global-inline-filter-actions > * {
                 width: 100%;
             }
 
@@ -766,7 +866,7 @@
     </div>
 
         {{-- Page Content --}}
-        <main class="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6">
+        <main class="flex-1 overflow-y-auto p-2.5 sm:p-4 lg:p-6">
             @yield('content')
         </main>
 
@@ -1173,6 +1273,29 @@
             });
         }
 
+        function enhanceResponsiveTables(root = document) {
+            root.querySelectorAll('table').forEach((table) => {
+                if (!(table instanceof HTMLTableElement)) {
+                    return;
+                }
+
+                if (table.closest('.global-table-scroll')) {
+                    return;
+                }
+
+                const parent = table.parentElement;
+
+                if (!(parent instanceof HTMLElement)) {
+                    return;
+                }
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'global-table-scroll';
+                parent.insertBefore(wrapper, table);
+                wrapper.appendChild(table);
+            });
+        }
+
         function ensureFastTableId(table) {
             if (!table.id) {
                 table.id = `fast-table-${Math.random().toString(36).slice(2, 10)}`;
@@ -1341,7 +1464,21 @@
         }
 
         function hasExistingExcelAction(table) {
-            const scope = table.closest('section, main > div, .rounded-2xl, .rounded-[28px], .rounded-[30px], .bg-white') || table.parentElement;
+            let scope = table.parentElement;
+
+            let current = table.parentElement;
+            while (current instanceof HTMLElement) {
+                if (
+                    current.matches('section, .bg-white, .rounded-2xl') ||
+                    current.classList.contains('rounded-[28px]') ||
+                    current.classList.contains('rounded-[30px]')
+                ) {
+                    scope = current;
+                    break;
+                }
+
+                current = current.parentElement;
+            }
 
             if (!(scope instanceof HTMLElement)) {
                 return false;
@@ -1445,6 +1582,7 @@
             enhanceInlineFilterForms(root);
             enhanceDataTableFooters(root);
             enhanceFastTableExports(root);
+            enhanceResponsiveTables(root);
         }
 
         if (document.readyState === 'loading') {

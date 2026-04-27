@@ -8,8 +8,8 @@
     $rpmCount = $items->where('cvr_type', 'rpm')->count();
 @endphp
 
-<div class="border-b border-slate-200 bg-gradient-to-r from-blue-50 via-white to-cyan-50 px-6 py-5">
-    <div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+<div class="border-b border-slate-200 bg-gradient-to-r from-blue-50 via-white to-cyan-50 px-4 py-5 sm:px-6">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div class="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm">
             <div class="flex items-center gap-3">
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
@@ -57,9 +57,9 @@
     </div>
 </div>
 
-<div class="space-y-4 p-5">
-    <div class="grid items-center gap-4 xl:ml-auto" style="grid-template-columns: minmax(0, 720px) auto; justify-content: space-between;">
-        <label class="relative block w-full max-w-[720px]">
+<div class="space-y-4 p-4 sm:p-5">
+    <div class="grid gap-4 xl:ml-auto xl:grid-cols-[minmax(0,720px)_auto] xl:items-center xl:justify-between">
+        <label class="relative block w-full xl:max-w-[720px]">
             <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                 <i class="fas fa-magnifying-glass text-sm"></i>
             </span>
@@ -71,7 +71,7 @@
                 class="h-14 w-full rounded-2xl border border-slate-300 bg-white pl-11 pr-4 text-sm text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             >
         </label>
-        <div class="flex items-center justify-end gap-3 whitespace-nowrap">
+        <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end">
             <span class="text-sm font-medium text-slate-500">Show</span>
             <select id="admin-vouchers-per-page" class="h-14 rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
                 @foreach ([5, 10, 25, 50] as $size)

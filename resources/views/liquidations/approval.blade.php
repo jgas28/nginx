@@ -71,14 +71,14 @@
             </div>
             <div class="space-y-3" id="gasolineList">
                 @foreach ($gasoline as $index => $item)
-                    <div class="flex flex-wrap gap-2 items-center" data-index="{{ $index }}">
-                        <select name="gasoline[{{ $index }}][type]" class="w-32 border rounded px-2 py-1 text-sm">
+                    <div class="flex flex-nowrap items-center gap-3" data-index="{{ $index }}">
+                        <select name="gasoline[{{ $index }}][type]" class="w-36 shrink-0 border rounded px-3 py-2 text-sm">
                             <option value="" {{ empty($item['type']) ? 'selected' : '' }}>Type</option>
                             <option value="cash" {{ ($item['type'] ?? '') === 'cash' ? 'selected' : '' }}>Cash</option>
                             <option value="card" {{ ($item['type'] ?? '') === 'card' ? 'selected' : '' }}>Card</option>
                         </select>
                         <input type="number" step="0.01" name="gasoline[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}"
-                            placeholder="Amount" class="w-36 border rounded px-2 py-1 text-sm" />
+                            placeholder="Amount" class="min-w-0 flex-1 border rounded px-3 py-2 text-sm" />
                         <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
                     </div>
                 @endforeach
@@ -95,19 +95,19 @@
             </div>
             <div class="space-y-3" id="rfidList">
                 @foreach ($rfid as $index => $item)
-                    <div class="flex flex-wrap gap-2 items-center" data-index="{{ $index }}">
-                        <select name="rfid[{{ $index }}][tag]" class="w-32 border rounded px-2 py-1 text-sm">
+                    <div class="flex flex-nowrap items-center gap-3" data-index="{{ $index }}">
+                        <select name="rfid[{{ $index }}][tag]" class="w-40 shrink-0 border rounded px-3 py-2 text-sm">
                             <option value="">Select Tag</option>
                             <option value="autosweep" {{ ($item['tag'] ?? '') === 'autosweep' ? 'selected' : '' }}>AutoSweep</option>
                             <option value="easytrip" {{ ($item['tag'] ?? '') === 'easytrip' ? 'selected' : '' }}>EasyTrip</option>
                         </select>
-                        <select name="rfid[{{ $index }}][type]" class="w-28 border rounded px-2 py-1 text-sm">
+                        <select name="rfid[{{ $index }}][type]" class="w-32 shrink-0 border rounded px-3 py-2 text-sm">
                             <option value="">Type</option>
                             <option value="cash" {{ ($item['type'] ?? '') === 'cash' ? 'selected' : '' }}>Cash</option>
                             <option value="card" {{ ($item['type'] ?? '') === 'card' ? 'selected' : '' }}>Card</option>
                         </select>
                         <input type="number" step="0.01" name="rfid[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}"
-                            placeholder="Amount" class="w-32 border rounded px-2 py-1 text-sm" />
+                            placeholder="Amount" class="min-w-0 flex-1 border rounded px-3 py-2 text-sm" />
                         <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
                     </div>
                 @endforeach
@@ -123,14 +123,14 @@
                 + Add
             </button>
         </div>
-        <div class="space-y-3" id="othersList">
+        <div class="space-y-4" id="othersList">
             @foreach ($others as $index => $item)
-                <div class="flex flex-wrap gap-2 items-center" data-index="{{ $index }}">
+                <div class="flex w-full items-center gap-3" data-index="{{ $index }}">
                     <input type="text" name="others[{{ $index }}][description]" placeholder="Description" value="{{ $item['description'] ?? '' }}"
-                        class="w-64 border rounded px-3 py-1 text-sm" />
+                        class="w-[60%] min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 sm:px-5 sm:text-base" />
                     <input type="number" step="0.01" name="others[{{ $index }}][amount]" placeholder="Amount" value="{{ $item['amount'] ?? '' }}"
-                        class="w-32 border rounded px-3 py-1 text-sm" />
-                    <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
+                        class="w-[35%] min-w-0 rounded-2xl border border-slate-300 px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 sm:px-4 sm:text-base" />
+                    <button type="button" onclick="this.closest('[data-index]').remove()" class="inline-flex h-10 w-[5%] min-w-[44px] items-center justify-center rounded-2xl bg-red-600 text-2xl leading-none text-white transition hover:bg-red-700 sm:h-11" aria-label="Remove others row">&times;</button>
                 </div>
             @endforeach
         </div>
@@ -661,15 +661,15 @@
 
     function addGasolineField() {
         const wrapper = document.getElementById('gasolineList');
-        wrapper.insertAdjacentHTML('beforeend', `
-            <div class="flex flex-wrap gap-2 items-center" data-index="${gasolineIndex}">
-                <select name="gasoline[${gasolineIndex}][type]" class="w-32 border rounded px-2 py-1 text-sm">
+        wrapper.insertAdjacentHTML('afterbegin', `
+            <div class="flex flex-nowrap items-center gap-3" data-index="${gasolineIndex}">
+                <select name="gasoline[${gasolineIndex}][type]" class="w-36 shrink-0 border rounded px-3 py-2 text-sm">
                     <option value="">Type</option>
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                 </select>
-                <input type="number" step="0.01" name="gasoline[${gasolineIndex}][amount]" placeholder="Amount" class="w-36 border rounded px-2 py-1 text-sm" />
-                <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
+                <input type="number" step="0.01" name="gasoline[${gasolineIndex}][amount]" placeholder="Amount" class="min-w-0 flex-1 border rounded px-3 py-2 text-sm" />
+                <button type="button" onclick="this.closest('[data-index]').remove()" class="inline-flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-red-600 text-3xl font-light text-white transition hover:bg-red-700" aria-label="Remove others row">&times;</button>
             </div>
         `);
         gasolineIndex++;
@@ -677,20 +677,20 @@
 
     function addRFIDField() {
         const wrapper = document.getElementById('rfidList');
-        wrapper.insertAdjacentHTML('beforeend', `
-            <div class="flex flex-wrap gap-2 items-center" data-index="${rfidIndex}">
-                <select name="rfid[${rfidIndex}][tag]" class="w-32 border rounded px-2 py-1 text-sm">
+        wrapper.insertAdjacentHTML('afterbegin', `
+            <div class="flex flex-nowrap items-center gap-3" data-index="${rfidIndex}">
+                <select name="rfid[${rfidIndex}][tag]" class="w-40 shrink-0 border rounded px-3 py-2 text-sm">
                     <option value="">Select Tag</option>
                     <option value="autosweep">AutoSweep</option>
                     <option value="easytrip">EasyTrip</option>
                 </select>
-                <select name="rfid[${rfidIndex}][type]" class="w-28 border rounded px-2 py-1 text-sm1">
+                <select name="rfid[${rfidIndex}][type]" class="w-32 shrink-0 border rounded px-3 py-2 text-sm">
                     <option value="">Type</option>
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                 </select>
-                <input type="number" step="0.01" name="rfid[${rfidIndex}][amount]" placeholder="Amount" class="w-32 border rounded px-2 py-1 text-sm" />
-                <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
+                <input type="number" step="0.01" name="rfid[${rfidIndex}][amount]" placeholder="Amount" class="min-w-0 flex-1 border rounded px-3 py-2 text-sm" />
+                <button type="button" onclick="this.closest('[data-index]').remove()" class="inline-flex h-12 w-full items-center justify-center rounded-2xl bg-red-600 text-2xl font-light text-white transition hover:bg-red-700 sm:h-14 sm:w-14 lg:h-[72px] lg:w-[72px] lg:text-3xl" aria-label="Remove others row">&times;</button>
             </div>
         `);
         rfidIndex++;
@@ -698,11 +698,11 @@
 
     function addOthersField() {
         const wrapper = document.getElementById('othersList');
-        wrapper.insertAdjacentHTML('beforeend', `
-            <div class="flex gap-2 items-center" data-index="${othersIndex}">
-                <input type="text" name="others[${othersIndex}][description]" placeholder="Description" class="w-64 border rounded px-3 py-1 text-sm" />
-                <input type="number" step="0.01" name="others[${othersIndex}][amount]" placeholder="Amount" class="w-32 border rounded px-3 py-1 text-sm" />
-                <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
+        wrapper.insertAdjacentHTML('afterbegin', `
+            <div class="flex w-full items-center gap-3" data-index="${othersIndex}">
+                <input type="text" name="others[${othersIndex}][description]" placeholder="Description" class="w-[60%] min-w-0 rounded-2xl border border-slate-300 px-4 py-3 text-sm text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 sm:px-5 sm:text-base" />
+                <input type="number" step="0.01" name="others[${othersIndex}][amount]" placeholder="Amount" class="w-[35%] min-w-0 rounded-2xl border border-slate-300 px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 sm:px-4 sm:text-base" />
+                <button type="button" onclick="this.closest('[data-index]').remove()" class="inline-flex h-10 w-[5%] min-w-[44px] items-center justify-center rounded-2xl bg-red-600 text-2xl leading-none text-white transition hover:bg-red-700 sm:h-11" aria-label="Remove others row">&times;</button>
             </div>
         `);
         othersIndex++;

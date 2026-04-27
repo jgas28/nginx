@@ -20,8 +20,8 @@
     </div>
 
     <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-        <form action="{{ route('liquidations.validatedList') }}" method="GET" id="liquidations-validated-filter-form" class="flex items-end justify-between gap-4">
-            <div class="min-w-0 flex-1 max-w-[420px]">
+        <form action="{{ route('liquidations.validatedList') }}" method="GET" id="liquidations-validated-filter-form" class="flex flex-col items-stretch justify-start gap-4 md:flex-row md:items-end md:justify-between">
+            <div class="min-w-0 w-full flex-1 md:max-w-[420px]">
                 <label for="cvr_type" class="sr-only">Voucher Type</label>
                 <select
                     name="cvr_type"
@@ -38,14 +38,14 @@
                 </select>
             </div>
 
-            <div class="flex shrink-0 items-end justify-end gap-3 whitespace-nowrap">
-                <button type="submit" class="inline-flex items-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700">
+            <div class="flex w-full shrink-0 flex-col items-stretch justify-start gap-3 whitespace-nowrap sm:flex-row sm:items-end sm:justify-end md:w-auto">
+                <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 sm:w-auto">
                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
                         <i class="fas fa-filter text-xs"></i>
                     </span>
                     Filter Results
                 </button>
-                <a href="{{ route('liquidations.validatedList') }}" id="liquidations-validated-filter-reset" class="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900">
+                <a href="{{ route('liquidations.validatedList') }}" id="liquidations-validated-filter-reset" class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900 sm:w-auto">
                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
                         <i class="fas fa-rotate-left text-xs"></i>
                     </span>

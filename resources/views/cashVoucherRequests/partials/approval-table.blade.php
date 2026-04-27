@@ -2,8 +2,8 @@
     $totalAmount = $deliveryRequests->sum(fn ($voucher) => (float) $voucher->amount);
 @endphp
 
-<div class="space-y-5 p-5">
-    <div class="grid gap-3" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+<div class="space-y-5 p-4 sm:p-5">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
             <div class="flex items-center gap-3">
                 <span class="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-100 text-blue-600">
@@ -50,8 +50,8 @@
         </div>
     </div>
 
-    <div class="grid items-center gap-4 rounded-[24px] border border-slate-200 bg-white p-4" style="grid-template-columns: minmax(0, 720px) auto; justify-content: space-between;">
-        <div class="relative min-w-0 max-w-[720px]">
+    <div class="grid gap-4 rounded-[24px] border border-slate-200 bg-white p-4 lg:grid-cols-[minmax(0,720px)_auto] lg:items-center lg:justify-between">
+        <div class="relative min-w-0 lg:max-w-[720px]">
             <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
                 <i class="fas fa-magnifying-glass text-sm"></i>
             </span>
@@ -64,7 +64,7 @@
             >
         </div>
 
-        <div class="flex items-center justify-end gap-3 whitespace-nowrap">
+        <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
             <label for="cash-voucher-approval-per-page" class="text-sm font-medium text-slate-600">Show</label>
             <select id="cash-voucher-approval-per-page" class="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100">
                 @foreach ([5, 10, 25, 50] as $size)
