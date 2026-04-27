@@ -43,11 +43,12 @@ class DashboardController extends Controller
         $currentYear = Carbon::now()->year;
         $currentMonth = Carbon::now()->month;
 
+        $month = Carbon::createFromFormat('Y-m', $selectedMonth);
+
         if ($PnLData) {
             // Check if month is selected, if yes, use that month, otherwise use the current month
-            $month = Carbon::createFromFormat('Y-m', $selectedMonth);
-            $startDate = $month->startOfMonth()->toDateString();
-            $endDate = $month->endOfMonth()->toDateString();
+            $startDate = $month->copy()->startOfMonth()->toDateString();
+            $endDate = $month->copy()->endOfMonth()->toDateString();
 
             // Filter Delivery Requests by selected month or date range
             $deliveryRequests = DeliveryRequest::with('lineItems')
@@ -61,43 +62,7 @@ class DashboardController extends Controller
                 }
             }
 
-            // Sum admin/rpm vs operational expenses based on selected date range
-            $liquidations = Liquidation::with('cashVoucher')
-            ->whereHas('cashVoucher', function ($query) use ($startDate, $endDate) {
-                $query->whereBetween('created_at', [$startDate, $endDate]);
-            })
-            ->get();
-
-            $adminRpmTotal = 0;
-            $operationTotal = 0;
-
-            foreach ($liquidations as $l) {
-                $total = 
-                    floatval($l->allowance) +
-                    floatval($l->manpower) +
-                    floatval($l->hauling) +
-                    floatval($l->right_of_way) +
-                    floatval($l->roro_expense) +
-                    floatval($l->cash_charge);
-
-                // JSON field totals
-                $total += collect($l->gasoline ?? [])->sum('amount');
-                $total += collect($l->rfid ?? [])->sum('amount');
-                $total += collect($l->others ?? [])->sum('amount');
-
-                $type = optional($l->cashVoucher)->cvr_type;
-
-                if (in_array($type, ['admin', 'rpm'])) {
-                    $adminRpmTotal += $total;
-                } else {
-                    $operationTotal += $total;
-                }
-            }
-
-            $totals = (object) [
-                'admin_rpm_total' => $adminRpmTotal,
-                'operation_total' => $operationTotal,
-            ];
+            $totals = (object) $this->calculateLiquidationTotals($startDate, $endDate);
         }
 
         $approvers = [];
@@ -136,6 +101,77 @@ class DashboardController extends Controller
         $totalLiquidation = Liquidation::where('status', 4)
             ->count();
 
+        $analyticsSeries = [];
+        $analyticsMax = 1;
+        $activityMix = [];
+        $expenseMix = [];
+
+        if ($PnLData) {
+            $analyticsSeries = $this->buildMonthlyAnalyticsSeries($month);
+            $analyticsMax = max(
+                1,
+                collect($analyticsSeries)->max(fn ($item) => max(
+                    $item['income'] ?? 0,
+                    $item['expenses'] ?? 0,
+                    $item['profit'] ?? 0
+                )) ?? 1
+            );
+
+            $activityMix = [
+                [
+                    'label' => 'Delivered Today',
+                    'value' => $totalDelivered ?? 0,
+                    'color' => 'bg-sky-500',
+                    'text' => 'text-sky-700',
+                ],
+                [
+                    'label' => 'Pending Deliveries',
+                    'value' => $totalPendingDeliveries ?? 0,
+                    'color' => 'bg-rose-500',
+                    'text' => 'text-rose-700',
+                ],
+                [
+                    'label' => 'Truck Allocated',
+                    'value' => $totalTruckAllocated ?? 0,
+                    'color' => 'bg-violet-500',
+                    'text' => 'text-violet-700',
+                ],
+                [
+                    'label' => 'Liquidations',
+                    'value' => $totalLiquidation ?? 0,
+                    'color' => 'bg-teal-500',
+                    'text' => 'text-teal-700',
+                ],
+                [
+                    'label' => 'CVR Approvals',
+                    'value' => $totalCVRapproval ?? 0,
+                    'color' => 'bg-fuchsia-500',
+                    'text' => 'text-fuchsia-700',
+                ],
+            ];
+
+            $expenseMix = [
+                [
+                    'label' => 'Income',
+                    'value' => ($totalDeliveryRates + $totalAccessorialRates),
+                    'color' => 'bg-emerald-500',
+                    'text' => 'text-emerald-700',
+                ],
+                [
+                    'label' => 'Admin / RPM Expense',
+                    'value' => $totals->admin_rpm_total ?? 0,
+                    'color' => 'bg-amber-500',
+                    'text' => 'text-amber-700',
+                ],
+                [
+                    'label' => 'Operational Expense',
+                    'value' => $totals->operation_total ?? 0,
+                    'color' => 'bg-orange-500',
+                    'text' => 'text-orange-700',
+                ],
+            ];
+        }
+
         // Role-based dashboard view rendering
         if (in_array(37, $roleIds)) {
             return view('dashboards.coordinator', compact(
@@ -168,7 +204,11 @@ class DashboardController extends Controller
                 'totalDelivered',
                 'totalTruckAllocated',
                 'totalLiquidation',
-                'totalCVRapproval'
+                'totalCVRapproval',
+                'analyticsSeries',
+                'analyticsMax',
+                'activityMix',
+                'expenseMix'
             ));
         }
 
@@ -183,10 +223,94 @@ class DashboardController extends Controller
                 'totals',
                 'totalPendingDeliveries',
                 'totalDelivered',
-                'totalTruckAllocated'
+                'totalTruckAllocated',
+                'totalLiquidation',
+                'totalCVRapproval',
+                'analyticsSeries',
+                'analyticsMax',
+                'activityMix',
+                'expenseMix'
             ));
         }
 
         abort(403, 'Unauthorized dashboard access.');
+    }
+
+    private function calculateLiquidationTotals(string $startDate, string $endDate): array
+    {
+        $liquidations = Liquidation::with('cashVoucher')
+            ->whereHas('cashVoucher', function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('created_at', [$startDate, $endDate]);
+            })
+            ->get();
+
+        $adminRpmTotal = 0;
+        $operationTotal = 0;
+
+        foreach ($liquidations as $liquidation) {
+            $total = $this->sumLiquidationAmount($liquidation);
+            $type = optional($liquidation->cashVoucher)->cvr_type;
+
+            if (in_array($type, ['admin', 'rpm'])) {
+                $adminRpmTotal += $total;
+            } else {
+                $operationTotal += $total;
+            }
+        }
+
+        return [
+            'admin_rpm_total' => $adminRpmTotal,
+            'operation_total' => $operationTotal,
+        ];
+    }
+
+    private function buildMonthlyAnalyticsSeries(Carbon $selectedMonth): array
+    {
+        $series = [];
+
+        for ($offset = 5; $offset >= 0; $offset--) {
+            $period = $selectedMonth->copy()->subMonths($offset);
+            $startDate = $period->copy()->startOfMonth()->toDateString();
+            $endDate = $period->copy()->endOfMonth()->toDateString();
+
+            $deliveryRequests = DeliveryRequest::with('lineItems')
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->get();
+
+            $deliveryIncome = $deliveryRequests->sum(fn ($item) => (float) $item->delivery_rate);
+            $accessorialIncome = $deliveryRequests->sum(
+                fn ($item) => $item->lineItems->sum(fn ($lineItem) => (float) $lineItem->accessorial_rate)
+            );
+
+            $income = $deliveryIncome + $accessorialIncome;
+            $liquidationTotals = $this->calculateLiquidationTotals($startDate, $endDate);
+            $expenses = ($liquidationTotals['admin_rpm_total'] ?? 0) + ($liquidationTotals['operation_total'] ?? 0);
+
+            $series[] = [
+                'label' => $period->format('M Y'),
+                'income' => round($income, 2),
+                'expenses' => round($expenses, 2),
+                'profit' => round($income - $expenses, 2),
+            ];
+        }
+
+        return $series;
+    }
+
+    private function sumLiquidationAmount(Liquidation $liquidation): float
+    {
+        $total =
+            (float) $liquidation->allowance +
+            (float) $liquidation->manpower +
+            (float) $liquidation->hauling +
+            (float) $liquidation->right_of_way +
+            (float) $liquidation->roro_expense +
+            (float) $liquidation->cash_charge;
+
+        $total += collect($liquidation->gasoline ?? [])->sum('amount');
+        $total += collect($liquidation->rfid ?? [])->sum('amount');
+        $total += collect($liquidation->others ?? [])->sum('amount');
+
+        return $total;
     }
 }

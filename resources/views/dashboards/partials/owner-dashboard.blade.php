@@ -21,6 +21,35 @@
         $totals->operation_total ?? 0,
         1
     );
+    $analyticsSeries = $analyticsSeries ?? [];
+    $analyticsMax = max(1, $analyticsMax ?? 1);
+    $activityMix = $activityMix ?? [];
+    $expenseMix = $expenseMix ?? [];
+    $chartWidth = 100;
+    $chartHeight = 130;
+    $chartPaddingX = 10;
+    $chartPaddingY = 18;
+    $chartInnerWidth = $chartWidth - ($chartPaddingX * 2);
+    $chartInnerHeight = $chartHeight - ($chartPaddingY * 2);
+    $chartCount = max(1, count($analyticsSeries) - 1);
+    $incomePoints = collect($analyticsSeries)->values()->map(function ($point, $index) use ($chartPaddingX, $chartPaddingY, $chartInnerWidth, $chartInnerHeight, $chartCount, $analyticsMax) {
+        $x = $chartPaddingX + ($index / $chartCount) * $chartInnerWidth;
+        $y = $chartPaddingY + ($chartInnerHeight - (($point['income'] ?? 0) / $analyticsMax) * $chartInnerHeight);
+        return number_format($x, 2, '.', '') . ',' . number_format($y, 2, '.', '');
+    })->implode(' ');
+    $expensePoints = collect($analyticsSeries)->values()->map(function ($point, $index) use ($chartPaddingX, $chartPaddingY, $chartInnerWidth, $chartInnerHeight, $chartCount, $analyticsMax) {
+        $x = $chartPaddingX + ($index / $chartCount) * $chartInnerWidth;
+        $y = $chartPaddingY + ($chartInnerHeight - (($point['expenses'] ?? 0) / $analyticsMax) * $chartInnerHeight);
+        return number_format($x, 2, '.', '') . ',' . number_format($y, 2, '.', '');
+    })->implode(' ');
+    $profitPoints = collect($analyticsSeries)->values()->map(function ($point, $index) use ($chartPaddingX, $chartPaddingY, $chartInnerWidth, $chartInnerHeight, $chartCount, $analyticsMax) {
+        $value = max(0, $point['profit'] ?? 0);
+        $x = $chartPaddingX + ($index / $chartCount) * $chartInnerWidth;
+        $y = $chartPaddingY + ($chartInnerHeight - ($value / $analyticsMax) * $chartInnerHeight);
+        return number_format($x, 2, '.', '') . ',' . number_format($y, 2, '.', '');
+    })->implode(' ');
+    $expenseMixMax = max(1, collect($expenseMix)->max('value') ?? 1);
+    $activityMixMax = max(1, collect($activityMix)->max('value') ?? 1);
 @endphp
 
 <div class="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#eff6ff_18%,#f8fafc_44%,#e0f2fe_72%,#ecfeff_100%)] py-4">
@@ -82,6 +111,64 @@
                     @endforeach
                 </div>
             @endforeach
+        </div>
+
+        <div class="mb-6 grid gap-4 xl:grid-cols-[minmax(0,1fr),360px]">
+            <div class="rounded-3xl border border-white/70 bg-gradient-to-br from-white via-white to-emerald-50/70 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur">
+                    <div class="mb-4 flex items-center gap-3">
+                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-100 to-lime-100 text-emerald-700 ring-1 ring-emerald-200 shadow-sm">
+                            <i class="fas fa-sitemap"></i>
+                        </span>
+                        <div>
+                            <h2 class="text-lg font-semibold text-slate-900">Activity Mix</h2>
+                            <p class="text-sm text-slate-500">Quick visual of the current operational workload.</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        @foreach ($activityMix as $item)
+                            @php $width = min(100, (($item['value'] ?? 0) / $activityMixMax) * 100); @endphp
+                            <div>
+                                <div class="mb-1.5 flex items-center justify-between text-sm">
+                                    <span class="font-medium text-slate-600">{{ $item['label'] }}</span>
+                                    <span class="font-semibold {{ $item['text'] }}">{{ number_format($item['value']) }}</span>
+                                </div>
+                                <div class="h-3 rounded-full bg-slate-100">
+                                    <div class="h-3 rounded-full {{ $item['color'] }}" style="width: {{ $width }}%"></div>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <div class="rounded-3xl border border-white/70 bg-gradient-to-br from-white via-white to-amber-50/70 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur">
+                <div class="mb-4 flex items-center gap-3">
+                    <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 text-amber-700 ring-1 ring-amber-200 shadow-sm">
+                        <i class="fas fa-coins"></i>
+                    </span>
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">Income vs Expense Mix</h2>
+                        <p class="text-sm text-slate-500">Selected-period financial weighting from your database records.</p>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    @foreach ($expenseMix as $item)
+                        @php $width = min(100, (($item['value'] ?? 0) / $expenseMixMax) * 100); @endphp
+                        <div>
+                            <div class="mb-1.5 flex items-center justify-between text-sm">
+                                <span class="font-medium text-slate-600">{{ $item['label'] }}</span>
+                                <span class="font-semibold {{ $item['text'] }}">PHP {{ number_format($item['value'], 2) }}</span>
+                            </div>
+                            <div class="h-3 rounded-full bg-slate-100">
+                                <div class="h-3 rounded-full {{ $item['color'] }}" style="width: {{ $width }}%"></div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
         </div>
 
         <div class="mb-6 grid gap-4 xl:grid-cols-[1.25fr,0.95fr]">
