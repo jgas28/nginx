@@ -822,7 +822,6 @@
                     <a href="{{ route('billing.dashboard') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-line w-4 text-center text-blue-300"></i><span>Dashboard</span></a>
                     <a href="{{ route('billing.createSOA.form') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-file-circle-plus w-4 text-center text-cyan-300"></i><span>Create SOA</span></a>
                     <a href="{{ route('billing.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-violet-300"></i><span>SOA List</span></a>
-                    <a href="{{ route('billing.indexAccessorial') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-file-invoice-dollar w-4 text-center text-amber-300"></i><span>Accessorial</span></a>
                 </div>
             </div>
             @endif

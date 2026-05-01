@@ -34,7 +34,7 @@
                             <option value="">Select Company</option>
                             @foreach($companies as $company)
                                 <option value="{{ $company->id }}" {{ old('company_id') == $company->id ? 'selected' : '' }}>
-                                    {{ $company->company_name }}
+                                    {{ $company->company_name }}{{ ($companyItemCounts[$company->id] ?? 0) > 0 ? ' (' . $companyItemCounts[$company->id] . ' pending)' : '' }}
                                 </option>
                             @endforeach
                         </select>
@@ -55,7 +55,7 @@
                             <option value="">Select Customer</option>
                             @foreach($customers as $customer)
                                 <option value="{{ $customer->id }}" {{ old('customer_id') == $customer->id ? 'selected' : '' }}>
-                                    {{ $customer->name }}
+                                    {{ $customer->name }}{{ ($customerItemCounts[$customer->id] ?? 0) > 0 ? ' (' . $customerItemCounts[$customer->id] . ' pending)' : '' }}
                                 </option>
                             @endforeach
                         </select>
@@ -809,18 +809,6 @@ function populateFilterDropdowns() {
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    // Set default dates if not set
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
-    if (!document.getElementById('billing_period_from').value) {
-        document.getElementById('billing_period_from').value = firstDay.toISOString().split('T')[0];
-    }
-    if (!document.getElementById('billing_period_to').value) {
-        document.getElementById('billing_period_to').value = lastDay.toISOString().split('T')[0];
-    }
-
     // Populate filter dropdowns first
     populateFilterDropdowns();
 

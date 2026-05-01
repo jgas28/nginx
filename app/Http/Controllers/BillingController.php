@@ -308,7 +308,10 @@ class BillingController extends Controller
             ]);
         }
 
-        return view('billing.create-soa', compact('companies', 'customers', 'deliveryLineItems', 'debug'));
+        $companyItemCounts = $deliveryLineItems->groupBy('delivery_request_company_id')->map->count();
+        $customerItemCounts = $deliveryLineItems->groupBy('delivery_request_customer_id')->map->count();
+
+        return view('billing.create-soa', compact('companies', 'customers', 'deliveryLineItems', 'debug', 'companyItemCounts', 'customerItemCounts'));
     }
 
     public function createSOA(Request $request)
@@ -455,7 +458,7 @@ class BillingController extends Controller
         $soa = Soa::with(['company', 'customer', 'creator'])->findOrFail($id);
         $attachedDeliveryRequests = $this->getAttachedDeliveryRequests($soa);
 
-        $pdf = Pdf::loadView('billing.print', compact('soa', 'attachedDeliveryRequests'))
+        $pdf = Pdf::loadView('billing.pdf', compact('soa', 'attachedDeliveryRequests'))
             ->setPaper('a4', 'portrait');
 
         return $pdf->download(($soa->soa_number ?? 'soa') . '.pdf');
