@@ -159,44 +159,13 @@
                     <span id="resultsCount">0</span> delivery requests found
                 </div>
 
-                <div id="deliveryRequestsContainer" class="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
-                    @if($deliveryLineItems->isEmpty())
-                        <div class="text-center py-8 text-gray-500">
-                            <i class="fas fa-truck text-3xl mb-4"></i>
-                            @if(!$debug['delivery_request_line_items_table_exists'])
-                                <p class="text-red-600 font-semibold mb-2">Database tables not found!</p>
-                                <p>The required database tables for delivery requests have not been created yet.</p>
-                                <p class="text-sm mt-2">Please run the pending migrations to create the necessary tables.</p>
-                                <div class="mt-4 p-4 bg-gray-100 rounded text-left text-sm">
-                                    <p><strong>Missing tables:</strong></p>
-                                    <ul class="list-disc list-inside mt-1">
-                                        @if(!$debug['delivery_requests_table_exists'])<li>delivery_requests</li>@endif
-                                        @if(!$debug['delivery_request_line_items_table_exists'])<li>delivery_request_line_items</li>@endif
-                                        @if(!$debug['soa_delivery_requests_table_exists'])<li>soa_delivery_requests</li>@endif
-                                    </ul>
-                                </div>
-                            @elseif(!$debug['delivery_requests_table_exists'])
-                                <p class="text-orange-600 font-semibold mb-2">Delivery requests table missing!</p>
-                                <p>The delivery_requests table needs to be created.</p>
-                            @else
-                                <p>Please select a company/customer and billing period to view available delivery requests.</p>
-                                <div class="mt-4 p-4 bg-blue-50 rounded text-left text-sm">
-                                    <p><strong>Debug Info:</strong></p>
-                                    <ul class="list-disc list-inside mt-1">
-                                        <li>Total delivery requests: {{ $debug['total_delivery_requests'] ?? 0 }}</li>
-                                        <li>Total line items: {{ $debug['total_line_items'] ?? 0 }}</li>
-                                        <li>Available statuses: {{ implode(', ', $debug['delivery_request_statuses'] ?? []) }}</li>
-                                        <li>Using mock data: {{ $deliveryLineItems->count() }} items</li>
-                                    </ul>
-                                </div>
-                            @endif
+                <div id="deliveryRequestsContainer" class="max-h-96 overflow-y-auto border border-gray-200 rounded-xl bg-white">
+                    <div class="flex flex-col items-center justify-center py-12 text-gray-400">
+                        <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
+                            <i class="fas fa-truck-loading text-blue-400 text-2xl"></i>
                         </div>
-                    @else
-                        <div class="text-center py-8 text-gray-500">
-                            <i class="fas fa-truck text-3xl mb-4"></i>
-                            <p>Please select a company/customer and billing period to view available delivery requests.</p>
-                        </div>
-                    @endif
+                        <p class="text-sm font-medium text-gray-500">Loading delivery requests&hellip;</p>
+                    </div>
                 </div>
 
                 @error('delivery_request_ids')
@@ -218,13 +187,37 @@
                         <button type="button" onclick="calculateTotal()" class="inline-flex w-full items-center justify-center rounded-lg bg-blue-500 px-6 py-2 text-white hover:bg-blue-600">
                             <i class="fas fa-calculator mr-2"></i>Show Summary
                         </button>
-                        <button type="submit" class="inline-flex w-full items-center justify-center rounded-lg bg-green-600 px-6 py-2 text-white hover:bg-green-700">
+                        <button type="button" onclick="validateAndSubmit()" class="inline-flex w-full items-center justify-center rounded-lg bg-green-600 px-6 py-2 text-white hover:bg-green-700">
                             <i class="fas fa-save mr-2"></i>Create SOA
                         </button>
                     </div>
                 </div>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Validation Modal -->
+<div id="validationModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 px-4 backdrop-blur-sm">
+    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200/80 overflow-hidden">
+        <div class="flex items-center gap-4 px-6 pt-6 pb-4">
+            <div class="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                <i class="fas fa-exclamation-triangle text-red-500 text-xl"></i>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">Missing Required Fields</h3>
+                <p class="text-sm text-gray-400 mt-0.5">Please complete the fields below before creating your SOA.</p>
+            </div>
+        </div>
+        <div class="px-6 pb-2" id="validationModalErrors"></div>
+        <div class="px-6 pb-6 pt-4 flex flex-col gap-2 sm:flex-row">
+            <button onclick="closeValidationModal()" class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition">
+                <i class="fas fa-times mr-2"></i>Dismiss
+            </button>
+            <button onclick="closeValidationModal()" class="w-full rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition">
+                <i class="fas fa-arrow-left mr-2"></i>Go back and fix
+            </button>
+        </div>
     </div>
 </div>
 
@@ -340,6 +333,122 @@ console.log('Delivery line items loaded:', deliveryLineItems.length);
 let calculateTotalModalItems = [];
 let calculateTotalModalCurrentPage = 1;
 
+// ── Skeleton loader ───────────────────────────────────────────
+function buildSkeletonCards(n) {
+    const card = `
+        <div class="border border-gray-100 rounded-xl p-4 animate-pulse">
+            <div class="flex items-start gap-3">
+                <div class="mt-0.5 h-5 w-5 rounded bg-gray-200 flex-shrink-0"></div>
+                <div class="flex-1 space-y-2 min-w-0">
+                    <div class="flex gap-2 items-center">
+                        <div class="h-4 bg-gray-200 rounded w-1/2"></div>
+                        <div class="h-4 bg-gray-100 rounded w-16"></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-x-4 gap-y-2 pt-1">
+                        <div class="h-3 bg-gray-100 rounded"></div>
+                        <div class="h-3 bg-gray-100 rounded w-4/5"></div>
+                        <div class="h-3 bg-gray-100 rounded w-3/4"></div>
+                        <div class="h-3 bg-gray-100 rounded"></div>
+                        <div class="h-3 bg-gray-100 rounded col-span-2 w-2/3"></div>
+                    </div>
+                    <div class="flex gap-4 pt-1 border-t border-gray-100">
+                        <div class="h-3 bg-gray-100 rounded w-24"></div>
+                        <div class="h-3 bg-gray-100 rounded w-20"></div>
+                        <div class="h-4 bg-gray-200 rounded w-16 ml-auto"></div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    return `<div class="space-y-3 p-3">${card.repeat(n)}</div>`;
+}
+
+// ── Status badge ──────────────────────────────────────────────
+function getStatusBadge(status) {
+    const s = (status || 'N/A').toLowerCase();
+    if (s.includes('deliver') || s.includes('complet')) return { cls: 'bg-green-100 text-green-700',  text: status || 'Delivered' };
+    if (s.includes('transit') || s.includes('progress'))return { cls: 'bg-blue-100 text-blue-700',   text: status };
+    if (s.includes('pending') || s.includes('wait'))    return { cls: 'bg-yellow-100 text-yellow-700',text: status };
+    if (s.includes('cancel')  || s.includes('fail'))    return { cls: 'bg-red-100 text-red-700',      text: status };
+    return { cls: 'bg-gray-100 text-gray-500', text: status || 'N/A' };
+}
+
+// ── Card interactivity ────────────────────────────────────────
+function toggleCard(cardEl) {
+    const cb = cardEl.querySelector('.delivery-checkbox');
+    cb.checked = !cb.checked;
+    toggleCardStyle(cb);
+}
+
+function toggleCardStyle(cb) {
+    const card = cb.closest('.dr-card');
+    if (!card) return;
+    if (cb.checked) {
+        card.classList.add('border-blue-400', 'bg-blue-50', 'shadow-sm');
+        card.classList.remove('border-gray-200');
+    } else {
+        card.classList.remove('border-blue-400', 'bg-blue-50', 'shadow-sm');
+        card.classList.add('border-gray-200');
+    }
+    updateSummary();
+}
+
+// ── Validation modal ──────────────────────────────────────────
+function validateAndSubmit() {
+    const errors = [];
+    if (!document.getElementById('company_id').value)
+        errors.push({ icon: 'fa-building',      color: 'blue',   field: 'Company',            msg: 'Please select a company for this SOA.' });
+    if (!document.getElementById('customer_id').value)
+        errors.push({ icon: 'fa-user',           color: 'purple', field: 'Customer',           msg: 'Please select a customer for this SOA.' });
+    if (!document.getElementById('billing_period_from').value)
+        errors.push({ icon: 'fa-calendar-alt',  color: 'green',  field: 'Billing Period From', msg: 'Set the billing period start date.' });
+    if (!document.getElementById('billing_period_to').value)
+        errors.push({ icon: 'fa-calendar-check',color: 'green',  field: 'Billing Period To',   msg: 'Set the billing period end date.' });
+    if (!document.querySelectorAll('.delivery-checkbox:checked').length)
+        errors.push({ icon: 'fa-boxes',         color: 'orange', field: 'Delivery Requests',   msg: 'Select at least one delivery request.' });
+
+    if (errors.length) { showValidationModal(errors); return; }
+    document.getElementById('soaForm').submit();
+}
+
+function showValidationModal(errors) {
+    const colorMap = {
+        blue:   'bg-blue-100 text-blue-600',
+        purple: 'bg-purple-100 text-purple-600',
+        green:  'bg-green-100 text-green-600',
+        orange: 'bg-orange-100 text-orange-600',
+        red:    'bg-red-100 text-red-600',
+    };
+    document.getElementById('validationModalErrors').innerHTML = errors.map(e => `
+        <div class="flex items-start gap-3 py-3 border-b border-gray-100 last:border-0">
+            <div class="flex-shrink-0 w-9 h-9 rounded-full ${colorMap[e.color] || 'bg-gray-100 text-gray-500'} flex items-center justify-center">
+                <i class="fas ${e.icon} text-sm"></i>
+            </div>
+            <div class="min-w-0">
+                <p class="text-sm font-semibold text-gray-900">${e.field}</p>
+                <p class="text-xs text-gray-400 mt-0.5">${e.msg}</p>
+            </div>
+        </div>`).join('');
+    const modal = document.getElementById('validationModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.body.classList.add('overflow-hidden');
+}
+
+function closeValidationModal() {
+    const modal = document.getElementById('validationModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    document.body.classList.remove('overflow-hidden');
+}
+
+// ── Card enter animation ──────────────────────────────────────
+const _drStyle = document.createElement('style');
+_drStyle.textContent = `
+@keyframes drFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.dr-card-enter { animation: drFadeIn 0.2s ease forwards; }
+`;
+document.head.appendChild(_drStyle);
+
 function formatPeso(amount) {
     return `PHP ${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -439,14 +548,7 @@ function filterDeliveryRequests() {
         console.log('Total delivery line items to filter:', deliveryLineItems.length);
 
         const container = document.getElementById('deliveryRequestsContainer');
-        container.innerHTML = `
-            <div class="text-center py-8">
-                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mx-auto mb-4">
-                    <i class="fas fa-spinner fa-spin text-3xl text-blue-600"></i>
-                </div>
-                <p class="mt-2 text-gray-600">Loading delivery requests...</p>
-            </div>
-        `;
+        container.innerHTML = buildSkeletonCards(4);
 
         setTimeout(() => {
             let html = '<div class="space-y-2">'; // Reduced spacing for more compact display
@@ -551,28 +653,51 @@ function filterDeliveryRequests() {
                             }
                         }
 
+                        const badge = getStatusBadge(lineItem.requestStatus || lineItem.deliveryStatusName);
+                        const cName = lineItem.deliveryRequest ? lineItem.deliveryRequest.companyName : 'N/A';
+                        const cuName = lineItem.deliveryRequest ? lineItem.deliveryRequest.customerName : 'N/A';
                         html += `
-                            <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
+                            <div class="dr-card border border-gray-200 rounded-xl p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 transition-all duration-150 dr-card-enter"
+                                 style="animation-delay:${visibleItems * 35}ms; opacity:0;"
+                                 onclick="toggleCard(this)">
                                 <div class="flex items-start gap-3">
-                                    <input type="checkbox" name="delivery_line_item_ids[]" value="${lineItem.id}"
-                                           id="line_item_${lineItem.id}" class="mt-1 delivery-checkbox"
-                                           onchange="updateSummary()">
+                                    <div class="flex-shrink-0 pt-0.5">
+                                        <input type="checkbox" name="delivery_line_item_ids[]" value="${lineItem.id}"
+                                               id="line_item_${lineItem.id}" class="delivery-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 cursor-pointer accent-blue-600"
+                                               onclick="event.stopPropagation()" onchange="toggleCardStyle(this)">
+                                    </div>
                                     <div class="flex-1 min-w-0">
-                                        <label for="line_item_${lineItem.id}" class="font-medium text-gray-900 cursor-pointer block">
-                                            MTM: ${lineItem.mtm} | Line Item #${lineItem.id}
-                                        </label>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-1 mt-1 text-sm text-gray-600">
-                                            <div>Booking Date: ${formattedBookingDate}</div>
-                                            <div>Delivery Date: ${formattedDate}</div>
-                                            <div>Amount: ₱${totalRate.toFixed(2)}</div>
-                                            <div class="truncate">Site: ${lineItem.siteName}</div>
-                                            <div class="truncate">Company: ${lineItem.deliveryRequest ? lineItem.deliveryRequest.companyName : 'N/A'}</div>
-                                            <div class="truncate">Customer: ${lineItem.deliveryRequest ? lineItem.deliveryRequest.customerName : 'N/A'}</div>
-                                            <div class="truncate md:col-span-2">Status: ${lineItem.requestStatus || lineItem.deliveryStatusName || 'N/A'}</div>
+                                        <div class="flex flex-wrap items-center gap-2 mb-2">
+                                            <span class="font-semibold text-gray-900 text-sm">MTM: ${lineItem.mtm}</span>
+                                            <span class="text-xs text-gray-400">#${lineItem.id}</span>
+                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium ${badge.cls}">${badge.text}</span>
                                         </div>
-                                        <div class="mt-1 flex flex-col gap-1 text-xs text-gray-500 sm:flex-row sm:gap-4">
-                                            <span>Accessorial: ₱${lineItem.accessorialRate.toFixed(2)}</span>
-                                            <span>Add-on: ₱${lineItem.addOnRate.toFixed(2)}</span>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500">
+                                            <div class="flex items-center gap-1.5 min-w-0">
+                                                <i class="fas fa-calendar-alt text-gray-300 w-3 flex-shrink-0"></i>
+                                                <span class="truncate">Booking: ${formattedBookingDate}</span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5 min-w-0">
+                                                <i class="fas fa-truck text-gray-300 w-3 flex-shrink-0"></i>
+                                                <span class="truncate">Delivery: ${formattedDate}</span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5 min-w-0">
+                                                <i class="fas fa-building text-gray-300 w-3 flex-shrink-0"></i>
+                                                <span class="truncate">${cName}</span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5 min-w-0">
+                                                <i class="fas fa-user text-gray-300 w-3 flex-shrink-0"></i>
+                                                <span class="truncate">${cuName}</span>
+                                            </div>
+                                            <div class="flex items-center gap-1.5 min-w-0 sm:col-span-2">
+                                                <i class="fas fa-map-marker-alt text-gray-300 w-3 flex-shrink-0"></i>
+                                                <span class="truncate">${lineItem.siteName || 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-wrap items-center gap-3 mt-2.5 pt-2 border-t border-gray-100 text-xs">
+                                            <span class="text-gray-400"><i class="fas fa-tags mr-1"></i>Accessorial: ₱${lineItem.accessorialRate.toFixed(2)}</span>
+                                            <span class="text-gray-400"><i class="fas fa-plus-circle mr-1"></i>Add-on: ₱${lineItem.addOnRate.toFixed(2)}</span>
+                                            <span class="ml-auto font-bold text-emerald-600 text-sm">₱${totalRate.toFixed(2)}</span>
                                         </div>
                                     </div>
                                 </div>
@@ -692,17 +817,17 @@ function calculateTotal() {
 
 // Bulk selection functions
 function selectAllItems() {
-    const checkboxes = document.querySelectorAll('.delivery-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = true;
+    document.querySelectorAll('.delivery-checkbox').forEach(cb => {
+        cb.checked = true;
+        toggleCardStyle(cb);
     });
     updateSummary();
 }
 
 function selectNoneItems() {
-    const checkboxes = document.querySelectorAll('.delivery-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = false;
+    document.querySelectorAll('.delivery-checkbox').forEach(cb => {
+        cb.checked = false;
+        toggleCardStyle(cb);
     });
     updateSummary();
 }
