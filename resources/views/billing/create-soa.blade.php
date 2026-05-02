@@ -27,17 +27,50 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Company Selection -->
                     <div>
-                        <label for="company_id" class="block text-sm font-medium text-gray-700 mb-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
                             Company <span class="text-red-500">*</span>
                         </label>
-                        <select id="company_id" name="company_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="onCompanyChange()">
+                        <!-- Hidden native select for form submission -->
+                        <select id="company_id" name="company_id" class="hidden" onchange="onCompanyChange()">
                             <option value="">Select Company</option>
                             @foreach($companies as $company)
-                                <option value="{{ $company->id }}" {{ old('company_id') == $company->id ? 'selected' : '' }}>
-                                    {{ $company->company_name }}{{ ($companyItemCounts[$company->id] ?? 0) > 0 ? ' (' . $companyItemCounts[$company->id] . ' pending)' : '' }}
-                                </option>
+                                <option value="{{ $company->id }}" {{ old('company_id') == $company->id ? 'selected' : '' }}>{{ $company->company_name }}</option>
                             @endforeach
                         </select>
+                        <!-- Custom styled dropdown -->
+                        <div class="relative" id="company-select-wrapper">
+                            <button type="button" id="company-trigger"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-left flex items-center justify-between gap-2"
+                                    onclick="toggleCustomSelect('company')">
+                                <span id="company-display" class="text-gray-400 text-sm truncate">Select Company</span>
+                                <i class="fas fa-chevron-down text-gray-400 text-xs flex-shrink-0 transition-transform duration-200" id="company-chevron"></i>
+                            </button>
+                            <div id="company-dropdown"
+                                 class="hidden absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                                <div class="p-1.5">
+                                    <div class="py-2 px-3 text-gray-400 text-sm cursor-pointer hover:bg-gray-50 rounded-lg"
+                                         onclick="selectCompanyOption('', 'Select Company', 0)">
+                                        Select Company
+                                    </div>
+                                    @foreach($companies as $company)
+                                        @php $pendingCount = $companyItemCounts[$company->id] ?? 0; @endphp
+                                        <div class="py-2 px-3 flex items-center justify-between gap-2 cursor-pointer hover:bg-blue-50 rounded-lg transition-colors"
+                                             onclick="selectCompanyOption('{{ $company->id }}', {{ json_encode($company->company_name) }}, {{ $pendingCount }})">
+                                            <span class="text-gray-900 text-sm truncate">{{ $company->company_name }}</span>
+                                            @if($pendingCount > 0)
+                                                <span class="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap">
+                                                    <i class="fas fa-clock"></i>{{ $pendingCount }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                        <div id="company-pending-hint" class="hidden mt-2 flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                            <i class="fas fa-clock"></i>
+                            <span id="company-pending-hint-text"></span>
+                        </div>
                         @if($companies->isEmpty())
                             <p class="mt-1 text-sm text-red-600">No companies found in database</p>
                         @endif
@@ -48,17 +81,50 @@
 
                     <!-- Customer Selection -->
                     <div>
-                        <label for="customer_id" class="block text-sm font-medium text-gray-700 mb-2">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
                             Customer <span class="text-red-500">*</span>
                         </label>
-                        <select id="customer_id" name="customer_id" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="onCustomerChange()">
+                        <!-- Hidden native select for form submission -->
+                        <select id="customer_id" name="customer_id" class="hidden" onchange="onCustomerChange()">
                             <option value="">Select Customer</option>
                             @foreach($customers as $customer)
-                                <option value="{{ $customer->id }}" {{ old('customer_id') == $customer->id ? 'selected' : '' }}>
-                                    {{ $customer->name }}{{ ($customerItemCounts[$customer->id] ?? 0) > 0 ? ' (' . $customerItemCounts[$customer->id] . ' pending)' : '' }}
-                                </option>
+                                <option value="{{ $customer->id }}" {{ old('customer_id') == $customer->id ? 'selected' : '' }}>{{ $customer->name }}</option>
                             @endforeach
                         </select>
+                        <!-- Custom styled dropdown -->
+                        <div class="relative" id="customer-select-wrapper">
+                            <button type="button" id="customer-trigger"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-left flex items-center justify-between gap-2"
+                                    onclick="toggleCustomSelect('customer')">
+                                <span id="customer-display" class="text-gray-400 text-sm truncate">Select Customer</span>
+                                <i class="fas fa-chevron-down text-gray-400 text-xs flex-shrink-0 transition-transform duration-200" id="customer-chevron"></i>
+                            </button>
+                            <div id="customer-dropdown"
+                                 class="hidden absolute z-20 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-64 overflow-y-auto">
+                                <div class="p-1.5">
+                                    <div class="py-2 px-3 text-gray-400 text-sm cursor-pointer hover:bg-gray-50 rounded-lg"
+                                         onclick="selectCustomerOption('', 'Select Customer', 0)">
+                                        Select Customer
+                                    </div>
+                                    @foreach($customers as $customer)
+                                        @php $pendingCount = $customerItemCounts[$customer->id] ?? 0; @endphp
+                                        <div class="py-2 px-3 flex items-center justify-between gap-2 cursor-pointer hover:bg-blue-50 rounded-lg transition-colors"
+                                             onclick="selectCustomerOption('{{ $customer->id }}', {{ json_encode($customer->name) }}, {{ $pendingCount }})">
+                                            <span class="text-gray-900 text-sm truncate">{{ $customer->name }}</span>
+                                            @if($pendingCount > 0)
+                                                <span class="flex-shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap">
+                                                    <i class="fas fa-clock"></i>{{ $pendingCount }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                        <div id="customer-pending-hint" class="hidden mt-2 flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                            <i class="fas fa-clock"></i>
+                            <span id="customer-pending-hint-text"></span>
+                        </div>
                         @if($customers->isEmpty())
                             <p class="mt-1 text-sm text-red-600">No customers found in database</p>
                         @endif
@@ -932,8 +998,77 @@ function populateFilterDropdowns() {
     });
 }
 
-// Initialize on page load
+// ── Custom select dropdowns (company & customer) ──────────────
+const _csOpen = { company: false, customer: false };
+
+const _companyPendingCounts = {
+    @foreach($companies as $company)
+    {{ $company->id }}: {{ $companyItemCounts[$company->id] ?? 0 }},
+    @endforeach
+};
+const _customerPendingCounts = {
+    @foreach($customers as $customer)
+    {{ $customer->id }}: {{ $customerItemCounts[$customer->id] ?? 0 }},
+    @endforeach
+};
+
+function toggleCustomSelect(type) {
+    const wasOpen = _csOpen[type];
+    _csCloseAll();
+    if (!wasOpen) _csOpen[type] = true, document.getElementById(`${type}-dropdown`).classList.remove('hidden'), document.getElementById(`${type}-chevron`).classList.add('rotate-180');
+}
+
+function _csCloseAll() {
+    ['company', 'customer'].forEach(t => {
+        _csOpen[t] = false;
+        document.getElementById(`${t}-dropdown`).classList.add('hidden');
+        document.getElementById(`${t}-chevron`).classList.remove('rotate-180');
+    });
+}
+
+function _applyCustomSelect(type, value, label, pendingCount) {
+    const select = document.getElementById(`${type}_id`);
+    select.value = value;
+    const display = document.getElementById(`${type}-display`);
+    if (value) {
+        display.textContent = label;
+        display.classList.replace('text-gray-400', 'text-gray-900');
+    } else {
+        display.textContent = type === 'company' ? 'Select Company' : 'Select Customer';
+        display.classList.replace('text-gray-900', 'text-gray-400');
+    }
+    const hint = document.getElementById(`${type}-pending-hint`);
+    const hintText = document.getElementById(`${type}-pending-hint-text`);
+    if (value && pendingCount > 0) {
+        hintText.textContent = `${pendingCount} pending delivery request${pendingCount !== 1 ? 's' : ''} available`;
+        hint.classList.remove('hidden');
+    } else {
+        hint.classList.add('hidden');
+    }
+    _csCloseAll();
+    select.dispatchEvent(new Event('change'));
+}
+
+function selectCompanyOption(value, label, pendingCount) { _applyCustomSelect('company', value, label, pendingCount); }
+function selectCustomerOption(value, label, pendingCount) { _applyCustomSelect('customer', value, label, pendingCount); }
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('#company-select-wrapper')) { _csOpen.company = false; const d = document.getElementById('company-dropdown'); if (d) { d.classList.add('hidden'); document.getElementById('company-chevron').classList.remove('rotate-180'); } }
+    if (!e.target.closest('#customer-select-wrapper')) { _csOpen.customer = false; const d = document.getElementById('customer-dropdown'); if (d) { d.classList.add('hidden'); document.getElementById('customer-chevron').classList.remove('rotate-180'); } }
+});
+
+// ── Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
+    // Restore custom select display for old() pre-selections
+    ['company', 'customer'].forEach(type => {
+        const select = document.getElementById(`${type}_id`);
+        if (select && select.value) {
+            const opt = select.querySelector(`option[value="${select.value}"]`);
+            const counts = type === 'company' ? _companyPendingCounts : _customerPendingCounts;
+            if (opt) _applyCustomSelect(type, select.value, opt.textContent.trim(), counts[select.value] || 0);
+        }
+    });
+
     // Populate filter dropdowns first
     populateFilterDropdowns();
 
