@@ -28,6 +28,19 @@
 
         .searchable-select-panel {
             z-index: 130 !important;
+            /* Override right-0 so panel can grow wider than the trigger button */
+            right: auto !important;
+            min-width: 100%;
+            width: max-content;
+            max-width: min(28rem, 92vw);
+        }
+
+        /* Show full option text — never truncate inside the dropdown list */
+        .searchable-select-panel [data-searchable-select-list] .truncate,
+        .searchable-select-panel [data-select-list] .truncate {
+            overflow: visible !important;
+            text-overflow: unset !important;
+            white-space: normal !important;
         }
 
         main form label {
@@ -1383,7 +1396,7 @@
             const date = new Date();
             const stamp = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-            return `${label || 'table'}-${stamp}.xls`;
+            return `${label || 'table'}-${stamp}.xlsx`;
         }
 
         function getCurrentTableElement(table) {
@@ -1501,33 +1514,35 @@
         }
 
         function downloadExcelFile(filename, headers, rows) {
-            const thead = headers.length > 0
-                ? `<thead><tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('')}</tr></thead>`
-                : '';
-            const tbody = rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('');
-            const documentHtml = `
-                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
-                    <head>
-                        <meta charset="UTF-8">
-                    </head>
-                    <body>
-                        <table border="1">
-                            ${thead}
-                            <tbody>${tbody}</tbody>
-                        </table>
-                    </body>
-                </html>
-            `;
+            // Build worksheet data: header row first, then data rows
+            const wsData = [];
+            if (headers.length > 0) wsData.push(headers);
+            rows.forEach((row) => wsData.push(row));
 
-            const blob = new Blob([documentHtml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
-            const downloadUrl = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = downloadUrl;
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            URL.revokeObjectURL(downloadUrl);
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+            // Style the header row bold if headers exist
+            if (headers.length > 0) {
+                headers.forEach((_, c) => {
+                    const cellRef = XLSX.utils.encode_cell({ r: 0, c });
+                    if (ws[cellRef]) {
+                        ws[cellRef].s = { font: { bold: true } };
+                    }
+                });
+            }
+
+            // Auto-fit column widths based on content
+            const colWidths = (wsData[0] || []).map((_, ci) => ({
+                wch: Math.min(60, Math.max(10, ...wsData.map((r) => String(r[ci] ?? '').length)))
+            }));
+            ws['!cols'] = colWidths;
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+            // Ensure .xlsx extension
+            const xlsxFilename = filename.replace(/\.xls$/, '.xlsx');
+            XLSX.writeFile(wb, xlsxFilename);
         }
 
         function hasExistingExcelAction(table) {
@@ -1817,6 +1832,9 @@
         });
     })();
 </script>
+
+{{-- SheetJS — real .xlsx generation for client-side table exports --}}
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 {{-- Alpine.js (for dropdowns) --}}
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
