@@ -113,12 +113,16 @@
             font-weight: 600;
             padding: 8px 10px;
         }
-        .total-amount td { font-weight: 700; font-size: 13px; }
+        .subtotal-row td { background-color: #F9FAFB; color: #4B5563; }
+        .discount-row td { background-color: #FEF2F2; color: #B91C1C; font-weight: 600; }
+        .adjustment-row td { background-color: #EFF6FF; color: #1D4ED8; font-weight: 600; }
+        .total-amount td { font-weight: 700; font-size: 13px; color: #065F46; background-color: #ECFDF5; }
         .outstanding-row td {
             background-color: #FEF2F2;
             font-weight: 700;
             color: #DC2626;
         }
+        .remarks-note { font-size: 10px; font-style: italic; font-weight: 400; margin-left: 4px; }
 
         /* Notes */
         .notes-box {
@@ -223,17 +227,51 @@
                 @endforelse
             </tbody>
             <tfoot>
+                @php
+                    $subtotal      = (float)($soa->subtotal_amount ?? $soa->total_amount);
+                    $discountAmt   = (float)($soa->discount_amount ?? 0);
+                    $adjustmentAmt = (float)($soa->adjustment_amount ?? 0);
+                    $hasAdj        = $discountAmt != 0 || $adjustmentAmt != 0;
+                @endphp
+                @if($hasAdj)
+                <tr class="totals-row subtotal-row">
+                    <td colspan="3" class="right">Subtotal:</td>
+                    <td class="right">&#8369;{{ number_format($subtotal, 2) }}</td>
+                </tr>
+                @if($discountAmt > 0)
+                <tr class="discount-row">
+                    <td colspan="3" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">
+                        {{ $soa->discount_type === 'dispute' ? 'Dispute' : 'Discount' }}:
+                        @if($soa->discount_remarks)
+                            <span class="remarks-note">({{ $soa->discount_remarks }})</span>
+                        @endif
+                    </td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">-&#8369;{{ number_format($discountAmt, 2) }}</td>
+                </tr>
+                @endif
+                @if($adjustmentAmt != 0)
+                <tr class="adjustment-row">
+                    <td colspan="3" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">
+                        Manual Adjustment:
+                        @if($soa->adjustment_remarks)
+                            <span class="remarks-note">({{ $soa->adjustment_remarks }})</span>
+                        @endif
+                    </td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">{{ $adjustmentAmt >= 0 ? '+' : '' }}&#8369;{{ number_format($adjustmentAmt, 2) }}</td>
+                </tr>
+                @endif
+                @endif
                 <tr class="totals-row total-amount">
-                    <td colspan="3" class="right">Total Amount:</td>
-                    <td class="right">P{{ number_format($soa->total_amount, 2) }}</td>
+                    <td colspan="3" class="right">Final Total:</td>
+                    <td class="right">&#8369;{{ number_format($soa->total_amount, 2) }}</td>
                 </tr>
                 <tr class="totals-row">
                     <td colspan="3" class="right">Paid Amount:</td>
-                    <td class="right">P{{ number_format($soa->paid_amount, 2) }}</td>
+                    <td class="right">&#8369;{{ number_format($soa->paid_amount, 2) }}</td>
                 </tr>
                 <tr class="outstanding-row">
                     <td colspan="3" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">Outstanding Amount:</td>
-                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">P{{ number_format($soa->outstanding_amount, 2) }}</td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">&#8369;{{ number_format($soa->outstanding_amount, 2) }}</td>
                 </tr>
             </tfoot>
         </table>

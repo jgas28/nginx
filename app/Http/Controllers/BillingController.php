@@ -72,6 +72,11 @@ class BillingController extends Controller
             'delivery_request_ids' => 'required|array|min:1',
             'delivery_request_ids.*' => 'integer',
             'notes' => 'nullable|string|max:1000',
+            'discount_type' => 'nullable|in:discount,dispute',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'discount_remarks' => 'nullable|string|max:1000',
+            'adjustment_amount' => 'nullable|numeric',
+            'adjustment_remarks' => 'nullable|string|max:1000',
         ]);
 
         if ($validator->fails()) {
@@ -116,13 +121,24 @@ class BillingController extends Controller
         DB::beginTransaction();
 
         try {
+            $discountType     = $request->discount_type ?: null;
+            $discountAmount   = (float) ($request->discount_amount ?? 0);
+            $adjustmentAmount = (float) ($request->adjustment_amount ?? 0);
+            $finalAmount      = max(0, $totalAmount - $discountAmount + $adjustmentAmount);
+
             $soa->update([
                 'billing_period_from' => $request->billing_period_from,
                 'billing_period_to' => $request->billing_period_to,
                 'statement_date' => $request->booking_date,
                 'due_date' => $request->booking_date,
-                'total_amount' => $totalAmount,
-                'outstanding_amount' => max(0, $totalAmount - (float) $soa->paid_amount),
+                'subtotal_amount' => $totalAmount,
+                'discount_type' => $discountType,
+                'discount_amount' => $discountAmount,
+                'discount_remarks' => $request->discount_remarks,
+                'adjustment_amount' => $adjustmentAmount,
+                'adjustment_remarks' => $request->adjustment_remarks,
+                'total_amount' => $finalAmount,
+                'outstanding_amount' => max(0, $finalAmount - (float) $soa->paid_amount),
                 'status' => $request->status,
                 'notes' => $request->notes,
                 'delivery_request_ids' => $deliveryRequestIds,
@@ -325,6 +341,11 @@ class BillingController extends Controller
             'delivery_line_item_ids' => 'required|array|min:1',
             'delivery_line_item_ids.*' => 'exists:delivery_request_line_items,id',
             'notes' => 'nullable|string|max:1000',
+            'discount_type' => 'nullable|in:discount,dispute',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'discount_remarks' => 'nullable|string|max:1000',
+            'adjustment_amount' => 'nullable|numeric',
+            'adjustment_remarks' => 'nullable|string|max:1000',
         ]);
 
         if ($validator->fails()) {
@@ -392,8 +413,13 @@ class BillingController extends Controller
                 ->filter(fn ($summary) => !empty($summary['delivery_request_id']))
                 ->values();
 
-            $totalAmount = $requestSummaries->sum('amount');
+            $subtotalAmount = $requestSummaries->sum('amount');
             $deliveryRequestIds = $requestSummaries->pluck('delivery_request_id')->map(fn ($id) => (int) $id)->all();
+
+            $discountType    = $request->discount_type ?: null;
+            $discountAmount  = (float) ($request->discount_amount ?? 0);
+            $adjustmentAmount = (float) ($request->adjustment_amount ?? 0);
+            $totalAmount = max(0, $subtotalAmount - $discountAmount + $adjustmentAmount);
 
             // Create SOA
             $soa = Soa::create([
@@ -402,8 +428,14 @@ class BillingController extends Controller
                 'customer_id' => $request->customer_id,
                 'billing_period_from' => $request->billing_period_from,
                 'billing_period_to' => $request->billing_period_to,
-                'statement_date' => $request->booking_date, // Use booking_date for statement_date
+                'statement_date' => $request->booking_date,
                 'due_date' => $request->booking_date,
+                'subtotal_amount' => $subtotalAmount,
+                'discount_type' => $discountType,
+                'discount_amount' => $discountAmount,
+                'discount_remarks' => $request->discount_remarks,
+                'adjustment_amount' => $adjustmentAmount,
+                'adjustment_remarks' => $request->adjustment_remarks,
                 'total_amount' => $totalAmount,
                 'outstanding_amount' => $totalAmount,
                 'status' => 'draft',

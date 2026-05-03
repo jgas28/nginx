@@ -241,24 +241,108 @@
 
             <!-- Summary and Actions -->
             <div class="bg-white rounded-lg shadow-lg p-6">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                        <h3 class="text-lg font-semibold text-gray-900">SOA Summary</h3>
-                        <div class="mt-2 text-sm text-gray-600">
-                            <p id="selectedRequests">Selected Line Items: 0</p>
-                            <p id="totalAmount">Total Amount: ₱0.00</p>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">SOA Summary</h3>
+                <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+
+                    <div class="flex-1 min-w-0 space-y-4">
+
+                        <!-- 1. Adjustments (first) -->
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                            <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                <i class="fas fa-sliders-h text-gray-400"></i> Adjustments
+                            </h4>
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 mb-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Type</label>
+                                    <select id="card_discount_type" onchange="syncAdjustments()"
+                                            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                        <option value="">None</option>
+                                        <option value="discount">Discount</option>
+                                        <option value="dispute">Dispute</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Amount (₱)</label>
+                                    <input type="number" id="card_discount_amount" min="0" step="0.01" value="0"
+                                           onchange="syncAdjustments()" oninput="syncAdjustments()"
+                                           class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Remarks / Reason</label>
+                                    <input type="text" id="card_discount_remarks" maxlength="1000"
+                                           placeholder="Why this discount/dispute?"
+                                           onchange="syncAdjustments()" oninput="syncAdjustments()"
+                                           class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Manual Adjustment (₱)</label>
+                                    <input type="number" id="card_adjustment_amount" step="0.01" value="0"
+                                           onchange="syncAdjustments()" oninput="syncAdjustments()"
+                                           placeholder="+ or −"
+                                           class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                    <p class="mt-1 text-xs text-gray-400">Negative to deduct, positive to add</p>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Adjustment Remarks</label>
+                                    <input type="text" id="card_adjustment_remarks" maxlength="1000"
+                                           placeholder="Reason for manual adjustment"
+                                           onchange="syncAdjustments()" oninput="syncAdjustments()"
+                                           class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Live breakdown (second) -->
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm space-y-2">
+                            <div class="flex justify-between text-gray-600">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-boxes text-gray-400 text-xs"></i> Selected Line Items</span>
+                                <span id="selectedRequests" class="font-semibold text-gray-800">0</span>
+                            </div>
+                            <div class="flex justify-between text-gray-600">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-receipt text-gray-400 text-xs"></i> Subtotal</span>
+                                <span id="summarySubtotal" class="font-semibold text-gray-800">₱0.00</span>
+                            </div>
+                            <div id="summaryDiscountRow" class="hidden flex-col gap-0.5">
+                                <div class="flex justify-between text-red-600">
+                                    <span class="flex items-center gap-1.5"><i class="fas fa-tag text-xs"></i> <span id="summaryDiscountLabel">Discount</span></span>
+                                    <span id="summaryDiscountAmt" class="font-semibold">-₱0.00</span>
+                                </div>
+                                <p id="summaryDiscountRemarks" class="text-xs text-gray-400 italic pl-5 hidden"></p>
+                            </div>
+                            <div id="summaryAdjustmentRow" class="hidden flex-col gap-0.5">
+                                <div class="flex justify-between text-blue-600">
+                                    <span class="flex items-center gap-1.5"><i class="fas fa-sliders-h text-xs"></i> Manual Adjustment</span>
+                                    <span id="summaryAdjustmentAmt" class="font-semibold">₱0.00</span>
+                                </div>
+                                <p id="summaryAdjustmentRemarks" class="text-xs text-gray-400 italic pl-5 hidden"></p>
+                            </div>
+                            <div class="flex justify-between font-bold text-gray-900 border-t border-gray-300 pt-2">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-check-circle text-emerald-500 text-xs"></i> Final Total</span>
+                                <span id="totalAmount" class="text-emerald-700 text-base">₱0.00</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex">
-                        <button type="button" onclick="calculateTotal()" class="inline-flex w-full items-center justify-center rounded-lg bg-blue-500 px-6 py-2 text-white hover:bg-blue-600">
+
+                    <!-- Action buttons -->
+                    <div class="flex flex-col gap-3 sm:flex-row lg:flex-col lg:w-44">
+                        <button type="button" onclick="calculateTotal()" class="inline-flex w-full items-center justify-center rounded-lg bg-blue-500 px-6 py-2.5 text-white hover:bg-blue-600">
                             <i class="fas fa-calculator mr-2"></i>Show Summary
                         </button>
-                        <button type="button" onclick="validateAndSubmit()" class="inline-flex w-full items-center justify-center rounded-lg bg-green-600 px-6 py-2 text-white hover:bg-green-700">
+                        <button type="button" onclick="validateAndSubmit()" class="inline-flex w-full items-center justify-center rounded-lg bg-green-600 px-6 py-2.5 text-white hover:bg-green-700">
                             <i class="fas fa-save mr-2"></i>Create SOA
                         </button>
                     </div>
                 </div>
             </div>
+
+            <!-- Hidden inputs for adjustments (synced from modal) -->
+            <input type="hidden" name="discount_type" id="hidden_discount_type">
+            <input type="hidden" name="discount_amount" id="hidden_discount_amount" value="0">
+            <input type="hidden" name="discount_remarks" id="hidden_discount_remarks">
+            <input type="hidden" name="adjustment_amount" id="hidden_adjustment_amount" value="0">
+            <input type="hidden" name="adjustment_remarks" id="hidden_adjustment_remarks">
         </form>
     </div>
 </div>
@@ -313,10 +397,11 @@
                         <p id="modalSelectedCount" class="mt-1 text-2xl font-bold text-blue-900">0</p>
                     </div>
                     <div class="rounded-lg bg-emerald-50 px-4 py-3 md:col-span-2">
-                        <p class="text-sm text-emerald-700">Grand Total</p>
+                        <p class="text-sm text-emerald-700">Subtotal</p>
                         <p id="modalGrandTotal" class="mt-1 text-2xl font-bold text-emerald-700">PHP 0.00</p>
                     </div>
                 </div>
+
 
                 <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <p id="calculateTotalModalPaginationText" class="text-sm text-gray-500">Showing 0 to 0 of 0 rows</p>
@@ -814,9 +899,12 @@ function filterDeliveryRequests() {
 function updateSummary() {
     const selectedLineItems = getSelectedLineItems();
     const count = selectedLineItems.length;
-    document.getElementById('selectedRequests').textContent = `Selected Line Items: ${count}`;
-    const total = selectedLineItems.reduce((sum, lineItem) => sum + getLineItemAmount(lineItem), 0);
-    document.getElementById('totalAmount').textContent = `Total Amount: ${formatPeso(total)}`;
+    document.getElementById('selectedRequests').textContent = count;
+    const subtotal = selectedLineItems.reduce((sum, lineItem) => sum + getLineItemAmount(lineItem), 0);
+    // Store subtotal on the modal element so syncAdjustments can read it
+    const grandTotalEl = document.getElementById('modalGrandTotal');
+    if (grandTotalEl) grandTotalEl.dataset.subtotal = subtotal;
+    syncAdjustments();
 }
 
 function calculateTotal() {
@@ -855,10 +943,13 @@ function openCalculateTotalModal(selectedLineItems, total) {
         emptyState.classList.add('hidden');
         content.classList.remove('hidden');
         document.getElementById('modalSelectedCount').textContent = selectedLineItems.length;
-        document.getElementById('modalGrandTotal').textContent = formatPeso(total);
+        const grandTotalEl = document.getElementById('modalGrandTotal');
+        grandTotalEl.textContent = formatPeso(total);
+        grandTotalEl.dataset.subtotal = total;
         calculateTotalModalItems = selectedLineItems;
         calculateTotalModalCurrentPage = 1;
         renderCalculateTotalModalRows();
+        syncAdjustments();
     }
 
     modal.classList.remove('hidden');
@@ -996,6 +1087,60 @@ function populateFilterDropdowns() {
         option.textContent = customer.name;
         customerSelect.appendChild(option);
     });
+}
+
+// ── Adjustment sync ───────────────────────────────────────────
+function syncAdjustments() {
+    const subtotal        = parseFloat(document.getElementById('modalGrandTotal').dataset.subtotal || 0);
+    const discountType    = document.getElementById('card_discount_type').value;
+    const discountAmt     = Math.max(0, parseFloat(document.getElementById('card_discount_amount').value) || 0);
+    const discountRemarks = document.getElementById('card_discount_remarks').value;
+    const adjustmentAmt   = parseFloat(document.getElementById('card_adjustment_amount').value) || 0;
+    const adjustmentRemarks = document.getElementById('card_adjustment_remarks').value;
+    const finalTotal      = Math.max(0, subtotal - discountAmt + adjustmentAmt);
+
+    // Sync hidden form inputs
+    document.getElementById('hidden_discount_type').value      = discountType;
+    document.getElementById('hidden_discount_amount').value    = discountAmt;
+    document.getElementById('hidden_discount_remarks').value   = discountRemarks;
+    document.getElementById('hidden_adjustment_amount').value  = adjustmentAmt;
+    document.getElementById('hidden_adjustment_remarks').value = adjustmentRemarks;
+
+    // Subtotal
+    document.getElementById('summarySubtotal').textContent = formatPeso(subtotal);
+
+    // Discount/Dispute row
+    const discRow = document.getElementById('summaryDiscountRow');
+    if (discountType && discountAmt > 0) {
+        document.getElementById('summaryDiscountLabel').textContent = discountType === 'dispute' ? 'Dispute' : 'Discount';
+        document.getElementById('summaryDiscountAmt').textContent = `-${formatPeso(discountAmt)}`;
+        const dr = document.getElementById('summaryDiscountRemarks');
+        dr.textContent = discountRemarks || '';
+        dr.classList.toggle('hidden', !discountRemarks);
+        discRow.classList.remove('hidden');
+        discRow.classList.add('flex');
+    } else {
+        discRow.classList.add('hidden');
+        discRow.classList.remove('flex');
+    }
+
+    // Adjustment row
+    const adjRow = document.getElementById('summaryAdjustmentRow');
+    if (adjustmentAmt !== 0) {
+        const sign = adjustmentAmt >= 0 ? '' : '-';
+        document.getElementById('summaryAdjustmentAmt').textContent = `${sign}${formatPeso(Math.abs(adjustmentAmt))}`;
+        const ar = document.getElementById('summaryAdjustmentRemarks');
+        ar.textContent = adjustmentRemarks || '';
+        ar.classList.toggle('hidden', !adjustmentRemarks);
+        adjRow.classList.remove('hidden');
+        adjRow.classList.add('flex');
+    } else {
+        adjRow.classList.add('hidden');
+        adjRow.classList.remove('flex');
+    }
+
+    // Final total
+    document.getElementById('totalAmount').textContent = formatPeso(finalTotal);
 }
 
 // ── Custom select dropdowns (company & customer) ──────────────

@@ -119,16 +119,107 @@
                 @error('delivery_request_ids')<p class="mt-3 text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
 
+            <!-- SOA Summary -->
             <div class="bg-white rounded-lg shadow-lg p-6">
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div class="text-sm text-gray-600">
-                        <p id="editSelectedRequests"><strong>Selected Delivery Requests:</strong> 0</p>
-                        <p id="editTotalAmount"><strong>Total Amount:</strong> P0.00</p>
-                        <p><strong>Paid Amount:</strong> P{{ number_format($soa->paid_amount, 2) }}</p>
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">SOA Summary</h3>
+                <div class="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+
+                    <!-- Left: adjustments first, breakdown second -->
+                    <div class="flex-1 min-w-0 space-y-4">
+
+                        <!-- 1. Adjustments (first) -->
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                            <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                <i class="fas fa-sliders-h text-gray-400"></i> Adjustments
+                            </h4>
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 mb-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Type</label>
+                                    <select name="discount_type" id="edit_discount_type" onchange="updateEditSummary()"
+                                            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                        <option value="" {{ old('discount_type', $soa->discount_type) == '' ? 'selected' : '' }}>None</option>
+                                        <option value="discount" {{ old('discount_type', $soa->discount_type) == 'discount' ? 'selected' : '' }}>Discount</option>
+                                        <option value="dispute" {{ old('discount_type', $soa->discount_type) == 'dispute' ? 'selected' : '' }}>Dispute</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Amount (₱)</label>
+                                    <input type="number" name="discount_amount" id="edit_discount_amount"
+                                           min="0" step="0.01"
+                                           value="{{ old('discount_amount', $soa->discount_amount ?? 0) }}"
+                                           onchange="updateEditSummary()" oninput="updateEditSummary()"
+                                           class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Remarks / Reason</label>
+                                    <input type="text" name="discount_remarks" id="edit_discount_remarks"
+                                           maxlength="1000"
+                                           value="{{ old('discount_remarks', $soa->discount_remarks) }}"
+                                           placeholder="Why this discount/dispute?"
+                                           onchange="updateEditSummary()" oninput="updateEditSummary()"
+                                           class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Manual Adjustment (₱)</label>
+                                    <input type="number" name="adjustment_amount" id="edit_adjustment_amount"
+                                           step="0.01"
+                                           value="{{ old('adjustment_amount', $soa->adjustment_amount ?? 0) }}"
+                                           placeholder="+ or −"
+                                           onchange="updateEditSummary()" oninput="updateEditSummary()"
+                                           class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                    <p class="mt-1 text-xs text-gray-400">Negative to deduct, positive to add</p>
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Adjustment Remarks</label>
+                                    <input type="text" name="adjustment_remarks" id="edit_adjustment_remarks"
+                                           maxlength="1000"
+                                           value="{{ old('adjustment_remarks', $soa->adjustment_remarks) }}"
+                                           placeholder="Reason for manual adjustment"
+                                           onchange="updateEditSummary()" oninput="updateEditSummary()"
+                                           class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Live breakdown (second) -->
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm space-y-2">
+                            <div class="flex justify-between text-gray-600">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-boxes text-gray-400 text-xs"></i> Selected Delivery Requests</span>
+                                <span id="editSelectedRequests" class="font-semibold text-gray-800">0</span>
+                            </div>
+                            <div class="flex justify-between text-gray-600">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-receipt text-gray-400 text-xs"></i> Subtotal</span>
+                                <span id="editSubtotal" class="font-semibold text-gray-800">₱0.00</span>
+                            </div>
+                            <div id="editDiscountRow" class="hidden flex-col gap-0.5">
+                                <div class="flex justify-between text-red-600">
+                                    <span class="flex items-center gap-1.5"><i class="fas fa-tag text-xs"></i> <span id="editDiscountLabel">Discount</span></span>
+                                    <span id="editDiscountAmt" class="font-semibold">-₱0.00</span>
+                                </div>
+                                <p id="editDiscountRemarks" class="text-xs text-gray-400 italic pl-5 hidden"></p>
+                            </div>
+                            <div id="editAdjustmentRow" class="hidden flex-col gap-0.5">
+                                <div class="flex justify-between text-blue-600">
+                                    <span class="flex items-center gap-1.5"><i class="fas fa-sliders-h text-xs"></i> Manual Adjustment</span>
+                                    <span id="editAdjustmentAmt" class="font-semibold">₱0.00</span>
+                                </div>
+                                <p id="editAdjustmentRemarks" class="text-xs text-gray-400 italic pl-5 hidden"></p>
+                            </div>
+                            <div class="flex justify-between font-bold text-gray-900 border-t border-gray-300 pt-2">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-check-circle text-emerald-500 text-xs"></i> Final Total</span>
+                                <span id="editTotalAmount" class="text-emerald-700 text-base">₱0.00</span>
+                            </div>
+                        </div>
                     </div>
-                    <button type="submit" class="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 lg:w-auto">
-                        <i class="fas fa-save mr-2"></i>Save Changes
-                    </button>
+
+                    <!-- Right: save button -->
+                    <div class="flex flex-col gap-3 sm:flex-row lg:flex-col lg:w-44">
+                        <button type="submit" class="inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-6 py-2.5 text-white hover:bg-blue-700">
+                            <i class="fas fa-save mr-2"></i>Save Changes
+                        </button>
+                    </div>
                 </div>
             </div>
         </form>
@@ -136,29 +227,68 @@
 </div>
 
 <script>
+function formatPesoEdit(amount) {
+    return `₱${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 function updateEditSummary() {
     const checkboxes = document.querySelectorAll('.edit-delivery-checkbox:checked');
-    let total = 0;
+    let subtotal = 0;
+    checkboxes.forEach((cb) => { subtotal += Number(cb.dataset.amount || 0); });
 
-    checkboxes.forEach((checkbox) => {
-        total += Number(checkbox.dataset.amount || 0);
-    });
+    const discountType    = document.getElementById('edit_discount_type').value;
+    const discountAmt     = Math.max(0, parseFloat(document.getElementById('edit_discount_amount').value) || 0);
+    const discountRemarks = document.getElementById('edit_discount_remarks').value;
+    const adjustmentAmt   = parseFloat(document.getElementById('edit_adjustment_amount').value) || 0;
+    const adjustmentRemarks = document.getElementById('edit_adjustment_remarks').value;
+    const finalTotal = Math.max(0, subtotal - discountAmt + adjustmentAmt);
 
-    document.getElementById('editSelectedRequests').textContent = `Selected Delivery Requests: ${checkboxes.length}`;
-    document.getElementById('editTotalAmount').textContent = `Total Amount: P${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    // Count
+    document.getElementById('editSelectedRequests').textContent = checkboxes.length;
+    // Subtotal
+    document.getElementById('editSubtotal').textContent = formatPesoEdit(subtotal);
+
+    // Discount row
+    const discRow = document.getElementById('editDiscountRow');
+    if (discountType && discountAmt > 0) {
+        document.getElementById('editDiscountLabel').textContent = discountType === 'dispute' ? 'Dispute' : 'Discount';
+        document.getElementById('editDiscountAmt').textContent = `-${formatPesoEdit(discountAmt)}`;
+        const dr = document.getElementById('editDiscountRemarks');
+        dr.textContent = discountRemarks || '';
+        dr.classList.toggle('hidden', !discountRemarks);
+        discRow.classList.remove('hidden');
+        discRow.classList.add('flex');
+    } else {
+        discRow.classList.add('hidden');
+        discRow.classList.remove('flex');
+    }
+
+    // Adjustment row
+    const adjRow = document.getElementById('editAdjustmentRow');
+    if (adjustmentAmt !== 0) {
+        const sign = adjustmentAmt >= 0 ? '' : '-';
+        document.getElementById('editAdjustmentAmt').textContent = `${sign}${formatPesoEdit(Math.abs(adjustmentAmt))}`;
+        const ar = document.getElementById('editAdjustmentRemarks');
+        ar.textContent = adjustmentRemarks || '';
+        ar.classList.toggle('hidden', !adjustmentRemarks);
+        adjRow.classList.remove('hidden');
+        adjRow.classList.add('flex');
+    } else {
+        adjRow.classList.add('hidden');
+        adjRow.classList.remove('flex');
+    }
+
+    // Final total
+    document.getElementById('editTotalAmount').textContent = formatPesoEdit(finalTotal);
 }
 
 function selectAllRequests() {
-    document.querySelectorAll('.edit-delivery-checkbox').forEach((checkbox) => {
-        checkbox.checked = true;
-    });
+    document.querySelectorAll('.edit-delivery-checkbox').forEach((cb) => { cb.checked = true; });
     updateEditSummary();
 }
 
 function unselectAllRequests() {
-    document.querySelectorAll('.edit-delivery-checkbox').forEach((checkbox) => {
-        checkbox.checked = false;
-    });
+    document.querySelectorAll('.edit-delivery-checkbox').forEach((cb) => { cb.checked = false; });
     updateEditSummary();
 }
 

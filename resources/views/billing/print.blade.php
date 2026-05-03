@@ -72,17 +72,51 @@
                     @endforeach
                 </tbody>
                 <tfoot class="bg-gray-50">
+                    @php
+                        $subtotal      = (float)($soa->subtotal_amount ?? $soa->total_amount);
+                        $discountAmt   = (float)($soa->discount_amount ?? 0);
+                        $adjustmentAmt = (float)($soa->adjustment_amount ?? 0);
+                        $hasAdj        = $discountAmt != 0 || $adjustmentAmt != 0;
+                    @endphp
+                    @if($hasAdj)
                     <tr>
-                        <td colspan="3" class="border border-gray-300 px-4 py-3 text-right font-semibold">Total Amount:</td>
-                        <td class="border border-gray-300 px-4 py-3 text-right font-bold text-lg">P{{ number_format($soa->total_amount, 2) }}</td>
+                        <td colspan="3" class="border border-gray-300 px-4 py-2 text-right font-semibold text-gray-600">Subtotal:</td>
+                        <td class="border border-gray-300 px-4 py-2 text-right text-gray-600">₱{{ number_format($subtotal, 2) }}</td>
+                    </tr>
+                    @if($discountAmt > 0)
+                    <tr class="bg-red-50">
+                        <td colspan="3" class="border border-gray-300 px-4 py-2 text-right text-red-700">
+                            <span class="font-semibold">{{ $soa->discount_type === 'dispute' ? 'Dispute' : 'Discount' }}:</span>
+                            @if($soa->discount_remarks)
+                                <span class="italic text-xs text-red-500 ml-1">({{ $soa->discount_remarks }})</span>
+                            @endif
+                        </td>
+                        <td class="border border-gray-300 px-4 py-2 text-right font-semibold text-red-700">-₱{{ number_format($discountAmt, 2) }}</td>
+                    </tr>
+                    @endif
+                    @if($adjustmentAmt != 0)
+                    <tr class="bg-blue-50">
+                        <td colspan="3" class="border border-gray-300 px-4 py-2 text-right text-blue-700">
+                            <span class="font-semibold">Manual Adjustment:</span>
+                            @if($soa->adjustment_remarks)
+                                <span class="italic text-xs text-blue-500 ml-1">({{ $soa->adjustment_remarks }})</span>
+                            @endif
+                        </td>
+                        <td class="border border-gray-300 px-4 py-2 text-right font-semibold text-blue-700">{{ $adjustmentAmt >= 0 ? '+' : '' }}₱{{ number_format($adjustmentAmt, 2) }}</td>
+                    </tr>
+                    @endif
+                    @endif
+                    <tr>
+                        <td colspan="3" class="border border-gray-300 px-4 py-3 text-right font-bold">Final Total:</td>
+                        <td class="border border-gray-300 px-4 py-3 text-right font-bold text-lg text-green-700">₱{{ number_format($soa->total_amount, 2) }}</td>
                     </tr>
                     <tr>
                         <td colspan="3" class="border border-gray-300 px-4 py-3 text-right font-semibold">Paid Amount:</td>
-                        <td class="border border-gray-300 px-4 py-3 text-right">P{{ number_format($soa->paid_amount, 2) }}</td>
+                        <td class="border border-gray-300 px-4 py-3 text-right">₱{{ number_format($soa->paid_amount, 2) }}</td>
                     </tr>
                     <tr class="bg-red-50">
                         <td colspan="3" class="border border-gray-300 px-4 py-3 text-right font-semibold">Outstanding Amount:</td>
-                        <td class="border border-gray-300 px-4 py-3 text-right font-bold text-red-600">P{{ number_format($soa->outstanding_amount, 2) }}</td>
+                        <td class="border border-gray-300 px-4 py-3 text-right font-bold text-red-600">₱{{ number_format($soa->outstanding_amount, 2) }}</td>
                     </tr>
                 </tfoot>
             </table>
