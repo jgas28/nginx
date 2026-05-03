@@ -17,6 +17,23 @@
 @endphp
 
 @section('content')
+<style>
+    /* Hide scrollbar but keep scroll functionality */
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+    /* Active tab pill indicator */
+    .tab-button.tab-active {
+        border-color: #93c5fd;
+        background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+        box-shadow: 0 8px 20px rgba(59,130,246,0.15), 0 0 0 1px rgba(147,197,253,0.4);
+        transform: translateY(-2px);
+    }
+    .tab-button.tab-active span:last-child {
+        color: #1d4ed8;
+        font-weight: 700;
+    }
+</style>
 <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
     <div class="overflow-hidden rounded-[30px] border border-slate-200/80 bg-white shadow-[0_18px_45px_rgba(15,23,42,0.07)]">
         <div class="border-b border-slate-200/80 bg-gradient-to-r from-slate-50 via-white to-blue-50/60 px-6 py-7 sm:px-8">
@@ -126,19 +143,28 @@
                 </div>
             </form>
 
-            <div class="mt-6 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:overflow-visible pb-2" id="tabs">
-                @foreach ($tabs as $tabKey => $tab)
-                    <button
-                        type="button"
-                        class="tab-button inline-flex w-full min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-[15px] font-semibold text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:text-blue-700 sm:w-auto sm:min-w-max"
-                        data-tab="{{ $tabKey }}"
-                    >
-                        <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br {{ $tab['accent'] }}">
-                            <i class="{{ $tab['icon'] }}"></i>
-                        </span>
-                        <span>{{ $tab['label'] }}</span>
-                    </button>
-                @endforeach
+            <!-- Tab navigation — horizontally scrollable, works on all screen sizes -->
+            <div class="relative mt-6">
+                <!-- Fade edges hint at scrollability -->
+                <div class="pointer-events-none absolute inset-y-0 left-0 z-10 w-5 bg-gradient-to-r from-slate-100/80 to-transparent"></div>
+                <div class="pointer-events-none absolute inset-y-0 right-0 z-10 w-5 bg-gradient-to-l from-slate-100/80 to-transparent"></div>
+
+                <div class="overflow-x-auto pb-2 scrollbar-hide" id="tabs-scroll">
+                    <div class="flex gap-2.5 px-1" id="tabs" style="width: max-content;">
+                        @foreach ($tabs as $tabKey => $tab)
+                            <button
+                                type="button"
+                                class="tab-button group flex shrink-0 flex-col items-center gap-1.5 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md active:scale-95 sm:flex-row sm:gap-3 sm:text-left"
+                                data-tab="{{ $tabKey }}"
+                            >
+                                <span class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br transition-transform duration-200 group-hover:scale-110 {{ $tab['accent'] }}">
+                                    <i class="{{ $tab['icon'] }} text-sm"></i>
+                                </span>
+                                <span class="text-xs font-semibold leading-tight text-slate-600 group-hover:text-blue-700 sm:text-[13px] sm:whitespace-nowrap">{{ $tab['label'] }}</span>
+                            </button>
+                        @endforeach
+                    </div>
+                </div>
             </div>
 
             <div class="mt-6 overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_12px_28px_rgba(15,23,42,0.05)]">
@@ -199,14 +225,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         tabButtons.forEach((button) => {
             const active = button.dataset.tab === tabName;
-            button.classList.toggle('border-blue-300', active);
-            button.classList.toggle('bg-blue-50', active);
-            button.classList.toggle('text-blue-700', active);
-            button.classList.toggle('shadow-[0_10px_24px_rgba(59,130,246,0.12)]', active);
-            button.classList.toggle('border-slate-200', !active);
-            button.classList.toggle('bg-white', !active);
-            button.classList.toggle('text-slate-600', !active);
+            button.classList.toggle('tab-active', active);
         });
+
+        // Scroll active tab into view in the scroll container
+        const activeBtn = document.querySelector(`.tab-button[data-tab="${tabName}"]`);
+        if (activeBtn) {
+            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
 
         if (tabs[tabName] && tabHeading) {
             tabHeading.textContent = tabs[tabName].label;

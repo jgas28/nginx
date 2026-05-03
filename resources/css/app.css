@@ -2,3 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+    .app-invalid-field,
+    [aria-invalid="true"] {
+        border-color: #dc2626 !important;
+        box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.12) !important;
+    }
+
+    .app-invalid-field:focus,
+    [aria-invalid="true"]:focus {
+        border-color: #dc2626 !important;
+        box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.16) !important;
+        outline: none !important;
+    }
+
+    .app-field-error {
+        margin-top: 0.5rem;
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        line-height: 1.4;
+        color: #dc2626;
+    }
+
+    .invalid-feedback {
+        margin-top: 0.5rem;
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        line-height: 1.4;
+        color: #dc2626;
+    }
+}

@@ -207,11 +207,10 @@ class CoordinatorsController extends Controller
 
         // Validate the request data
         $validationRules = [
-            // 'mtm' => 'required|unique:delivery_request,mtm',
             'mtm' => [
                 'required',
-                Rule::unique('delivery_request', 'mtm')->where(function ($query) {
-                    return $query->where('status', '!=', 0); // Ensure it is unique among active records
+                Rule::unique('delivery_requests', 'mtm')->where(function ($query) {
+                    return $query->where('status', '!=', 0);
                 }),
             ],
             'customer_id' => 'required',
@@ -366,10 +365,9 @@ class CoordinatorsController extends Controller
 
             return redirect()->route('coordinators.index')->with('success', 'Delivery Request created successfully.');
         } catch (\Exception $e) {
-            // Rollback if there is an error
             DB::rollBack();
             Log::error('Error saving delivery request and line items: ' . $e->getMessage());
-            return redirect()->route('coordinators.index')->with('error', 'Failed to create Delivery Request.');
+            return back()->withInput()->with('error', 'Failed to create Delivery Request: ' . $e->getMessage());
         }
     }
 
