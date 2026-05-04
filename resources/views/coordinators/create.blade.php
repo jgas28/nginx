@@ -170,7 +170,7 @@
         </div>
     </div>
 
-    <form action="{{ route('coordinators.store') }}" method="POST" id="coordinator-create-form" class="space-y-6">
+    <form action="{{ route('coordinators.store') }}" method="POST" id="coordinator-create-form" class="space-y-6" novalidate>
         @csrf
         <div class="section-card p-6">
             <!-- Row 1 -->
@@ -678,6 +678,10 @@
 
         function getVisibleRequiredFields() {
             return Array.from(form.querySelectorAll('[required]')).filter((field) => {
+                if (field.disabled) {
+                    return false;
+                }
+
                 const section = field.closest('#regular-fields, #multi-drop-fields, #multi-pickup-fields');
 
                 if (!section) {
@@ -712,6 +716,20 @@
         function isEmptyMultiPickupRow(row) {
             const deliveryNumber = row.querySelector('input[name*="[delivery_number]"]')?.value?.trim() || '';
             return !deliveryNumber;
+        }
+
+        function syncCoordinatorSectionState() {
+            ['regular-fields', 'multi-drop-fields', 'multi-pickup-fields'].forEach((sectionId) => {
+                const section = document.getElementById(sectionId);
+                if (!section) {
+                    return;
+                }
+
+                const isVisible = section.style.display !== 'none' && !section.classList.contains('hidden');
+                section.querySelectorAll('input, select, textarea').forEach((field) => {
+                    field.disabled = !isVisible;
+                });
+            });
         }
 
         function pruneEmptyCoordinatorRows() {
@@ -894,6 +912,9 @@
             document.getElementById('regular-fields').style.display = 'none';
             document.getElementById('multi-drop-fields').style.display = 'none';
             document.getElementById('multi-pickup-fields').style.display = 'none';
+            document.getElementById('regular-fields').classList.add('hidden');
+            document.getElementById('multi-drop-fields').classList.add('hidden');
+            document.getElementById('multi-pickup-fields').classList.add('hidden');
 
             clearFormFields('regular-fields');
             clearFormFields('multi-drop-fields');
@@ -902,13 +923,18 @@
             // Show fields based on selected delivery type
             if (deliveryType === 'Regular') {
                 document.getElementById('regular-fields').style.display = 'block';
+                document.getElementById('regular-fields').classList.remove('hidden');
             } 
             else if (deliveryType === 'Multi-Drop') {
                 document.getElementById('multi-drop-fields').style.display = 'block';
+                document.getElementById('multi-drop-fields').classList.remove('hidden');
             } 
             else if (deliveryType === 'Multi Pick-Up') {
                 document.getElementById('multi-pickup-fields').style.display = 'block';
+                document.getElementById('multi-pickup-fields').classList.remove('hidden');
             }
+
+            syncCoordinatorSectionState();
         });
 
         function clearFormFields(sectionId) {
@@ -1120,6 +1146,7 @@
         });
 
         mountCoordinatorSearchableSelects();
+        syncCoordinatorSectionState();
 
         const dynamicObserver = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
@@ -1153,6 +1180,7 @@
 
         form.addEventListener('submit', (event) => {
             pruneEmptyCoordinatorRows();
+            syncCoordinatorSectionState();
 
             if (!validateCoordinatorCreateForm()) {
                 event.preventDefault();
