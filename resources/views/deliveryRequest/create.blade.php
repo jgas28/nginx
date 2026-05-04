@@ -21,6 +21,11 @@
             height: 2rem;
             width: 2rem;
         }
+
+        #delivery-request-create-form .text-red-600,
+        #delivery-request-create-form .text-red-500 {
+            pointer-events: none;
+        }
     </style>
 
     <form action="{{ route('deliveryRequest.store') }}" method="POST" id="delivery-request-create-form">
@@ -603,8 +608,19 @@
             const list = wrapper.querySelector('[data-searchable-select-list]');
             const emptyState = wrapper.querySelector('[data-searchable-select-empty]');
             const label = wrapper.querySelector('[data-searchable-select-label]');
+            const linkedLabels = select.id
+                ? form.querySelectorAll(`label[for="${select.id}"]`)
+                : [];
 
             select._searchableSelect = { wrapper, panel, searchInput, list, emptyState, label };
+            select.tabIndex = -1;
+
+            linkedLabels.forEach((linkedLabel) => {
+                linkedLabel.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    trigger.click();
+                });
+            });
 
             trigger.addEventListener('click', () => {
                 const shouldOpen = wrapper.dataset.open !== 'true';
@@ -771,13 +787,20 @@
         areaSelect.addEventListener('change', function () {
             const areaId = this.value;
             if (!areaId) {
+                regionSelect.disabled = false;
                 regionSelect.innerHTML = '<option value="">Select Province</option>';
                 refreshSearchableSelect(regionSelect);
                 return;
             }
+
+            regionSelect.disabled = true;
+            regionSelect.innerHTML = '<option value="">Loading provinces...</option>';
+            refreshSearchableSelect(regionSelect);
+
             fetch(`/regions/by-area/${areaId}`)
                 .then(response => response.json())
                 .then(data => {
+                    regionSelect.disabled = false;
                     regionSelect.innerHTML = '<option value="">Select Province</option>';
                     data.forEach(region => {
                         const option = document.createElement('option');
@@ -787,7 +810,12 @@
                     });
                     refreshSearchableSelect(regionSelect);
                 })
-                .catch(() => alert('Unable to fetch regions.'));
+                .catch(() => {
+                    regionSelect.disabled = false;
+                    regionSelect.innerHTML = '<option value="">Select Province</option>';
+                    refreshSearchableSelect(regionSelect);
+                    alert('Unable to fetch regions.');
+                });
         });
 
         initializeSearchableSelects();

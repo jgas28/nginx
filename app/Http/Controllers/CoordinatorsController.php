@@ -205,68 +205,12 @@ class CoordinatorsController extends Controller
 
         Log::debug('Delivery Type:', ['delivery_type' => $request->delivery_type]);
 
-        // Validate the request data
-        $validationRules = [
-            'mtm' => [
-                'required',
-                Rule::unique('delivery_requests', 'mtm')->where(function ($query) {
-                    return $query->where('status', '!=', 0);
-                }),
-            ],
-            'customer_id' => 'required',
-            'booking_date' => 'required',
-            'delivery_date' => 'required',
-            'delivery_rate' => 'required',
-            'truck_type_id' => 'required',
-            'company_id' => 'required',
-            'project_name' => 'required',
-            'region_id' => 'required',
-            'area_id' => 'required',
-            'delivery_type' => 'required', // This is always required
-            'expense_type_id' => 'required',
-            'delivery_status' => 'required',
-        ];
+        $validationRules = $this->getCoordinatorValidationRules($request);
+        $validated = $request->validate($validationRules);
+        $lineItemsPayload = $this->prepareCoordinatorLineItems($request);
 
-        // Add specific validation for delivery types
-        if ($request->delivery_type == 'Regular') {
-            $validationRules['regular'] = 'nullable|array';
-            // $validationRules['regular.*.warehouse_id'] = 'nullable|string';
-            $validationRules['regular.*.site_name'] = 'nullable|string';
-            $validationRules['regular.*.delivery_number'] = 'nullable|string';
-            $validationRules['regular.*.delivery_address'] = 'nullable|string';
-            $validationRules['regular.*.distance_type'] = 'nullable|string';
-            $validationRules['regular.*.accessorial_type'] = 'nullable|string';
-            $validationRules['regular.*.accessorial_rate'] = 'nullable|string';
-            // $validationRules['regular.*.add_on_rate'] = 'nullable|string';
-        }
-
-        if ($request->delivery_type == 'Multi-Drop') {
-            $validationRules['multi_drop'] = 'nullable|array';
-            $validationRules['multi_drop.*.warehouse_id'] = 'nullable|string';
-            // $validationRules['multi_drop.*.site_name'] = 'nullable|string';
-            $validationRules['multi_drop.*.delivery_number'] = 'nullable|string';
-            // $validationRules['multi_drop.*.delivery_address'] = 'nullable|string';
-            $validationRules['multi_drop.*.distance_type'] = 'nullable|string';
-            $validationRules['multi_drop.*.accessorial_type'] = 'nullable|string';
-            $validationRules['multi_drop.*.accessorial_rate'] = 'nullable|string';
-            // $validationRules['multi_drop.*.add_on_rate'] = 'nullable|string';
-        }
-
-        if ($request->delivery_type == 'Multi Pick-Up') {
-            $validationRules['multi_pickup'] = 'nullable|array';
-            $validationRules['multi_pickup.*.warehouse_id'] = 'nullable|string';
-            $validationRules['multi_pickup.*.site_name'] = 'nullable|string';
-            $validationRules['multi_pickup.*.delivery_address'] = 'nullable|string';
-            $validationRules['multi_pickup.*.distance_type'] = 'nullable|string';
-            $validationRules['multi_pickup.*.add_on_rate'] = 'nullable|string';
-            $validationRules['multi_pickup.*.accessorial_type'] = 'nullable|string';
-            $validationRules['multi_pickup.*.accessorial_rate'] = 'nullable|string';
-        }
-
-        // Perform the validation
-        $request->validate($validationRules);
-
-        Log::debug('Validated data:', $request->all());
+        Log::debug('Validated data:', $validated);
+        Log::debug('Prepared line items:', $lineItemsPayload);
 
         // Start a database transaction to ensure atomicity
         DB::beginTransaction();
@@ -296,68 +240,10 @@ class CoordinatorsController extends Controller
 
             Log::debug('Get DR ID:', ['delivery_request_id' => $deliveryRequestId]);
 
-            // Conditionally save line items based on delivery type
-            switch ($request->delivery_type) {
-                case 'Regular':
-                    if ($request->has('regular') && count($request->regular) > 0) {
-                        Log::debug('Saving Regular Line Items:', $request->regular);
-                        $this->saveLineItems($request->regular, $request->mtm, $deliveryRequestId, $employeeCode);
-                    } else {
-                        Log::debug('No Regular Line Items to save');
-                    }
-                    break;
-
-                case 'Multi-Drop':
-                    if ($request->has('multi_drop') && count($request->multi_drop) > 0) {
-                        Log::debug('Saving Multi-Drop Line Items:', $request->multi_drop);
-    
-                        // Create an updated multi-drop array with missing fields filled
-                        $updatedMultiDropItems = [];
-                        foreach ($request->multi_drop as $index => $lineItem) {
-                            // If some fields are missing in multi_drop[n], use values from multi_drop[0]
-                            if ($index > 0) {
-                                $lineItem['warehouse_id'] = $lineItem['warehouse_id'] ?? $request->multi_drop[0]['warehouse_id'];
-                                $lineItem['add_on_rate'] = $lineItem['add_on_rate'] ?? $request->multi_drop[0]['add_on_rate'];
-                            }
-    
-                            $updatedMultiDropItems[] = $lineItem;
-                        }
-    
-                        // Now save the updated multi-drop items
-                        $this->saveLineItems($updatedMultiDropItems, $request->mtm, $deliveryRequestId, $employeeCode);
-    
-                    } else {
-                        Log::debug('No Multi-Drop Line Items to save');
-                    }
-                    break;
-
-                    case 'Multi Pick-Up':
-                        if ($request->has('multi_pickup') && count($request->multi_pickup) > 0) {
-                            Log::debug('Saving Multi Pick-Up Line Items:', $request->multi_pickup);
-        
-                            // Create an updated multi-pickup array with missing common fields filled
-                            $updatedMultiPickupItems = [];
-                            foreach ($request->multi_pickup as $index => $lineItem) {
-                                // Fill common fields like site_name, delivery_address, and add_on_rate if missing
-                                $lineItem['site_name'] = $lineItem['site_name'] ?? $request->multi_pickup[0]['site_name'];
-                                $lineItem['delivery_address'] = $lineItem['delivery_address'] ?? $request->multi_pickup[0]['delivery_address'];
-                                $lineItem['add_on_rate'] = $lineItem['add_on_rate'] ?? $request->multi_pickup[0]['add_on_rate'];
-        
-                                // Add the updated line item to the array
-                                $updatedMultiPickupItems[] = $lineItem;
-                            }
-        
-                            // Now save the updated multi-pickup items
-                            $this->saveLineItems($updatedMultiPickupItems, $request->mtm, $deliveryRequestId, $employeeCode);
-        
-                        } else {
-                            Log::debug('No Multi Pick-Up Line Items to save');
-                        }
-                    break;
-
-                default:
-                    Log::debug('Unknown Delivery Type');
-                    break;
+            if (!empty($lineItemsPayload)) {
+                $this->saveLineItems($lineItemsPayload, $request->mtm, $deliveryRequestId, $employeeCode);
+            } else {
+                Log::debug('No line items to save for delivery type.', ['delivery_type' => $request->delivery_type]);
             }
 
             // Commit the transaction if everything is successful
@@ -371,9 +257,128 @@ class CoordinatorsController extends Controller
         }
     }
 
+    private function getCoordinatorValidationRules(Request $request, ?DeliveryRequest $deliveryRequest = null): array
+    {
+        $mtmRule = [
+            'required',
+            Rule::unique('delivery_requests', 'mtm')
+                ->where(fn ($query) => $query->where('status', '!=', 0)),
+        ];
+
+        if ($deliveryRequest) {
+            $mtmRule = [
+                'required',
+                Rule::unique('delivery_requests', 'mtm')
+                    ->ignore($deliveryRequest->id)
+                    ->where(fn ($query) => $query->where('status', '!=', 0)),
+            ];
+        }
+
+        $validationRules = [
+            'mtm' => $mtmRule,
+            'customer_id' => 'required',
+            'booking_date' => 'required',
+            'delivery_date' => 'required',
+            'delivery_rate' => 'required',
+            'truck_type_id' => 'required',
+            'company_id' => 'required',
+            'project_name' => 'required',
+            'region_id' => 'required',
+            'area_id' => 'required',
+            'delivery_type' => 'required',
+            'expense_type_id' => 'required',
+            'delivery_status' => 'required',
+        ];
+
+        if ($request->delivery_type === 'Regular') {
+            $validationRules['regular'] = 'required|array|min:1';
+            $validationRules['regular.0.warehouse_id'] = 'required';
+            $validationRules['regular.0.site_name'] = 'required|string';
+            $validationRules['regular.0.delivery_number'] = 'required|string';
+            $validationRules['regular.0.delivery_address'] = 'required|string';
+            $validationRules['regular.*.accessorial_type'] = 'nullable|string';
+            $validationRules['regular.*.accessorial_rate'] = 'nullable|numeric';
+        }
+
+        if ($request->delivery_type === 'Multi-Drop') {
+            $validationRules['multi_drop'] = 'required|array|min:1';
+            $validationRules['multi_drop.0.warehouse_id'] = 'required';
+            $validationRules['multi_drop.0.add_on_rate'] = 'required';
+            $validationRules['multi_drop.*.site_name'] = 'required|string';
+            $validationRules['multi_drop.*.delivery_number'] = 'required|string';
+            $validationRules['multi_drop.*.delivery_address'] = 'required|string';
+            $validationRules['multi_drop.*.accessorial_type'] = 'nullable|string';
+            $validationRules['multi_drop.*.accessorial_rate'] = 'nullable|numeric';
+        }
+
+        if ($request->delivery_type === 'Multi Pick-Up') {
+            $validationRules['multi_pickup'] = 'required|array|min:1';
+            $validationRules['multi_pickup.0.site_name'] = 'required|string';
+            $validationRules['multi_pickup.0.delivery_address'] = 'required|string';
+            $validationRules['multi_pickup.0.add_on_rate'] = 'required';
+            $validationRules['multi_pickup.*.warehouse_id'] = 'required';
+            $validationRules['multi_pickup.*.delivery_number'] = 'required|string';
+            $validationRules['multi_pickup.*.accessorial_type'] = 'nullable|string';
+            $validationRules['multi_pickup.*.accessorial_rate'] = 'nullable|numeric';
+        }
+
+        return $validationRules;
+    }
+
+    private function prepareCoordinatorLineItems(Request $request): array
+    {
+        return match ($request->delivery_type) {
+            'Regular' => $this->normalizeLineItems($request->input('regular', [])),
+            'Multi-Drop' => $this->normalizeMultiDropLineItems($request->input('multi_drop', [])),
+            'Multi Pick-Up' => $this->normalizeMultiPickupLineItems($request->input('multi_pickup', [])),
+            default => [],
+        };
+    }
+
+    private function normalizeLineItems(array $lineItems): array
+    {
+        return array_values(array_filter(array_map(function ($lineItem) {
+            return is_array($lineItem) ? $lineItem : [];
+        }, $lineItems), fn ($lineItem) => !empty($lineItem)));
+    }
+
+    private function normalizeMultiDropLineItems(array $lineItems): array
+    {
+        $baseItem = $lineItems[0] ?? [];
+
+        return array_values(array_filter(array_map(function ($lineItem, $index) use ($baseItem) {
+            if (!is_array($lineItem)) {
+                return [];
+            }
+
+            if ($index > 0) {
+                $lineItem['warehouse_id'] = !empty($lineItem['warehouse_id']) ? $lineItem['warehouse_id'] : ($baseItem['warehouse_id'] ?? null);
+                $lineItem['add_on_rate'] = !empty($lineItem['add_on_rate']) ? $lineItem['add_on_rate'] : ($baseItem['add_on_rate'] ?? null);
+            }
+
+            return $lineItem;
+        }, $lineItems, array_keys($lineItems)), fn ($lineItem) => !empty($lineItem)));
+    }
+
+    private function normalizeMultiPickupLineItems(array $lineItems): array
+    {
+        $baseItem = $lineItems[0] ?? [];
+
+        return array_values(array_filter(array_map(function ($lineItem) use ($baseItem) {
+            if (!is_array($lineItem)) {
+                return [];
+            }
+
+            $lineItem['site_name'] = !empty($lineItem['site_name']) ? $lineItem['site_name'] : ($baseItem['site_name'] ?? null);
+            $lineItem['delivery_address'] = !empty($lineItem['delivery_address']) ? $lineItem['delivery_address'] : ($baseItem['delivery_address'] ?? null);
+            $lineItem['add_on_rate'] = !empty($lineItem['add_on_rate']) ? $lineItem['add_on_rate'] : ($baseItem['add_on_rate'] ?? null);
+
+            return $lineItem;
+        }, $lineItems), fn ($lineItem) => !empty($lineItem)));
+    }
+
     private function saveLineItems($lineItems, $mtm, $deliveryRequestId, $employeeCode)
     {
-
         foreach ($lineItems as $lineItem) {
             // Trim all fields to avoid unwanted whitespace issues
             $lineItem = array_map(function ($item) {
@@ -398,17 +403,14 @@ class CoordinatorsController extends Controller
                     'created_by' => $employeeCode,
                 ]);
                 
-                // You can validate the data here if necessary, for example:
-                // $deliveryRequestLineItem->validate();
-                
                 $deliveryRequestLineItem->save();
                 Log::debug('Line Item saved successfully', ['mtm' => $mtm, 'lineItem' => $lineItem]);
             } catch (\Exception $e) {
-                // Log more detailed error information including the data being saved
                 Log::error('Error saving delivery request line item: ' . $e->getMessage(), [
                     'mtm' => $mtm,
                     'lineItem' => $lineItem
                 ]);
+                throw $e;
             }
         }
     }
@@ -450,64 +452,15 @@ class CoordinatorsController extends Controller
     {
         Log::debug('Delivery Type:', ['delivery_type' => $request->delivery_type]);
 
-
-        // Validate the request data
-        $validationRules = [
-            'mtm' => 'required|unique:delivery_request,mtm,' . $deliveryRequest->id,
-            'customer_id' => 'required',
-            'booking_date' => 'required',
-            'delivery_date' => 'required',
-            'delivery_rate' => 'required',
-            'truck_type_id' => 'required',
-            'company_id' => 'required',
-            'project_name' => 'required',
-            'region_id' => 'required',
-            'area_id' => 'required',
-            'delivery_type' => 'required', // This is always required
-            'expense_type_id' => 'required',     
-            'delivery_status' => 'required',
-        ];
-
-        // Add specific validation for delivery types
-        if ($request->delivery_type == 'Regular') {
-            $validationRules['regular'] = 'nullable|array';
-            $validationRules['regular.*.site_name'] = 'nullable|string';
-            $validationRules['regular.*.delivery_number'] = 'nullable|string';
-            $validationRules['regular.*.delivery_address'] = 'nullable|string';
-            $validationRules['regular.*.distance_type'] = 'nullable|string';
-
-            $validationRules['regular.*.accessorial_type'] = 'nullable|string';
-            $validationRules['regular.*.accessorial_rate'] = 'nullable|numeric';
-        }
-
-        if ($request->delivery_type == 'Multi-Drop') {
-            $validationRules['multi_drop'] = 'nullable|array';
-            $validationRules['multi_drop.*.warehouse_id'] = 'nullable|string';
-            $validationRules['multi_drop.*.delivery_number'] = 'nullable|string';
-            $validationRules['multi_drop.*.distance_type'] = 'nullable|string';
-
-            $validationRules['multi_drop.*.accessorial_type'] = 'nullable|string';
-            $validationRules['multi_drop.*.accessorial_rate'] = 'nullable|numeric';
-        }
-
-        if ($request->delivery_type == 'Multi Pick-Up') {
-            $validationRules['multi_pickup'] = 'nullable|array';
-            $validationRules['multi_pickup.*.warehouse_id'] = 'nullable|string';
-            $validationRules['multi_pickup.*.site_name'] = 'nullable|string';
-            $validationRules['multi_pickup.*.delivery_address'] = 'nullable|string';
-            $validationRules['multi_pickup.*.distance_type'] = 'nullable|string';
-            $validationRules['multi_pickup.*.add_on_rate'] = 'nullable|string';
-
-            $validationRules['multi_pickup.*.accessorial_type'] = 'nullable|string';
-            $validationRules['multi_pickup.*.accessorial_rate'] = 'nullable|numeric';
-        }
+        $validationRules = $this->getCoordinatorValidationRules($request, $deliveryRequest);
 
         Log::debug('Starting Validation...', $request->all());
 
-        // Perform the validation
-        $request->validate($validationRules);
+        $validated = $request->validate($validationRules);
+        $lineItemsPayload = $this->prepareCoordinatorLineItems($request);
         
-        Log::debug('Validated data:', $request->all());
+        Log::debug('Validated data:', $validated);
+        Log::debug('Prepared line items:', $lineItemsPayload);
         Log::debug('Updating Delivery Request:', $deliveryRequest->toArray());
         // Start a database transaction to ensure atomicity
         DB::beginTransaction();
@@ -526,72 +479,12 @@ class CoordinatorsController extends Controller
             $deliveryRequest->region_id = $request->region_id;
             $deliveryRequest->area_id = $request->area_id;
             $deliveryRequest->expense_type_id = $request->expense_type_id;
-            $deliveryRequest->status = $request->delivery_status;
+            $deliveryRequest->delivery_status = $request->delivery_status;
 
             $deliveryRequest->update();
             Log::debug('DeliveryRequest saved:', $deliveryRequest->toArray());
-            // Conditionally update line items based on delivery type
-            switch ($request->delivery_type) {
-                case 'Regular':
-                    if ($request->has('regular') && count($request->regular) > 0) {
-                        Log::debug('Saving Regular Line Items:', $request->regular);
-                        $this->updateLineItems($request->regular, $request->mtm);
-                    } else {
-                        Log::debug('No Regular Line Items to save');
-                    }
-                    break;
 
-                case 'Multi-Drop':
-                    if ($request->has('multi_drop') && count($request->multi_drop) > 0) {
-                        Log::debug('Saving Multi-Drop Line Items:', $request->multi_drop);
-                        
-                        // Create an updated multi-drop array with missing fields filled
-                        $updatedMultiDropItems = [];
-                        foreach ($request->multi_drop as $index => $lineItem) {
-                            // If some fields are missing in multi_drop[n], use values from multi_drop[0]
-                            if ($index > 0) {
-                                $lineItem['warehouse_id'] = $lineItem['warehouse_id'] ?? $request->multi_drop[0]['warehouse_id'];
-                                $lineItem['add_on_rate'] = $lineItem['add_on_rate'] ?? $request->multi_drop[0]['add_on_rate'];
-                            }
-                            $updatedMultiDropItems[] = $lineItem;
-                        }
-
-                        // Now save the updated multi-drop items
-                        $this->updateLineItems($updatedMultiDropItems, $request->mtm);
-
-                    } else {
-                        Log::debug('No Multi-Drop Line Items to save');
-                    }
-                    break;
-
-                case 'Multi Pick-Up':
-                    if ($request->has('multi_pickup') && count($request->multi_pickup) > 0) {
-                        Log::debug('Saving Multi Pick-Up Line Items:', $request->multi_pickup);
-
-                        // Create an updated multi-pickup array with missing common fields filled
-                        $updatedMultiPickupItems = [];
-                        foreach ($request->multi_pickup as $index => $lineItem) {
-                            // Fill common fields like site_name, delivery_address, and add_on_rate if missing
-                            $lineItem['site_name'] = $lineItem['site_name'] ?? $request->multi_pickup[0]['site_name'];
-                            $lineItem['delivery_address'] = $lineItem['delivery_address'] ?? $request->multi_pickup[0]['delivery_address'];
-                            $lineItem['add_on_rate'] = $lineItem['add_on_rate'] ?? $request->multi_pickup[0]['add_on_rate'];
-
-                            // Add the updated line item to the array
-                            $updatedMultiPickupItems[] = $lineItem;
-                        }
-
-                        // Now save the updated multi-pickup items
-                        $this->updateLineItems($updatedMultiPickupItems, $request->mtm);
-
-                    } else {
-                        Log::debug('No Multi Pick-Up Line Items to save');
-                    }
-                    break;
-
-                default:
-                    Log::debug('Unknown Delivery Type');
-                    break;
-            }
+            $this->updateLineItems($lineItemsPayload, $request->mtm, $deliveryRequest->id, $deliveryRequest->created_by);
 
             // Commit the transaction if everything is successful
             DB::commit();
@@ -621,7 +514,7 @@ class CoordinatorsController extends Controller
         return redirect()->route('coordinators.index')->with('success', 'Delivery Request deleted successfully.');
     }
 
-    private function updateLineItems($lineItems, $mtm)
+    private function updateLineItems($lineItems, $mtm, $deliveryRequestId, $employeeCode)
     {
         // Start a database transaction
         DB::beginTransaction();
@@ -630,7 +523,7 @@ class CoordinatorsController extends Controller
                 // Ensure that 'id' is present for existing items, or handle the new item
                 if (empty($lineItem['id'])) {
                     // Handle new line items (those without an ID)
-                    $this->saveLineItems([$lineItem], $mtm);
+                    $this->saveLineItems([$lineItem], $mtm, $deliveryRequestId, $employeeCode);
                     Log::debug('New Line Item created', ['mtm' => $mtm, 'lineItem' => $lineItem]);
                     continue;  // Skip the update logic for new items since they're already saved
                 }
@@ -670,7 +563,7 @@ class CoordinatorsController extends Controller
                     Log::debug('Line Item updated successfully', ['mtm' => $mtm, 'lineItem' => $lineItem]);
                 } else {
                     // If no matching line item exists for this mtm and id, create a new one
-                    $this->saveLineItems([$lineItem], $mtm);
+                    $this->saveLineItems([$lineItem], $mtm, $deliveryRequestId, $employeeCode);
                     Log::debug('New Line Item created', ['mtm' => $mtm, 'lineItem' => $lineItem]);
                 }
             }

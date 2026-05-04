@@ -397,7 +397,7 @@
                         <div class="w-full md:w-1/3 px-2">
                             <label for="multi_drop_0_warehouse_id" class="block text-sm font-medium text-gray-700 mb-1">Warehouse</label>
                             <select name="multi_drop[0][warehouse_id]" id="multi_drop_0_warehouse_id"
-                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                                 @foreach($warehouses as $warehouse)
                                     <option value="{{ $warehouse->id }}">{{ $warehouse->warehouse_name }}</option>
                                 @endforeach
@@ -410,7 +410,7 @@
                         <div class="w-full md:w-1/3 px-2">
                             <label for="add_on_rate_0" class="block text-sm font-medium text-gray-700 mb-1">Add-on Rate</label>
                             <select name="multi_drop[0][add_on_rate]" id="add_on_rate_0"
-                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                                 @foreach($AddOnRates_multiDrops as $AddOnRates_multiDrop)
                                     <option value="{{ $AddOnRates_multiDrop->id }}">{{ $AddOnRates_multiDrop->add_on_rate_type_code }}</option>
                                 @endforeach
@@ -434,7 +434,7 @@
                             <div class="w-full md:w-1/6 px-2 mb-4">
                                 <label for="site_name_0" class="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
                                 <input type="text" name="multi_drop[0][site_name]" id="site_name_0"
-                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                    required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                                 @error('multi_drop.0.site_name')
                                     <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                                 @enderror
@@ -443,7 +443,7 @@
                             <div class="w-full md:w-1/4 px-2 mb-4">
                                 <label for="delivery_number_0" class="block text-sm font-medium text-gray-700 mb-1">Delivery Number</label>
                                 <input type="text" name="multi_drop[0][delivery_number]" id="delivery_number_0"
-                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                    required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                                 @error('multi_drop.0.delivery_number')
                                     <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                                 @enderror
@@ -452,7 +452,7 @@
                             <div class="w-full md:w-1/4 px-2 mb-4">
                                 <label for="delivery_address_0" class="block text-sm font-medium text-gray-700 mb-1">Delivery Address</label>
                                 <textarea name="multi_drop[0][delivery_address]" id="delivery_address_0" rows="2"
-                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"></textarea>
+                                    required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"></textarea>
                                 @error('multi_drop.0.delivery_address')
                                     <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                                 @enderror
@@ -466,7 +466,7 @@
                             <div class="w-full md:w-1/6 px-2 mb-4">
                                 <label for="site_name_1" class="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
                                 <input type="text" name="multi_drop[1][site_name]" id="multi_site_name_1"
-                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                    required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                                 @error('multi_drop.1.site_name')
                                     <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                                 @enderror
@@ -475,7 +475,7 @@
                             <div class="w-full md:w-1/4 px-2 mb-4">
                                 <label for="delivery_number_1" class="block text-sm font-medium text-gray-700 mb-1">Delivery Number</label>
                                 <input type="text" name="multi_drop[1][delivery_number]" id="delivery_number_1"
-                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                    required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                                 @error('multi_drop.1.delivery_number')
                                     <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                                 @enderror
@@ -484,7 +484,7 @@
                             <div class="w-full md:w-1/4 px-2 mb-4">
                                 <label for="delivery_address_1" class="block text-sm font-medium text-gray-700 mb-1">Delivery Address</label>
                                 <textarea name="multi_drop[1][delivery_address]" id="delivery_address_1" rows="2"
-                                    class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"></textarea>
+                                    required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"></textarea>
                                 @error('multi_drop.1.delivery_address')
                                     <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                                 @enderror
@@ -504,7 +504,7 @@
                         <div class="w-full md:w-1/3 px-2">
                             <label for="site_name_0" class="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
                             <input type="text" name="multi_pickup[0][site_name]" id="site_name_0"
-                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                             @error('multi_pickup.0.site_name')
                                 <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                             @enderror
@@ -513,7 +513,7 @@
                         <div class="w-full md:w-1/3 px-2">
                             <label for="delivery_address_0" class="block text-sm font-medium text-gray-700 mb-1">Delivery Address</label>
                             <textarea name="multi_pickup[0][delivery_address]" id="delivery_address_0" rows="2"
-                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"></textarea>
+                                required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm"></textarea>
                             @error('multi_pickup.0.delivery_address')
                                 <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                             @enderror
@@ -522,7 +522,7 @@
                         <div class="w-full md:w-1/4 px-2">
                             <label for="add_on_rate_0" class="block text-sm font-medium text-gray-700 mb-1">Add-on Rate</label>
                             <select name="multi_pickup[0][add_on_rate]" id="add_on_rate_0"
-                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                                 @foreach($AddOnRates_multiPickUps as $AddOnRates_multiPickUp)
                                     <option value="{{ $AddOnRates_multiPickUp->id }}">{{ $AddOnRates_multiPickUp->add_on_rate_type_code }}</option>
                                 @endforeach
@@ -544,7 +544,7 @@
                         <div class="w-full md:w-1/6 px-2 mb-4">
                             <label for="multi_pickup_0_warehouse_id" class="block text-sm font-medium text-gray-700 mb-1">Warehouse</label>
                             <select name="multi_pickup[0][warehouse_id]" id="multi_pickup_0_warehouse_id"
-                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                                 @foreach($warehouses as $warehouse)
                                     <option value="{{ $warehouse->id }}">{{ $warehouse->warehouse_name }}</option>
                                 @endforeach
@@ -557,7 +557,7 @@
                         <div class="w-full md:w-1/2 px-2 mb-4">
                             <label for="multi_pickup_0_delivery_number" class="block text-sm font-medium text-gray-700 mb-1">Delivery Number</label>
                             <input type="text" name="multi_pickup[0][delivery_number]" id="multi_pickup_0_delivery_number"
-                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                             @error('multi_pickup.0.delivery_number')
                                 <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                             @enderror
@@ -571,7 +571,7 @@
                         <div class="w-full md:w-1/6 px-2 mb-4">
                             <label for="multi_pickup_1_warehouse_id" class="block text-sm font-medium text-gray-700 mb-1">Warehouse</label>
                             <select name="multi_pickup[1][warehouse_id]" id="multi_pickup_1_warehouse_id"
-                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                                 @foreach($warehouses as $warehouse)
                                     <option value="{{ $warehouse->id }}">{{ $warehouse->warehouse_name }}</option>
                                 @endforeach
@@ -584,7 +584,7 @@
                         <div class="w-full md:w-1/2 px-2 mb-4">
                             <label for="multi_pickup_1_delivery_number" class="block text-sm font-medium text-gray-700 mb-1">Delivery Number</label>
                             <input type="text" name="multi_pickup[1][delivery_number]" id="multi_pickup_1_delivery_number"
-                                class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                required class="w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-sm">
                             @error('multi_pickup.1.delivery_number')
                                 <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
                             @enderror
@@ -593,10 +593,10 @@
                 </div>
             </div>
         </div>
-        <div class="section-card p-6">
-            <div class="flex flex-col gap-4 border-t border-slate-200 pt-4 md:flex-row md:items-center md:justify-between">
-                <p class="text-base text-slate-500">Double-check the delivery type and line-item details before creating the request.</p>
-                <div class="flex flex-wrap items-center justify-end gap-3">
+    <div class="section-card p-6">
+        <div class="flex flex-col gap-4 border-t border-slate-200 pt-4 md:flex-row md:items-center md:justify-between">
+            <p class="text-base text-slate-500">Double-check the delivery type and line-item details before creating the request.</p>
+            <div class="flex flex-wrap items-center justify-end gap-3">
                     <a href="{{ route('coordinators.index') }}"
                        class="inline-flex h-12 min-w-[160px] items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 text-base font-semibold text-slate-600 shadow-sm transition hover:border-slate-400 hover:text-slate-900">
                         <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
@@ -610,20 +610,129 @@
                         </span>
                         Create Delivery Request
                     </button>
-                </div>
             </div>
         </div>
+    </div>
     </form>
+
+    <div id="coordinator-create-validation-modal" class="fixed inset-0 z-[120] hidden items-center justify-center bg-slate-900/50 p-4">
+        <div class="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <h2 class="text-xl font-bold text-slate-900">Missing Required Fields</h2>
+            <p class="mt-2 text-sm text-slate-500">Please complete the required fields before saving this delivery request.</p>
+            <ul id="coordinator-create-validation-list" class="mt-4 list-disc space-y-1 pl-5 text-sm text-rose-600"></ul>
+            <div class="mt-6 flex justify-end">
+                <button type="button" id="coordinator-create-validation-close" class="inline-flex h-11 items-center justify-center rounded-2xl bg-indigo-600 px-5 text-sm font-semibold text-white transition hover:bg-indigo-700">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
     <script>
         let currentIndex = 2;
         let multiDropIndex = 2;
+        const form = document.getElementById('coordinator-create-form');
+        const multiPickupWarehouseOptions = document.getElementById('multi_pickup_0_warehouse_id')?.innerHTML ?? '';
+        const validationModal = document.getElementById('coordinator-create-validation-modal');
+        const validationList = document.getElementById('coordinator-create-validation-list');
 
         function closeAllSearchableSelects() {
             document.querySelectorAll('#coordinator-create-form [data-searchable-select-wrapper]').forEach((wrapper) => {
                 wrapper.dataset.open = 'false';
                 wrapper.querySelector('[data-searchable-select-panel]')?.classList.add('hidden');
+            });
+        }
+
+        function showValidationModal(messages) {
+            if (!validationModal || !validationList) {
+                return;
+            }
+
+            validationList.innerHTML = '';
+            messages.forEach((message) => {
+                const item = document.createElement('li');
+                item.textContent = message;
+                validationList.appendChild(item);
+            });
+
+            validationModal.classList.remove('hidden');
+            validationModal.classList.add('flex');
+        }
+
+        function hideValidationModal() {
+            if (!validationModal) {
+                return;
+            }
+
+            validationModal.classList.add('hidden');
+            validationModal.classList.remove('flex');
+        }
+
+        function getFieldLabel(field) {
+            const fieldId = field.getAttribute('id');
+            const label = fieldId ? form.querySelector(`label[for="${fieldId}"]`) : null;
+
+            return (label?.textContent || field.name || 'Field').replace(/\s+/g, ' ').trim();
+        }
+
+        function getVisibleRequiredFields() {
+            return Array.from(form.querySelectorAll('[required]')).filter((field) => {
+                const section = field.closest('#regular-fields, #multi-drop-fields, #multi-pickup-fields');
+
+                if (!section) {
+                    return true;
+                }
+
+                return section.style.display !== 'none' && !section.classList.contains('hidden');
+            });
+        }
+
+        function validateCoordinatorCreateForm() {
+            const invalidFields = getVisibleRequiredFields().filter((field) => !field.value || `${field.value}`.trim() === '');
+
+            if (invalidFields.length === 0) {
+                return true;
+            }
+
+            const uniqueMessages = [...new Set(invalidFields.map((field) => `${getFieldLabel(field)} is required.`))];
+            showValidationModal(uniqueMessages);
+            invalidFields[0].focus();
+            return false;
+        }
+
+        function isEmptyMultiDropRow(row) {
+            const siteName = row.querySelector('input[name*="[site_name]"]')?.value?.trim() || '';
+            const deliveryNumber = row.querySelector('input[name*="[delivery_number]"]')?.value?.trim() || '';
+            const deliveryAddress = row.querySelector('textarea[name*="[delivery_address]"]')?.value?.trim() || '';
+
+            return !siteName && !deliveryNumber && !deliveryAddress;
+        }
+
+        function isEmptyMultiPickupRow(row) {
+            const deliveryNumber = row.querySelector('input[name*="[delivery_number]"]')?.value?.trim() || '';
+            return !deliveryNumber;
+        }
+
+        function pruneEmptyCoordinatorRows() {
+            document.querySelectorAll('#multi-drop-items .multi-drop-row').forEach((row, index) => {
+                if (index === 0) {
+                    return;
+                }
+
+                if (isEmptyMultiDropRow(row)) {
+                    row.remove();
+                }
+            });
+
+            document.querySelectorAll('#multi-pickup-items .multi-pickup-row').forEach((row, index) => {
+                if (index === 0) {
+                    return;
+                }
+
+                if (isEmptyMultiPickupRow(row)) {
+                    row.remove();
+                }
             });
         }
 
@@ -826,8 +935,8 @@
                 <div class="flex flex-wrap -mx-2 mb-4">
                     <div class="w-full md:w-1/6 px-2 mb-4 md:mb-0">
                         <label for="multi_pickup_${currentIndex}_warehouse_id" class="block text-sm font-medium text-gray-700">Warehouse</label>
-                        <select name="multi_pickup[${currentIndex}][warehouse_id]" id="multi_pickup_${currentIndex}_warehouse_id" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                            <!-- JS-rendered options -->
+                        <select name="multi_pickup[${currentIndex}][warehouse_id]" id="multi_pickup_${currentIndex}_warehouse_id" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            ${multiPickupWarehouseOptions}
                         </select>
                         <!-- Error placeholder -->
                         <div class="text-red-600 text-sm mt-1 hidden" id="error_multi_pickup_${currentIndex}_warehouse_id"></div>
@@ -835,7 +944,7 @@
 
                     <div class="w-full md:w-1/3 px-2 mb-4 md:mb-0">
                         <label for="multi_pickup_${currentIndex}_delivery_number" class="block text-sm font-medium text-gray-700">Delivery Number</label>
-                        <input type="text" name="multi_pickup[${currentIndex}][delivery_number]" id="multi_pickup_${currentIndex}_delivery_number" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <input type="text" name="multi_pickup[${currentIndex}][delivery_number]" id="multi_pickup_${currentIndex}_delivery_number" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <div class="text-red-600 text-sm mt-1 hidden" id="error_multi_pickup_${currentIndex}_delivery_number"></div>
                     </div>
 
@@ -850,6 +959,7 @@
             
             // Insert the new row after the second row
             document.getElementById('multi-pickup-items').insertBefore(newRow, secondRow.nextSibling);
+            mountCoordinatorSearchableSelects(newRow);
 
             // Increment the index for the next row
             currentIndex++;
@@ -911,19 +1021,19 @@
                 <div class="flex flex-wrap -mx-2 mb-4">
                     <div class="w-full md:w-2/12 px-2 mb-4 md:mb-0">
                         <label for="site_name_${multiDropIndex}" class="block text-sm font-medium text-gray-700">Site Name</label>
-                        <input type="text" name="multi_drop[${multiDropIndex}][site_name]" id="site_name_${multiDropIndex}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <input type="text" name="multi_drop[${multiDropIndex}][site_name]" id="site_name_${multiDropIndex}" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <div class="text-red-600 text-sm mt-1 hidden" id="error_multi_drop_${multiDropIndex}_site_name"></div>
                     </div>
 
                     <div class="w-full md:w-3/12 px-2 mb-4 md:mb-0">
                         <label for="delivery_number_${multiDropIndex}" class="block text-sm font-medium text-gray-700">Delivery Number</label>
-                        <input type="text" name="multi_drop[${multiDropIndex}][delivery_number]" id="delivery_number_${multiDropIndex}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                        <input type="text" name="multi_drop[${multiDropIndex}][delivery_number]" id="delivery_number_${multiDropIndex}" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                         <div class="text-red-600 text-sm mt-1 hidden" id="error_multi_drop_${multiDropIndex}_delivery_number"></div>
                     </div>
 
                     <div class="w-full md:w-3/12 px-2 mb-4 md:mb-0">
                         <label for="delivery_address_${multiDropIndex}" class="block text-sm font-medium text-gray-700">Delivery Address</label>
-                        <textarea name="multi_drop[${multiDropIndex}][delivery_address]" id="delivery_address_${multiDropIndex}" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+                        <textarea name="multi_drop[${multiDropIndex}][delivery_address]" id="delivery_address_${multiDropIndex}" required class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
                         <div class="text-red-600 text-sm mt-1 hidden" id="error_multi_drop_${multiDropIndex}_delivery_address"></div>
                     </div>
 
@@ -971,9 +1081,16 @@
             const regionSelect = document.getElementById('region_id');
 
             if (areaId) {
+                regionSelect.disabled = true;
+                regionSelect.innerHTML = '<option value="">Loading provinces...</option>';
+                regionSelect.dataset.searchableMounted = 'false';
+                regionSelect.nextElementSibling?.remove();
+                mountSearchableSelect(regionSelect, { placeholder: 'Loading provinces...', icon: 'fa-map-pin' });
+
                 fetch(`/regions/by-area/${areaId}`)
                     .then(response => response.json())
                     .then(data => {
+                        regionSelect.disabled = false;
                         regionSelect.innerHTML = '<option value="">Select Province</option>';
                         data.forEach(region => {
                             const option = document.createElement('option');
@@ -985,8 +1102,16 @@
                         regionSelect.nextElementSibling?.remove();
                         mountSearchableSelect(regionSelect, { placeholder: 'Select Province', icon: 'fa-map-pin' });
                     })
-                    .catch(() => alert('Unable to fetch regions.'));
+                    .catch(() => {
+                        regionSelect.disabled = false;
+                        regionSelect.innerHTML = '<option value="">Select Province</option>';
+                        regionSelect.dataset.searchableMounted = 'false';
+                        regionSelect.nextElementSibling?.remove();
+                        mountSearchableSelect(regionSelect, { placeholder: 'Select Province', icon: 'fa-map-pin' });
+                        alert('Unable to fetch regions.');
+                    });
             } else {
+                regionSelect.disabled = false;
                 regionSelect.innerHTML = '<option value="">Select Province</option>';
                 regionSelect.dataset.searchableMounted = 'false';
                 regionSelect.nextElementSibling?.remove();
@@ -1016,6 +1141,21 @@
         document.addEventListener('click', (event) => {
             if (!event.target.closest('[data-searchable-select-wrapper]')) {
                 closeAllSearchableSelects();
+            }
+        });
+
+        document.getElementById('coordinator-create-validation-close')?.addEventListener('click', hideValidationModal);
+        validationModal?.addEventListener('click', (event) => {
+            if (event.target === validationModal) {
+                hideValidationModal();
+            }
+        });
+
+        form.addEventListener('submit', (event) => {
+            pruneEmptyCoordinatorRows();
+
+            if (!validateCoordinatorCreateForm()) {
+                event.preventDefault();
             }
         });
 

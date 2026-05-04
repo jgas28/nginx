@@ -9,7 +9,7 @@
         </div>
     @endif
 
-    <form action="{{ route('coordinators.update', $deliveryRequest) }}" method="POST">
+    <form action="{{ route('coordinators.update', $deliveryRequest) }}" method="POST" id="coordinator-edit-form">
         @csrf
         @method('PUT')
 
@@ -613,6 +613,20 @@
         let multiDropIndex, currentIndex;
 
         document.addEventListener('DOMContentLoaded', function () {
+            const editForm = document.getElementById('coordinator-edit-form');
+
+            editForm?.addEventListener('submit', function (event) {
+                const invalidField = Array.from(editForm.querySelectorAll('[required]')).find((field) => !field.value || `${field.value}`.trim() === '');
+
+                if (!invalidField) {
+                    return;
+                }
+
+                event.preventDefault();
+                alert('Please complete all required fields before saving.');
+                invalidField.focus();
+            });
+
             // Get initial values from hidden inputs
             var MultiDropIndexCount = document.querySelector('input[name="multi_drop_count"]');
             var MultiPickUpIndexCount = document.querySelector('input[name="multi_pickup_count"]');
@@ -652,7 +666,7 @@
                                 <!-- Site Name -->
                                 <div class="col-span-12 md:col-span-1">
                                 <label for="site_name_${multiDropIndex}" class="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
-                                <input type="text" name="multi_drop[${multiDropIndex}][site_name]" id="site_name_${multiDropIndex}" 
+                                <input type="text" name="multi_drop[${multiDropIndex}][site_name]" id="site_name_${multiDropIndex}" required
                                     class="block w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 @error('multi_drop.${multiDropIndex}.site_name') border-red-500 @enderror">
                                 @error('multi_drop.${multiDropIndex}.site_name')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -662,7 +676,7 @@
                                 <!-- Delivery Number -->
                                 <div class="col-span-12 md:col-span-3">
                                 <label for="delivery_number_${multiDropIndex}" class="block text-sm font-medium text-gray-700 mb-1">Delivery Number</label>
-                                <input type="text" name="multi_drop[${multiDropIndex}][delivery_number]" id="delivery_number_${multiDropIndex}" 
+                                <input type="text" name="multi_drop[${multiDropIndex}][delivery_number]" id="delivery_number_${multiDropIndex}" required
                                     class="block w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 @error('multi_drop.${multiDropIndex}.delivery_number') border-red-500 @enderror">
                                 @error('multi_drop.${multiDropIndex}.delivery_number')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -672,7 +686,7 @@
                                 <!-- Delivery Address -->
                                 <div class="col-span-12 md:col-span-3">
                                 <label for="delivery_address_${multiDropIndex}" class="block text-sm font-medium text-gray-700 mb-1">Delivery Address</label>
-                                <textarea name="multi_drop[${multiDropIndex}][delivery_address]" id="delivery_address_${multiDropIndex}" 
+                                <textarea name="multi_drop[${multiDropIndex}][delivery_address]" id="delivery_address_${multiDropIndex}" required
                                     class="block w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 @error('multi_drop.${multiDropIndex}.delivery_address') border-red-500 @enderror"></textarea>
                                 @error('multi_drop.${multiDropIndex}.delivery_address')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -697,7 +711,7 @@
                                   <!-- Accessorial Rate -->
                                 <div class="col-span-12 md:col-span-1">
                                     <label for="multi_pickup_${multiDropIndex}_accessorial_rate" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Rate</label>
-                                    <input type="number" name="multi_pickup[${multiDropIndex}][accessorial_rate]" id="multi_pickup_${multiDropIndex}_accessorial_rate" 
+                                    <input type="number" name="multi_drop[${multiDropIndex}][accessorial_rate]" id="multi_drop_${multiDropIndex}_accessorial_rate" 
                                         class="block w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                         value="" step="0.01" min="0">
                                 </div>
@@ -740,7 +754,7 @@
                                 <!-- Warehouse (2 columns) -->
                                 <div class="col-span-12 md:col-span-2">
                                 <label for="multi_pickup_${currentIndex}_warehouse_id" class="block text-sm font-medium text-gray-700 mb-1">Warehouse</label>
-                                <select name="multi_pickup[${currentIndex}][warehouse_id]" id="multi_pickup_${currentIndex}_warehouse_id" 
+                                <select name="multi_pickup[${currentIndex}][warehouse_id]" id="multi_pickup_${currentIndex}_warehouse_id" required
                                     class="block w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 @error('multi_pickup.${currentIndex}.warehouse_id') border-red-500 @enderror">
                                     @foreach($warehouses as $warehouse)
                                     <option value="{{ $warehouse->id }}">{{ $warehouse->warehouse_name }}</option>
@@ -754,7 +768,7 @@
                                 <!-- Delivery Number (4 columns) -->
                                 <div class="col-span-12 md:col-span-4">
                                 <label for="multi_pickup_${currentIndex}_delivery_number" class="block text-sm font-medium text-gray-700 mb-1">Delivery Number</label>
-                                <input type="text" name="multi_pickup[${currentIndex}][delivery_number]" id="multi_pickup_${currentIndex}_delivery_number"
+                                <input type="text" name="multi_pickup[${currentIndex}][delivery_number]" id="multi_pickup_${currentIndex}_delivery_number" required
                                     class="block w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 @error('multi_pickup.${currentIndex}.delivery_number') border-red-500 @enderror">
                                 @error('multi_pickup.${currentIndex}.delivery_number')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
