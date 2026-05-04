@@ -657,6 +657,15 @@
             background: #cbd5e1;
             border-radius: 9999px;
         }
+
+        #delivery-request-edit-form [data-searchable-select-wrapper] {
+            position: relative;
+            z-index: 1;
+        }
+
+        #delivery-request-edit-form [data-searchable-select-wrapper][data-open="true"] {
+            z-index: 90;
+        }
     </style>
 
     <script>

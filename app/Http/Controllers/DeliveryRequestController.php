@@ -164,6 +164,7 @@ class DeliveryRequestController extends Controller
     {
         $user = Auth::user();
         $employeeCode = $user->id;
+        $deliveryRequestTable = DeliveryRequest::resolveTableName();
 
         Log::debug('Delivery Type:', ['delivery_type' => $request->delivery_type]);
 
@@ -171,7 +172,7 @@ class DeliveryRequestController extends Controller
         $validationRules = [
             'mtm' => [
                 'required',
-                Rule::unique('delivery_requests', 'mtm')->where(function ($query) {
+                Rule::unique($deliveryRequestTable, 'mtm')->where(function ($query) {
                     return $query->where('status', '!=', 0);
                 }),
             ],
@@ -348,11 +349,12 @@ class DeliveryRequestController extends Controller
      */
     public function edit(DeliveryRequest $deliveryRequest)
     {
+        $deliveryRequestTable = DeliveryRequest::resolveTableName();
         // Fetch related delivery line items by joining with the correct table name
-        $deliveryLineItems = DeliveryRequestLineItem::join('delivery_requests', 'delivery_requests.mtm', '=', 'delivery_request_line_items.mtm')
-        ->where('delivery_requests.id', $deliveryRequest->id)
+        $deliveryLineItems = DeliveryRequestLineItem::join($deliveryRequestTable, $deliveryRequestTable . '.mtm', '=', 'delivery_request_line_items.mtm')
+        ->where($deliveryRequestTable . '.id', $deliveryRequest->id)
         ->where('delivery_request_line_items.status', '!=', 0)
-        ->select('delivery_request_line_items.*', 'delivery_requests.id as request_id')
+        ->select('delivery_request_line_items.*', $deliveryRequestTable . '.id as request_id')
         ->get();
 
         // dd($deliveryLineItems);
@@ -385,11 +387,12 @@ class DeliveryRequestController extends Controller
     public function update(Request $request, DeliveryRequest $deliveryRequest)
     {
         Log::debug('Delivery Type:', ['delivery_type' => $request->delivery_type]);
+        $deliveryRequestTable = DeliveryRequest::resolveTableName();
 
 
         // Validate the request data
         $validationRules = [
-            'mtm' => 'required|unique:delivery_request,mtm,' . $deliveryRequest->id,
+            'mtm' => 'required|unique:' . $deliveryRequestTable . ',mtm,' . $deliveryRequest->id,
             'customer_id' => 'required',
             'booking_date' => 'required',
             'delivery_date' => 'required',
@@ -462,16 +465,16 @@ class DeliveryRequestController extends Controller
             $deliveryRequest->region_id = $request->region_id;
             $deliveryRequest->area_id = $request->area_id;
             $deliveryRequest->expense_type_id = $request->expense_type_id;
-            $deliveryRequest->status = $request->delivery_status;
+            $deliveryRequest->delivery_status = $request->delivery_status;
 
-            $deliveryRequest->update();
+            $deliveryRequest->save();
             Log::debug('DeliveryRequest saved:', $deliveryRequest->toArray());
             // Conditionally update line items based on delivery type
             switch ($request->delivery_type) {
                 case 'Regular':
                     if ($request->has('regular') && count($request->regular) > 0) {
                         Log::debug('Saving Regular Line Items:', $request->regular);
-                        $this->updateLineItems($request->regular, $request->mtm);
+                        $this->updateLineItems($request->regular, $request->mtm, $deliveryRequest->id, $deliveryRequest->created_by);
                     } else {
                         Log::debug('No Regular Line Items to save');
                     }
@@ -493,7 +496,7 @@ class DeliveryRequestController extends Controller
                         }
 
                         // Now save the updated multi-drop items
-                        $this->updateLineItems($updatedMultiDropItems, $request->mtm);
+                        $this->updateLineItems($updatedMultiDropItems, $request->mtm, $deliveryRequest->id, $deliveryRequest->created_by);
 
                     } else {
                         Log::debug('No Multi-Drop Line Items to save');
@@ -517,7 +520,7 @@ class DeliveryRequestController extends Controller
                         }
 
                         // Now save the updated multi-pickup items
-                        $this->updateLineItems($updatedMultiPickupItems, $request->mtm);
+                        $this->updateLineItems($updatedMultiPickupItems, $request->mtm, $deliveryRequest->id, $deliveryRequest->created_by);
 
                     } else {
                         Log::debug('No Multi Pick-Up Line Items to save');
@@ -599,7 +602,7 @@ class DeliveryRequestController extends Controller
         }
     }
 
-    private function updateLineItems($lineItems, $mtm)
+    private function updateLineItems($lineItems, $mtm, $deliveryRequestId, $employeeCode)
     {
         // Start a database transaction
         DB::beginTransaction();
@@ -608,7 +611,7 @@ class DeliveryRequestController extends Controller
                 // Ensure that 'id' is present for existing items, or handle the new item
                 if (empty($lineItem['id'])) {
                     // Handle new line items (those without an ID)
-                    $this->saveLineItems([$lineItem], $mtm);
+                    $this->saveLineItems([$lineItem], $mtm, $deliveryRequestId, $employeeCode);
                     Log::debug('New Line Item created', ['mtm' => $mtm, 'lineItem' => $lineItem]);
                     continue;  // Skip the update logic for new items since they're already saved
                 }
@@ -648,7 +651,7 @@ class DeliveryRequestController extends Controller
                     Log::debug('Line Item updated successfully', ['mtm' => $mtm, 'lineItem' => $lineItem]);
                 } else {
                     // If no matching line item exists for this mtm and id, create a new one
-                    $this->saveLineItems([$lineItem], $mtm);
+                    $this->saveLineItems([$lineItem], $mtm, $deliveryRequestId, $employeeCode);
                     Log::debug('New Line Item created', ['mtm' => $mtm, 'lineItem' => $lineItem]);
                 }
             }
@@ -667,11 +670,12 @@ class DeliveryRequestController extends Controller
     }
     
     public function splitView(DeliveryRequest $deliveryRequest){
+        $deliveryRequestTable = DeliveryRequest::resolveTableName();
         // Fetch related delivery line items by joining with the correct table name
-        $deliveryLineItems = DeliveryRequestLineItem::join('delivery_requests', 'delivery_requests.mtm', '=', 'delivery_request_line_items.mtm')
-        ->where('delivery_requests.id', $deliveryRequest->id)
+        $deliveryLineItems = DeliveryRequestLineItem::join($deliveryRequestTable, $deliveryRequestTable . '.mtm', '=', 'delivery_request_line_items.mtm')
+        ->where($deliveryRequestTable . '.id', $deliveryRequest->id)
         ->where('delivery_request_line_items.status', '!=', 0)
-        ->select('delivery_request_line_items.*', 'delivery_requests.id as request_id')
+        ->select('delivery_request_line_items.*', $deliveryRequestTable . '.id as request_id')
         ->get();
 
         // dd($deliveryLineItems);
@@ -700,11 +704,12 @@ class DeliveryRequestController extends Controller
     public function showSplitForm($id, Request $request)
     {
         $requestId = $request->query('request_id');
+        $deliveryRequestTable = DeliveryRequest::resolveTableName();
 
-        $deliveryLineItems = DeliveryRequestLineItem::join('delivery_requests', 'delivery_requests.mtm', '=', 'delivery_request_line_items.mtm')
+        $deliveryLineItems = DeliveryRequestLineItem::join($deliveryRequestTable, $deliveryRequestTable . '.mtm', '=', 'delivery_request_line_items.mtm')
         ->where('delivery_request_line_items.id', $id)
         ->where('delivery_request_line_items.status', '!=', 0)
-        ->select('delivery_request_line_items.*', 'delivery_requests.id as request_id')
+        ->select('delivery_request_line_items.*', $deliveryRequestTable . '.id as request_id')
         ->get();
 
 

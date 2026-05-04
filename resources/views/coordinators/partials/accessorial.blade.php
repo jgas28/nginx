@@ -42,9 +42,11 @@
                     <td class="px-4 py-2 border-b">
                         {{ $deliveryRequest->deliveryStatus->status_name ?? 'N/A' }}
                     </td>
-                    <td class="px-4 py-2 border-b space-x-2">
-                        <a href="{{ route('coordinators.editAllocation', $deliveryRequest) }}" class="text-yellow-600 hover:underline">Edit</a>
-                        <a href="{{ route('coordinators.requestAccessorial', $deliveryRequest) }}" class="text-yellow-600 hover:underline">Request CV</a>
+                    <td class="px-4 py-2 border-b">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <a href="{{ route('coordinators.editAllocation', $deliveryRequest) }}" class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:from-amber-100 hover:to-yellow-100 hover:shadow"><span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-amber-600"><i class="fas fa-pen text-[10px]"></i></span>Edit</a>
+                            <a href="{{ route('coordinators.requestAccessorial', $deliveryRequest) }}" class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-fuchsia-50 px-3 py-1.5 text-xs font-semibold text-violet-700 shadow-sm transition hover:-translate-y-0.5 hover:from-violet-100 hover:to-fuchsia-100 hover:shadow"><span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-violet-600"><i class="fas fa-file-invoice-dollar text-[10px]"></i></span>Request CV</a>
+                        </div>
                     </td>
                 </tr>
             @endforeach

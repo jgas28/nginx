@@ -259,16 +259,17 @@ class CoordinatorsController extends Controller
 
     private function getCoordinatorValidationRules(Request $request, ?DeliveryRequest $deliveryRequest = null): array
     {
+        $deliveryRequestTable = DeliveryRequest::resolveTableName();
         $mtmRule = [
             'required',
-            Rule::unique('delivery_requests', 'mtm')
+            Rule::unique($deliveryRequestTable, 'mtm')
                 ->where(fn ($query) => $query->where('status', '!=', 0)),
         ];
 
         if ($deliveryRequest) {
             $mtmRule = [
                 'required',
-                Rule::unique('delivery_requests', 'mtm')
+                Rule::unique($deliveryRequestTable, 'mtm')
                     ->ignore($deliveryRequest->id)
                     ->where(fn ($query) => $query->where('status', '!=', 0)),
             ];
@@ -417,11 +418,12 @@ class CoordinatorsController extends Controller
 
     public function edit(DeliveryRequest $deliveryRequest)
     {
+        $deliveryRequestTable = DeliveryRequest::resolveTableName();
         // Fetch related delivery line items by joining with the correct table name
-        $deliveryLineItems = DeliveryRequestLineItem::join('delivery_requests', 'delivery_requests.mtm', '=', 'delivery_request_line_items.mtm')
-        ->where('delivery_requests.id', $deliveryRequest->id)
+        $deliveryLineItems = DeliveryRequestLineItem::join($deliveryRequestTable, $deliveryRequestTable . '.mtm', '=', 'delivery_request_line_items.mtm')
+        ->where($deliveryRequestTable . '.id', $deliveryRequest->id)
         ->where('delivery_request_line_items.status', '!=', 0)
-        ->select('delivery_request_line_items.*', 'delivery_requests.id as request_id')
+        ->select('delivery_request_line_items.*', $deliveryRequestTable . '.id as request_id')
         ->get();
 
         // dd($deliveryLineItems);
@@ -582,11 +584,12 @@ class CoordinatorsController extends Controller
     }
 
     public function splitView(DeliveryRequest $deliveryRequest){
+        $deliveryRequestTable = DeliveryRequest::resolveTableName();
         // Fetch related delivery line items by joining with the correct table name
-        $deliveryLineItems = DeliveryRequestLineItem::join('delivery_requests', 'delivery_requests.mtm', '=', 'delivery_request_line_items.mtm')
-        ->where('delivery_requests.id', $deliveryRequest->id)
+        $deliveryLineItems = DeliveryRequestLineItem::join($deliveryRequestTable, $deliveryRequestTable . '.mtm', '=', 'delivery_request_line_items.mtm')
+        ->where($deliveryRequestTable . '.id', $deliveryRequest->id)
         ->where('delivery_request_line_items.status', '!=', 0)
-        ->select('delivery_request_line_items.*', 'delivery_requests.id as request_id')
+        ->select('delivery_request_line_items.*', $deliveryRequestTable . '.id as request_id')
         ->get();
 
         // dd($deliveryLineItems);
@@ -615,11 +618,12 @@ class CoordinatorsController extends Controller
     public function showSplitForm($id, Request $request)
     {
         $requestId = $request->query('request_id');
+        $deliveryRequestTable = DeliveryRequest::resolveTableName();
 
-        $deliveryLineItems = DeliveryRequestLineItem::join('delivery_requests', 'delivery_requests.mtm', '=', 'delivery_request_line_items.mtm')
+        $deliveryLineItems = DeliveryRequestLineItem::join($deliveryRequestTable, $deliveryRequestTable . '.mtm', '=', 'delivery_request_line_items.mtm')
         ->where('delivery_request_line_items.id', $id)
         ->where('delivery_request_line_items.status', '!=', 0)
-        ->select('delivery_request_line_items.*', 'delivery_requests.id as request_id')
+        ->select('delivery_request_line_items.*', $deliveryRequestTable . '.id as request_id')
         ->get();
 
 
@@ -1124,10 +1128,12 @@ class CoordinatorsController extends Controller
 
     public function request($id)
     {
-        $deliveryLineItems = DeliveryRequest::join('delivery_request_line_items', 'delivery_requests.id', '=', 'delivery_request_line_items.dr_id')
-            ->where('delivery_requests.id', $id)
+        $deliveryRequestTable = DeliveryRequest::resolveTableName();
+
+        $deliveryLineItems = DeliveryRequest::join('delivery_request_line_items', $deliveryRequestTable . '.id', '=', 'delivery_request_line_items.dr_id')
+            ->where($deliveryRequestTable . '.id', $id)
             ->where('delivery_request_line_items.status', '!=', 0)
-            ->select('delivery_requests.*', 'delivery_request_line_items.*', 'delivery_requests.id as request_id')
+            ->select($deliveryRequestTable . '.*', 'delivery_request_line_items.*', $deliveryRequestTable . '.id as request_id')
             ->get();
 
         if ($deliveryLineItems->isEmpty()) {
@@ -1327,10 +1333,12 @@ class CoordinatorsController extends Controller
 
     public function requestAccessorial($id)
     {
-        $deliveryLineItems = DeliveryRequest::join('delivery_request_line_items', 'delivery_requests.id', '=', 'delivery_request_line_items.dr_id')
-            ->where('delivery_requests.id', $id)
+        $deliveryRequestTable = DeliveryRequest::resolveTableName();
+
+        $deliveryLineItems = DeliveryRequest::join('delivery_request_line_items', $deliveryRequestTable . '.id', '=', 'delivery_request_line_items.dr_id')
+            ->where($deliveryRequestTable . '.id', $id)
             ->where('delivery_request_line_items.status', '!=', 0)
-            ->select('delivery_requests.*', 'delivery_request_line_items.*', 'delivery_requests.id as request_id')
+            ->select($deliveryRequestTable . '.*', 'delivery_request_line_items.*', $deliveryRequestTable . '.id as request_id')
             ->get();
 
         if ($deliveryLineItems->isEmpty()) {

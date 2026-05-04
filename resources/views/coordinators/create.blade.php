@@ -37,6 +37,10 @@
         z-index: 90;
     }
 
+    #coordinator-create-form[data-modal-open="true"] [data-searchable-select-wrapper] {
+        z-index: 0 !important;
+    }
+
     #coordinator-create-form label {
         margin-bottom: 0.5rem;
         display: block;
@@ -615,8 +619,8 @@
     </div>
     </form>
 
-    <div id="coordinator-create-validation-modal" class="fixed inset-0 z-[120] hidden items-center justify-center bg-slate-900/50 p-4">
-        <div class="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+    <div id="coordinator-create-validation-modal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/50 p-4">
+        <div class="relative z-[10000] w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
             <h2 class="text-xl font-bold text-slate-900">Missing Required Fields</h2>
             <p class="mt-2 text-sm text-slate-500">Please complete the required fields before saving this delivery request.</p>
             <ul id="coordinator-create-validation-list" class="mt-4 list-disc space-y-1 pl-5 text-sm text-rose-600"></ul>
@@ -645,6 +649,9 @@
         }
 
         function showValidationModal(messages) {
+            closeAllSearchableSelects();
+            form.dataset.modalOpen = 'true';
+
             if (!validationModal || !validationList) {
                 return;
             }
@@ -661,6 +668,8 @@
         }
 
         function hideValidationModal() {
+            delete form.dataset.modalOpen;
+
             if (!validationModal) {
                 return;
             }
@@ -754,6 +763,51 @@
             });
         }
 
+        function shouldAutoSelectCoordinatorOption(select) {
+            if (!select) {
+                return false;
+            }
+
+            return select.matches(
+                '#regular_warehouse_id, select[id^="multi_pickup_"][id$="_warehouse_id"], select[id^="multi_drop_"][id$="_warehouse_id"], select[id^="add_on_rate_"]'
+            );
+        }
+
+        function getFirstSelectableValue(select) {
+            return Array.from(select?.options || []).find((option) => option.value !== '')?.value || '';
+        }
+
+        function syncCoordinatorSelectValue(select, { force = false, dispatch = false } = {}) {
+            if (!shouldAutoSelectCoordinatorOption(select)) {
+                return;
+            }
+
+            const firstSelectableValue = getFirstSelectableValue(select);
+            if (!firstSelectableValue) {
+                return;
+            }
+
+            if (!force && select.value) {
+                return;
+            }
+
+            if (select.value === firstSelectableValue) {
+                return;
+            }
+
+            select.value = firstSelectableValue;
+
+            if (dispatch) {
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+
+        function syncCoordinatorDefaultSelects(root = document, options = {}) {
+            root.querySelectorAll('select').forEach((select) => {
+                syncCoordinatorSelectValue(select, options);
+            });
+        }
+
         function mountSearchableSelect(select, config = {}) {
             if (!select || select.dataset.searchableMounted === 'true') {
                 return;
@@ -799,6 +853,8 @@
             const list = wrapper.querySelector('[data-searchable-select-list]');
             const emptyState = wrapper.querySelector('[data-searchable-select-empty]');
             const label = wrapper.querySelector('[data-searchable-select-label]');
+
+            syncCoordinatorSelectValue(select);
 
             function updateLabel() {
                 const selectedOption = select.options[select.selectedIndex];
@@ -862,6 +918,19 @@
             searchInput.addEventListener('input', () => renderOptions(searchInput.value));
             updateLabel();
             renderOptions();
+
+            select._searchableWrapper = wrapper;
+        }
+
+        function remountSearchableSelect(select, config = {}) {
+            if (!select) {
+                return;
+            }
+
+            select._searchableWrapper?.remove();
+            delete select._searchableWrapper;
+            delete select.dataset.searchableMounted;
+            mountSearchableSelect(select, config);
         }
 
         function mountCoordinatorSearchableSelects(root = document) {
@@ -924,14 +993,17 @@
             if (deliveryType === 'Regular') {
                 document.getElementById('regular-fields').style.display = 'block';
                 document.getElementById('regular-fields').classList.remove('hidden');
+                syncCoordinatorDefaultSelects(document.getElementById('regular-fields'), { force: true, dispatch: true });
             } 
             else if (deliveryType === 'Multi-Drop') {
                 document.getElementById('multi-drop-fields').style.display = 'block';
                 document.getElementById('multi-drop-fields').classList.remove('hidden');
+                syncCoordinatorDefaultSelects(document.getElementById('multi-drop-fields'), { force: true, dispatch: true });
             } 
             else if (deliveryType === 'Multi Pick-Up') {
                 document.getElementById('multi-pickup-fields').style.display = 'block';
                 document.getElementById('multi-pickup-fields').classList.remove('hidden');
+                syncCoordinatorDefaultSelects(document.getElementById('multi-pickup-fields'), { force: true, dispatch: true });
             }
 
             syncCoordinatorSectionState();
@@ -953,6 +1025,7 @@
 
         // Function to handle adding more fields for multi-pickup
         document.querySelector('.add-more-pickup').addEventListener('click', function() {
+            const selectedWarehouse = document.getElementById('multi_pickup_0_warehouse_id')?.value || '';
             const newRow = document.createElement('div');
             newRow.classList.add('multi-pickup-row');
             newRow.id = `multi-pickup-row-${currentIndex}`;
@@ -980,12 +1053,23 @@
                 </div>
             `;
 
-            // Get the reference to the second row element (multi-pickup-row-1)
+            const multiPickupItems = document.getElementById('multi-pickup-items');
             const secondRow = document.getElementById('multi-pickup-row-1');
-            
-            // Insert the new row after the second row
-            document.getElementById('multi-pickup-items').insertBefore(newRow, secondRow.nextSibling);
+
+            if (secondRow?.nextSibling) {
+                multiPickupItems.insertBefore(newRow, secondRow.nextSibling);
+            } else {
+                multiPickupItems.appendChild(newRow);
+            }
+            const newWarehouseSelect = newRow.querySelector(`#multi_pickup_${currentIndex}_warehouse_id`);
+            if (newWarehouseSelect && selectedWarehouse) {
+                newWarehouseSelect.value = selectedWarehouse;
+            }
+            syncCoordinatorDefaultSelects(newRow, { force: !selectedWarehouse });
             mountCoordinatorSearchableSelects(newRow);
+            if (newWarehouseSelect && newWarehouseSelect.dispatchEvent) {
+                newWarehouseSelect.dispatchEvent(new Event('change', { bubbles: true }));
+            }
 
             // Increment the index for the next row
             currentIndex++;
@@ -1028,12 +1112,15 @@
             // Show fields based on selected delivery type
             if (deliveryType === 'Regular') {
                 document.getElementById('regular-fields').style.display = 'block';
+                syncCoordinatorDefaultSelects(document.getElementById('regular-fields'), { force: true, dispatch: true });
             } 
             else if (deliveryType === 'Multi-Drop') {
                 document.getElementById('multi-drop-fields').style.display = 'block';
+                syncCoordinatorDefaultSelects(document.getElementById('multi-drop-fields'), { force: true, dispatch: true });
             } 
             else if (deliveryType === 'Multi Pick-Up') {
                 document.getElementById('multi-pickup-fields').style.display = 'block';
+                syncCoordinatorDefaultSelects(document.getElementById('multi-pickup-fields'), { force: true, dispatch: true });
             }
         });
 
@@ -1069,11 +1156,14 @@
                     </div>
             `;
 
-            // Get the reference to the second row element (multi-drop-row-1)
+            const multiDropItems = document.getElementById('multi-drop-items');
             const secondRow = document.getElementById('multi-drop-row-1');
-            
-            // Insert the new row after the second row
-            document.getElementById('multi-drop-items').insertBefore(newRow, secondRow.nextSibling);
+
+            if (secondRow?.nextSibling) {
+                multiDropItems.insertBefore(newRow, secondRow.nextSibling);
+            } else {
+                multiDropItems.appendChild(newRow);
+            }
 
 
             // Increment the index for the next row
@@ -1109,9 +1199,7 @@
             if (areaId) {
                 regionSelect.disabled = true;
                 regionSelect.innerHTML = '<option value="">Loading provinces...</option>';
-                regionSelect.dataset.searchableMounted = 'false';
-                regionSelect.nextElementSibling?.remove();
-                mountSearchableSelect(regionSelect, { placeholder: 'Loading provinces...', icon: 'fa-map-pin' });
+                remountSearchableSelect(regionSelect, { placeholder: 'Loading provinces...', icon: 'fa-map-pin' });
 
                 fetch(`/regions/by-area/${areaId}`)
                     .then(response => response.json())
@@ -1124,27 +1212,22 @@
                             option.text = region.province;
                             regionSelect.appendChild(option);
                         });
-                        regionSelect.dataset.searchableMounted = 'false';
-                        regionSelect.nextElementSibling?.remove();
-                        mountSearchableSelect(regionSelect, { placeholder: 'Select Province', icon: 'fa-map-pin' });
+                        remountSearchableSelect(regionSelect, { placeholder: 'Select Province', icon: 'fa-map-pin' });
                     })
                     .catch(() => {
                         regionSelect.disabled = false;
                         regionSelect.innerHTML = '<option value="">Select Province</option>';
-                        regionSelect.dataset.searchableMounted = 'false';
-                        regionSelect.nextElementSibling?.remove();
-                        mountSearchableSelect(regionSelect, { placeholder: 'Select Province', icon: 'fa-map-pin' });
+                        remountSearchableSelect(regionSelect, { placeholder: 'Select Province', icon: 'fa-map-pin' });
                         alert('Unable to fetch regions.');
                     });
             } else {
                 regionSelect.disabled = false;
                 regionSelect.innerHTML = '<option value="">Select Province</option>';
-                regionSelect.dataset.searchableMounted = 'false';
-                regionSelect.nextElementSibling?.remove();
-                mountSearchableSelect(regionSelect, { placeholder: 'Select Province', icon: 'fa-map-pin' });
+                remountSearchableSelect(regionSelect, { placeholder: 'Select Province', icon: 'fa-map-pin' });
             }
         });
 
+        syncCoordinatorDefaultSelects(document);
         mountCoordinatorSearchableSelects();
         syncCoordinatorSectionState();
 

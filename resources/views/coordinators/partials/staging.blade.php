@@ -42,10 +42,11 @@
                     <td class="px-4 py-2 border-b">
                         {{ $deliveryRequest->deliveryStatus->status_name ?? 'N/A' }}
                     </td>
-                    <td class="px-4 py-2 border-b space-x-2">
+                    <td class="px-4 py-2 border-b">
+                        <div class="flex flex-wrap items-center gap-2">
                         <a href="{{ route('coordinators.edit', ['deliveryRequest' => $deliveryRequest->id, 'tab' => request('tab')]) }}"
-                            class="text-yellow-600 hover:underline">
-                            Edit
+                            class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:from-amber-100 hover:to-yellow-100 hover:shadow">
+                            <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-amber-600"><i class="fas fa-pen text-[10px]"></i></span>Edit
                         </a>
                         <!-- @if($deliveryRequest->delivery_type != 'Regular')
                             <a href="{{ route('coordinators.splitView', $deliveryRequest) }}" class="text-green-600 hover:underline">Split</a>
@@ -55,6 +56,7 @@
                             @method('DELETE')
                             <button type="submit" class="text-red-600 hover:underline">Delete</button>
                         </form> -->
+                        </div>
                     </td>
                 </tr>
             @endforeach

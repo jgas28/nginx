@@ -1,6 +1,16 @@
 @extends('layouts.app')
 
 @section('content')
+    <style>
+        #coordinator-edit-form [data-searchable-select-wrapper] {
+            position: relative;
+            z-index: 1;
+        }
+
+        #coordinator-edit-form [data-searchable-select-wrapper][data-open="true"] {
+            z-index: 90;
+        }
+    </style>
     <!-- <h1>Edit Delivery Request</h1> -->
 
     @if(session('error'))
@@ -615,6 +625,25 @@
         document.addEventListener('DOMContentLoaded', function () {
             const editForm = document.getElementById('coordinator-edit-form');
 
+            function getFirstSelectableValue(select) {
+                return Array.from(select?.options || []).find((option) => option.value !== '')?.value || '';
+            }
+
+            function syncWarehouseDefault(select, preferredValue = '') {
+                if (!select) {
+                    return;
+                }
+
+                const fallbackValue = preferredValue || getFirstSelectableValue(select);
+                if (!fallbackValue) {
+                    return;
+                }
+
+                if (!select.value || select.value === '') {
+                    select.value = fallbackValue;
+                }
+            }
+
             editForm?.addEventListener('submit', function (event) {
                 const invalidField = Array.from(editForm.querySelectorAll('[required]')).find((field) => !field.value || `${field.value}`.trim() === '');
 
@@ -741,6 +770,7 @@
                 // Check if the clicked button has the class 'add-more-pickup' (for multi-pickup)
                 else if (event.target && event.target.classList.contains('add-more-pickup')) {
                     console.log("Add More Pickup button clicked");
+                    const selectedWarehouse = document.getElementById('multi_pickup_0_warehouse_id')?.value || '';
 
                     // Logic for Multi Pickup functionality
                     // For example, add a new row for multi-pickup fields
@@ -811,6 +841,7 @@
 
                     // Append the new row for multi-pickup fields
                     document.getElementById('multi-pickup-items').appendChild(newRow);
+                    syncWarehouseDefault(newRow.querySelector(`#multi_pickup_${currentIndex}_warehouse_id`), selectedWarehouse);
 
                     // Increment the index for the next multi-pickup row
                     currentIndex++;
@@ -820,6 +851,10 @@
 
                     console.log('currentIndex: ', currentIndex); // Log to confirm increment
                 }
+            });
+
+            document.querySelectorAll('select[id^="multi_pickup_"][id$="_warehouse_id"], select[id^="multi_drop_"][id$="_warehouse_id"], select[id^="regular_warehouse_id_"]').forEach((select) => {
+                syncWarehouseDefault(select);
             });
         });
 

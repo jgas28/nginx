@@ -22,13 +22,26 @@
             width: 2rem;
         }
 
+        #delivery-request-create-form [data-searchable-select-wrapper] {
+            position: relative;
+            z-index: 1;
+        }
+
+        #delivery-request-create-form [data-searchable-select-wrapper][data-open="true"] {
+            z-index: 90;
+        }
+
+        #delivery-request-create-form[data-modal-open="true"] [data-searchable-select-wrapper] {
+            z-index: 0 !important;
+        }
+
         #delivery-request-create-form .text-red-600,
         #delivery-request-create-form .text-red-500 {
             pointer-events: none;
         }
     </style>
 
-    <form action="{{ route('deliveryRequest.store') }}" method="POST" id="delivery-request-create-form">
+    <form action="{{ route('deliveryRequest.store') }}" method="POST" id="delivery-request-create-form" novalidate>
         @csrf
         <div class="border bg-white p-4 rounded shadow-sm">
             <!-- Row 1 -->
@@ -461,6 +474,19 @@
         </button>
     </form>
 
+    <div id="delivery-request-validation-modal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/50 p-4">
+        <div class="relative z-[10000] w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <h2 class="text-xl font-bold text-slate-900">Missing Required Fields</h2>
+            <p class="mt-2 text-sm text-slate-500">Please complete the required fields before saving this delivery request.</p>
+            <ul id="delivery-request-validation-list" class="mt-4 list-disc space-y-1 pl-5 text-sm text-rose-600"></ul>
+            <div class="mt-6 flex justify-end">
+                <button type="button" id="delivery-request-validation-close" class="inline-flex h-11 items-center justify-center rounded-2xl bg-indigo-600 px-5 text-sm font-semibold text-white transition hover:bg-indigo-700">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
     <style>
         .searchable-select-source {
             position: absolute;
@@ -483,6 +509,8 @@
         let currentIndex = 2;
         let multiDropIndex = 2;
         const form = document.getElementById('delivery-request-create-form');
+        const validationModal = document.getElementById('delivery-request-validation-modal');
+        const validationList = document.getElementById('delivery-request-validation-list');
         const regularFields = document.getElementById('regular-fields');
         const multiDropFields = document.getElementById('multi-drop-fields');
         const multiPickupFields = document.getElementById('multi-pickup-fields');
@@ -514,11 +542,105 @@
             });
         }
 
+        function showValidationModal(messages) {
+            closeAllSearchableSelects();
+            form.dataset.modalOpen = 'true';
+
+            if (!validationModal || !validationList) {
+                return;
+            }
+
+            validationList.innerHTML = '';
+            messages.forEach((message) => {
+                const item = document.createElement('li');
+                item.textContent = message;
+                validationList.appendChild(item);
+            });
+
+            validationModal.classList.remove('hidden');
+            validationModal.classList.add('flex');
+        }
+
+        function hideValidationModal() {
+            delete form.dataset.modalOpen;
+
+            if (!validationModal) {
+                return;
+            }
+
+            validationModal.classList.add('hidden');
+            validationModal.classList.remove('flex');
+        }
+
+        function getFieldLabel(field) {
+            const fieldId = field.getAttribute('id');
+            const label = fieldId ? form.querySelector(`label[for="${fieldId}"]`) : null;
+
+            return (label?.textContent || field.name || 'Field').replace(/\s+/g, ' ').trim();
+        }
+
+        function getVisibleRequiredFields() {
+            return Array.from(form.querySelectorAll('[required]')).filter((field) => {
+                const section = field.closest('#regular-fields, #multi-drop-fields, #multi-pickup-fields');
+
+                if (!section) {
+                    return true;
+                }
+
+                return !section.classList.contains('hidden');
+            });
+        }
+
+        function validateDeliveryRequestForm() {
+            const invalidFields = getVisibleRequiredFields().filter((field) => !field.value || `${field.value}`.trim() === '');
+
+            if (invalidFields.length === 0) {
+                return true;
+            }
+
+            const uniqueMessages = [...new Set(invalidFields.map((field) => `${getFieldLabel(field)} is required.`))];
+            showValidationModal(uniqueMessages);
+            return false;
+        }
+
         function updateSearchableSelectLabel(select) {
             if (!select._searchableSelect) return;
             const selectedOption = select.options[select.selectedIndex];
             const placeholder = select.dataset.placeholder || select.querySelector('option[value=""]')?.text || 'Select an option';
             select._searchableSelect.label.textContent = selectedOption && selectedOption.value !== '' ? selectedOption.textContent.trim() : placeholder;
+        }
+
+        function shouldAutoSelectDeliveryRequestOption(select) {
+            if (!select) return false;
+
+            return select.matches(
+                '#regular_warehouse_id, select[id^="multi_pickup_"][id$="_warehouse_id"], select[id^="multi_drop_"][id$="_warehouse_id"], select[id^="add_on_rate_"]'
+            );
+        }
+
+        function getFirstSelectableValue(select) {
+            return Array.from(select?.options || []).find((option) => option.value !== '')?.value || '';
+        }
+
+        function syncDeliveryRequestSelectValue(select, { force = false, dispatch = false } = {}) {
+            if (!shouldAutoSelectDeliveryRequestOption(select)) return;
+
+            const firstSelectableValue = getFirstSelectableValue(select);
+            if (!firstSelectableValue) return;
+            if (!force && select.value) return;
+            if (select.value === firstSelectableValue) return;
+
+            select.value = firstSelectableValue;
+
+            if (dispatch) {
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+
+        function syncDeliveryRequestDefaultSelects(root = form, options = {}) {
+            root.querySelectorAll('select').forEach((select) => {
+                syncDeliveryRequestSelectValue(select, options);
+            });
         }
 
         function renderSearchableSelectOptions(select, term = '') {
@@ -612,6 +734,7 @@
                 ? form.querySelectorAll(`label[for="${select.id}"]`)
                 : [];
 
+            syncDeliveryRequestSelectValue(select);
             select._searchableSelect = { wrapper, panel, searchInput, list, emptyState, label };
             select.tabIndex = -1;
 
@@ -674,9 +797,18 @@
                 clearFormFields('multi-drop-fields');
                 clearFormFields('multi-pickup-fields');
             }
-            if (deliveryType === 'Regular') regularFields.classList.remove('hidden');
-            if (deliveryType === 'Multi-Drop') multiDropFields.classList.remove('hidden');
-            if (deliveryType === 'Multi Pick-Up') multiPickupFields.classList.remove('hidden');
+            if (deliveryType === 'Regular') {
+                regularFields.classList.remove('hidden');
+                syncDeliveryRequestDefaultSelects(regularFields, { force: true, dispatch: true });
+            }
+            if (deliveryType === 'Multi-Drop') {
+                multiDropFields.classList.remove('hidden');
+                syncDeliveryRequestDefaultSelects(multiDropFields, { force: true, dispatch: true });
+            }
+            if (deliveryType === 'Multi Pick-Up') {
+                multiPickupFields.classList.remove('hidden');
+                syncDeliveryRequestDefaultSelects(multiPickupFields, { force: true, dispatch: true });
+            }
         }
 
         function deleteRow(index) {
@@ -719,6 +851,7 @@
         deliveryTypeSelect.addEventListener('change', () => handleDeliveryTypeChange(true));
 
         document.querySelector('.add-more-pickup').addEventListener('click', function() {
+            const selectedWarehouse = document.getElementById('multi_pickup_0_warehouse_id')?.value || '';
             const newRow = document.createElement('div');
             newRow.classList.add('multi-pickup-row');
             newRow.id = `multi-pickup-row-${currentIndex}`;
@@ -746,7 +879,15 @@
             `;
             const secondRow = document.getElementById('multi-pickup-row-1');
             document.getElementById('multi-pickup-items').insertBefore(newRow, secondRow.nextSibling);
+            const newWarehouseSelect = newRow.querySelector(`#multi_pickup_${currentIndex}_warehouse_id`);
+            if (newWarehouseSelect && selectedWarehouse) {
+                newWarehouseSelect.value = selectedWarehouse;
+            }
+            syncDeliveryRequestDefaultSelects(newRow, { force: !selectedWarehouse });
             initializeSearchableSelects(newRow);
+            if (newWarehouseSelect && selectedWarehouse) {
+                refreshSearchableSelect(newWarehouseSelect);
+            }
             currentIndex++;
         });
 
@@ -818,7 +959,21 @@
                 });
         });
 
+        syncDeliveryRequestDefaultSelects();
         initializeSearchableSelects();
         handleDeliveryTypeChange(false);
+
+        document.getElementById('delivery-request-validation-close')?.addEventListener('click', hideValidationModal);
+        validationModal?.addEventListener('click', (event) => {
+            if (event.target === validationModal) {
+                hideValidationModal();
+            }
+        });
+
+        form.addEventListener('submit', (event) => {
+            if (!validateDeliveryRequestForm()) {
+                event.preventDefault();
+            }
+        });
     </script>
 @endsection

@@ -206,10 +206,12 @@ class CashVoucherController extends Controller
 
     public function request($id)
     {
-        $deliveryLineItems = DeliveryRequest::join('delivery_request_line_items', 'delivery_requests.id', '=', 'delivery_request_line_items.dr_id')
-            ->where('delivery_requests.id', $id)
+        $deliveryRequestTable = DeliveryRequest::resolveTableName();
+
+        $deliveryLineItems = DeliveryRequest::join('delivery_request_line_items', $deliveryRequestTable . '.id', '=', 'delivery_request_line_items.dr_id')
+            ->where($deliveryRequestTable . '.id', $id)
             ->where('delivery_request_line_items.status', '!=', 0)
-            ->select('delivery_requests.*', 'delivery_request_line_items.*', 'delivery_requests.id as request_id')
+            ->select($deliveryRequestTable . '.*', 'delivery_request_line_items.*', $deliveryRequestTable . '.id as request_id')
             ->get();
 
         $allocation = Allocation::where('dr_id', $id)->first();
@@ -273,15 +275,17 @@ class CashVoucherController extends Controller
 
     public function accessorialRequest($id)
     {
-        $deliveryLineItems = DeliveryRequest::join('delivery_request_line_items', 'delivery_requests.id', '=', 'delivery_request_line_items.dr_id')
+        $deliveryRequestTable = DeliveryRequest::resolveTableName();
+
+        $deliveryLineItems = DeliveryRequest::join('delivery_request_line_items', $deliveryRequestTable . '.id', '=', 'delivery_request_line_items.dr_id')
         ->leftJoin('accessorial_types', DB::raw('REPLACE(delivery_request_line_items.accessorial_type, \'"\', \'\')'), '=', 'accessorial_types.id')
-        ->where('delivery_requests.id', $id)
+        ->where($deliveryRequestTable . '.id', $id)
         ->where('delivery_request_line_items.status', '!=', 0)
         ->whereNotNull('delivery_request_line_items.accessorial_type')
         ->select(
-            'delivery_requests.*',
+            $deliveryRequestTable . '.*',
             'delivery_request_line_items.*',
-            'delivery_requests.id as request_id',
+            $deliveryRequestTable . '.id as request_id',
             'accessorial_types.accessorial_types_name as accessorial_type_name'
         )
         ->get();
@@ -516,11 +520,13 @@ class CashVoucherController extends Controller
         Log::info("Approval request ID: $id");  // Log the ID to see if it's reaching here
         $deliveryRequestId = $id;
 
-        $cashVouchers = CashVoucher::where('id', $id)->first();
-        $deliveryRequests = DeliveryRequest::where('id', $cashVouchers->dr_id)->first();
+        $cashVouchers = CashVoucher::with(['employee', 'cvrTypes'])->findOrFail($id);
+        $deliveryRequests = DeliveryRequest::with(['company', 'expenseType'])
+            ->find($cashVouchers->dr_id);
         $allocations = Allocation::where('dr_id', $cashVouchers->dr_id)
             ->where('trip_type', $cashVouchers->cvr_type)
             ->where('sequence', $cashVouchers->sequence)
+            ->with('truck')
             ->first();
 
         $employees = User::where('status', '!=', 0)->get();

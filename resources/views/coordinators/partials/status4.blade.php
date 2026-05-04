@@ -17,9 +17,9 @@
                 <div><dt class="font-semibold text-slate-700">Truck / Region / Province</dt><dd>{{ $deliveryRequest->truckType->truck_code ?? 'N/A' }} / {{ $deliveryRequest->area->area_code ?? 'N/A' }} / {{ $deliveryRequest->region->province ?? 'N/A' }}</dd></div>
                 <div><dt class="font-semibold text-slate-700">Delivery Rate</dt><dd>{{ $deliveryRequest->delivery_rate ?? 'N/A' }}</dd></div>
             </dl>
-            <div class="mt-4 flex flex-wrap gap-3 text-sm font-semibold">
-                <a href="{{ route('coordinators.editAllocation', $deliveryRequest) }}" class="text-yellow-600 hover:underline">Edit</a>
-                <a href="{{ route('coordinators.coordinators', $deliveryRequest) }}" class="text-yellow-600 hover:underline">Request CV</a>
+            <div class="mt-4 flex flex-wrap gap-2">
+                <a href="{{ route('coordinators.editAllocation', $deliveryRequest) }}" class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:from-amber-100 hover:to-yellow-100 hover:shadow"><span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-amber-600"><i class="fas fa-pen text-[10px]"></i></span>Edit</a>
+                <a href="{{ route('coordinators.coordinators', $deliveryRequest) }}" class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-fuchsia-50 px-3 py-1.5 text-xs font-semibold text-violet-700 shadow-sm transition hover:-translate-y-0.5 hover:from-violet-100 hover:to-fuchsia-100 hover:shadow"><span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-violet-600"><i class="fas fa-file-invoice-dollar text-[10px]"></i></span>Request CV</a>
             </div>
         </article>
     @endforeach
@@ -55,9 +55,11 @@
                     <td class="px-4 py-2 border-b">{{ $deliveryRequest->area->area_code ?? 'N/A' }}</td>
                     <td class="px-4 py-2 border-b">{{ $deliveryRequest->region->province ?? 'N/A' }}</td>
                     <td class="px-4 py-2 border-b">{{ $deliveryRequest->deliveryStatus->status_name ?? 'N/A' }}</td>
-                    <td class="px-4 py-2 border-b space-x-2">
-                        <a href="{{ route('coordinators.editAllocation', $deliveryRequest) }}" class="text-yellow-600 hover:underline">Edit</a>
-                        <a href="{{ route('coordinators.coordinators', $deliveryRequest) }}" class="text-yellow-600 hover:underline">Request CV</a>
+                    <td class="px-4 py-2 border-b">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <a href="{{ route('coordinators.editAllocation', $deliveryRequest) }}" class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:from-amber-100 hover:to-yellow-100 hover:shadow"><span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-amber-600"><i class="fas fa-pen text-[10px]"></i></span>Edit</a>
+                            <a href="{{ route('coordinators.coordinators', $deliveryRequest) }}" class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-fuchsia-50 px-3 py-1.5 text-xs font-semibold text-violet-700 shadow-sm transition hover:-translate-y-0.5 hover:from-violet-100 hover:to-fuchsia-100 hover:shadow"><span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-violet-600"><i class="fas fa-file-invoice-dollar text-[10px]"></i></span>Request CV</a>
+                        </div>
                     </td>
                 </tr>
             @endforeach

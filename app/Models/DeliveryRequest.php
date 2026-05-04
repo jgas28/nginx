@@ -4,12 +4,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class DeliveryRequest extends Model
 { 
     use HasFactory;
 
-    protected $table = 'delivery_requests';
+    public static function resolveTableName(): string
+    {
+        return Schema::hasTable('delivery_request') ? 'delivery_request' : 'delivery_requests';
+    }
+
+    public function getTable()
+    {
+        return static::resolveTableName();
+    }
 
     protected $fillable = [
         'mtm', 'booking_date', 'delivery_date', 'delivery_type', 'delivery_rate', 

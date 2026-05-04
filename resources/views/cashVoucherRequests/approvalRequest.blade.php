@@ -25,11 +25,18 @@
                     </svg>
                     CVR Information
                 </legend>
+                @php
+                    $cvrPrefix = preg_replace('/\/\d+$/', '', $cashVouchers->cvr_number ?? '');
+                    $truckName = $allocations?->truck?->truck_name ?? 'NO-TRUCK';
+                    $companyCode = $deliveryRequests?->company?->company_code ?? ($cashVouchers->company?->company_code ?? 'NO-COMPANY');
+                    $expenseCode = $deliveryRequests?->expenseType?->expense_code ?? ($cashVouchers->expenseTypes?->expense_code ?? '');
+                    $requestorName = trim(($cashVouchers->employee?->fname ?? '') . ' ' . ($cashVouchers->employee?->lname ?? ''));
+                @endphp
                 <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
                     <div class="md:col-span-3">
                         <input type="hidden" name="dr_id" value="{{ $cashVouchers->dr_id }}">
                         <label for="cvr_number" class="block text-sm font-medium text-gray-700">CVR Number</label>
-                        <input type="text" name="cvr_number" id="cvr_number" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ preg_replace('/\/\d+$/', '', $cashVouchers->cvr_number) }}-{{ $allocations->truck->truck_name }}-{{ $deliveryRequests->company->company_code }}{{ $deliveryRequests->expenseType->expense_code }}" readonly>
+                        <input type="text" name="cvr_number" id="cvr_number" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cvrPrefix }}-{{ $truckName }}-{{ $companyCode }}{{ $expenseCode }}" readonly>
                     </div>
 
                     <div class="md:col-span-3">
@@ -41,7 +48,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mt-4">
                     <div class="md:col-span-3">
                         <label for="requestor" class="block text-sm font-medium text-gray-700">Requestor</label>
-                        <input type="text" name="requestor" id="requestor" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->employee->fname }} {{ $cashVouchers->employee->lname }}" readonly>
+                        <input type="text" name="requestor" id="requestor" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $requestorName !== '' ? $requestorName : 'N/A' }}" readonly>
                     </div>
                     @if ($cashVouchers->cvrTypes && !in_array($cashVouchers->cvr_type, ['admin', 'rpm']))
                         <div class="md:col-span-3">
@@ -81,7 +88,7 @@
     </div>
 
     <!-- Approval Form -->
-    <form method="POST" action="{{ route('cashVoucherRequests.approvalRequestStore') }}">
+    <form id="cash-voucher-approval-form" method="POST" action="{{ route('cashVoucherRequests.approvalRequestStore') }}" novalidate>
         @csrf
         <input type="hidden" name="cvr_id" value="{{ $cashVouchers->id }}">
         <input type="hidden" name="cvr_number" value="{{ $cashVouchers->cvr_number }}">
@@ -116,16 +123,16 @@
 
             <div>
                 <label class="block text-gray-700">Reference Number</label>
-                <input type="text" name="reference_number" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="text" name="reference_number" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Reference Number" />
             </div>
             <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="cash_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
+                <input type="number" name="cash_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" data-required-label="Amount" />
             </div>
 
             <div>
                 <label class="block text-gray-700">Receiver</label>
-                <select name="cash_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
+                <select name="cash_receiver" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Receiver">
                     <option value="">Select Receiver</option>
                     @foreach($employees as $employee)
                         <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
@@ -134,7 +141,7 @@
             </div>
             <div>
                 <label class="block text-gray-700">Fund Source</label>
-                <select name="cash_fund_source" class="w-full border border-gray-300 rounded px-3 py-2">
+                <select name="cash_fund_source" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Fund Source">
                     <option value="">Select Funds</option>
                     @foreach($approves as $approve)
                         <option value="{{ $approve->id }}">{{ $approve->name }}</option>
@@ -149,19 +156,19 @@
 
             <div>
                 <label class="block text-gray-700">Bank Name</label>
-                <input type="text" name="bank_name" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="text" name="bank_name" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Bank Name" />
             </div>
             <div>
                 <label class="block text-gray-700">Reference Number</label>
-                <input type="text" name="bank_reference_number" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="text" name="bank_reference_number" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Reference Number" />
             </div>
            <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="bank_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
+                <input type="number" name="bank_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" data-required-label="Amount" />
             </div>
             <div>
                 <label class="block text-gray-700">Receiver</label>
-                <select nambere="bank_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
+                <select name="bank_receiver" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Receiver">
                     <option value="">Select Receiver</option>
                     @foreach($employees as $employee)
                         <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
@@ -170,7 +177,7 @@
             </div>
             <div>
                 <label class="block text-gray-700">Fund Source</label>
-                <select name="bank_fund_source" class="w-full border border-gray-300 rounded px-3 py-2">
+                <select name="bank_fund_source" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Fund Source">
                     <option value="">Select Funds</option>
                     @foreach($approves as $approve)
                         <option value="{{ $approve->id }}">{{ $approve->name }}</option>
@@ -189,19 +196,19 @@
 
             <div>
                 <label class="block text-gray-700">Outlet Name</label>
-                <input type="text" name="outlet_name" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="text" name="outlet_name" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Outlet Name" />
             </div>
             <div>
                 <label class="block text-gray-700">Reference Number</label>
-                <input type="text" name="outlet_reference_number" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="text" name="outlet_reference_number" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Reference Number" />
             </div>
             <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="outlet_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
+                <input type="number" name="outlet_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" data-required-label="Amount" />
             </div>
             <div>
                 <label class="block text-gray-700">Receiver</label>
-                <select name="outlet_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
+                <select name="outlet_receiver" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Receiver">
                     <option value="">Select Receiver</option>
                     @foreach($employees as $employee)
                         <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
@@ -210,7 +217,7 @@
             </div>
             <div>
                 <label class="block text-gray-700">Fund Source</label>
-                <select name="outlet_fund_source" class="w-full border border-gray-300 rounded px-3 py-2">
+                <select name="outlet_fund_source" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Fund Source">
                     <option value="">Select Funds</option>
                     @foreach($approves as $approve)
                         <option value="{{ $approve->id }}">{{ $approve->name }}</option>
@@ -229,19 +236,19 @@
 
             <div>
                 <label class="block text-gray-700">Bank Name</label>
-                <input type="text" name="cheque_bank_name" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="text" name="cheque_bank_name" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Bank Name" />
             </div>
             <div>
                 <label class="block text-gray-700">Cheque Number</label>
-                <input type="text" name="cheque_number" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="text" name="cheque_number" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Cheque Number" />
             </div>
            <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="cheque_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
+                <input type="number" name="cheque_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" data-required-label="Amount" />
             </div>
             <div>
                 <label class="block text-gray-700">Receiver</label>
-                <select nambere="cheque_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
+                <select name="cheque_receiver" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Receiver">
                     <option value="">Select Receiver</option>
                     @foreach($employees as $employee)
                         <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
@@ -250,7 +257,7 @@
             </div>
             <div>
                 <label class="block text-gray-700">Fund Source</label>
-                <select name="cheque_fund_source" class="w-full border border-gray-300 rounded px-3 py-2">
+                <select name="cheque_fund_source" class="w-full border border-gray-300 rounded px-3 py-2" data-required-label="Fund Source">
                     <option value="">Select Funds</option>
                     @foreach($approves as $approve)
                         <option value="{{ $approve->id }}">{{ $approve->name }}</option>
@@ -300,12 +307,29 @@
     </div>
 </div>
 
+<div id="approvalValidationModal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-950/45 px-4">
+    <div class="w-full max-w-lg rounded-[28px] bg-white p-6 shadow-[0_30px_80px_rgba(15,23,42,0.25)]">
+        <h2 class="text-xl font-bold text-slate-900">Missing Required Fields</h2>
+        <p class="mt-2 text-sm text-slate-500">Please complete the required payment details before approving this cash voucher.</p>
+        <ul id="approval-validation-list" class="mt-4 list-disc space-y-1 pl-5 text-sm text-rose-600"></ul>
+        <div class="mt-6 flex justify-end">
+            <button type="button" id="approval-validation-close" class="inline-flex h-11 items-center justify-center rounded-2xl bg-indigo-600 px-5 text-sm font-semibold text-white transition hover:bg-indigo-700">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- JS to toggle form sections -->
 <script>
 
     const rejectBtn = document.getElementById('rejectBtn');
     const rejectModal = document.getElementById('rejectModal');
     const modalCloseBtn = document.getElementById('modalCloseBtn');
+    const approvalForm = document.getElementById('cash-voucher-approval-form');
+    const approvalValidationModal = document.getElementById('approvalValidationModal');
+    const approvalValidationList = document.getElementById('approval-validation-list');
+    const approvalValidationClose = document.getElementById('approval-validation-close');
 
     rejectBtn.addEventListener('click', () => {
         rejectModal.classList.remove('hidden');
@@ -328,6 +352,82 @@
             bank_transfer: document.getElementById('bankTransferFields'),
             outlet_transfer: document.getElementById('storeTransferFields'),
             cheque_transfer: document.getElementById('chequeFields')
+        };
+        const paymentRequiredFields = {
+            cash: ['reference_number', 'cash_amount', 'cash_receiver', 'cash_fund_source'],
+            bank_transfer: ['bank_name', 'bank_reference_number', 'bank_amount', 'bank_receiver', 'bank_fund_source'],
+            outlet_transfer: ['outlet_name', 'outlet_reference_number', 'outlet_amount', 'outlet_receiver', 'outlet_fund_source'],
+            cheque_transfer: ['cheque_bank_name', 'cheque_number', 'cheque_amount', 'cheque_receiver', 'cheque_fund_source']
+        };
+
+        const showValidationModal = (messages) => {
+            if (!approvalValidationModal || !approvalValidationList) {
+                return;
+            }
+
+            approvalValidationList.innerHTML = '';
+
+            messages.forEach((message) => {
+                const item = document.createElement('li');
+                item.textContent = message;
+                approvalValidationList.appendChild(item);
+            });
+
+            approvalValidationModal.classList.remove('hidden');
+            approvalValidationModal.classList.add('flex');
+        };
+
+        const hideValidationModal = () => {
+            approvalValidationModal?.classList.add('hidden');
+            approvalValidationModal?.classList.remove('flex');
+        };
+
+        const getFieldLabel = (field) => {
+            if (!field) {
+                return 'Field';
+            }
+
+            if (field.dataset.requiredLabel) {
+                return field.dataset.requiredLabel;
+            }
+
+            const label = field.closest('div')?.querySelector('label');
+            return label ? label.textContent.trim() : 'Field';
+        };
+
+        const isEmptyField = (field) => {
+            if (!field) {
+                return true;
+            }
+
+            if (field.tagName === 'SELECT') {
+                return !field.value;
+            }
+
+            return `${field.value ?? ''}`.trim() === '';
+        };
+
+        const validateApprovalForm = () => {
+            const selectedPaymentType = document.querySelector('input[name="payment_type"]:checked')?.value;
+            const messages = [];
+
+            if (!selectedPaymentType) {
+                messages.push('Payment Type is required.');
+            }
+
+            (paymentRequiredFields[selectedPaymentType] || []).forEach((fieldName) => {
+                const field = approvalForm?.querySelector(`[name="${fieldName}"]`);
+                if (isEmptyField(field)) {
+                    messages.push(`${getFieldLabel(field)} is required.`);
+                }
+            });
+
+            if (!messages.length) {
+                return true;
+            }
+
+            showValidationModal([...new Set(messages)]);
+            return false;
         };
 
         const updateFieldNames = (selectedType) => {
@@ -360,6 +460,19 @@
                 // Update field names
                 updateFieldNames(selected);
             });
+        });
+
+        approvalValidationClose?.addEventListener('click', hideValidationModal);
+        approvalValidationModal?.addEventListener('click', (event) => {
+            if (event.target === approvalValidationModal) {
+                hideValidationModal();
+            }
+        });
+
+        approvalForm?.addEventListener('submit', (event) => {
+            if (!validateApprovalForm()) {
+                event.preventDefault();
+            }
         });
     });
 
