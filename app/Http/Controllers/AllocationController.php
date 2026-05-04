@@ -11,6 +11,8 @@ use App\Models\Company;
 use App\Models\cvr_request_type;
 use App\Models\Expense_Type;
 use App\Models\CashVoucher;
+use App\Models\Area;
+use App\Models\Region;
 use App\Models\DeliveryRequestLineItem;
 use App\Models\MonthlySeriesNumber;
 use App\Models\DeliveryRequest;
@@ -24,143 +26,122 @@ class AllocationController extends Controller
 {
     public function index(Request $request)
     {
-        // Get the search term if it exists
         $search = $request->input('search');
 
-        // Query the Delivery Request table
         $deliveryRequests = DeliveryRequest::with([
             'company',
             'region',
             'truckType',
             'area',
             'lineItems' => function ($query) {
-                $query->where('status', '!=', 0)
-                    ->where('delivery_status', '"8"');
+                $query->where('status', '!=', 0);
             },
             'lineItems.deliveryStatus',
             'lineItems.addOnRate',
         ])
-        ->whereHas('lineItems', function ($query) {
-            $query->where('status', '!=', 0)
-                  ->where('delivery_status', '"8"');
-        })
+        ->where('status', '!=', 0)
+        ->where('delivery_status', 8) // Now using delivery_status on DeliveryRequest
         ->when($search, function ($query, $search) {
             $query->where(function ($q) use ($search) {
                 $q->where('mtm', 'like', '%' . $search . '%')
-                ->orWhere('region', 'like', '%' . $search . '%')
-                ->orWhere('province', 'like', '%' . $search . '%')
+                ->orWhereHas('region', fn($r) => $r->where('province', 'like', "%{$search}%"))
+                ->orWhereHas('area', fn($a) => $a->where('area_name', 'like', "%{$search}%"))
                 ->orWhere('delivery_date', 'like', '%' . $search . '%');
             });
         })
-        ->where('status', '!=', 0)
+        ->orderBy('created_at', 'desc')
         ->paginate(10);
-               
 
-        // Check if it's an AJAX request
         if ($request->ajax()) {
-            return response()->json(view('allocations.table', compact('deliveryRequests'))->render());
+            return response()->json(
+                view('allocations.table', compact('deliveryRequests'))->render()
+            );
         }
 
-        // For non-AJAX requests, just return the view
         return view('allocations.index', compact('deliveryRequests', 'search'));
     }
 
+
     public function store(Request $request)
     {
-        // Validate incoming data
         $request->validate([
             'truck' => 'required|exists:trucks,id',
             'driver_id' => 'required|exists:users,id',
             'amount' => 'required|numeric|min:0',
             'helpers' => 'nullable|array',
+            'remarks' => 'nullable|array',
             'delivery_request_ids' => 'required|array',
+            'requestor_id' => 'required',
         ]);
 
         $truckId = $request->truck;
         $driverId = $request->driver_id;
+        $requestorId = $request->requestor_id;
         $amount = $request->amount;
-        $user = Auth::user();
-        $employeeCode = $user->id;
-        $helpers = $request->helpers;
+        $helpers = $request->helpers ?? [];
+        $remarks = $request->remarks ?? [];
+        $employeeCode = Auth::id();
 
-        // Log the start of the allocation process
         Log::info('Starting the allocation process.', [
             'user_id' => $employeeCode,
             'truck_id' => $truckId,
+            'requestor_id' => $requestorId,
             'driver_id' => $driverId,
             'amount' => $amount,
             'helpers' => $helpers,
-            'delivery_request_ids' => $request->delivery_request_ids
+            'remarks' => $remarks,
+            'delivery_request_ids' => $request->delivery_request_ids,
+            'trip_type' => 'delivery',
         ]);
 
-        // Loop through selected delivery requests
-        $firstDr = true; // Flag to track the first selected DR
+        $firstDr = true;
 
+         // ✅ Correct sequence calculation
+    
         foreach ($request->delivery_request_ids as $drId) {
-            // Log each DR being processed
             Log::info('Processing delivery request.', ['dr_id' => $drId]);
 
-            // Fetch line items related to this delivery request
             $lineItems = DeliveryRequestLineItem::where('dr_id', $drId)
                 ->where('status', '!=', 0)
-                ->where('delivery_status', '=', '"8"')
                 ->get();
 
-            foreach ($lineItems as $lineItem) {
-                // Determine amount: Full amount for first DR, 0 for the rest
-                $currentAmount = $firstDr ? $amount : 0;
+            $currentAmount = $firstDr ? $amount : 0;
+            $firstDr = false;
 
-                // Set $firstDr to false after processing the first DR
-                if ($firstDr) {
-                    $firstDr = false;
-                }
+            // ✅ FIXED: Get sequence only for this drId and trip_type
+            $sequence = Allocation::where('dr_id', $drId)
+                ->where('trip_type', 'delivery')
+                ->count() + 1;
 
-                // Log the creation of each allocation
-                Log::info('Creating allocation.', [
-                    'dr_id' => $drId,
-                    'line_item_id' => $lineItem->id,
-                    'truck_id' => $truckId,
-                    'driver_id' => $driverId,
-                    'helper' => $helpers,
-                    'amount' => $currentAmount,
-                    'created_by' => $employeeCode
-                ]);
+            Allocation::create([
+                'dr_id' => $drId,
+                'requestor_id' => $requestorId,
+                'truck_id' => $truckId,
+                'driver_id' => $driverId,
+                'helper' => $helpers,
+                'remarks' => $remarks,
+                'amount' => $currentAmount,
+                'trip_type' => 'delivery',
+                'created_by' => $employeeCode,
+                'dr_stats' => 'Allocated',
+                'sequence' => $sequence,
+            ]);
 
-                // Create the allocation
-                Allocation::create([
-                    'dr_id'        => $drId,
-                    'line_item_id' => $lineItem->id,
-                    'truck_id'     => $truckId,
-                    'driver_id'    => $driverId,
-                    'helper'       => $helpers,
-                    'amount'       => $currentAmount,
-                    'created_by'   => $employeeCode,
-                ]);
-
-                $lineItem->update([
-                    'delivery_status' => '9',  // Set the delivery status to "9"
-                ]);
-
-                Log::info('Updated delivery status of line item.', [
-                    'line_item_id' => $lineItem->id,
-                    'new_status' => '9'
-                ]);
-            }
+            DeliveryRequest::where('id', $drId)->update(['delivery_status' => 14]);
         }
-
-        // Log completion of the allocation process
-        Log::info('Cash voucher allocations created successfully.', [
+        Log::info('Cash voucher allocations processed successfully.', [
             'user_id' => $employeeCode,
-            'delivery_request_ids' => $request->delivery_request_ids
+            'delivery_request_ids' => $request->delivery_request_ids,
         ]);
 
-        return redirect()->route('allocations.index')->with('success', 'Cash voucher allocations created successfully.');
+        return redirect()->route('allocations.index')
+            ->with('success', 'Cash voucher allocations processed successfully.');
     }
+
 
     public function allocate(Request $request)
     {
         $ids = explode(',', $request->query('ids'));
-
         $deliveryRequests = DeliveryRequest::whereIn('id', $ids)->with([
             'company',
             'region',
@@ -181,8 +162,8 @@ class AllocationController extends Controller
         }
 
         // Pass supporting data (you need to load these from DB or services)
-        $employees = User::all(); // or however you're fetching
-        $fleetCards = FleetCard::all();
+        $employees = User::where('status', '!=', 0)->get(); // or however you're fetching
+        $fleetCards = FleetCard::where('status', 1)->get();
         $trucks = Truck::all();
         $requestType = cvr_request_type::all();
 
@@ -196,6 +177,101 @@ class AllocationController extends Controller
             'trucks',
             'requestType',
         ));
+    }
+
+    public function DRList(Request $request)
+    {
+        // $query = DeliveryRequest::with(['lineItems', 'creator'])
+        //     ->select('id', 'mtm', 'delivery_rate', 'delivery_date', 'created_at', 'created_by', 'company_id', 'area_id', 'region_id');
+
+        $query = DeliveryRequest::with(['lineItems' => function ($q) {
+            $q->where('status', '!=', 0);
+        }, 'creator'])
+        ->select('id', 'mtm', 'delivery_rate', 'delivery_date', 'created_at', 'created_by', 'company_id', 'area_id', 'region_id');
+
+        // Default filter: show current month ONLY if no filters at all are applied
+        if (!$request->hasAny(['date_from', 'date_to', 'month', 'mtm', 'company_id', 'area_id', 'region_id', 'created_by'])) {
+            $query->whereMonth('created_at', Carbon::now()->month)
+                ->whereYear('created_at', Carbon::now()->year);
+        }
+
+        // Apply filters conditionally
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $query->whereBetween('created_at', [
+                Carbon::parse($request->date_from)->startOfDay(),
+                Carbon::parse($request->date_to)->endOfDay(),
+            ]);
+        }
+
+        if ($request->filled('mtm')) {
+            $query->where('mtm', 'like', '%' . $request->mtm . '%');
+        }
+
+        if ($request->filled('month')) {
+            $query->whereMonth('created_at', $request->month);
+        }
+
+        if ($request->filled('company_id')) {
+            $query->where('company_id', $request->company_id);
+        }
+
+        if ($request->filled('area_id')) {
+            $query->where('area_id', $request->area_id);
+        }
+
+        if ($request->filled('region_id')) {
+            $query->where('region_id', $request->region_id);
+        }
+
+        if ($request->filled('created_by')) {
+            $query->where('created_by', $request->created_by);
+        }
+
+        $drList = $query->get();
+
+        // Add computed fields
+        $drList->transform(function ($dr) {
+            $accessorialTotal = $dr->lineItems->sum(function ($item) {
+                return is_array($item->accessorial_rate)
+                    ? collect($item->accessorial_rate)->sum()
+                    : (is_numeric($item->accessorial_rate) ? $item->accessorial_rate : 0);
+            });
+
+            $dr->accessorial_total = $accessorialTotal;
+            $dr->creator_name = $dr->creator ? "{$dr->creator->fname} {$dr->creator->lname}" : 'N/A';
+
+            return $dr;
+        });
+
+        // For dropdown filters
+        $companies = Company::all();
+        $areas = Area::all();
+        $regions = Region::all();
+        $users = User::whereIn('id', function ($query) {
+            $query->select('created_by')
+                ->from('delivery_request')
+                ->distinct()
+                ->whereNotNull('created_by');
+        })
+        ->where('status', '!=', 0) // Adding the condition for status != 0
+        ->orderBy('fname')
+        ->orderBy('lname')
+        ->get();
+
+        return view('allocations.drlist', compact('drList', 'companies', 'areas', 'regions', 'users'));
+    } 
+
+
+    public function show($id)
+    {
+        $deliveryRequest = DeliveryRequest::with([
+            'cashVouchers.employee',
+            'cashVouchers.cvrApprovals',
+            'cashVouchers.liquidations',
+            'lineItems', 
+        ])->findOrFail($id);
+
+        return view('allocations.partials.dr_modal', compact('deliveryRequest'));
     }
 
 }

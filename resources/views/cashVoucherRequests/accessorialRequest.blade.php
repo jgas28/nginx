@@ -72,7 +72,7 @@
                 <select name="requestor" id="requestor" class="form-control" required>
                     <option value="">Select Employee</option>
                     @foreach($employees as $employee)
-                        <option value="{{ $employee->id }}" data-type="{{ $employee->employee_code }}">{{ $employee->first_name }} {{ $employee->last_name }}</option>
+                        <option value="{{ $employee->id }}" data-type="{{ $employee->employee_code }}">{{ $employee->fname }} {{ $employee->lname }}</option>
                     @endforeach
                 </select>
                     @error('requestor')
@@ -88,7 +88,7 @@
                 <select name="driver" id="driver" class="form-control" required>
                     <option value="">Select Employee</option>
                     @foreach($employees as $employee)
-                        <option value="{{ $employee->id }}" data-type="{{ $employee->employee_code }}">{{ $employee->first_name }} {{ $employee->last_name }}</option>
+                        <option value="{{ $employee->id }}" data-type="{{ $employee->employee_code }}">{{ $employee->fname }} {{ $employee->lanme }}</option>
                     @endforeach
                 </select>
                     @error('driver')

@@ -16,7 +16,6 @@ class DeliveryRequestLineItem extends Model
         'delivery_number',
         'truck_id',
         'status',
-        'delivery_status',
         'delivery_address',
         'distance_type',
         'add_on_rate',
@@ -39,14 +38,10 @@ class DeliveryRequestLineItem extends Model
     // Relationship with DeliveryRequest model (assuming the relationship exists in DeliveryRequest model)
     public function deliveryRequest()
     {
-        return $this->belongsTo(DeliveryRequest::class, 'id', 'dr_id');
+        return $this->belongsTo(DeliveryRequest::class, 'dr_id', 'id');
     }
 
-    public function deliveryStatus()
-    {
-        return $this->belongsTo(DeliveryStatus::class, 'delivery_status');
-    }
-
+    
     public function distanceType()
     {
         return $this->belongsTo(DistanceType::class, 'distance_type');
@@ -65,5 +60,10 @@ class DeliveryRequestLineItem extends Model
     public function warehouses()
     {
         return $this->belongsToMany(Warehouse::class, 'delivery_request_line_item_warehouse', 'line_item_id', 'warehouse_id');
+    }
+
+    public function deliveryStatus()
+    {
+        return $this->belongsTo(DeliveryStatus::class, 'delivery_status');
     }
 }

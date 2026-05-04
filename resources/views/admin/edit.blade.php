@@ -79,7 +79,7 @@
                             <label class="block text-sm font-medium text-gray-700">Tax Base Amount</label>
                             <input type="number" name="tax_base_amount" id="tax_base_amount"
                                 class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                                value="{{ old('tax_base_amount', $voucher->tax_based_amount) }}">
+                                value="{{ old('tax_base_amount', $voucher->tax_based_amount) }}" step="0.01">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Withholding Tax</label>
@@ -126,7 +126,7 @@
                                 <option value="" disabled>Select Supplier</option>
                                 @foreach($suppliers as $supplier)
                                     <option value="{{ $supplier->id }}" {{ $voucher->supplier_id == $supplier->id ? 'selected' : '' }}>
-                                        {{ $supplier->supplier_code }}
+                                        {{ $supplier->supplier_name }}
                                     </option>
                                 @endforeach
                             </select>
@@ -139,6 +139,18 @@
                                 @foreach($expenseTypes as $expenseType)
                                     <option value="{{ $expenseType->id }}" {{ $voucher->expense_type_id == $expenseType->id ? 'selected' : '' }}>
                                         {{ $expenseType->expense_code }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Request Type</label>
+                            <select name="request_type" id="request_type" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                                <option value="" disabled>Select Expense Type</option>
+                                @foreach($cvrTypes as $cvrType)
+                                    <option value="{{ $cvrType->id }}" {{ $voucher->request_type == $cvrType->id ? 'selected' : '' }}>
+                                        {{ $cvrType->request_type }}
                                     </option>
                                 @endforeach
                             </select>

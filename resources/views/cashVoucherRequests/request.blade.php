@@ -69,7 +69,7 @@
             @csrf
             <input type="hidden" name="dr_id" value="{{ $deliveryLineItems->first()->dr_id }}">
             <input type="hidden" name="mtm" value="{{ $deliveryLineItems->first()->mtm }}">
-            <input type="hidden" name="cvr_type" value="basic">
+            <input type="hidden" name="cvr_type" value="delivery">
             <input type="hidden" name="company_id" value="{{ $deliveryLineItems->first()->company->id }}">
 
             <!-- CVR Type -->
@@ -100,10 +100,9 @@
 
                     <!-- Tax Base Amount -->
                     <div id="tax_base_container" class="w-full md:w-1/3 hidden">
-                        <input type="number" name="tax_base_amount" class="input w-full" placeholder="Enter base amount">
+                        <input type="number" name="tax_base_amount" class="input w-full" placeholder="Enter base amount" step="0.01">
                         <label class="block text-sm text-gray-600 mt-1">Tax Base Amount</label>
                     </div>
-
                 </div>
             </fieldset>
 
@@ -114,7 +113,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     
                     <!-- CVR Number -->
-                    <div>
+                    <div> 
                         <input type="text" name="cvr_number" value="{{ $formattedCvrNumber }}" readonly class="input bg-gray-100 w-full">
                         <label class="block text-sm text-gray-600 mt-1">CVR Number</label>
                     </div>
@@ -141,7 +140,10 @@
                         <select name="requestor" class="input w-full" required>
                             <option value="">Select Employee</option>
                             @foreach($employees as $emp)
-                                <option value="{{ $emp->id }}">{{ $emp->fname }} {{ $emp->lname }}</option>
+                                <option value="{{ $emp->id }}"
+                                    @if(!empty($allocation) && $allocation->requestor_id == $emp->id) selected @endif>
+                                    {{ $emp->fname }} {{ $emp->lname }}
+                                </option>
                             @endforeach
                         </select>
                         <label class="block text-sm text-gray-600 mt-1">Requestor</label>

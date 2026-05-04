@@ -101,7 +101,7 @@
 
                     <div id="tax_base_container" class="w-full md:w-1/3 {{ $cashVoucher->voucher_type != 'with_tax' || !$cashVoucher->tax_based_amount ? 'hidden' : '' }}">
                         <input type="number" name="tax_base_amount" class="input w-full" placeholder="Enter base amount"
-                            value="{{ old('tax_base_amount', $cashVoucher->tax_based_amount) }}">
+                            value="{{ old('tax_base_amount', $cashVoucher->tax_based_amount) }}" step="0.01">
                         <label class="block text-sm text-gray-600 mt-1">Tax Base Amount</label>
                     </div>
                 </div>

@@ -20,6 +20,7 @@ use Carbon\Carbon;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use NumberToWords\NumberToWords;
 
 class AdminController extends Controller
 {
@@ -33,7 +34,7 @@ class AdminController extends Controller
         ->when($search, function ($query, $search) {
             return $query->where('cvr_type', 'like', '%' . $search . '%');
         })
-        ->where('cvr_type', '!=', 'basic')
+        ->whereNotIn('cvr_type', ['delivery', 'pullout', 'accessorial'])
         ->where('status', '=', '1')
         ->paginate(10);
 
@@ -48,77 +49,109 @@ class AdminController extends Controller
         $suppliers=Supplier::all();
         $trucks=Truck::all();
         $taxes=WithholdingTax::all();
+        $cvrTypes = cvr_request_type::all();
 
-        return view('admin.create', compact('companies', 'expenseTypes', 'suppliers', 'trucks', 'taxes'));
+        return view('admin.create', compact('companies', 'expenseTypes', 'suppliers', 'trucks', 'taxes', 'cvrTypes'));
     }
 
     public function store(Request $request)
-    {
-        $user = Auth::user();
-        $employeeCode = $user->id;
+{
+    $user = Auth::user();
+    $employeeCode = $user->id;
+    $company_id = $request->company_id;
 
-        $request->validate([
-            'cvr_type' => 'required|string',
-            'voucher_type' => 'required|string',
-            'company_id' => 'required|exists:companies,id',
-            'supplier_id' => 'required|exists:suppliers,id',
-            'expense_type_id' => 'required|exists:expense_types,id',
-            'description' => 'required|array|min:1',
-            'amount_details' => 'required|array|min:1',
-            'description.*' => 'required|string',
-            'amount_details.*' => 'required|numeric',
-            'truck_id' => 'nullable|exists:trucks,id',
-            'withholding_tax' => 'nullable|numeric',
-            'tax_base_amount' => 'nullable|numeric',
-            'remarks' => 'nullable|array',
-            'remarks.*' => 'nullable|string',
-            'cvr_number' => 'required|string|unique:cash_vouchers,cvr_number',
-        ]);
+    // Conditional validation based on cvr_type
+    $validationRules = [
+        'cvr_type' => 'required|string',
+        'voucher_type' => 'required|string',
+        'company_id' => 'required|exists:companies,id',
+        'supplier_id' => 'required|exists:suppliers,id',
+        'expense_type_id' => 'required|exists:expense_types,id',
+        'description' => 'required|array|min:1',
+        'amount_details' => 'required|array|min:1',
+        'description.*' => 'required|string',
+        'amount_details.*' => 'required|numeric',
+        'withholding_tax' => 'nullable|numeric',
+        'tax_base_amount' => 'nullable|numeric',
+        'remarks' => 'nullable|array',
+        'remarks.*' => 'nullable|string',
+        'request_type' => 'required|exists:cvr_request_type,id',
+    ];
 
-        $monthlySeries = MonthlySeriesNumber::where('company_id', $request->company_id)->first();
-        $nextCvrNumber = $monthlySeries ? $monthlySeries->series_number + 1 : 1;
+    // Conditionally make truck_id required if cvr_type is 'rpm'
+    if ($request->cvr_type === 'rpm') {
+        $validationRules['truck_id'] = 'required|exists:trucks,id';
+    } else {
+        $validationRules['truck_id'] = 'nullable|exists:trucks,id';
+    }
 
-        // Handle potential rollover
-        $currentDate = new DateTime();
-        $lastDayOfMonth = $currentDate->format('t');
-        if ((int)$currentDate->format('j') === (int)$lastDayOfMonth) {
-            $currentDate->modify('first day of next month');
+    $request->validate($validationRules);
+
+    DB::transaction(function () use ($request, $employeeCode, $company_id) {
+        // Calculate current (or next) month and year
+        $currentDate = new DateTime(); // Always current date
+        $yearMonth = $currentDate->format('Y-m');
+        $isFirstDayOfMonth = (int) $currentDate->format('d') === 1;
+
+        $monthlySeries = MonthlySeriesNumber::where('company_id', $company_id)
+            ->lockForUpdate()
+            ->first();
+
+        if (!$monthlySeries) {
+                // Create if not exists
+                $monthlySeries = MonthlySeriesNumber::create([
+                    'company_id' => $company_id,
+                    'month' => $yearMonth,
+                    'series_number' => 1,
+                ]);
+                $nextCvrNumber = 1;
+                Log::info("Created MonthlySeriesNumber: company_id = $company_id, month = $yearMonth, series = 1");
+        } else {
+                // Check if the month has changed, and reset series number if true
+                $isNewMonth = $monthlySeries->month !== $yearMonth;
+            if ($isNewMonth) {
+                    // Reset the series number for the new month
+                    $monthlySeries->update([
+                        'month' => $yearMonth,
+                        'series_number' => 1,
+                    ]);
+                    $nextCvrNumber = 1;
+                    Log::info("Reset MonthlySeriesNumber: company_id = $company_id, new month = $yearMonth, series = 1");
+            } else {
+                    // Normal increment
+                    $monthlySeries->increment('series_number');
+                    $nextCvrNumber = $monthlySeries->series_number;
+                    Log::info("Incremented MonthlySeriesNumber: company_id = $company_id, series = $nextCvrNumber");
+            }
         }
 
         $currentYear = $currentDate->format('Y');
         $currentMonth = $currentDate->format('m');
         $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber);
+        $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}/{$company_id}";
 
-        $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}";
-
-        // Store main cash voucher
+        // Save voucher
         $voucher = new CashVoucher();
         $voucher->cvr_type = $request->cvr_type;
         $voucher->voucher_type = $request->voucher_type;
         $voucher->cvr_number = $formattedCvrNumber;
-        $voucher->company_id = $request->company_id;
+        $voucher->company_id = $company_id;
         $voucher->supplier_id = $request->supplier_id;
         $voucher->expense_type_id = $request->expense_type_id;
-        $voucher->withholding_tax_id = $request->withholding_tax;
-        $voucher->tax_based_amount = $request->tax_base_amount;
+        $voucher->request_type = $request->request_type;
+        $voucher->withholding_tax_id = $request->voucher_type === 'with_tax' ? $request->withholding_tax : null;
+        $voucher->tax_based_amount = $request->voucher_type === 'with_tax' ? $request->tax_base_amount : null;
         $voucher->description = json_encode($request->description);
         $voucher->amount_details = json_encode($request->amount_details);
-        $voucher->remarks = json_encode($request->remarks);
+        $voucher->remarks = $request->remarks ? json_encode($request->remarks) : null;
         $voucher->status = '1';
-        $voucher->truck_id =  $request->truck_id;
+        $voucher->truck_id = $request->truck_id;
         $voucher->created_by = $employeeCode;
         $voucher->save();
+    });
 
-        // Increment the series number *after* successful creation
-        $yearMonth = now()->format('Y-m');
-        $monthlySeries = MonthlySeriesNumber::firstOrCreate(
-            ['company_id' => $request->company_id, 'month' => $yearMonth],
-            ['series_number' => 0]
-        );
-        $monthlySeries->increment('series_number');
-
-        return redirect()->route('admin.index')->with('success', 'Cash Voucher successfully created.');
-    }
+    return redirect()->route('admin.index')->with('success', 'Cash Voucher successfully created.');
+}
 
 
     public function generateCvrNumber(Request $request)
@@ -126,25 +159,27 @@ class AdminController extends Controller
         $company = Company::findOrFail($request->company_id);
 
         $now = now();
-        if ($now->isLastOfMonth()) {
-            $now = $now->copy()->addMonthNoOverflow()->startOfMonth();
-        }
-
         $year = $now->format('Y');
         $month = $now->format('m');
         $yearMonth = $now->format('Y-m');
 
-        // Just fetch, don't create or modify
+
+        // Get the current monthly series record for the company
         $monthlySeries = MonthlySeriesNumber::where('company_id', $company->id)
-            ->where('month', $yearMonth)
             ->first();
 
-        // Get current or default to 0, then increment by 1
-        $seriesNumber = optional($monthlySeries)->series_number ?? 0;
-        $series = str_pad($seriesNumber + 1, 3, '0', STR_PAD_LEFT);
+        // Determine the series number
+        if (!$monthlySeries || $monthlySeries->month !== $yearMonth) {
+            $seriesNumber = 1;  // Reset the series to 1 if no record or first day of month
+        } else {
+            $seriesNumber = $monthlySeries->series_number + 1;  // Increment if record exists
+        }
 
+        // Format the series number to 3 digits
+        $series = str_pad($seriesNumber, 3, '0', STR_PAD_LEFT);
         $cvrNumber = "CVR-{$year}-{$month}-{$series}";
 
+        // Return the generated CVR number for viewing
         return response()->json(['cvr_number' => $cvrNumber]);
     }
 
@@ -160,7 +195,7 @@ class AdminController extends Controller
             ->whereIn('cvr_type', ['admin', 'rpm'])
             ->where('status', 1)
             ->paginate(10);
-
+ 
         return view('adminCV.approval', compact('cashVouchers'));
     }
 
@@ -173,8 +208,9 @@ class AdminController extends Controller
         $suppliers = Supplier::all();
         $trucks = Truck::all();
         $taxes = WithholdingTax::all();
+        $cvrTypes = cvr_request_type::all();
 
-        return view('admin.edit', compact('voucher', 'companies', 'expenseTypes', 'suppliers', 'trucks', 'taxes'));
+        return view('admin.edit', compact('voucher', 'companies', 'expenseTypes', 'suppliers', 'trucks', 'taxes', 'cvrTypes'));
     }
 
     public function update(Request $request, $id)
@@ -187,6 +223,7 @@ class AdminController extends Controller
             'company_id' => 'required|integer|exists:companies,id',
             'supplier_id' => 'required|integer|exists:suppliers,id',
             'expense_type_id' => 'required|integer|exists:expense_types,id',
+            'request_type' => 'required|integer|exists:cvr_request_type,id',
             'truck_id' => 'nullable|integer|exists:trucks,id',
             'description' => 'required|array',
             'description.*' => 'required|string',
@@ -209,6 +246,7 @@ class AdminController extends Controller
             'withholding_tax_id' => $withholdingTaxId,
             'supplier_id' => $request->supplier_id,
             'expense_type_id' => $request->expense_type_id,
+            'request_type' => $request->request_type,
             'truck_id' => $request->cvr_type === 'rpm' ? $request->truck_id : null,
             'description' => $request->description,
             'amount_details' => $request->amount_details,
@@ -230,9 +268,10 @@ class AdminController extends Controller
     public function viewPrint($id)
     {
         $voucher = CashVoucher::findOrFail($id);
+        $cvr_approval = cvr_approval::where('cvr_id', $id)->firstOrFail();
         
         // return a dedicated view for printing, e.g., print.blade.php
-        return view('admin.viewPrint', compact('voucher'));
+        return view('admin.viewPrint', compact('voucher','cvr_approval'));
     }
 
     public function editApproval($id)
@@ -245,7 +284,7 @@ class AdminController extends Controller
         $cashVouchers = CashVoucher::with(['company', 'suppliers', 'expenseTypes', 'employee'])
             ->findOrFail($id);
         
-        $employees = User::all();
+        $employees = Supplier::all();
         $approves = Approver::all();
         $taxes = WithholdingTax::all();
         $requestType = cvr_request_type::all();
@@ -272,7 +311,7 @@ class AdminController extends Controller
         $receiver = '';
         $fund_source = '';
         $charge = null;
-
+ 
         switch ($request->payment_type) {
             case 'cash':
                 $paymentName = 'Cash';
@@ -297,6 +336,14 @@ class AdminController extends Controller
                 $receiver = $request->outlet_receiver;
                 $fund_source = $request->outlet_fund_source;
                 $charge = $request->outlet_charge;
+                break;
+            case 'cheque_transfer':
+                $paymentName = $request->cheque_bank_name;
+                $reference_number = $request->cheque_number;
+                $amount = $request->cheque_amount;
+                $receiver = $request->cheque_receiver;
+                $fund_source = $request->cheque_fund_source;
+                $charge = $request->cheque_charge;
                 break;
         }
 
@@ -328,10 +375,11 @@ class AdminController extends Controller
                 'type' => 8, // CVR approval
                 'amount' => -1 * floatval($totalAmount), // It's a deduction
                 'description' => $cashVouchers->cvr_number,
-                'employee_id' => $receiver, // Or set this if linked to a user
+                'supplier_id' => $receiver, // Or set this if linked to a user
                 'approver_id' => $fund_source,
                 'created_by' => $employeeCode,
                 'cvr_number' =>  $cashVouchers->cvr_number,
+                'adjustment_type' =>  'Out',
             ]);
 
             // Log success for cvr_approval
@@ -386,20 +434,481 @@ class AdminController extends Controller
         }
     }
 
+    public function reject(Request $request)
+    {
+        $request->validate([
+            'cvr_id' => 'required|integer',
+            'reject_remarks' => 'nullable|string',
+        ]);
+
+        $cashVoucher = CashVoucher::find($request->cvr_id);
+
+        if ($cashVoucher) {
+            $cashVoucher->status = 3;
+
+            // Decode existing remarks and append new one
+            $existingRemarks = json_decode($cashVoucher->reject_remarks, true) ?? [];
+            $existingRemarks[] = $request->reject_remarks;
+
+            $cashVoucher->reject_remarks = json_encode($existingRemarks);
+            $cashVoucher->save();
+
+             return redirect()->route('adminCV.approval')->with('success', 'Cash Voucher Approval Rejected Successfully');
+        }
+
+        return redirect()->back()->with('error', 'Cash Voucher not found.');
+    }
+
     public function rejectView()
     {
         $user = Auth::user();
         $employeeCode = $user->id;
-        $cashVouchers = CashVoucher::where('status', 3)
-            ->where('cvr_type', 'basic')
-            ->where('created_by', $employeeCode)
+        $cashVouchers = CashVoucher::where('status', 3) 
+            ->whereIn('cvr_type', ['admin','rpm'])
+            // ->where('created_by', $employeeCode)
             ->get();
 
         return view('adminCV.rejectView', compact('cashVouchers'));
     }
 
-    public function printPreview()
+    public function editCVR($id)
     {
-         return view('adminCV.printPreview');
+        $cashVoucher = CashVoucher::findOrFail($id);
+
+        // Decode safely if not already an array
+        $cashVoucher->description = json_decode($cashVoucher->description, true) ?? [];
+        $cashVoucher->amount_details = json_decode($cashVoucher->amount_details, true) ?? [];
+        $cashVoucher->remarks = json_decode($cashVoucher->remarks, true) ?? [];
+
+        // Other required data
+        $employees = User::where('status', '!=', 0)->get();
+        $approves      = Approver::all();
+        $taxes         = WithholdingTax::all();
+        $companies     = Company::all();
+        $expenseTypes  = Expense_Type::all();
+        $suppliers     = Supplier::all();
+        $trucks        = Truck::all();
+
+        return view('adminCV.editCVR', compact(
+            'cashVoucher',
+            'employees',
+            'approves',
+            'taxes',
+            'companies',
+            'suppliers',
+            'expenseTypes',
+            'trucks'
+        ));
+    }
+
+    
+    public function updateCVR(Request $request, $id)
+    {
+        $request->validate([
+            'cvr_type' => 'required|string|in:admin,rpm',
+            'company_id' => 'required|exists:companies,id',
+            'supplier_id' => 'required|exists:suppliers,id',
+            'expense_type_id' => 'required|exists:expense_types,id',
+            'cvr_number' => 'required|string',
+            'description' => 'required|array',
+            'description.*' => 'required|string',
+            'amount_details' => 'required|array',
+            'amount_details.*' => 'required|numeric|min:0',
+            'remarks' => 'nullable|array',
+            'remarks.*' => 'nullable|string',
+        ]);
+
+        $cashVoucher = CashVoucher::findOrFail($id);
+
+        $cashVoucher->cvr_type = $request->cvr_type;
+        $cashVoucher->company_id = $request->company_id;
+        $cashVoucher->supplier_id = $request->supplier_id;
+        $cashVoucher->expense_type_id = $request->expense_type_id;
+        // cvr_number is usually readonly, but just in case
+        $cashVoucher->cvr_number = $request->cvr_number;
+
+        // Store description and amount_details as JSON strings
+        $cashVoucher->description = $request->description;
+        $cashVoucher->amount_details = $request->amount_details;
+
+        // Store remarks as JSON string
+        // Filter out empty remarks (optional)
+        $remarks = array_filter($request->remarks ?? [], fn($r) => trim($r) !== '');
+        $cashVoucher->remarks = array_values($remarks);
+        $cashVoucher->status = 1;
+        $cashVoucher->save();
+
+        return redirect()->route('adminCV.rejectView', $cashVoucher->id)
+                        ->with('success', 'Cash Voucher Request updated successfully.');
+    }
+
+
+    public function printPreview($id)
+    {
+        $user = Auth::user();
+        $fullname = $user->fname . ' ' . $user->lname;
+
+        $vouchers = CashVoucher::findOrFail($id);
+        // Compute the amount that will be shown on the Blade
+        if ($vouchers->voucher_type === 'with_tax') {
+            $taxAmount = $vouchers->tax_based_amount * 0.12;
+            $withholdingAmount = $vouchers->tax_based_amount * $vouchers->withholdingTax->percentage;
+            $finalAmount = $vouchers->tax_based_amount + $taxAmount - $withholdingAmount;
+        } elseif ($vouchers->voucher_type === 'regular') {
+            $finalAmount = $vouchers->amount;
+        } else {
+            $finalAmount = 0; // fallback
+        }
+
+        // Convert the calculated amount to words
+        $amountInWords = $this->convertAmountToWordsPreview($finalAmount);
+        return view('adminCV.printPreview', compact('vouchers', 'fullname', 'amountInWords')); 
+    } 
+
+    public function printMultiple(Request $request)
+    {
+        $user = Auth::user();
+        $fullname = $user->fname . ' ' . $user->lname;
+
+        $ids = $request->input('request_ids'); // This matches form input name
+        if (!$ids) {
+            return back()->with('error', 'No CVRs selected.');
+        }
+
+        $cashVoucherIds = $request->input('cash_voucher_ids', []);
+        $cvrTypes = $request->input('cvr_types', []);
+        // Fetch vouchers and related data
+        $vouchers = cvr_approval::with([
+            'cashVoucher.withholdingTax',
+            'cashVoucher.company',
+            'cashVoucher.suppliers',
+            'cashVoucher.expenseTypes',
+            'cashVoucher.trucks'
+        ])->whereIn('id', $ids)->get();
+
+        // Fetch approvers keyed by cvr_approval.id
+        $approvers = DB::table('cvr_approvals')
+            ->leftJoin('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
+            ->whereIn('cvr_approvals.id', $ids)
+            ->select('cvr_approvals.id', 'cvr_approver.name') // include only what's needed
+            ->get()
+            ->keyBy('id');
+
+        // Prepare the $allData array for the Blade view
+        $allData = $vouchers->map(function ($voucher) use ($approvers) {
+            // Calculate final amount
+            if ($voucher->cashVoucher->voucher_type === 'with_tax') {
+                $taxAmount = $voucher->cashVoucher->tax_based_amount * 0.12;
+                $withholdingAmount = $voucher->cashVoucher->tax_based_amount * $voucher->cashVoucher->withholdingTax->percentage;
+                $finalAmount = $voucher->cashVoucher->tax_based_amount + $taxAmount - $withholdingAmount;
+            } elseif ($voucher->cashVoucher->voucher_type === 'regular') {
+                $amountDetails = json_decode($voucher->cashVoucher->amount_details, true) ?? [];
+                $finalAmount = array_sum(array_filter($amountDetails, 'is_numeric'));
+            } else {
+                $finalAmount = 0;
+            }
+
+            return [
+                'cashVoucherRequest' => $voucher,
+                'amountInWords' => app()->make(Self::class)->convertAmountToWords($finalAmount),
+                'approvers' => $approvers[$voucher->id] ?? null,
+            ];
+        });
+
+        return view('adminCV.printMultiple', [
+            'allData' => $allData,
+            'fullname' => $fullname
+        ]);
+    }
+
+
+    public function printCVR($id, $cvr_number)
+    {
+        $user = Auth::user();
+        $fullname = $user->fname . ' ' . $user->lname;
+
+        $vouchers = cvr_approval::with('cashVoucher')->find($id);
+        $fullname = $user->fname . ' ' . $user->lname;
+        $approvers = DB::table('cvr_approvals')
+                ->leftjoin('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
+                ->where('cvr_approvals.id', $id)
+                ->first();
+
+        // Compute the amount that will be shown on the Blade
+        if ($vouchers->cashVoucher->voucher_type === 'with_tax') {
+            $taxAmount = $vouchers->cashVoucher->tax_based_amount * 0.12;
+            $withholdingAmount = $vouchers->cashVoucher->tax_based_amount * $vouchers->cashVoucher->withholdingTax->percentage;
+            $finalAmount = $vouchers->cashVoucher->tax_based_amount + $taxAmount - $withholdingAmount;
+        } elseif ($vouchers->cashVoucher->voucher_type === 'regular') {
+            $finalAmount = $vouchers->amount;
+        } else {
+            $finalAmount = 0; // fallback
+        }
+
+        // Convert the calculated amount to words
+        $amountInWords = $this->convertAmountToWords($finalAmount);
+
+        return view('adminCV.print', compact('vouchers', 'fullname', 'approvers', 'amountInWords'));
+    }
+
+    public function printViewCVR($id, $cvr_number)
+    {
+        $user = Auth::user();
+        $fullname = $user->fname . ' ' . $user->lname;
+
+        $vouchers = cvr_approval::with('cashVoucher')->find($id);
+        $fullname = $user->fname . ' ' . $user->lname;
+        $approvers = DB::table('cvr_approvals')
+                ->leftjoin('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
+                ->where('cvr_approvals.id', $id)
+                ->first();
+
+        // Compute the amount that will be shown on the Blade
+        if ($vouchers->cashVoucher->voucher_type === 'with_tax') {
+            $taxAmount = $vouchers->cashVoucher->tax_based_amount * 0.12;
+            $withholdingAmount = $vouchers->cashVoucher->tax_based_amount * $vouchers->cashVoucher->withholdingTax->percentage;
+            $finalAmount = $vouchers->cashVoucher->tax_based_amount + $taxAmount - $withholdingAmount;
+        } elseif ($vouchers->cashVoucher->voucher_type === 'regular') {
+            $finalAmount = $vouchers->amount;
+        } else {
+            $finalAmount = 0; // fallback
+        }
+
+        // Convert the calculated amount to words
+        $amountInWords = $this->convertAmountToWords($finalAmount);
+
+        return view('adminCV.printView', compact('vouchers', 'fullname', 'approvers', 'amountInWords'));
+    }
+
+    public function editPrintView($id, $cvr_number)
+    {
+        $vouchers = cvr_approval::where('cvr_id', $cvr_number)->first();
+        return view('adminCV.editPrintView', compact('vouchers'));
+    }
+
+    public function updateReference(Request $request, $id)
+    {
+        $request->validate([
+            'reference_number' => 'required|string|max:255',
+        ]);
+
+        try {
+            $voucher = cvr_approval::findOrFail($id);
+            $voucher->reference_number = $request->reference_number;
+            $voucher->save();
+
+            return redirect()
+                ->route('adminCV.cvrList')  // or whatever the appropriate redirect is
+                ->with('success', 'Reference number updated successfully.');
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('adminCV.cvrList')
+                ->with('error', 'Failed to update reference number.');
+        }
+    }
+
+
+    public function cvrList(Request $request)
+    { 
+        // Get the search query from the request
+        $search = $request->get('search');
+    
+        // Fetch related delivery line items by joining with the correct table name
+        $cashVoucherRequests = cvr_approval::with('cashVoucher')
+        ->whereHas('cashVoucher', function ($query) {
+            $query->whereIn('cvr_type', ['admin', 'rpm'])
+                ->where('status', 2)
+                ->orderBy('print_status', 'asc');
+        })
+        ->paginate(10);
+
+        // Check if the request expects an AJAX response
+        if ($request->ajax()) {
+            return view('adminCV.cvrList_table', compact('cashVoucherRequests'))->render();
+        }
+    
+        // For the normal view
+        return view('adminCV.cvrList', compact('cashVoucherRequests', 'search'));
+    } 
+
+    public function convertAmountToWords($amount)
+        {
+            // Handle edge cases like 0, null or non-numeric values
+            if (is_null($amount) || !is_numeric($amount) || $amount <= 0) {
+                return 'Zero or Invalid Amount';
+            }
+
+            // Initialize the NumberToWords class
+            $numberToWords = new NumberToWords();
+
+            // Get the number to words transformer (not currency transformer)
+            $numberTransformer = $numberToWords->getNumberTransformer('en');
+            
+            // Convert the amount (integer part) into words
+            $amountInWords = $numberTransformer->toWords(floor($amount)); // Get the integer part
+
+            // Handle fractional part (cents)
+            $fractionalPart = round(($amount - floor($amount)) * 100); // Get the cents (if any)
+
+            $currency = 'pesos'; // Default currency
+            $fractionalCurrency = 'centavos'; // Default fractional currency
+            
+            // Check for singular/plural currency
+            if ($amount == 1) {
+                $currency = 'peso';
+            }
+
+            // If there is a fractional part, format it as a fraction (e.g., 45/100)
+            if ($fractionalPart > 0) {
+                return ucfirst($amountInWords) . ' ' . $currency . ' & ' . $fractionalPart . '/100 ';
+            }
+
+            // Return the amount in words with currency (e.g., "five hundred pesos")
+            return ucfirst($amountInWords) . ' ' . $currency;
+        }
+
+        public function convertAmountToWordsPreview($amount)
+        {
+            // Handle edge cases like 0, null or non-numeric values
+            if (is_null($amount) || !is_numeric($amount) || $amount <= 0) {
+                return 'Zero or Invalid Amount';
+            }
+
+            // Initialize the NumberToWords class
+            $numberToWords = new NumberToWords();
+
+            // Get the number to words transformer (not currency transformer)
+            $numberTransformer = $numberToWords->getNumberTransformer('en');
+            
+            // Convert the amount (integer part) into words
+            $amountInWords = $numberTransformer->toWords(floor($amount)); // Get the integer part
+
+            // Handle fractional part (cents)
+            $fractionalPart = round(($amount - floor($amount)) * 100); // Get the cents (if any)
+
+            $currency = 'pesos'; // Default currency
+            $fractionalCurrency = 'centavos'; // Default fractional currency
+            
+            // Check for singular/plural currency
+            if ($amount == 1) {
+                $currency = 'peso';
+            }
+
+            // If there is a fractional part, format it as a fraction (e.g., 45/100)
+            if ($fractionalPart > 0) {
+                return ucfirst($amountInWords) . ' ' . $currency . ' & ' . $fractionalPart . '/100 ';
+            }
+
+            // Return the amount in words with currency (e.g., "five hundred pesos")
+            return ucfirst($amountInWords) . ' ' . $currency;
+        }
+
+        public function updatePrintStatus(Request $request)
+        {
+            $user = Auth::user();
+            $employeeCode = $user->id;
+
+            // Log the authenticated user and their employee code
+            Log::info('User authenticated:', ['user_id' => $user->id, 'employee_code' => $employeeCode]);
+
+            // Validate & extract ids
+            $cvrIds = $request->input('cvr_ids', []);
+            $voucherIds = $request->input('voucher_ids', []);
+
+            // Log the ids being updated
+            Log::info('Received CVR IDs:', ['cvr_ids' => $cvrIds]);
+            Log::info('Received Voucher IDs:', ['voucher_ids' => $voucherIds]);
+
+            // Check if there are any IDs to update
+            if (empty($cvrIds) && empty($voucherIds)) {
+                Log::warning('No CVR or Voucher IDs provided!');
+            }
+
+            // Update print status and printed_by for CashVoucher and cvr_approval
+            $cvrUpdateResult = CashVoucher::whereIn('id', $voucherIds)->update([
+                'print_status' => '1',
+                'printed_by' => $employeeCode
+            ]);
+
+            $voucherUpdateResult = cvr_approval::whereIn('id', $cvrIds)->update([
+                'print_status' => '1',
+                'printed_by' => $employeeCode
+            ]);
+
+            // Log the result of the update operations
+            Log::info('CashVoucher update result:', ['rows_affected' => $cvrUpdateResult]);
+            Log::info('cvr_approval update result:', ['rows_affected' => $voucherUpdateResult]);
+
+            // If no rows were affected, log a warning
+            if ($cvrUpdateResult == 0) {
+                Log::warning('No rows were updated for CashVoucher.');
+            }
+            if ($voucherUpdateResult == 0) {
+                Log::warning('No rows were updated for cvr_approval.');
+            }
+
+            return response()->json(['message' => 'Print status updated']);
+        }
+
+
+    public function rejectPrintView($id)
+    {
+        $user = Auth::user();
+        $fullname = $user->fname . ' ' . $user->lname;
+
+        $vouchers = CashVoucher::findOrFail($id);
+        // Compute the amount that will be shown on the Blade
+        if ($vouchers->voucher_type === 'with_tax') {
+            $taxAmount = $vouchers->tax_based_amount * 0.12;
+            $withholdingAmount = $vouchers->tax_based_amount * $vouchers->withholdingTax->percentage;
+            $finalAmount = $vouchers->tax_based_amount + $taxAmount - $withholdingAmount;
+        } elseif ($vouchers->voucher_type === 'regular') {
+            $finalAmount = $vouchers->amount;
+        } else {
+            $finalAmount = 0; // fallback
+        }
+
+        // Convert the calculated amount to words
+        $amountInWords = $this->convertAmountToWordsPreview($finalAmount);
+
+         return view('adminCV.reject_print', compact('vouchers', 'fullname', 'amountInWords')); 
+    }
+
+    public function rejectPrintMultiple(Request $request)
+    {
+        $user = Auth::user();
+        $fullname = $user->fname . ' ' . $user->lname;
+
+        $voucherIds = $request->input('voucher_ids', []);
+
+        if (empty($voucherIds)) {
+            return back()->withErrors(['message' => 'No vouchers selected for printing.']);
+        }
+
+        $vouchers = CashVoucher::with('withholdingTax')
+            ->whereIn('id', $voucherIds)
+            ->get();
+
+        $voucherData = [];
+
+        foreach ($vouchers as $voucher) {
+            if ($voucher->voucher_type === 'with_tax') {
+                $taxAmount = $voucher->tax_based_amount * 0.12;
+                $withholdingAmount = $voucher->tax_based_amount * $voucher->withholdingTax->percentage;
+                $finalAmount = $voucher->tax_based_amount + $taxAmount - $withholdingAmount;
+            } elseif ($voucher->voucher_type === 'regular') {
+                $finalAmount = $voucher->amount;
+            } else {
+                $finalAmount = 0;
+            }
+
+            $voucherData[] = [
+                'voucher' => $voucher,
+                'finalAmount' => $finalAmount,
+                'amountInWords' => $this->convertAmountToWordsPreview($finalAmount),
+            ];
+        }
+
+        return view('adminCV.reject_print_multiple', compact('voucherData', 'fullname'));
     }
 }

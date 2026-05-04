@@ -13,7 +13,7 @@
                     d="M9 12h6m-6 4h6m2 4H7a2 2 0 01-2-2V6a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z"/>
             </svg>
             Cash Voucher Details
-            </h4>
+            </h4> 
         </div>
         <div class="p-6">
             <fieldset class="mb-6 p-4 border border-gray-200 rounded bg-gray-50">
@@ -25,27 +25,32 @@
                     </svg>
                     CVR Information
                 </legend>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                    <div class="md:col-span-3">
                         <input type="hidden" name="dr_id" value="{{ $cashVouchers->dr_id }}">
                         <label for="cvr_number" class="block text-sm font-medium text-gray-700">CVR Number</label>
-                        <input type="text" name="cvr_number" id="cvr_number" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->cvr_number }}" readonly>
+                        <input type="text" name="cvr_number" id="cvr_number" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ preg_replace('/\/\d+$/', '', $cashVouchers->cvr_number) }}-{{ $allocations->truck->truck_name }}-{{ $deliveryRequests->company->company_code }}{{ $deliveryRequests->expenseType->expense_code }}" readonly>
                     </div>
 
-                    <div>
+                    <div class="md:col-span-3">
                         <label for="amount" class="block text-sm font-medium text-gray-700">Amount</label>
                         <input type="text" name="amount" id="amount" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ number_format($cashVouchers->amount, 2) }}" readonly>
                     </div>
+                </div>
 
-                    <div>
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-4 mt-4">
+                    <div class="md:col-span-3">
                         <label for="requestor" class="block text-sm font-medium text-gray-700">Requestor</label>
                         <input type="text" name="requestor" id="requestor" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->employee->fname }} {{ $cashVouchers->employee->lname }}" readonly>
                     </div>
-
-                    <div>
-                        <label for="request_type" class="block text-sm font-medium text-gray-700">Request Type</label>
-                        <input type="text" name="request_type" id="request_type" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->cvrTypes->request_code }}" readonly>
-                    </div>
+                    @if ($cashVouchers->cvrTypes && !in_array($cashVouchers->cvr_type, ['admin', 'rpm']))
+                        <div class="md:col-span-3">
+                            <label for="request_type" class="block text-sm font-medium text-gray-700">Request Type</label>
+                            <input type="text" name="request_type" id="request_type"
+                                class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100"
+                                value="{{ $cashVouchers->cvrTypes->request_code }}" readonly>
+                        </div>
+                    @endif
                 </div>
                 <div>
                     @php $remarks = json_decode($cashVouchers->remarks, true); @endphp
@@ -61,10 +66,14 @@
                     @endif
                 </div>
                 <div class="my-2">
-                    <a href="{{ route('cashVoucherRequests.showCustomCVR', ['id' => $cashVouchers->id, 'cvr_number' => $cashVouchers->dr_id]) }}"
+                   <a href="{{ route('cashVoucherRequests.showCustomCVR', [
+                        'id' => $cashVouchers->id,
+                        'cvr_number' => $cashVouchers->dr_id,
+                        'cvr_type' => $cashVouchers->cvr_type
+                    ]) }}"
                         target="_blank"
                         class="inline-block bg-yellow-500 text-white px-5 py-2 rounded hover:bg-yellow-600 transition">
-                        View CVR
+                        View
                     </a>
                 </div>
             </fieldset>
@@ -93,6 +102,11 @@
                     <input type="radio" name="payment_type" value="outlet_transfer" class="mr-3" />
                     <span>Outlet Transfer</span>
                 </label>
+
+                <label class="flex items-center bg-white border rounded p-4 shadow cursor-pointer">
+                    <input type="radio" name="payment_type" value="cheque_transfer" class="mr-3" />
+                    <span>Cheque Transfer</span>
+                </label>
             </div>
         </fieldset>
 
@@ -106,8 +120,9 @@
             </div>
             <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="cash_amount" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="number" name="cash_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
             </div>
+
             <div>
                 <label class="block text-gray-700">Receiver</label>
                 <select name="cash_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
@@ -140,9 +155,9 @@
                 <label class="block text-gray-700">Reference Number</label>
                 <input type="text" name="bank_reference_number" class="w-full border border-gray-300 rounded px-3 py-2" />
             </div>
-            <div>
+           <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="bank_amount" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="number" name="bank_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
             </div>
             <div>
                 <label class="block text-gray-700">Receiver</label>
@@ -182,7 +197,7 @@
             </div>
             <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="outlet_amount" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="number" name="outlet_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
             </div>
             <div>
                 <label class="block text-gray-700">Receiver</label>
@@ -205,6 +220,46 @@
             <div>
                 <label class="block text-gray-700">Outlet Charge</label>
                 <input type="text" name="outlet_charge" class="w-full border border-gray-300 rounded px-3 py-2" />
+            </div>
+        </fieldset>
+
+        <!-- Cheque Fields -->
+        <fieldset id="chequeFields" class="hidden mb-6 p-4 border border-gray-200 rounded bg-gray-50 space-y-4">
+            <legend class="text-blue-600 font-semibold text-sm mb-3">Cheque Details</legend>
+
+            <div>
+                <label class="block text-gray-700">Bank Name</label>
+                <input type="text" name="cheque_bank_name" class="w-full border border-gray-300 rounded px-3 py-2" />
+            </div>
+            <div>
+                <label class="block text-gray-700">Cheque Number</label>
+                <input type="text" name="cheque_number" class="w-full border border-gray-300 rounded px-3 py-2" />
+            </div>
+           <div>
+                <label class="block text-gray-700">Amount</label>
+                <input type="number" name="cheque_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
+            </div>
+            <div>
+                <label class="block text-gray-700">Receiver</label>
+                <select nambere="cheque_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
+                    <option value="">Select Receiver</option>
+                    @foreach($employees as $employee)
+                        <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-gray-700">Fund Source</label>
+                <select name="cheque_fund_source" class="w-full border border-gray-300 rounded px-3 py-2">
+                    <option value="">Select Funds</option>
+                    @foreach($approves as $approve)
+                        <option value="{{ $approve->id }}">{{ $approve->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-gray-700">Bank Charge</label>
+                <input type="text" name="cheque_charge" class="w-full border border-gray-300 rounded px-3 py-2" />
             </div>
         </fieldset>
 
@@ -271,18 +326,42 @@
         const paymentFields = {
             cash: document.getElementById('cashFields'),
             bank_transfer: document.getElementById('bankTransferFields'),
-            outlet_transfer: document.getElementById('storeTransferFields')
+            outlet_transfer: document.getElementById('storeTransferFields'),
+            cheque_transfer: document.getElementById('chequeFields')
+        };
+
+        const updateFieldNames = (selectedType) => {
+            Object.entries(paymentFields).forEach(([type, section]) => {
+                const inputs = section.querySelectorAll('input, select, textarea');
+                inputs.forEach(input => {
+                    if (type === selectedType) {
+                        // Restore original name from data-name
+                        if (input.dataset.name) {
+                            input.name = input.dataset.name;
+                        }
+                    } else {
+                        // Save original name and remove it from field
+                        input.dataset.name = input.name;
+                        input.removeAttribute('name');
+                    }
+                });
+            });
         };
 
         document.querySelectorAll('input[name="payment_type"]').forEach(radio => {
             radio.addEventListener('change', () => {
-                Object.values(paymentFields).forEach(section => section.classList.add('hidden'));
                 const selected = radio.value;
+                // Hide all fields
+                Object.values(paymentFields).forEach(section => section.classList.add('hidden'));
+                // Show selected
                 if (paymentFields[selected]) {
                     paymentFields[selected].classList.remove('hidden');
                 }
+                // Update field names
+                updateFieldNames(selected);
             });
         });
     });
+
 </script>
 @endsection

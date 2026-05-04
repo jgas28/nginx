@@ -20,7 +20,6 @@
                 <div>
                 <label for="mtm" class="block text-sm font-medium text-gray-700 mb-1">MTM Number</label>
                 <input type="text" name="mtm" id="mtm" required
-                    value="{{ old('mtm', $deliveryRequest->mtm) }}"
                     class="block w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 @error('mtm') border-red-500 @enderror">
                 @error('mtm')
                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -167,6 +166,23 @@
                 @enderror
                 </div>
 
+                <!-- Delivery Status (4 cols) --> 
+                <div class="md:col-span-4">
+                    <label for="delivery_status" class="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
+                    <select name="delivery_status" id="delivery_status" class="block w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 @error('delivery_status') border-red-500 @enderror">
+                        @foreach($deliveryStatuses as $status)
+                            <option value="{{ $status->id }}" 
+                                {{ old('delivery_status', $deliveryRequest->delivery_status) == $status->id ? 'selected' : '' }}>
+                                {{ $status->status_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('delivery_status')
+                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                </div>
+
+
                 <!-- Delivery Type (4 cols) -->
                 <div class="md:col-span-4">
                 <label for="delivery_type" class="block text-sm font-medium text-gray-700 mb-1">Delivery Type</label>
@@ -183,95 +199,100 @@
 
 
         <!-- Conditional Output for Delivery Type -->
-        <div id="regular-fields" class="mt-3 p-4 border bg-white rounded shadow-sm">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
-                @foreach($deliveryLineItems as $index => $lineItem)
-                    <input type="hidden" name="regular[{{ $index }}][id]" value="{{ $lineItem->id }}">
-                    <!-- Warehouse (4 cols) -->
-                    <div class="md:col-span-4">
-                        <label for="regular_warehouse_id_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Warehouse</label>
-                        <select name="regular[{{ $index }}][warehouse_id]" id="regular_warehouse_id_{{ $index }}" readonly
+       <div id="regular-fields" class="mt-3 p-4 border bg-white rounded shadow-sm">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+        @foreach($deliveryLineItems as $index => $lineItem)
+            <input type="hidden" name="regular[{{ $index }}][id]" value="{{ $lineItem->id }}">
+
+            <!-- Warehouse (4 cols) -->
+            <div class="md:col-span-4">
+                <label for="regular_warehouse_id_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Warehouse</label>
+                <select name="regular[{{ $index }}][warehouse_id]" id="regular_warehouse_id_{{ $index }}" readonly
                         class="block w-full rounded border border-gray-300 bg-gray-100 cursor-not-allowed px-3 py-2 focus:outline-none">
-                        @foreach($warehouses as $warehouse)
-                            <option value="{{ $warehouse->id }}" {{ $warehouse->id == old('regular.' . $index . '.warehouse_id', $lineItem->warehouse_id) ? 'selected' : '' }}>
+                    @foreach($warehouses as $warehouse)
+                        <option value="{{ $warehouse->id }}" 
+                            {{ $warehouse->id == old('regular.' . $index . '.warehouse_id', $lineItem->warehouse_id) ? 'selected' : '' }}>
                             {{ $warehouse->warehouse_name }}
-                            </option>
-                        @endforeach
-                            </select>
-                        @error('regular.' . $index . '.warehouse_id')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+                        </option>
+                    @endforeach
+                </select>
+                @error('regular.' . $index . '.warehouse_id')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
 
-                    <!-- Delivery Number (4 cols) -->
-                    <div class="md:col-span-4">
-                        <label for="regular_delivery_number_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Delivery Number</label>
-                        <input type="text" name="regular[{{ $index }}][delivery_number]" id="regular_delivery_number_{{ $index }}" readonly
-                        value="{{ old('regular.' . $index . '.delivery_number', $lineItem->delivery_number) }}"
-                        class="block w-full rounded border border-gray-300 bg-gray-100 cursor-not-allowed px-3 py-2 focus:outline-none">
-                            @error('regular.' . $index . '.delivery_number')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                    </div>
+            <!-- Delivery Number (4 cols) -->
+            <div class="md:col-span-4">
+                <label for="regular_delivery_number_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Delivery Number</label>
+                <input type="text" name="regular[{{ $index }}][delivery_number]" id="regular_delivery_number_{{ $index }}" readonly
+                       value="{{ old('regular.' . $index . '.delivery_number', $lineItem->delivery_number) }}"
+                       class="block w-full rounded border border-gray-300 bg-gray-100 cursor-not-allowed px-3 py-2 focus:outline-none">
+                @error('regular.' . $index . '.delivery_number')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
 
-                    <!-- Site Name (4 cols) -->
-                    <div class="md:col-span-4">
-                        <label for="regular_site_name_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
-                        <input type="text" name="regular[{{ $index }}][site_name]" id="regular_site_name_{{ $index }}" readonly
-                        value="{{ old('regular.' . $index . '.site_name', $lineItem->site_name) }}"
-                        class="block w-full rounded border border-gray-300 bg-gray-100 cursor-not-allowed px-3 py-2 focus:outline-none">
-                        @error('regular.' . $index . '.site_name')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
+            <!-- Site Name (4 cols) -->
+            <div class="md:col-span-4">
+                <label for="regular_site_name_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Site Name</label>
+                <input type="text" name="regular[{{ $index }}][site_name]" id="regular_site_name_{{ $index }}" readonly
+                       value="{{ old('regular.' . $index . '.site_name', $lineItem->site_name) }}"
+                       class="block w-full rounded border border-gray-300 bg-gray-100 cursor-not-allowed px-3 py-2 focus:outline-none">
+                @error('regular.' . $index . '.site_name')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
 
-                    <!-- Delivery Status (4 cols) -->
-                    <div class="md:col-span-4">
-                        <label for="regular_delivery_status_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Delivery Status</label>
-                        <select name="regular[{{ $index }}][delivery_status]" id="regular_delivery_status_{{ $index }}" readonly
-                        class="block w-full rounded border border-gray-300 bg-gray-100 cursor-not-allowed px-3 py-2 focus:outline-none">
-                        @foreach($deliveryStatuses as $deliveryStatus)
-                            <option value="{{ $deliveryStatus->id }}" {{ $deliveryStatus->id == old('regular.' . $index . '.delivery_status', $lineItem->delivery_status) ? 'selected' : '' }}>
-                                {{ $deliveryStatus->status_name }}
-                            </option>
-                        @endforeach
-                        </select>
-                            @error('regular.' . $index . '.delivery_status')
-                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                    </div>
+            <!-- Delivery Address (4 cols) -->
+            <div class="md:col-span-4">
+                <label for="regular_delivery_address_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Delivery Address</label>
+                <textarea name="regular[{{ $index }}][delivery_address]" id="regular_delivery_address_{{ $index }}" readonly
+                          class="block w-full rounded border border-gray-300 bg-gray-100 cursor-not-allowed px-3 py-2 focus:outline-none resize-none" rows="3">{{ old('regular.' . $index . '.delivery_address', trim($lineItem->delivery_address ?? '')) }}</textarea>
+                @error('regular.' . $index . '.delivery_address')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
 
-                    <!-- Delivery Address (4 cols) -->
-                    <div class="md:col-span-4">
-                        <label for="regular_delivery_address_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Delivery Address</label>
-                        <textarea name="regular[{{ $index }}][delivery_address]" id="regular_delivery_address_{{ $index }}" readonly
-                        class="block w-full rounded border border-gray-300 bg-gray-100 cursor-not-allowed px-3 py-2 focus:outline-none resize-none" rows="3">{{ old('regular.' . $index . '.delivery_address', trim($lineItem->delivery_address ?? '')) }}</textarea>
-                        @error('regular.' . $index . '.delivery_address')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                           @enderror
-                    </div>
-                        @endforeach
-                    </div>
-                </div>
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded my-4">
-                    Create Delivery Request
-                </button>
+           <!-- Accessorial Type -->
+            <div class="md:col-span-4">
+                <label for="accessorial_type_{{ $index }}" class="block text-sm font-medium text-gray-700">Accessorial Type</label>
+                <select name="regular[{{ $index }}][accessorial_type]" id="accessorial_type_{{ $index }}"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring focus:ring-blue-200">
+                    <option value="" {{ old('regular.' . $index . '.accessorial_type', $lineItem->accessorial_type) == '' ? 'selected' : '' }}>
+                        Select an Accessorial Type
+                    </option>
+                    @foreach($accessorialTypes as $accessorialType)
+                        <option value="{{ $accessorialType->id }}"
+                            {{ (old('regular.' . $index . '.accessorial_type', $lineItem->accessorial_type) == $accessorialType->id) ? 'selected' : '' }}>
+                            {{ $accessorialType->accessorial_types_code }}
+                        </option>
+                    @endforeach
+                </select>
+                @error('regular.' . $index . '.accessorial_type')
+                    <div class="text-red-600 text-sm mt-1">{{ $message }}</div>
+                @enderror
+            </div>
+
+            <!-- Accessorial Rate -->
+            <div class="md:col-span-4">
+                <label for="regular_accessorial_rate_{{ $index }}" class="block text-sm font-medium text-gray-700 mb-1">Accessorial Rate</label>
+                <input type="number" name="regular[{{ $index }}][accessorial_rate]" id="regular_accessorial_rate_{{ $index }}"
+                    value="{{ old('regular.' . $index . '.accessorial_rate', $lineItem->accessorial_rate) }}"
+                    class="block w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 @error('regular.' . $index . '.accessorial_rate') border-red-500 @enderror"
+                    step="0.01" min="0" {{ $lineItem->accessorial_rate ? 'readonly' : '' }}>
+
+                @error('regular.' . $index . '.accessorial_rate')
+                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+
+        @endforeach
+    </div>
+</div>
+
+        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded my-4">
+            Create Delivery Request
+        </button>      
     </form>
-
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const mtmInput = document.getElementById('mtm');
-        if (mtmInput) {
-            let value = mtmInput.value.trim();
-
-            // If it doesn't already end with -2, append it
-            if (value && !value.endsWith('-1')) {
-                // Remove any accidental -2s
-                value = value.replace(/-1/g, '');
-                mtmInput.value = value + '-1';
-            }
-        }
-    });
-</script>
 
 @endsection

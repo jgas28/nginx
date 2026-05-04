@@ -1,20 +1,6 @@
 @extends('layouts.app')
 
 @section('content')
-{{-- <h1>Create Region</h1>
-
-    <form action="{{ route('expenseTypes.store') }}" method="POST">
-@csrf
-<div class="form-group">
-    <label for="expense_code">Expense Code</label>
-    <input type="text" name="expense_code" id="expense_code" class="form-control" required>
-</div>
-<div class="form-group">
-    <label for="expense_name">Expense Name</label>
-    <input type="expense_name" name="expense_name" id="area_name" class="form-control" required>
-</div>
-<button type="submit" class="btn btn-primary mt-4">Create Expense Type</button>
-</form> --}}
 
 <div class="max-w-4xl mx-auto bg-white p-10 mt-10 rounded-2xl shadow-lg">
     <h1 class="text-3xl font-semibold text-gray-800 mb-8">Create Expense Type</h1>
@@ -33,7 +19,7 @@
         </div>
 
         <div>
-    <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
+    <!-- <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
     <select name="type" id="type" required class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
         <option value="" disabled selected>Select Delivery Request Type</option>
         @foreach ($deliveryRequestTypes as $deliveryRequestType)
@@ -41,7 +27,7 @@
                 {{ $deliveryRequestType->description }}
             </option>
         @endforeach
-    </select>
+    </select> -->
 </div>
 
         <div class="md:col-span-2 pt-6">

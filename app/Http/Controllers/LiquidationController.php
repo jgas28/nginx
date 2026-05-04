@@ -6,41 +6,94 @@ use App\Models\Approver;
 use App\Models\Liquidation;
 use App\Models\cvr_approval;
 use App\Models\CashVoucher;
+use App\Models\Allocation;
+use App\Models\Company;
 use App\Models\RunningBalance;
+use App\Models\Supplier;
 use App\Models\DeliveryRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class LiquidationController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-       $data = cvr_approval::with('cashVoucher')
-        ->where('status', '1')
-        ->whereHas('cashVoucher', function ($query) {
-            $query->where('cvr_type', 'basic')
-                ->where('status', '2');
-        })
-        ->get();
+        // Load data first
+        $data = cvr_approval::with('cashVoucher')
+            ->where('status', '1')
+            ->whereHas('cashVoucher', function ($query) {
+                $query->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial', 'freight', 'others'])
+                    ->where('status', '2');
+            })
+            ->get();
 
-        return view('liquidations.index', compact('data'));
+        // Add allocation information to each item
+        foreach ($data as $item) {
+            $cashVoucher = $item->cashVoucher;
+            $drId = $cashVoucher->deliveryRequest->id ?? null;
+            $cvrType = $cashVoucher->cvr_type ?? null;
+
+            $allocation = null;
+
+            if ($drId && $cvrType) {
+                $allocation = Allocation::where('dr_id', $drId)
+                    ->where('trip_type', $cvrType)
+                    ->where('sequence', $cashVoucher->sequence)
+                    ->first();
+            }
+
+            // Attach allocation to item
+            $item->allocation = $allocation;
+        }
+
+        if ($request->has('requestor') && $request->requestor != '') {
+            $data = $data->filter(function ($item) use ($request) {
+                return $item->cashVoucher->requestor == $request->requestor;
+            });
+        }
+
+        $employees = User::where('status', '!=', 0)->get();
+        $companies = Company::all();
+
+        // Return the view with the filtered data
+        return view('liquidations.index', compact('data', 'employees', 'companies'));
     }
 
-    public function indexAdmin()
-    {
-        $data = cvr_approval::with('cashVoucher.deliveryRequest.allocations.truck.company')
-        ->where('status', '1')
-        ->whereHas('cashVoucher', function ($query) {
-            $query->where('cvr_type', '!=', 'basic')
-                ->where('status', '2');
-        })
-        ->get();
 
-        return view('liquidations.indexAdmin', compact('data'));
+    public function indexAdmin(Request $request)
+    {
+        // Initialize the query builder for cvr_approval
+        $query = cvr_approval::with('cashVoucher')
+            ->where('status', '1')
+            ->whereHas('cashVoucher', function ($query) {
+                $query->whereIn('cvr_type', ['admin', 'rpm'])
+                    ->where('status', '2');
+            });
+
+        // Apply Supplier filter if exists
+        if ($request->has('supplier_id') && $request->supplier_id != '') {
+            $query->whereHas('cashVoucher.suppliers', function ($query) use ($request) {
+                $query->where('suppliers.id', $request->supplier_id);
+            });
+        }
+
+        // Fetch the filtered data
+        $data = $query->get();
+
+        // Fetch all suppliers for the select filter
+        $suppliers = Supplier::all();
+
+        // Return view with filtered data and suppliers
+        return view('liquidations.indexAdmin', compact('data', 'suppliers'));
     }
+
 
     public function storeSummary(Request $request, $id)
     {
@@ -52,20 +105,56 @@ class LiquidationController extends Controller
             'cvr_id' => 'required|integer',
             'cvr_number' => 'required|string',
             'cvr_approval_id' => 'nullable|integer',
-            'prepared_by' => 'nullable|integer',
-            'noted_by' => 'nullable|integer',
+            'prepared_by' => 'required|integer',
+            'noted_by' => 'required|integer',
             'validated_by' => 'nullable|integer',
             'collected_by' => 'nullable|integer',
             'approved_by' => 'nullable|integer',
         ]);
 
         $expenses = $request->input('expenses', []);
+        $gasoline = $request->input('gasoline', []);
+        $rfid = $request->input('rfid', []);
+        $others = $request->input('others', []);
+
+        // Calculate total liquidated amount (CASH ONLY for gasoline & RFID)
+        $totalLiquidated = 0;
+        $totalLiquidated += floatval($expenses['allowance'] ?? 0);
+        $totalLiquidated += floatval($expenses['manpower'] ?? 0);
+        $totalLiquidated += floatval($expenses['hauling'] ?? 0);
+        $totalLiquidated += floatval($expenses['right_of_way'] ?? 0);
+        $totalLiquidated += floatval($expenses['roro_expense'] ?? 0);
+        $totalLiquidated += floatval($expenses['cash_charge'] ?? 0);
+
+        foreach ($gasoline as $item) {
+            if (($item['type'] ?? '') === 'cash') {
+                $totalLiquidated += floatval($item['amount'] ?? 0);
+            }
+        }
+
+        foreach ($rfid as $item) {
+            if (($item['type'] ?? '') === 'cash') {
+                $totalLiquidated += floatval($item['amount'] ?? 0);
+            }
+        }
+
+        foreach ($others as $item) {
+            $totalLiquidated += floatval($item['amount'] ?? 0);
+        }
+
+        // Get approved amount from CashVoucher
+        $cashVoucher = CashVoucher::find($request->input('cvr_id'));
+        $approvedAmount = floatval($cashVoucher->amount ?? 0);
+
+        // Determine Liquidation status
+        $status = 1; // default
+
+        // Prepare data
         $data = [
             'cvr_id' => $request->input('cvr_id'),
             'cvr_number' => $request->input('cvr_number'),
             'cvr_approval_id' => $request->input('cvr_approval_id'),
 
-            // Direct fields from expenses
             'allowance' => $expenses['allowance'] ?? null,
             'manpower' => $expenses['manpower'] ?? null,
             'hauling' => $expenses['hauling'] ?? null,
@@ -73,13 +162,11 @@ class LiquidationController extends Controller
             'roro_expense' => $expenses['roro_expense'] ?? null,
             'cash_charge' => $expenses['cash_charge'] ?? null,
 
-            // JSON fields
-            'gasoline' => array_values($request->input('gasoline', [])),
-            'rfid' => array_values($request->input('rfid', [])),
-            'others' => array_values($request->input('others', [])),
+            'gasoline' => array_values($gasoline),
+            'rfid' => array_values($rfid),
+            'others' => array_values($others),
 
-            // Status + people
-            'status' => '1',
+            'status' => $status,
             'prepared_by' => $request->input('prepared_by'),
             'noted_by' => $request->input('noted_by'),
             'validated_by' => null,
@@ -87,6 +174,7 @@ class LiquidationController extends Controller
             'approved_by' => null,
         ];
 
+        // Create the Liquidation record
         Liquidation::create($data);
         $cvrId = $request->input('cvr_id');
         CashVoucher::where('id', $cvrId)->update(['status' => 4]);
@@ -99,27 +187,64 @@ class LiquidationController extends Controller
     public function liquidate($id)
     {
         $liquidation = cvr_approval::with('cashVoucher')->findOrFail($id);
-        $employees = User::all();
+        $employees = User::whereIn('id', [1, 41, 15, 5, 9, 16, 22])->get();
+        $preparers = User::where('status', '!=', 0)->get();
         
-        return view('liquidations.liquidate', compact('liquidation', 'employees'));
+        return view('liquidations.liquidate', compact('liquidation', 'employees', 'preparers'));
     }
 
-    public function reviewList()
+    public function reviewList(Request $request)
     {
-        $liquidations = Liquidation::with('preparedBy', 'notedBy', 'cashVoucher')
-            ->where('status', 1)
-            ->paginate(10);
+        $query = Liquidation::with(['preparedBy', 'notedBy', 'cashVoucher'])
+            ->where('status', 1);
 
+        // Apply the cvr_number filter if it's present in the request
+        if ($request->has('cvr_number') && $request->cvr_number != '') {
+            $query->whereHas('cashVoucher', function ($query) use ($request) {
+                $query->where('cvr_number', 'like', '%' . $request->cvr_number . '%');
+            });
+        }
+
+        // Paginate the result
+        $liquidations = $query->paginate(10);
+
+        // Iterate through liquidations to attach allocation and deliveryRequest
+        foreach ($liquidations as $liquidation) {
+            $cashVoucher = $liquidation->cashVoucher;
+
+            if (!$cashVoucher) {
+                continue; // Skip if no associated CashVoucher
+            }
+
+            $cvrType = $cashVoucher->cvr_type;
+            $dr = $cashVoucher->deliveryRequest ?? null;
+
+            // Only get allocation for these CVR types
+            if (in_array($cvrType, ['delivery', 'others', 'rpm', 'freight', 'accessorial', 'pullout']) && $dr) {
+                $allocation = Allocation::where('dr_id', $dr->id)
+                    ->where('trip_type', $cvrType)
+                    ->where('sequence', $cashVoucher->sequence)
+                    ->first();
+
+                $liquidation->allocation = $allocation;
+                $liquidation->deliveryRequest = $dr;
+            }
+        }
+ 
         return view('liquidations.reviewList', compact('liquidations'));
     }
 
+
     public function review($id)
     {
+        // Load liquidation with related data
         $liquidation = Liquidation::with('cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy')->findOrFail($id);
-        $employees = User::all();
+        $employees = User::whereIn('id', [41,5,15,53,1,9,16,22])->get(); // You can adjust this condition as needed
+        $staffs = User::where('status', '!=', 0)->get();
         $approvers = Approver::all();
+        $collectors = User::whereIn('id', [15,35,54])->get();
 
-        // Total Liquidated Cash (Only cash items)
+        // Calculate total liquidated cash (cash only)
         $totalCash = 0;
 
         foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field) {
@@ -144,7 +269,7 @@ class LiquidationController extends Controller
             $totalCash += floatval($item['amount'] ?? 0);
         }
 
-        // Total Card Expenses (non-cash)
+        // Calculate total non-cash (card) expenses
         $totalCard = 0;
 
         foreach ($liquidation->gasoline ?? [] as $item) {
@@ -159,24 +284,68 @@ class LiquidationController extends Controller
             }
         }
 
-        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0);
+        // Approved amount from CVR
+        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
+
+        // Raw difference (before adjustments)
         $difference = $totalCash - $approvedAmount;
 
-        // Logic for display and next step status
-        $nextStatus = 4; // default: approval
+        $totalLiquidated = $totalCash;
+        // Load running balances
+        $runningRefunds = RunningBalance::where('cvr_number', $liquidation->cvr_number)
+            ->where('type', '3') // Refund
+            ->get();
+
+        $runningReturns = RunningBalance::where('cvr_number', $liquidation->cvr_number)
+            ->where('type', '2') // Returned cash
+            ->get();
+
+        $runningUncollected = RunningBalance::where('cvr_number', $liquidation->cvr_number)
+            ->where('type', '4') // Uncollected
+            ->get();
+
+        // Sum of existing refunds
+        $refundTotal = $runningRefunds->sum(function ($item) {
+            return isset($item->amount) ? abs($item->amount) : 0;
+        });
+
+        // Combine returns and uncollected
+        $combinedReturns = collect();
+        if ($runningReturns) {
+            $combinedReturns = $combinedReturns->merge($runningReturns);
+        }
+        if ($runningUncollected) {
+            $combinedReturns = $combinedReturns->merge($runningUncollected);
+        }
+
+        $returnedTotal = $combinedReturns->sum(function ($item) {
+            return isset($item->amount) ? abs($item->amount) : 0;
+        });
+
+        // Adjusted difference
+        $adjustedDifference = round($difference + $refundTotal + $returnedTotal, 2);
+
+        // Decide next step
+        $nextStatus = 4; // default to "For Approval"
         $refund = false;
         $return = false;
 
-        if ($difference > 0) {
+        if (round($adjustedDifference, 2) == 0) {
+            // Fully reconciled: either no transaction, or liquidated + refund/return balances match the CVR
+            $nextStatus = 4;
+        } elseif ($adjustedDifference > 0) {
+            // User is owed money (over-liquidated)
             $refund = true;
-            $nextStatus = 4; // can still go to approval but shows refund button
-        } elseif ($difference < 0) {
+            $nextStatus = 4;
+        } elseif ($adjustedDifference < 0) {
+            // User owes money (under-liquidated)
             $return = true;
-            $nextStatus = 3; // needs collection
+            $nextStatus = 3;
         }
 
+        // Return view
         return view('liquidations.review', compact(
-            'liquidation',
+            'liquidation', 
             'employees',
             'approvers',
             'totalCash',
@@ -185,28 +354,26 @@ class LiquidationController extends Controller
             'difference',
             'refund',
             'return',
-            'nextStatus'
+            'nextStatus',
+            'staffs',
+            'runningRefunds',
+            'runningReturns',
+            'runningUncollected',
+            'collectors' 
         ));
     }
 
-
     public function validateLiquidation(Request $request, $id)
     {
-        $request->validate([
-            'validated_by' => 'required|exists:users,id',  // adjust table name accordingly
-        ]);
-
         $liquidation = Liquidation::findOrFail($id);
 
-        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0);
+        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
 
         // Recalculate the total like in your `validated` method
         $totalCash = 0;
-
         foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field) {
             $totalCash += floatval($liquidation->$field ?? 0);
         }
-
         $totalCash += floatval($liquidation->cash_charge ?? 0);
 
         foreach ($liquidation->gasoline ?? [] as $item) {
@@ -225,29 +392,79 @@ class LiquidationController extends Controller
             $totalCash += floatval($item['amount'] ?? 0);
         }
 
+        $difference = round($totalCash - $approvedAmount, 2);
 
-        $difference = $totalCash - $approvedAmount;
+        // Base validation (always needed)
+        $rules = [
+            'validated_by' => 'required|exists:users,id',
+        ];
 
-        // Assign status based on difference
-        if ($difference > 0) {
-            $liquidation->status = 4; // Refund, go to approval
-        } else {
-            $liquidation->status = 3; // Returned cash, go to collection
+        // If under-liquidated (needs return), require collector
+        if ($difference < 0) {
+            $rules['collector_id'] = 'required|exists:users,id';
         }
 
-        $liquidation->validated_by = $request->validated_by;
+        $validated = $request->validate($rules);
+
+        // Assign next status
+        $liquidation->status = $difference < 0 ? 3 : 4;
+        $liquidation->validated_by = $validated['validated_by'];
         $liquidation->validated_at = now();
+
+        // Optional: store collector
+        if ($difference < 0 && isset($validated['collector_id'])) {
+            $liquidation->collector_id = $validated['collector_id']; // only if this field exists in the table
+        }
+
         $liquidation->save();
 
         return redirect()->route('liquidations.reviewList')->with('success', 'Liquidation validated successfully.');
     }
 
-    // wag muna to
-    public function validatedList()
+
+    public function validatedList(Request $request)
     {
-        $liquidations = Liquidation::with('preparedBy', 'notedBy', 'cashVoucher')
-            ->where('status', 3)
-            ->paginate(10);
+        $user = Auth::user();
+
+        $query = Liquidation::with(['preparedBy', 'notedBy', 'cashVoucher']);
+
+        // Only get status 3 (validated)
+        $query->where('status', 3);
+
+        // 👇 If the user is not user ID 54, filter by collector_id
+        if (!in_array($user->id, [1, 53, 54])) {
+            $query->where('collector_id', $user->id);
+        }
+
+        // 👇 Optional CVR Number filtering
+        if ($request->has('cvr_number') && $request->cvr_number != '') {
+            $query->whereHas('cashVoucher', function ($query) use ($request) {
+                $query->where('cvr_number', 'like', '%' . $request->cvr_number . '%');
+            });
+        }
+
+        $liquidations = $query->paginate(10);
+
+        foreach ($liquidations as $liquidation) {
+            $cashVoucher = $liquidation->cashVoucher;
+
+            if (!$cashVoucher) {
+                continue;
+            }
+
+            $cvrType = $cashVoucher->cvr_type;
+            $dr = $cashVoucher->deliveryRequest ?? null;
+
+            if (in_array($cvrType, ['delivery', 'others', 'rpm', 'freight', 'accessorial', 'pullout']) && $dr) {
+                $allocation = Allocation::where('dr_id', $dr->id)
+                    ->where('trip_type', $cvrType)
+                    ->where('sequence', $cashVoucher->sequence)
+                    ->first();
+
+                $liquidation->allocation = $allocation;
+                $liquidation->deliveryRequest = $dr;
+            }
+        }
 
         return view('liquidations.validatedList', compact('liquidations'));
     }
@@ -255,7 +472,8 @@ class LiquidationController extends Controller
     public function validate(Request $request, $id)
     {
         $liquidation = Liquidation::with('cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy')->findOrFail($id);
-        $employees = User::all();
+        $employees = User::whereIn('id', [54, 15, 35, 5, 15])->get();
+        $staffs = User::where('status', '!=', 0)->get();
         $approvers = Approver::all();
 
         // Total Liquidated Cash (Only cash items)
@@ -298,7 +516,7 @@ class LiquidationController extends Controller
             }
         }
 
-        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0);
+        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
         $difference = $totalCash - $approvedAmount;
 
         // Logic for display and next step status
@@ -313,6 +531,18 @@ class LiquidationController extends Controller
             $return = true;
             $nextStatus = 3; // needs collection
         }
+
+        $runningRefunds = RunningBalance::where('cvr_number', $liquidation->cvr_number)
+            ->where('type', '3')
+            ->get();
+
+        $runningReturns = RunningBalance::where('cvr_number', $liquidation->cvr_number)
+            ->where('type', '2')
+            ->get();
+
+        $runningUncollected = RunningBalance::where('cvr_number', $liquidation->cvr_number)
+            ->where('type', '4')
+            ->get();
 
         return view('liquidations.validated', compact(
             'liquidation',
@@ -324,8 +554,29 @@ class LiquidationController extends Controller
             'difference',
             'refund',
             'return',
-            'nextStatus'
+            'nextStatus',
+            'staffs',
+            'runningRefunds',
+            'runningReturns',
+            'runningUncollected'
         ));
+    }
+
+    public function reject(Request $request, $id)
+    {
+        $request->validate([
+            'remarks' => 'required|string|max:1000',
+            'validated_by' => 'required|exists:users,id',
+        ]);
+
+        $liquidation = Liquidation::findOrFail($id);
+        $liquidation->status = 10; // Rejected
+        $liquidation->validated_by = $request->validated_by;
+        $liquidation->validated_at = now();
+        $liquidation->remarks = $request->remarks;
+        $liquidation->save();
+
+        return redirect()->route('liquidations.index')->with('error', 'Liquidation has been rejected.');
     }
 
     public function collectedLiquidation(Request $request, $id)
@@ -344,11 +595,42 @@ class LiquidationController extends Controller
         return redirect()->route('liquidations.reviewList')->with('success', 'Liquidation validated successfully.');
     }
 
-    public function approvalList()
+    public function approvalList(Request $request)
     {
-        $liquidations = Liquidation::with('preparedBy', 'notedBy', 'cashVoucher')
-            ->where('status', 4)
-            ->paginate(10);
+        $query = Liquidation::with(['preparedBy', 'notedBy', 'cashVoucher'])
+            ->where('status', 4);
+            
+        // Apply the cvr_number filter if it's present in the request
+        if ($request->has('cvr_number') && $request->cvr_number != '') {
+            $query->whereHas('cashVoucher', function ($query) use ($request) {
+                $query->where('cvr_number', 'like', '%' . $request->cvr_number . '%');
+            });
+        }
+
+        // Paginate the result
+        $liquidations = $query->paginate(10);
+        
+        foreach ($liquidations as $liquidation) {
+            $cashVoucher = $liquidation->cashVoucher;
+
+            if (!$cashVoucher) {
+                continue; // Skip if no associated CashVoucher
+            }
+
+            $cvrType = $cashVoucher->cvr_type;
+            $dr = $cashVoucher->deliveryRequest ?? null;
+
+            // Only get allocation for these CVR types
+            if (in_array($cvrType, ['delivery', 'others', 'rpm', 'freight', 'accessorial', 'pullout']) && $dr) {
+                $allocation = Allocation::where('dr_id', $dr->id)
+                    ->where('trip_type', $cvrType)
+                    ->where('sequence', $cashVoucher->sequence)
+                    ->first();
+
+                $liquidation->allocation = $allocation;
+                $liquidation->deliveryRequest = $dr;
+            }
+        }
 
         return view('liquidations.approvalList', compact('liquidations'));
     }
@@ -358,88 +640,122 @@ class LiquidationController extends Controller
         $liquidation = Liquidation::with(['cashVoucher', 'cvrApproval', 'preparedBy', 'notedBy', 'runningBalances'])
                         ->findOrFail($id);
 
-        $employees = User::all();
+        $employees = User::whereIn('id', [54])->get();
         $approvers = Approver::all();
+        $staffs = User::where('status', '!=', 0)->get();
 
         // Calculate total liquidated cash
         $totalCash = 0;
-
         foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field) {
             $totalCash += floatval($liquidation->$field ?? 0);
         }
-
         $totalCash += floatval($liquidation->cash_charge ?? 0);
 
-        foreach ($liquidation->gasoline ?? [] as $item) {
+        // Decode JSON fields
+        $gasoline = is_array($liquidation->gasoline) ? $liquidation->gasoline : json_decode($liquidation->gasoline, true) ?? [];
+        $rfid = is_array($liquidation->rfid) ? $liquidation->rfid : json_decode($liquidation->rfid, true) ?? [];
+        $others = is_array($liquidation->others) ? $liquidation->others : json_decode($liquidation->others, true) ?? [];
+
+        // Add cash-based gasoline
+        foreach ($gasoline as $item) {
             if (($item['type'] ?? '') === 'cash') {
                 $totalCash += floatval($item['amount'] ?? 0);
             }
         }
 
-        foreach ($liquidation->rfid ?? [] as $item) {
+        // Add cash-based RFID
+        foreach ($rfid as $item) {
             if (($item['type'] ?? '') === 'cash') {
                 $totalCash += floatval($item['amount'] ?? 0);
             }
         }
 
-        foreach ($liquidation->others ?? [] as $item) {
+        // Add all "others" amounts
+        foreach ($others as $item) {
             $totalCash += floatval($item['amount'] ?? 0);
         }
 
-        // Total Card Expenses (non-cash)
+        // Total Card Expenses
         $totalCard = 0;
-
-        foreach ($liquidation->gasoline ?? [] as $item) {
+        foreach ($gasoline as $item) {
             if (($item['type'] ?? '') === 'card') {
                 $totalCard += floatval($item['amount'] ?? 0);
             }
         }
 
-        foreach ($liquidation->rfid ?? [] as $item) {
+        foreach ($rfid as $item) {
             if (($item['type'] ?? '') === 'card') {
                 $totalCard += floatval($item['amount'] ?? 0);
             }
         }
 
-        // Add refund/return from running balances
-        $refundReturnTotal = $liquidation->runningBalances->sum('amount');
-        $finalLiquidated = $totalCash + $refundReturnTotal;
+        // Properly calculate each running balance type
+        $refundTotal = $liquidation->runningBalances
+            ->where('type', '3') // Refund
+            ->sum(fn($item) => abs($item->amount));
 
-        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0);
-        $difference = $finalLiquidated - $approvedAmount;
+        $returnTotal = $liquidation->runningBalances
+            ->where('type', '2') // Return
+            ->sum(fn($item) => abs($item->amount));
 
-        // Determine next status
-        $nextStatus = 4; // default: approval
-        $refund = false;
-        $return = false;
+        $uncollectedTotal = $liquidation->runningBalances
+            ->where('type', '4') // Uncollected
+            ->sum(fn($item) => abs($item->amount));
 
-        if ($difference > 0) {
-            $refund = true;
-            $nextStatus = 4;
-        } elseif ($difference < 0) {
-            $return = true;
-            $nextStatus = 3;
-        }
-
+         // Separate running balances for display
         $runningRefunds = RunningBalance::where('cvr_number', $liquidation->cvr_number)
-            ->where('type', '3')
-            ->get();
+            ->where('type', '3')->get();
 
         $runningReturns = RunningBalance::where('cvr_number', $liquidation->cvr_number)
-            ->where('type', '2')
-            ->get();
+            ->where('type', '2')->get();
 
         $runningUncollected = RunningBalance::where('cvr_number', $liquidation->cvr_number)
-            ->where('type', '4')
-            ->get();
+            ->where('type', '4')->get();
 
+
+        // Approved amount
+        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
+
+        $finalLiquidated = $totalCash;
+
+        // Calculate raw cash difference
+        $rawDifference = $approvedAmount - $totalCash;
+
+        // Adjust based on actual return/refund made
+        if ($rawDifference > 0) {
+            // Underspent — Return expected
+            $difference = $rawDifference - ($returnTotal + $uncollectedTotal);
+        } elseif ($rawDifference < 0) {
+            // Overspent — Refund expected
+            $difference = $rawDifference + $refundTotal; // Refunds are money already returned
+        } else {
+            $difference = 0;
+        }
+
+        // Use epsilon for floating point tolerance
+        $epsilon = 0.01; // 1 cent tolerance
+
+        if (abs($difference) < $epsilon) {
+            $difference = 0;
+            $refund = false;
+            $return = false;
+        } else {
+            $refund = $difference < 0;
+            $return = $difference > 0;
+        }
+
+        $nextStatus = $refund ? 3 : ($return ? 4 : null);
+
+       
         return view('liquidations.approval', compact(
             'liquidation',
             'employees',
             'approvers',
             'totalCash',
             'totalCard',
-            'refundReturnTotal',
+            'refundTotal',
+            'returnTotal',
+            'uncollectedTotal',
             'finalLiquidated',
             'approvedAmount',
             'difference',
@@ -448,19 +764,21 @@ class LiquidationController extends Controller
             'nextStatus',
             'runningRefunds',
             'runningReturns',
-            'runningUncollected'
+            'runningUncollected',
+            'gasoline',
+            'rfid',
+            'others',
+            'staffs'
         ));
     }
 
+
     public function approvedLiquidation(Request $request, $id)
     {
-        $request->validate([
-            'approved_by' => 'required|exists:users,id',  // adjust table name accordingly
-        ]);
 
         $liquidation = Liquidation::findOrFail($id);
 
-        $liquidation->approved_by = $request->approved_by;
+        $liquidation->approved_by = 54;
         $liquidation->approved_at = now();
         $liquidation->status = 5;
         $liquidation->save();
@@ -476,8 +794,8 @@ class LiquidationController extends Controller
 
         $liquidation = Liquidation::findOrFail($id);
 
-        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0);
-
+        $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
+ 
         // Recalculate the total like in your `validated` method
         $totalCash = 0;
 
@@ -519,6 +837,116 @@ class LiquidationController extends Controller
 
         return redirect()->route('liquidations.approvalList')->with('success', 'Liquidation validated successfully.');
     }
+
+    public function liquidationList(Request $request)
+    {
+        $startDate = $request->input('start_date');
+        $endDate   = $request->input('end_date');
+        $cvrNumber = $request->input('cvr_number');
+
+        if ($startDate && $endDate) {
+            $start = Carbon::parse($startDate)->startOfDay();
+            $end   = Carbon::parse($endDate)->endOfDay();
+        } else {
+            $start = Carbon::today();
+            $end   = Carbon::today()->endOfDay();
+        }
+
+        // Base query
+        $query = Liquidation::with('cashVoucher')
+            ->whereBetween('created_at', [$start, $end]);
+
+        // Add CVR filter if present
+        if ($cvrNumber) {
+            $query->whereHas('cashVoucher', function ($q) use ($cvrNumber) {
+                $q->where('cvr_number', 'like', '%' . $cvrNumber . '%');
+            });
+        }
+
+        // Paginate results (10 per page)
+        $liquidations = $query->paginate(10)->withQueryString();
+
+        // Compute total expenses for each item
+        $liquidations->getCollection()->transform(function ($liquidation) {
+            $cashVoucher = $liquidation->cashVoucher;
+            $totalExpenses = 0;
+
+            if ($cashVoucher) {
+                $cashVoucher->load([
+                    'deliveryRequest.company',
+                    'deliveryRequest.expenseType',
+                    'withholdingTax',
+                ]);
+
+                $deliveryRequest = $cashVoucher->deliveryRequest;
+
+                $allocationRelation = match ($cashVoucher->cvr_type) {
+                    'delivery'     => 'deliveryAllocations',
+                    'pullout'      => 'pulloutAllocations',
+                    'accessorial'  => 'accessorialAllocations',
+                    'freight'      => 'freightAllocations',
+                    'others', 'admin', 'rpm' => 'othersAllocations',
+                    default        => null,
+                };
+
+                $liquidation->allocations = ($deliveryRequest && $allocationRelation && method_exists($deliveryRequest, $allocationRelation))
+                    ? $deliveryRequest->$allocationRelation()->with('truck')->get()
+                    : collect();
+
+                // Add direct expense fields
+                $totalExpenses += (float) $liquidation->allowance;
+                $totalExpenses += (float) $liquidation->manpower;
+                $totalExpenses += (float) $liquidation->hauling;
+                $totalExpenses += (float) $liquidation->right_of_way;
+                $totalExpenses += (float) $liquidation->roro_expense;
+                $totalExpenses += (float) $liquidation->cash_charge;
+
+                // 'others' field
+                $others = is_string($liquidation->others)
+                    ? json_decode($liquidation->others, true)
+                    : $liquidation->others;
+                if (is_array($others)) {
+                    foreach ($others as $item) {
+                        $totalExpenses += isset($item['amount']) ? (float) $item['amount'] : 0;
+                    }
+                }
+
+                // 'gasoline' field (cash only)
+                $gasoline = is_string($liquidation->gasoline)
+                    ? json_decode($liquidation->gasoline, true)
+                    : $liquidation->gasoline;
+                if (is_array($gasoline)) {
+                    foreach ($gasoline as $item) {
+                        if (($item['type'] ?? '') === 'cash') {
+                            $totalExpenses += isset($item['amount']) ? (float) $item['amount'] : 0;
+                        }
+                    }
+                }
+
+                // 'rf_id' field (cash only)
+                $rf_id = is_string($liquidation->rf_id)
+                    ? json_decode($liquidation->rf_id, true)
+                    : $liquidation->rf_id;
+                if (is_array($rf_id)) {
+                    foreach ($rf_id as $item) {
+                        if (($item['type'] ?? '') === 'cash') {
+                            $totalExpenses += isset($item['amount']) ? (float) $item['amount'] : 0;
+                        }
+                    }
+                }
+            } else {
+                $liquidation->allocations = collect();
+            }
+
+            $liquidation->total_expense = $totalExpenses;
+            return $liquidation;
+        });
+
+        return view('liquidations.liquidationList', compact('liquidations', 'startDate', 'endDate', 'cvrNumber'));
+    }
+
+
+
 
     /**
      * Show the form for creating a new resource.
@@ -567,4 +995,488 @@ class LiquidationController extends Controller
     {
         //
     }
-}
+
+    public function approvedLiqUpdate(Request $request, $id)
+    {
+        // Find the liquidation by ID
+        $liquidation = Liquidation::findOrFail($id);
+
+        // Validate the request data (e.g., approved_by and expenses)
+        $request->validate([
+            'allowance' => 'nullable|numeric',
+            'manpower' => 'nullable|numeric',
+            'hauling' => 'nullable|numeric',
+            'right_of_way' => 'nullable|numeric',
+            'roro_expense' => 'nullable|numeric',
+            'cash_charge' => 'nullable|numeric',
+            'gasoline' => 'nullable|array',
+            'gasoline.*.type' => 'nullable|string',
+            'gasoline.*.amount' => 'nullable|numeric',
+            'rfid' => 'nullable|array',
+            'rfid.*.tag' => 'nullable|string',
+            'rfid.*.type' => 'nullable|string',
+            'rfid.*.amount' => 'nullable|numeric',
+            'others' => 'nullable|array',
+            'others.*.description' => 'nullable|string',
+            'others.*.amount' => 'nullable|numeric',
+        ]);
+
+        // Update fields with the form data
+        $liquidation->update([
+            'approved_by' => $request->approved_by,
+            'allowance' => $request->allowance ?? 0,
+            'manpower' => $request->manpower ?? 0,
+            'hauling' => $request->hauling ?? 0,
+            'right_of_way' => $request->right_of_way ?? 0,
+            'roro_expense' => $request->roro_expense ?? 0,
+            'cash_charge' => $request->cash_charge ?? 0,
+            'gasoline' => array_values($request->gasoline ?? []),
+            'rfid' => array_values($request->rfid ?? []),
+            'others' => array_values($request->others ?? []),
+        ]);
+
+        // Redirect with success message
+        return redirect()->route('liquidations.approval', $liquidation->id)
+        ->with('success', 'Liquidation details updated!');
+    } 
+
+    public function approvedCollection(Request $request, $id)
+    {
+        // Find the liquidation by ID
+        $liquidation = Liquidation::findOrFail($id);
+
+        // Validate the request data (e.g., approved_by and expenses)
+        $request->validate([
+            'allowance' => 'nullable|numeric',
+            'manpower' => 'nullable|numeric',
+            'hauling' => 'nullable|numeric',
+            'right_of_way' => 'nullable|numeric',
+            'roro_expense' => 'nullable|numeric',
+            'cash_charge' => 'nullable|numeric',
+            'gasoline' => 'nullable|array',
+            'gasoline.*.type' => 'nullable|string',
+            'gasoline.*.amount' => 'nullable|numeric',
+            'rfid' => 'nullable|array',
+            'rfid.*.tag' => 'nullable|string',
+            'rfid.*.type' => 'nullable|string',
+            'rfid.*.amount' => 'nullable|numeric',
+            'others' => 'nullable|array',
+            'others.*.description' => 'nullable|string',
+            'others.*.amount' => 'nullable|numeric',
+        ]);
+
+        // Update fields with the form data
+        $liquidation->update([
+            'approved_by' => $request->approved_by,
+            'allowance' => $request->allowance ?? 0,
+            'manpower' => $request->manpower ?? 0,
+            'hauling' => $request->hauling ?? 0,
+            'right_of_way' => $request->right_of_way ?? 0,
+            'roro_expense' => $request->roro_expense ?? 0,
+            'cash_charge' => $request->cash_charge ?? 0,
+            'gasoline' => array_values($request->gasoline ?? []),
+            'rfid' => array_values($request->rfid ?? []),
+            'others' => array_values($request->others ?? []),
+        ]);
+
+        // Redirect with success message
+        return redirect()->route('liquidations.approvalList') // Or wherever you want to redirect
+            ->with('success', 'Liquidation updated and approved successfully!');
+    }
+
+    public function approvedValidation(Request $request, $id)
+    {
+        // Find the liquidation by ID
+        $liquidation = Liquidation::findOrFail($id);
+
+        // Validate the request data (e.g., approved_by and expenses)
+        $request->validate([
+            'allowance' => 'nullable|numeric',
+            'manpower' => 'nullable|numeric',
+            'hauling' => 'nullable|numeric',
+            'right_of_way' => 'nullable|numeric',
+            'roro_expense' => 'nullable|numeric',
+            'cash_charge' => 'nullable|numeric',
+            'gasoline' => 'nullable|array',
+            'gasoline.*.type' => 'nullable|string',
+            'gasoline.*.amount' => 'nullable|numeric',
+            'rfid' => 'nullable|array',
+            'rfid.*.tag' => 'nullable|string',
+            'rfid.*.type' => 'nullable|string',
+            'rfid.*.amount' => 'nullable|numeric',
+            'others' => 'nullable|array',
+            'others.*.description' => 'nullable|string',
+            'others.*.amount' => 'nullable|numeric',
+        ]);
+
+        // Update fields with the form data
+        $liquidation->update([
+            'approved_by' => $request->approved_by,
+            'allowance' => $request->allowance ?? 0,
+            'manpower' => $request->manpower ?? 0,
+            'hauling' => $request->hauling ?? 0,
+            'right_of_way' => $request->right_of_way ?? 0,
+            'roro_expense' => $request->roro_expense ?? 0,
+            'cash_charge' => $request->cash_charge ?? 0,
+            'gasoline' => array_values($request->gasoline ?? []),
+            'rfid' => array_values($request->rfid ?? []),
+            'others' => array_values($request->others ?? []),
+        ]);
+
+        // Redirect with success message
+        return redirect()->route('liquidations.approvalList') // Or wherever you want to redirect
+            ->with('success', 'Liquidation updated and approved successfully!');
+    }
+
+    public function rejectedList()
+    {
+        // Fetch ALL liquidations with their immediate cashVoucher
+        $liquidations = Liquidation::with('cashVoucher')
+        ->where('status', 10)
+        ->get();
+
+        $liquidations->each(function ($liquidation) {
+            $cashVoucher = $liquidation->cashVoucher;
+
+            // Initialize total expenses
+            $totalExpenses = 0;
+
+            if ($cashVoucher) {
+                // Load nested relationships
+                $cashVoucher->load([
+                    'deliveryRequest.company',
+                    'deliveryRequest.expenseType',
+                    'withholdingTax',
+                ]);
+
+                $deliveryRequest = $cashVoucher->deliveryRequest;
+
+                // Load allocation relation dynamically
+                $allocationRelation = match ($cashVoucher->cvr_type) {
+                    'delivery'     => 'deliveryAllocations',
+                    'pullout'      => 'pulloutAllocations',
+                    'accessorial'  => 'accessorialAllocations',
+                    'freight'      => 'freightAllocations',
+                    'others', 'admin', 'rpm' => 'othersAllocations',
+                    default        => null,
+                };
+
+                if ($deliveryRequest && $allocationRelation && method_exists($deliveryRequest, $allocationRelation)) {
+                    $liquidation->allocations = $deliveryRequest->$allocationRelation()->with('truck')->get();
+                } else {
+                    $liquidation->allocations = collect();
+                }
+
+                // Direct expense fields (numeric)
+                $totalExpenses += (float) $liquidation->allowance;
+                $totalExpenses += (float) $liquidation->manpower;
+                $totalExpenses += (float) $liquidation->hauling;
+                $totalExpenses += (float) $liquidation->right_of_way;
+                $totalExpenses += (float) $liquidation->roro_expense;
+                $totalExpenses += (float) $liquidation->cash_charge;
+
+                // Parse 'others' JSON
+                $others = $liquidation->others;
+                if (is_string($others)) {
+                    $others = json_decode($others, true);
+                }
+                if (is_array($others)) {
+                    foreach ($others as $item) {
+                        $totalExpenses += isset($item['amount']) ? (float) $item['amount'] : 0;
+                    }
+                }
+
+                // Parse 'gasoline' JSON - only type == 'cash'
+                $gasoline = $liquidation->gasoline;
+                if (is_string($gasoline)) {
+                    $gasoline = json_decode($gasoline, true);
+                }
+                if (is_array($gasoline)) {
+                    foreach ($gasoline as $item) {
+                        if (($item['type'] ?? '') === 'cash') {
+                            $totalExpenses += isset($item['amount']) ? (float) $item['amount'] : 0;
+                        }
+                    }
+                }
+
+                // Parse 'rf_id' JSON - only type == 'cash'
+                $rf_id = $liquidation->rf_id;
+                if (is_string($rf_id)) {
+                    $rf_id = json_decode($rf_id, true);
+                }
+                if (is_array($rf_id)) {
+                    foreach ($rf_id as $item) {
+                        if (($item['type'] ?? '') === 'cash') {
+                            $totalExpenses += isset($item['amount']) ? (float) $item['amount'] : 0;
+                        }
+                    }
+                }
+            } else {
+                $liquidation->allocations = collect(); // fallback
+            }
+
+            // Attach total expense to the liquidation instance
+            $liquidation->total_expense = $totalExpenses;
+        });
+
+          return view('liquidations.rejectList', compact('liquidations'));
+    }
+
+    public function rejectEdit($id)
+    {
+        $liquidation = Liquidation::with('cashVoucher')->findOrFail($id);
+
+        $employees = User::whereIn('id', [1, 41, 15, 5, 22])->get();
+        $preparers = User::where('status', '!=', 0)->get();
+
+        return view('liquidations.rejectEdit', compact('liquidation', 'preparers', 'employees'));
+    }
+ 
+    public function rejectUpdate(Request $request, $id)
+    {
+        // Log the raw incoming request data
+        Log::info('Reject Update Request:', $request->all());
+
+        $liquidation = Liquidation::findOrFail($id);
+
+        $data = $request->validate([
+            'allowance' => 'nullable|numeric',
+            'manpower' => 'nullable|numeric',
+            'hauling' => 'nullable|numeric',
+            'right_of_way' => 'nullable|numeric',
+            'roro_expense' => 'nullable|numeric',
+            'cash_charge' => 'nullable|numeric',
+            'gasoline' => 'nullable|array',
+            'rfid' => 'nullable|array',
+            'others' => 'nullable|array',
+            'prepared_by' => 'required|exists:users,id',
+            'noted_by' => 'nullable|exists:users,id',
+        ]);
+
+        // Log extracted arrays individually
+        Log::info('Parsed Arrays:', [
+            'gasoline' => $request->gasoline,
+            'rfid' => $request->rfid,
+            'others' => $request->others,
+        ]);
+
+        $liquidation->update([
+            'approved_by' => $request->approved_by ?? null,
+            'allowance' => $request->allowance ?? 0,
+            'manpower' => $request->manpower ?? 0,
+            'hauling' => $request->hauling ?? 0,
+            'right_of_way' => $request->right_of_way ?? 0,
+            'roro_expense' => $request->roro_expense ?? 0,
+            'cash_charge' => $request->cash_charge ?? 0,
+            'gasoline' => array_values($request->gasoline ?? []),
+            'rfid' => array_values($request->rfid ?? []),
+            'others' => array_values($request->others ?? []),
+            'prepared_by' => $request->prepared_by,
+            'noted_by' => $request->noted_by,
+            'status' => 1,
+        ]);
+
+        Log::info('Liquidation Updated:', $liquidation->toArray());
+
+        return redirect()->route('liquidations.rejectedList')->with('success', 'Liquidation updated successfully.');
+    }
+
+    public function Overall(Request $request)
+    {
+        // Extract the request data
+        $companyId = $request->input('company_id');
+        $dateFrom = $request->input('date_from', now()->startOfMonth()->toDateString());
+        $dateTo = $request->input('date_to', now()->endOfMonth()->toDateString());
+        $requestCode = $request->input('request_code');
+        $cvrNumber = $request->input('cvr_number');
+        $status = $request->input('status');
+
+        // Prepare conditions and params
+        $conditions = "WHERE DATE(cv.created_at) BETWEEN ? AND ?";
+        $params = [$dateFrom, $dateTo];
+
+        // Add filters dynamically
+        if ($requestCode) {
+            $conditions .= " AND crt.request_type = ?";
+            $params[] = $requestCode;
+        }
+
+        if ($companyId) {
+            $conditions .= " AND (
+                (cv.cvr_type IN ('admin','rpm') AND cv.company_id = ?) OR
+                (cv.cvr_type NOT IN ('admin','rpm') AND dr.company_id = ?)
+            )";
+            $params[] = $companyId;
+            $params[] = $companyId;
+        }
+
+        if ($cvrNumber) {
+            $conditions .= " AND cv.cvr_number LIKE ?";
+            $params[] = "%$cvrNumber%";
+        }
+
+        // Add status filter (handled with a switch)
+        if ($status) {
+            switch ($status) {
+                case '1':  // Pending Cash Approval
+                    $conditions .= " AND cv.status = 1";
+                    break;
+                case '3':  // Rejected CVR
+                    $conditions .= " AND cv.status = 3";
+                    break;
+                case '5':  // Completed
+                    $conditions .= " AND l.status = 5";
+                    break;
+                case '10': // Rejected Liquidation
+                    $conditions .= " AND l.status = 10";
+                    break;
+                case 'for_validation':  // For Validation
+                    $conditions .= " AND l.status = 1";
+                    break;
+                case 'for_collection':  // For Collection
+                    $conditions .= " AND l.status = 3";
+                    break;
+                case 'for_approval':  // For Approval
+                    $conditions .= " AND l.status = 4";
+                    break;
+                case 'liquidation_in_progress':  // Liquidation In Progress
+                    $conditions .= " AND l.status NOT IN (1, 3, 4, 5, 10)";
+                    break;
+                case 'for_liquidation':  // For Liquidation
+                    $conditions .= " AND ca.status = 1 AND l.status IS NULL";
+                    break;
+                default:
+                    break;
+            }
+        }
+
+
+        // SQL query (fixed)
+        $sql = "
+            SELECT
+                cv.id AS cash_voucher_id,
+                cv.cvr_type,
+                cv.sequence,
+                cv.cvr_number,
+                CASE 
+                    WHEN cv.cvr_type IN ('admin','rpm') THEN cv.truck_id 
+                    ELSE a.truck_id 
+                END AS truck_id,
+                CASE 
+                    WHEN cv.cvr_type IN ('admin','rpm') THEN cv.company_id 
+                    ELSE dr.company_id 
+                END AS company_id, 
+                CASE 
+                    WHEN cv.cvr_type IN ('admin','rpm') THEN cv.expense_type_id 
+                    ELSE dr.expense_type_id 
+                END AS expense_type_id,
+                t.truck_name,
+                c.company_code,
+                et.expense_code,
+                crt.request_type AS request_code,
+                CASE 
+                    WHEN cv.cvr_type IN ('admin','rpm') THEN (
+                        SELECT SUM(CAST(JSON_UNQUOTE(amt.value) AS DECIMAL(10,2)))
+                        FROM JSON_TABLE(cv.amount_details, '$[*]' COLUMNS (value JSON PATH '$')) AS amt
+                    )
+                    ELSE cv.amount
+                END AS requested_amount,
+                COALESCE((
+                    SELECT SUM(amount)
+                    FROM fczcnyx.cvr_approvals ca2
+                    WHERE ca2.cvr_id = cv.id
+                ), 0) AS approved_amount,
+                COALESCE(l.allowance,0) + COALESCE(l.manpower,0) + COALESCE(l.hauling,0) +
+                COALESCE(l.right_of_way,0) + COALESCE(l.roro_expense,0) +
+                COALESCE((
+                    SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
+                    FROM JSON_TABLE(l.gasoline,'$[*]' COLUMNS(value JSON PATH '$')) j
+                    WHERE j.value->>'$.type' = 'cash'
+                ), 0) +
+                COALESCE((
+                    SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
+                    FROM JSON_TABLE(l.rfid,'$[*]' COLUMNS(value JSON PATH '$')) j
+                    WHERE j.value->>'$.type' = 'cash'
+                ), 0) +
+                COALESCE((
+                    SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
+                    FROM JSON_TABLE(l.others,'$[*]' COLUMNS(value JSON PATH '$')) j
+                ), 0) AS liquidated_amount_cash,
+                (
+                    COALESCE((
+                        SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
+                        FROM JSON_TABLE(l.gasoline,'$[*]' COLUMNS(value JSON PATH '$')) j
+                        WHERE j.value->>'$.type' = 'card'
+                    ), 0) +
+                    COALESCE((
+                        SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2)))
+                        FROM JSON_TABLE(l.rfid,'$[*]' COLUMNS(value JSON PATH '$')) j
+                        WHERE j.value->>'$.type' = 'card'
+                    ), 0)
+                ) AS liquidated_amount_card,
+                cv.status AS cash_voucher_status,
+                ca.status AS approval_status,
+                l.status AS liquidation_status,
+                CASE
+                    WHEN l.id IS NULL AND ca.status = '1' AND cv.status = 3 THEN 'Rejected CVR'
+                    WHEN cv.status = 3 AND ca.status = '1' THEN 'Rejected CVR'
+                    WHEN l.id IS NULL AND ca.status IS NULL AND cv.status = 3 THEN 'Rejected CVR'
+                    WHEN l.id IS NOT NULL THEN
+                        CASE
+                            WHEN l.status = '1' THEN 'For Validation'
+                            WHEN l.status = '3' THEN 'For Collection'
+                            WHEN l.status = '4' THEN 'For Approval'
+                            WHEN l.status = '5' THEN 'Completed'
+                            WHEN l.status = '10' THEN 'Rejected Liquidation'
+                            ELSE 'Liquidation In Progress'
+                        END
+                    WHEN ca.id IS NOT NULL THEN
+                        CASE
+                            WHEN ca.status = '1' THEN 'For Liquidation'
+                            WHEN ca.status = '3' THEN 'Rejected CVR'
+                            ELSE 'Pending Cash Approval'
+                        END
+                    ELSE 'Pending Cash Approval'
+                END AS overall_status
+            FROM fczcnyx.cash_vouchers cv
+            LEFT JOIN fczcnyx.delivery_request dr ON dr.id = cv.dr_id
+            LEFT JOIN (
+                SELECT * FROM (
+                    SELECT *, 
+                        ROW_NUMBER() OVER (PARTITION BY dr_id, trip_type, sequence ORDER BY id) AS row_num
+                    FROM fczcnyx.allocations
+                ) AS ranked_allocations
+                WHERE row_num = 1
+            ) a ON a.dr_id = cv.dr_id AND a.trip_type = cv.cvr_type AND a.sequence = cv.sequence
+            LEFT JOIN fczcnyx.cvr_approvals ca ON ca.cvr_id = cv.id
+            LEFT JOIN fczcnyx.liquidations l ON l.cvr_approval_id = ca.id
+            LEFT JOIN fczcnyx.trucks t ON t.id = CASE 
+                                                    WHEN cv.cvr_type IN ('admin','rpm') THEN cv.truck_id 
+                                                    ELSE a.truck_id 
+                                                END
+            LEFT JOIN fczcnyx.companies c ON c.id = CASE 
+                                                        WHEN cv.cvr_type IN ('admin','rpm') THEN cv.company_id 
+                                                        ELSE dr.company_id 
+                                                    END
+            LEFT JOIN fczcnyx.expense_types et ON et.id = CASE 
+                                                                    WHEN cv.cvr_type IN ('admin','rpm') THEN cv.expense_type_id 
+                                                                    ELSE dr.expense_type_id 
+                                                                END
+            LEFT JOIN fczcnyx.cvr_request_type crt ON crt.id = cv.request_type
+            $conditions
+            ORDER BY company_id ASC, cvr_number ASC;
+        ";
+
+        // Execute query
+        $cashVouchers = DB::select($sql, $params);
+
+        Log::info("Status Filter: " . $status);
+        Log::info($request->all());
+        Log::info("SQL Query: " . $sql);
+        Log::info("Parameters: ", $params);
+
+        return view('liquidations.overall', compact('cashVouchers'));
+    }
+
+
+} 

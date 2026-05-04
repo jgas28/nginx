@@ -19,7 +19,7 @@
             <input type="text" name="expense_name" id="expense_name" value="{{ $expenseType->expense_name }}" required class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
         </div>
 
-        <div>
+        <!-- <div>
             <label for="type" class="block text-sm font-medium text-gray-700">Type</label>
             <select name="type" id="type" required class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500">
                 <option value="" disabled selected>Select Type</option>
@@ -30,7 +30,7 @@
                     </option>
                 @endforeach
             </select>
-        </div>
+        </div> -->
 
 
         <div class="md:col-span-2 pt-6">

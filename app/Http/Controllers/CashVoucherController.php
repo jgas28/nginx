@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Allocation;
 use App\Models\Approver;
 use Illuminate\Http\Request;
 use App\Models\cvr_approval;
@@ -43,7 +44,7 @@ class CashVoucherController extends Controller
         ->paginate(10);
 
         // Get employees for the view (you can use it for dropdowns or other use cases)
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
 
         return view('cashVoucherRequests.index', compact('deliveryRequests', 'employees', 'search'));
     }
@@ -54,20 +55,48 @@ class CashVoucherController extends Controller
         $search = $request->get('search');
     
         // Fetch related delivery line items by joining with the correct table name
-        $deliveryRequests = CashVoucher::join('delivery_request', 'cash_vouchers.dr_id', '=', 'delivery_request.id')
-            ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
-            ->when($search, function ($query, $search) {
-                return $query->where('delivery_request.mtm', 'like', '%' . $search . '%');
-            })
-            ->where('cash_vouchers.status', '=', 1)
-            ->select('delivery_request.*', 'cash_vouchers.*', 'cvr_request_type.request_type as cvr_type')
-            ->paginate(10);
-    
+        $deliveryRequests = CashVoucher::with([
+            'deliveryRequest.deliveryAllocations' => function ($query) {
+                $query->orderBy('sequence');
+            },
+            'deliveryRequest.pulloutAllocations',
+            'deliveryRequest.accessorialAllocations',
+            'deliveryRequest.othersAllocations',
+            'deliveryRequest.freightAllocations',
+            'cvrTypes'
+        ])
+        ->when($search, function ($query, $search) {
+            return $query->whereHas('deliveryRequest', function ($q) use ($search) {
+                $q->where('mtm', 'like', '%' . $search . '%');
+            });
+        })
+        ->where('status', 1)
+        ->whereNotIn('cvr_type', ['admin', 'rpm'])
+        ->paginate(10);
+
+        foreach ($deliveryRequests as $cashVoucher) {
+            $allAllocations = collect([
+                ...($cashVoucher->deliveryRequest->deliveryAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->pulloutAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->accessorialAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->othersAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->freightAllocations ?? []),
+            ]);
+
+            $matchedAllocation = $allAllocations->first(function ($allocation) use ($cashVoucher) {
+                return $allocation->dr_id == $cashVoucher->dr_id &&
+                    strtolower($allocation->trip_type) === strtolower($cashVoucher->cvr_type) &&
+                    $allocation->sequence == $cashVoucher->sequence;
+            });
+
+            // Add this to the model temporarily so you can access in the view
+            $cashVoucher->matched_allocation = $matchedAllocation;
+        }
         // Check if the request expects an AJAX response
         if ($request->ajax()) {
             return view('cashVoucherRequests.approval', compact('deliveryRequests'))->render();
         }
-    
+
         // For the normal view
         return view('cashVoucherRequests.approval', compact('deliveryRequests', 'search'));
     }    
@@ -89,7 +118,7 @@ class CashVoucherController extends Controller
         ->paginate(10);
 
         // Get employees for the view (you can use it for dropdowns or other use cases)
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
 
         return view('cashVoucherRequests.accessorial', compact('deliveryRequests', 'employees', 'search'));
     }
@@ -107,7 +136,7 @@ class CashVoucherController extends Controller
             ->paginate(10); // Pagination
 
         // Get employees for the view (you can use it for dropdowns or other use cases)
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
 
         return view('cashVoucherRequests.index', compact('deliveryRequests', 'employees', 'search'));
     }
@@ -119,6 +148,8 @@ class CashVoucherController extends Controller
             ->where('delivery_request_line_items.status', '!=', 0)
             ->select('delivery_request.*', 'delivery_request_line_items.*', 'delivery_request.id as request_id')
             ->get();
+
+        $allocation = Allocation::where('dr_id', $id)->first();
 
         if ($deliveryLineItems->isEmpty()) {
             abort(404, 'No delivery request line items found.');
@@ -159,8 +190,8 @@ class CashVoucherController extends Controller
 
         // Fetch other required data
         $requestType = cvr_request_type::all();
-        $employees = User::all();
-        $fleetCards = FleetCard::all();
+        $employees = User::where('status', '!=', 0)->get();
+        $fleetCards = FleetCard::where('status', 1)->get();
         $taxes = WithholdingTax::all();
 
         return view('cashVoucherRequests.request', compact(
@@ -171,7 +202,8 @@ class CashVoucherController extends Controller
             'employees',
             'fleetCards',
             'trucks',
-            'taxes'
+            'taxes', 
+            'allocation'
         ));
     }
 
@@ -190,12 +222,12 @@ class CashVoucherController extends Controller
             'accessorial_types.accessorial_types_name as accessorial_type_name'
         )
         ->get();
-        // dd($deliveryLineItems);
+
 
         $cvr = MonthlySeriesNumber::all();
         $requestType = cvr_request_type::all();
-        $employees = User::all();
-        $fleetCards = FleetCard::All();
+        $employees = User::where('status', '!=', 0)->get();
+        $fleetCards = FleetCard::where('status', 1)->get();
 
         return view('cashVoucherRequests.accessorialRequest', compact('deliveryLineItems', 'cvr', 'requestType', 'employees', 'fleetCards'));
     }
@@ -203,6 +235,7 @@ class CashVoucherController extends Controller
     public function store(Request $request)
     {
         Log::info('Request Data:', ['data' => $request->all()]);
+        $company_id = $request->company_id;
 
         try {
             $validated = $request->validate([
@@ -217,56 +250,62 @@ class CashVoucherController extends Controller
                 'tax_base_amount' => 'nullable|numeric|min:0',
             ]);
             Log::info('Validation Passed:', ['validated_data' => $validated]);
-
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::error('Validation Errors:', ['errors' => $e->errors()]);
             return redirect()->back()->withErrors($e->errors())->withInput();
         }
 
-        $company_id = $request->company_id;
+        $sequence = CashVoucher::where('dr_id', $request->dr_id)
+            ->where('cvr_type', $request->cvr_type)
+            ->count() + 1;
 
         // Run everything in a DB transaction
-        DB::transaction(function () use ($company_id, $request) {
+        DB::transaction(function () use ($company_id, $request, $sequence) {
             // Handle potential rollover
-            $currentDate = new DateTime();
-            $lastDayOfMonth = $currentDate->format('t');
-            if ((int)$currentDate->format('j') === (int)$lastDayOfMonth) {
-                $currentDate->modify('first day of next month');
-            }
+            $currentDate = new DateTime(); // Always current date
+            $yearMonth = $currentDate->format('Y-m');
+            $isFirstDayOfMonth = (int) $currentDate->format('d') === 1;
 
-            $currentMonthString = $currentDate->format('Y-m');
-
-            // Lock and fetch or create MonthlySeriesNumber
             $monthlySeries = MonthlySeriesNumber::where('company_id', $company_id)
-                ->where('month', $currentMonthString)
                 ->lockForUpdate()
                 ->first();
 
             if (!$monthlySeries) {
-                $monthlySeries = new MonthlySeriesNumber();
-                $monthlySeries->company_id = $company_id;
-                $monthlySeries->month = $currentMonthString;
-                $monthlySeries->series_number = 1;
-                $monthlySeries->save();
-                $nextCvrNumber = 1;
-                Log::info("Created new MonthlySeriesNumber with series_number = 1 for company_id: {$company_id}");
+                    // Create if not exists
+                    $monthlySeries = MonthlySeriesNumber::create([
+                        'company_id' => $company_id,
+                        'month' => $yearMonth,
+                        'series_number' => 1,
+                    ]);
+                    $nextCvrNumber = 1;
+                    Log::info("Created MonthlySeriesNumber: company_id = $company_id, month = $yearMonth, series = 1");
             } else {
-                if ($monthlySeries->series_number <= 0) {
-                    $monthlySeries->series_number = 1;
+                    // Check if the month has changed, and reset series number if true
+                    $isNewMonth = $monthlySeries->month !== $yearMonth;
+                if ($isNewMonth) {
+                        // Reset the series number for the new month
+                        $monthlySeries->update([
+                            'month' => $yearMonth,
+                            'series_number' => 1,
+                        ]);
+                        $nextCvrNumber = 1;
+                        Log::info("Reset MonthlySeriesNumber: company_id = $company_id, new month = $yearMonth, series = 1");
                 } else {
-                    $monthlySeries->increment('series_number');
+                        // Normal increment
+                        $monthlySeries->increment('series_number');
+                        $nextCvrNumber = $monthlySeries->series_number;
+                        Log::info("Incremented MonthlySeriesNumber: company_id = $company_id, series = $nextCvrNumber");
                 }
-                $nextCvrNumber = $monthlySeries->series_number;
-                Log::info("Updated MonthlySeriesNumber to {$nextCvrNumber} for company_id: {$company_id}");
             }
 
             // Construct the final CVR number
             $currentYear = $currentDate->format('Y');
             $currentMonth = $currentDate->format('m');
             $nextCvrNumberFormatted = sprintf('%03d', $nextCvrNumber);
-            $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}";
+            $formattedCvrNumber = "CVR-{$currentYear}-{$currentMonth}-{$nextCvrNumberFormatted}/{$company_id}";
             $user = Auth::user();
             $employeeCode = $user->id;
+            $remarks = $request->has('remarks') ? json_encode($request->remarks) : null;
 
             // Save the actual cash voucher
             $cashVoucher = new CashVoucher([
@@ -275,25 +314,27 @@ class CashVoucherController extends Controller
                 'amount' => $request->amount,
                 'request_type' => $request->request_type,
                 'requestor' => $request->requestor,
-                'mtm' => $request->mtm,    
+                'mtm' => $request->mtm,
                 'status' => '1',
                 'voucher_type' => $request->voucher_type,
                 'withholding_tax_id' => $request->voucher_type === 'with_tax' ? $request->withholding_tax : null,
                 'tax_based_amount' => $request->voucher_type === 'with_tax' ? $request->tax_base_amount : null,
-                'remarks' => $request->has('remarks') ? json_encode($request->remarks) : null,
+                'remarks' => $remarks, 
                 'created_by' => $employeeCode,
                 'dr_id' => $request->dr_id,
+                'sequence' => $sequence,
             ]);
 
             Log::info('Saving Cash Voucher:', ['cash_voucher' => $cashVoucher->toArray()]);
             $cashVoucher->save();
 
             // Update DeliveryRequest status
-            $deliveryRequest = DeliveryRequest::where('mtm', $request->mtm)->first();
+            $deliveryRequest = DeliveryRequest::where('id', $request->dr_id)->first();
             if ($deliveryRequest && $deliveryRequest->status != 0) {
+                Log::info("Updating DeliveryRequest status: dr_id = {$request->dr_id}, old_status = {$deliveryRequest->status}, new_status = 1");
                 $deliveryRequest->status = '1';
+                $deliveryRequest->delivery_status = 2;
                 $deliveryRequest->save();
-                Log::info('Updated DeliveryRequest status to 1.');
             }
 
             // Update Line Items
@@ -302,16 +343,17 @@ class CashVoucherController extends Controller
                 ->get();
 
             foreach ($lineItems as $lineItem) {
+                Log::info("Updating LineItem status: line_item_id = {$lineItem->id}, old_status = {$lineItem->status}, new_status = 1");
                 $lineItem->status = '1';
                 $lineItem->save();
             }
-
-            Log::info('Updated DeliveryRequestLineItems status to 1.');
         });
 
-        return redirect()->route('cashVoucherRequests.index')
-            ->with('success', 'Cash Voucher created successfully and statuses updated.');
+            return redirect()->route('coordinators.index', ['tab' => 'status9'])
+                ->with('success', 'Cash Voucher created successfully and statuses updated.');
     }
+
+
 
     public function store_accessorial(Request $request)
     {
@@ -413,11 +455,16 @@ class CashVoucherController extends Controller
         $deliveryRequestId = $id;
 
         $cashVouchers = CashVoucher::where('id', $id)->first();
+        $deliveryRequests = DeliveryRequest::where('id', $cashVouchers->dr_id)->first();
+        $allocations = Allocation::where('dr_id', $cashVouchers->dr_id)
+            ->where('trip_type', $cashVouchers->cvr_type)
+            ->where('sequence', $cashVouchers->sequence)
+            ->first();
 
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
         $approves = Approver::all(); 
 
-        return view('cashVoucherRequests.approvalRequest', compact('deliveryRequestId', 'employees', 'approves', 'cashVouchers'));
+        return view('cashVoucherRequests.approvalRequest', compact('deliveryRequestId', 'employees', 'approves', 'cashVouchers', 'allocations', 'deliveryRequests'));
     }
 
     public function reject(Request $request)
@@ -428,9 +475,15 @@ class CashVoucherController extends Controller
         ]);
 
         $cashVoucher = CashVoucher::find($request->cvr_id);
+        // $cashVoucher_approval = cvr_approval::where('cvr_id', $request->cvr_id)->first();
+
+        // if ($cashVoucher_approval) {
+        //     $cashVoucher_approval->status =3;
+        //     $cashVoucher_approval->save();
+        // }
 
         if ($cashVoucher) {
-            $cashVoucher->status = 3;
+            $cashVoucher->status = 3; 
 
             // Decode existing remarks and append new one
             $existingRemarks = json_decode($cashVoucher->reject_remarks, true) ?? [];
@@ -447,23 +500,53 @@ class CashVoucherController extends Controller
 
     public function approvalRequestStore(Request $request)
     {
-        $cvr_id = $request->cvr_id;
-        $cashVouchers = CashVoucher::where('id', $cvr_id)->first();
+        // Step 1: Validate request
+        $validated = $request->validate([
+            'cvr_id' => 'required|exists:cash_vouchers,id',
+            'cvr_number' => 'required|string',
+            'payment_type' => 'required|in:cash,bank_transfer,outlet_transfer',
 
-        if ($cashVouchers) {
-            $cashVouchers->status = 2;
-            $cashVouchers->save();
-        }
+            // Cash fields
+            'cash_amount' => 'sometimes|required_if:payment_type,cash|numeric',
+            'cash_receiver' => 'sometimes|required_if:payment_type,cash|string',
+            'cash_fund_source' => 'sometimes|required_if:payment_type,cash|string',
+            'reference_number' => 'nullable|string',
+
+            // Bank fields
+            'bank_name' => 'sometimes|required_if:payment_type,bank_transfer|string',
+            'bank_reference_number' => 'sometimes|required_if:payment_type,bank_transfer|string',
+            'bank_amount' => 'sometimes|required_if:payment_type,bank_transfer|numeric',
+            'bank_receiver' => 'sometimes|required_if:payment_type,bank_transfer|string',
+            'bank_fund_source' => 'sometimes|required_if:payment_type,bank_transfer|string',
+            'bank_charge' => 'nullable|numeric',
+
+            // Outlet fields
+            'outlet_name' => 'sometimes|required_if:payment_type,outlet_transfer|string',
+            'outlet_reference_number' => 'sometimes|required_if:payment_type,outlet_transfer|string',
+            'outlet_amount' => 'sometimes|required_if:payment_type,outlet_transfer|numeric',
+            'outlet_receiver' => 'sometimes|required_if:payment_type,outlet_transfer|string',
+            'outlet_fund_source' => 'sometimes|required_if:payment_type,outlet_transfer|string',
+            'outlet_charge' => 'nullable|numeric',
+
+            // Cheque fields
+            'cheque_bank_name' => 'sometimes|required_if:payment_type,cheque_transfer|string',
+            'cheque_number' => 'sometimes|required_if:payment_type,cheque_transfer|string',
+            'cheque_amount' => 'sometimes|required_if:payment_type,cheque_transfer|numeric',
+            'cheque_receiver' => 'sometimes|required_if:payment_type,cheque_transfer|string',
+            'cheque_fund_source' => 'sometimes|required_if:payment_type,cheque_transfer|string',
+            'cheque_charge' => 'nullable|numeric',
+        ]);
+
 
         Log::info('Full Request Data', $request->all());
 
-        // Set payment_name based on payment type
+        // Step 2: Extract payment fields
         $paymentName = '';
         $reference_number = '';
-        $amount = '';
+        $amount = 0;
         $receiver = '';
         $fund_source = '';
-        $charge = null;
+        $charge = 0;
 
         switch ($request->payment_type) {
             case 'cash':
@@ -472,329 +555,561 @@ class CashVoucherController extends Controller
                 $amount = $request->cash_amount;
                 $receiver = $request->cash_receiver;
                 $fund_source = $request->cash_fund_source;
-                $charge = null;
+                $charge = 0;
                 break;
+
             case 'bank_transfer':
                 $paymentName = $request->bank_name;
                 $reference_number = $request->bank_reference_number;
                 $amount = $request->bank_amount;
                 $receiver = $request->bank_receiver;
                 $fund_source = $request->bank_fund_source;
-                $charge = $request->bank_charge;
+                $charge = $request->bank_charge ?? 0;
                 break;
+
             case 'outlet_transfer':
                 $paymentName = $request->outlet_name;
                 $reference_number = $request->outlet_reference_number;
                 $amount = $request->outlet_amount;
                 $receiver = $request->outlet_receiver;
                 $fund_source = $request->outlet_fund_source;
-                $charge = $request->outlet_charge;
+                $charge = $request->outlet_charge ?? 0;
+                break;
+            case 'cheque_transfer':
+                $paymentName = $request->cheque_bank_name;
+                $reference_number = $request->cheque_number;
+                $amount = $request->cheque_amount;
+                $receiver = $request->cheque_receiver;
+                $fund_source = $request->cheque_fund_source;
+                $charge = $request->cheque_charge ?? 0;
                 break;
         }
-
-        // Wrap the saving logic in a try-catch block and use a transaction
-        DB::beginTransaction();
 
         $user = Auth::user();
         $employeeCode = $user->id;
 
-        try {
-            // Save cvr_approval
-            $cvrApproval = new cvr_approval();
-            $cvrApproval->payment_type = $request->payment_type;
-            $cvrApproval->payment_name = $paymentName;
-            $cvrApproval->reference_number = $reference_number;
-            $cvrApproval->amount = $amount;
-            $cvrApproval->receiver = $receiver;
-            $cvrApproval->source = $fund_source;
-            $cvrApproval->charge = $charge ?? null;
-            $cvrApproval->cvr_number = $request->cvr_number;
-            $cvrApproval->status = 1; // Set initial status
-            $cvrApproval->created_by = $employeeCode;
-            $cvrApproval->cvr_id = $request->cvr_id;
-            $cvrApproval->save();
+        // Step 3: Start transaction
+        DB::beginTransaction();
 
-            // Log success for cvr_approval
+        try {
+            // Step 4: Save cvr_approval
+            $cvrApproval = new cvr_approval();
+            $cvrApproval->fill([
+                'payment_type' => $request->payment_type,
+                'payment_name' => $paymentName,
+                'reference_number' => $reference_number,
+                'amount' => $amount,
+                'receiver' => $receiver,
+                'source' => $fund_source,
+                'charge' => $charge,
+                'cvr_number' => $request->cvr_number,
+                'status' => 1,
+                'created_by' => $employeeCode,
+                'cvr_id' => $request->cvr_id,
+            ]);
+            $cvrApproval->saveOrFail();
+
             Log::info('Cash Voucher Approval saved successfully', [
                 'cvr_approval_id' => $cvrApproval->id,
-                'amount' => $cvrApproval->amount,
-                'receiver' => $cvrApproval->receiver,
-            ]);
-
-            // Update the related CashVoucher status to 2 (approved)
-            $cashVoucher = CashVoucher::where('cvr_number', $request->cvr_number)->first(); // Assuming cvr_number is the identifier
-            if ($cashVoucher) {
-                $cashVoucher->status = 2; // Update status to 2 (approved)
-                $cashVoucher->save(); // Save the status change
-
-                Log::info('Cash Voucher status updated to 2', [
-                    'cash_voucher_id' => $cashVoucher->id,
-                    'new_status' => $cashVoucher->status,
-                ]);
-
-            $amount = floatval($cvrApproval->amount ?? 0);
-            $charge = floatval($cvrApproval->charge ?? 0);
-            $totalAmount = $amount + $charge;
-            RunningBalance::create([
-                'type' => 8, // CVR approval
-                'amount' => -1 * floatval($totalAmount), // It's a deduction
-                'description' => $cashVouchers->cvr_number,
-                'employee_id' => $receiver, // Or set this if linked to a user
-                'approver_id' => $fund_source,
-                'created_by' => $employeeCode,
-                'cvr_number' =>  $cashVouchers->cvr_number,
-            ]);
-
-            } else {
-                // Log a warning if CashVoucher is not found
-                Log::warning('Cash Voucher not found', [
-                    'cvr_number' => $request->cvr_number,
-                ]);
-
-                // If CashVoucher isn't found, throw an exception to trigger rollback
-                throw new \Exception('Cash Voucher not found.');
-            }
-
-            // Commit the transaction
-            DB::commit();
-
-            // Redirect to success page with success message
-            return redirect()->route('cashVoucherRequests.approval')->with('success', 'Cash Voucher Approval Saved Successfully');
-        } catch (\Exception $e) {
-            // Rollback the transaction if any part of the process fails
-            DB::rollBack();
-
-            // Log error if the save or update fails
-            Log::error('Failed to save Cash Voucher Approval or update Cash Voucher status', [
-                'error_message' => $e->getMessage(),
-                'error_code' => $e->getCode(),
-                'payment_type' => $request->payment_type,
-                'reference_number' => $reference_number,
                 'amount' => $amount,
                 'receiver' => $receiver,
             ]);
 
-            // Return an error message to the user
+            // Step 5: Update CashVoucher status
+            $cashVoucher = CashVoucher::where('cvr_number', $request->cvr_number)->firstOrFail();
+            $cashVoucher->status = 2;
+            $cashVoucher->saveOrFail();
+
+            Log::info('Cash Voucher status updated to 2', [
+                'cash_voucher_id' => $cashVoucher->id,
+                'new_status' => $cashVoucher->status,
+            ]);
+
+            // Step 6: Save running balance
+            $totalAmount = floatval($amount) + floatval($charge);
+            RunningBalance::create([
+                'type' => 8,
+                'amount' => -1 * $totalAmount,
+                'description' => $cashVoucher->cvr_number,
+                'employee_id' => $receiver,
+                'approver_id' => $fund_source,
+                'created_by' => $employeeCode,
+                'cvr_number' => $cashVoucher->cvr_number,
+                'adjustment_type' => 'Out',
+            ]);
+
+            // Step 7: Commit transaction
+            DB::commit();
+
+            return redirect()->route('cashVoucherRequests.approval')
+                ->with('success', 'Cash Voucher Approval Saved Successfully');
+
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            Log::error('Failed to process Cash Voucher Approval', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return redirect()->route('cashVoucherRequests.approval')
                 ->with('error', 'DB Error: ' . $e->getMessage());
         }
     }
 
+
     public function cvrList(Request $request)
-    { 
-        // Get the search query from the request
+    {
         $search = $request->get('search');
-    
-        // Fetch related delivery line items by joining with the correct table name
-        $cashVoucherRequests = CashVoucher::join('delivery_request', 'cash_vouchers.dr_id', '=', 'delivery_request.id')
-            ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
-            ->when($search, function ($query, $search) {
-                return $query->where('delivery_request.mtm', 'like', '%' . $search . '%');
-            })
-            ->where('cash_vouchers.status', '=', 2)
-            ->orderBy('cash_vouchers.print_status', 'asc')
-            ->select('delivery_request.*', 'cash_vouchers.*', 'cvr_request_type.request_type as cvr_type', 'cash_vouchers.print_status' )
-            ->paginate(10);
-    
-        // Check if the request expects an AJAX response
+
+        $cashVoucherRequests = CashVoucher::with([
+            'deliveryRequest.deliveryAllocations',
+            'deliveryRequest.pulloutAllocations',
+            'deliveryRequest.accessorialAllocations',
+            'deliveryRequest.othersAllocations',
+            'deliveryRequest.freightAllocations',
+            'cvrTypes',
+            'cvrApprovals'  
+        ]) 
+        ->when($search, function ($query, $search) {
+            return $query->whereHas('deliveryRequest', function ($q) use ($search) {
+                $q->where('mtm', 'like', '%' . $search . '%');
+            });
+        })
+        ->where('status', 2)
+        ->whereNotIn('cvr_type', ['admin', 'rpm'])
+        ->orderBy('print_status', 'asc')
+        ->orderBy('cvr_number')
+        ->paginate(10);
+
+        // Add matched_allocation to each cash voucher
+        foreach ($cashVoucherRequests as $cashVoucher) {
+            $allAllocations = collect([
+                ...($cashVoucher->deliveryRequest->deliveryAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->pulloutAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->accessorialAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->othersAllocations ?? []),
+                ...($cashVoucher->deliveryRequest->freightAllocations ?? []),
+            ]);
+
+            $matchedAllocation = $allAllocations->first(function ($allocation) use ($cashVoucher) {
+                return $allocation->dr_id == $cashVoucher->dr_id &&
+                    strtolower($allocation->trip_type) === strtolower($cashVoucher->cvr_type) &&
+                    $allocation->sequence == $cashVoucher->sequence;
+            });
+
+            // Temporarily attach the matched allocation to the model
+            $cashVoucher->matched_allocation = $matchedAllocation;
+        }
+
         if ($request->ajax()) {
             return view('cashVoucherRequests.cvrList_table', compact('cashVoucherRequests'))->render();
         }
-    
-        // For the normal view
+
         return view('cashVoucherRequests.cvrList', compact('cashVoucherRequests', 'search'));
-    } 
+    }
 
     public function printMultiple(Request $request)
     {
-        // Fetch the list of CVR numbers from the request (assumed to be passed as an array)
-        $cvr_numbers = $request->input('cvr_numbers'); // This is an array of CVR numbers
+        $ids = $request->input('cvr_ids', []);
+        $types = $request->input('cvr_types', []); // e.g., ['1' => 'delivery', '2' => 'pullout']
 
-        if (is_string($cvr_numbers)) {
-            $cvr_numbers = explode(',', $cvr_numbers);  // Split by commas
+        if (!is_array($ids) || empty($ids)) {
+            return redirect()->back()->with('error', 'No CVRs selected for printing.');
         }
-
-        if (!is_array($cvr_numbers)) {
-            Log::error('Expected cvr_numbers to be an array, but it is not.', ['cvr_numbers' => $cvr_numbers]);
-            return redirect()->back()->with('error', 'Invalid CVR numbers input.');
-        }
-
-        // Fetch all the cash vouchers based on the provided CVR numbers
-        $cashVoucherRequests = DB::table('cash_vouchers')
-            ->join('cvr_approvals', 'cash_vouchers.cvr_number', '=', 'cvr_approvals.cvr_number')
-            ->join('delivery_request', 'cash_vouchers.mtm', '=', 'delivery_request.mtm')
-            ->select(
-                'cash_vouchers.*',
-                'cash_vouchers.id as cash_vouchers_id',
-                'cvr_approvals.*',
-                'cvr_approvals.id as cvr_approvals_id',
-                'cvr_approvals.amount as approved_amount',
-                'delivery_request.*'
-            )
-            ->whereIn('cash_vouchers.cvr_number', $cvr_numbers)
-            ->get();
 
         $allData = [];
 
-        // Loop over the results to prepare the data for each voucher
-        foreach ($cashVoucherRequests as $cashVoucherRequest) {
+        foreach ($ids as $id) {
+            $mtm = $types[$id] ?? null;
+
+            // Fetch CVR with relationships
+            $cashVoucherRequest = CashVoucher::with([
+                'deliveryRequest',
+                'withholdingTax:id,description,percentage'
+            ])->find($id);
+
+            if (!$cashVoucherRequest || !$mtm) {
+                continue;
+            }
+
+            // Decode or explode remarks
             if (is_string($cashVoucherRequest->remarks) && $this->isJson($cashVoucherRequest->remarks)) {
                 $remarks = json_decode($cashVoucherRequest->remarks, true);
             } else {
-                // If it's a string (but not JSON), explode it by commas into an array
-                $remarks = is_string($cashVoucherRequest->remarks) ? explode(',', $cashVoucherRequest->remarks) : (array) $cashVoucherRequest->remarks;
+                $remarks = is_string($cashVoucherRequest->remarks)
+                    ? explode(',', $cashVoucherRequest->remarks)
+                    : (array) $cashVoucherRequest->remarks;
             }
-
             $remarks = array_map('trim', $remarks);
 
-            // Fetch additional related data for the voucher
+            // Delivery line items
             $deliveryLineItems = DB::table('delivery_request_line_items')
-                ->select('delivery_request_line_items.*')
-                ->where('delivery_request_line_items.mtm', $cashVoucherRequest->mtm)
+                ->where('dr_id', $cashVoucherRequest->dr_id)
                 ->get();
 
-            $deliveryRequest = DB::table('delivery_request')
-                ->leftjoin('customers', 'delivery_request.customer_id', '=', 'customers.id')
-                ->where('delivery_request.mtm', $cashVoucherRequest->mtm)
-                ->first();
+            // Delivery request with company & customer
+            $deliveryRequest = DeliveryRequest::with('company', 'customer')
+                ->find($cashVoucherRequest->dr_id);
 
+            // Request type
             $requestTypes = DB::table('cash_vouchers')
                 ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
-                ->where('cash_vouchers.cvr_number', $cashVoucherRequest->cvr_number)
+                ->where('cash_vouchers.id', $id)
                 ->first();
 
-            $drivers = DB::table('cash_vouchers')
-                ->join('employees', 'cash_vouchers.driver', '=', 'employees.id')
-                ->where('cash_vouchers.cvr_number', $cashVoucherRequest->cvr_number)
+            // Driver info
+            $drivers = DB::table('allocations')
+                ->join('users', 'allocations.driver_id', '=', 'users.id')
+                ->where('allocations.dr_id', $cashVoucherRequest->dr_id)
+                ->where('allocations.trip_type', $mtm)
+                ->where('sequence', $cashVoucherRequest->sequence)
+                ->first();
+                
+            // Allocation + Truck
+            $allocations = Allocation::with('truck')
+                ->where('dr_id', $cashVoucherRequest->dr_id)
+                ->where('trip_type', $mtm)
+                ->where('sequence', $cashVoucherRequest->sequence)
                 ->first();
 
-            $fleets = DB::table('cash_vouchers')
-                ->join('fleet_cards', 'cash_vouchers.fleet_card', '=', 'fleet_cards.id')
-                ->where('cash_vouchers.cvr_number', $cashVoucherRequest->cvr_number)
+            // Fleet card info
+            $fleets = DB::table('allocations')
+                ->join('fleet_cards', 'allocations.fleet_card_id', '=', 'fleet_cards.id')
+                ->where('allocations.dr_id', $cashVoucherRequest->dr_id)
+                ->where('trip_type', $mtm)
+                ->where('sequence', $cashVoucherRequest->sequence)
                 ->first();
 
-            $employees = DB::table('cvr_approvals')
-                ->join('employees', 'cvr_approvals.receiver', '=', 'employees.id')
-                ->select('employees.*', 'cvr_approvals.*')
+            // Employee info (requestor)
+            $employees = DB::table('cash_vouchers')
+                ->join('users', 'cash_vouchers.requestor', '=', 'users.id')
+                ->select('users.*', 'cash_vouchers.*')
+                ->where('cash_vouchers.id', $id)
+                ->first();
+
+            // Approval info
+            $cvrApprovals = cvr_approval::where('cvr_id', $id)->first();
+
+            $approvers = DB::table('cvr_approvals')
+                ->leftJoin('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
                 ->where('cvr_approvals.cvr_number', $cashVoucherRequest->cvr_number)
                 ->first();
+
+            // Amount calculations
+            if ($cashVoucherRequest->voucher_type === 'with_tax') {
+                $baseAmount = $cashVoucherRequest->tax_based_amount ?? 0;
+                $vatAmount = $baseAmount * 0.12;
+                $taxPercentage = $cashVoucherRequest->withholdingTax->percentage ?? 0;
+                $taxDeduction = $baseAmount * $taxPercentage;
+                $finalAmount = $baseAmount + $vatAmount - $taxDeduction;
+            } elseif ($cashVoucherRequest->voucher_type === 'regular') {
+                $baseAmount = $cvrApprovals->amount ?? 0;
+                $vatAmount = 0;
+                $taxDeduction = 0;
+                $finalAmount = $baseAmount;
+            } else {
+                $finalAmount = 0;
+            }
+
+            $amountInWords = $finalAmount > 0 ? $this->convertAmountToWords($finalAmount) : 'N/A';
+
+            $allData[] = compact(
+                'cashVoucherRequest', 'amountInWords', 'deliveryLineItems', 'employees',
+                'approvers', 'drivers', 'fleets', 'requestTypes', 'deliveryRequest',
+                'remarks', 'allocations', 'cvrApprovals'
+            );
+        }
+
+        return view('cashVoucherRequests.printMultiple', compact('allData'));
+    }
+
+
+    public function printCVR($id, $cvr_number, $mtm, $sequence)
+    {
+         $cashVoucherRequest = CashVoucher::with([
+                'deliveryRequest',
+                'withholdingTax:id,description,percentage'
+            ])
+            ->where('id', $id)
+            ->where('dr_id', $cvr_number)
+            ->where('sequence', $sequence)
+            ->first();
+
+            // Check if the remarks column contains a JSON string
+            if (is_string($cashVoucherRequest->remarks) && $this->isJson($cashVoucherRequest->remarks)) {
+                // Decode JSON if it is in JSON format
+                $remarks = json_decode($cashVoucherRequest->remarks, true);
+            } else {
+                // Otherwise, just explode the string (assuming it is comma-separated)
+                $remarks = explode(',', $cashVoucherRequest->remarks);
+            }
+    
+            $remarks = array_map('trim', $remarks);
+    
+            $deliveryLineItems = DB::table('delivery_request_line_items')
+            ->select(
+                'delivery_request_line_items.*'
+            )
+            ->where('delivery_request_line_items.dr_id', $cvr_number)
+            ->get();
+
+    
+            $deliveryRequest = DeliveryRequest::with('company','customer')
+            ->where('id', $cashVoucherRequest->dr_id)
+            ->first();
+    
+            $requestTypes = DB::table('cash_vouchers')
+            ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
+            ->where('cash_vouchers.dr_id', $cvr_number) 
+            ->where('cash_vouchers.cvr_type', $mtm) 
+            ->first();
+    
+            $drivers = DB::table('allocations')
+            ->join('users', 'allocations.driver_id', '=', 'users.id')
+            ->where('allocations.dr_id', $cvr_number) 
+            ->where('allocations.trip_type', $mtm) 
+            ->where('sequence', $cashVoucherRequest->sequence)
+            ->first();
+
+            $allocations = Allocation::with('truck')
+            ->where('dr_id', $cashVoucherRequest->dr_id)
+            ->where('allocations.trip_type', $mtm) 
+            ->where('sequence', $cashVoucherRequest->sequence)
+            ->first();
+    
+            $fleets = DB::table('allocations')
+            ->join('fleet_cards', 'allocations.fleet_card_id', '=', 'fleet_cards.id')
+            ->where('allocations.dr_id', $cvr_number) 
+            ->where('allocations.trip_type', $mtm) 
+            ->where('sequence', $cashVoucherRequest->sequence)
+            ->first();
+    
+            $employees = DB::table('cash_vouchers')
+            ->join('users', 'cash_vouchers.requestor', '=', 'users.id')
+            ->select('users.*', 'cash_vouchers.*') 
+            ->where('cash_vouchers.dr_id', $cvr_number) 
+            ->where('cash_vouchers.cvr_type', $mtm) 
+            ->where('sequence', $cashVoucherRequest->sequence)
+            ->first();
+
+            $cvrApprovals = cvr_approval::where('cvr_id', $id)
+            ->first();
 
             $approvers = DB::table('cvr_approvals')
                 ->leftjoin('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
                 ->where('cvr_approvals.cvr_number', $cashVoucherRequest->cvr_number)
                 ->first();
 
-            // Convert the amount to words
-            $amountInWords = $cashVoucherRequest->approved_amount ? $this->convertAmountToWords($cashVoucherRequest->approved_amount) : 'N/A';
+            if ($cashVoucherRequest->voucher_type === 'with_tax') {
+                $baseAmount = $cashVoucherRequest->tax_based_amount ?? 0;
+                $vatAmount = $baseAmount * 0.12;
+                $taxPercentage = $cashVoucherRequest->withholdingTax->percentage ?? 0;
+                $taxDeduction = $baseAmount * $taxPercentage;
+                $finalAmount = $baseAmount + $vatAmount - $taxDeduction;
+            } elseif ($cashVoucherRequest->voucher_type === 'regular') {
+                $baseAmount = $cvrApprovals->amount ?? 0;
+                $vatAmount = 0;
+                $taxDeduction = 0;
+                $finalAmount = $cvrApprovals->amount ?? 0;
+            } else {
+                $baseAmount = 0;
+                $vatAmount = 0;
+                $taxDeduction = 0;
+                $finalAmount = 0;
+            }
 
-            // Add the data to the allData array for rendering in the view
-            $allData[] = compact(
-                'cashVoucherRequest', 'amountInWords', 'deliveryLineItems', 
-                'employees', 'approvers', 'drivers', 'fleets', 'requestTypes', 
-                'deliveryRequest', 'remarks'
-            );
-        }
-
-        // Pass the allData array to the view
-        return view('cashVoucherRequests.printMultiple', compact('allData'));
-    }
-
-    public function printCVR($id, $cvr_number, $mtm)
-    {
-        // Fetch the cash voucher request by its ID using raw DB queries
-        $cashVoucherRequest = DB::table('cash_vouchers')
-        ->join('cvr_approvals', 'cash_vouchers.cvr_number', '=', 'cvr_approvals.cvr_number')
-        ->join('delivery_request', 'cash_vouchers.mtm', '=', 'delivery_request.mtm')
-        // ->join('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
-        // ->join('employees', 'cvr_approvals.receiver', '=', 'employees.id')
-        ->select(
-            'cash_vouchers.*',
-            'cash_vouchers.id as cash_vouchers_id',
-            'cvr_approvals.*',
-            'cvr_approvals.id as cvr_approvals_id',
-            'cvr_approvals.amount as approved_amount',
-            'delivery_request.*'
-            // 'cvr_approver.*',
-            // 'employees.*',
-        )
-        ->where('cash_vouchers.id', $id)
-        ->where('cash_vouchers.cvr_number', $cvr_number) 
-        ->first();
-
-        // Check if the remarks column contains a JSON string
-        if (is_string($cashVoucherRequest->remarks) && $this->isJson($cashVoucherRequest->remarks)) {
-            // Decode JSON if it is in JSON format
-            $remarks = json_decode($cashVoucherRequest->remarks, true);
-        } else {
-            // Otherwise, just explode the string (assuming it is comma-separated)
-            $remarks = explode(',', $cashVoucherRequest->remarks);
-        }
-
-        $remarks = array_map('trim', $remarks);
-
-        $deliveryLineItems = DB::table('delivery_request_line_items')
-        ->select(
-            'delivery_request_line_items.*'
-        )
-        ->where('delivery_request_line_items.mtm', $mtm)
-        ->get();
-
-        $deliveryRequest = DB::table('delivery_request')
-        ->leftjoin('customers', 'delivery_request.customer_id', '=', 'customers.id')
-        ->where('delivery_request.mtm', $mtm) 
-        ->first();
-
-        $requestTypes = DB::table('cash_vouchers')
-        ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
-        ->where('cash_vouchers.cvr_number', $cvr_number) 
-        ->first();
-
-        $drivers = DB::table('cash_vouchers')
-        ->join('employees', 'cash_vouchers.driver', '=', 'employees.id')
-        ->where('cash_vouchers.cvr_number', $cvr_number) 
-        ->first();
-
-        $fleets = DB::table('cash_vouchers')
-        ->join('fleet_cards', 'cash_vouchers.fleet_card', '=', 'fleet_cards.id')
-        ->where('cash_vouchers.cvr_number', $cvr_number) 
-        ->first();
-
-        $employees = DB::table('cvr_approvals')
-        ->join('employees', 'cvr_approvals.receiver', '=', 'employees.id')
-        ->select('employees.*', 'cvr_approvals.*') 
-        ->where('cvr_approvals.cvr_number', $cvr_number) 
-        ->first();
-
-        $approvers = DB::table('cvr_approvals')
-        ->leftjoin('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
-        // ->select('cvr_approver.*', 'cvr_approvals.*') 
-        ->where('cvr_approvals.cvr_number', $cvr_number) 
-        ->first();
-
-
-
-        // Check if the amount exists and convert it to words
-        $amountInWords = $cashVoucherRequest->approved_amount ? $this->convertAmountToWords($cashVoucherRequest->approved_amount) : 'N/A';
-
+            $amountInWords = $finalAmount > 0 ? $this->convertAmountToWords($finalAmount) : 'N/A';
+   
         // Return the print view with the data
         return view(
             'cashVoucherRequests.print', compact('cashVoucherRequest', 'amountInWords', 
-            'deliveryLineItems', 'employees', 'approvers', 'drivers', 'fleets', 'requestTypes', 'deliveryRequest', 'remarks'
+            'deliveryLineItems', 'employees', 'approvers', 'drivers', 'fleets', 'requestTypes', 'deliveryRequest', 'remarks', 'allocations', 'cvrApprovals'
+        ));
+    }
+
+    public function editPrint($id, $cvr_number, $mtm, $sequence)
+    {
+        $cvrApprovals = cvr_approval::where('cvr_id', $id)
+            ->first();
+
+        return view('cashVoucherRequests.editPrintView', compact('cvrApprovals'));
+    }
+
+    public function updateReference(Request $request, $id)
+    {
+        $request->validate([
+            'reference_number' => 'required|string|max:255',
+        ]);
+
+        try {
+            $cvrApproval = cvr_approval::findOrFail($id);
+            $cvrApproval->reference_number = $request->reference_number;
+            $cvrApproval->save();
+
+            return redirect()
+                ->route('cashVoucherRequests.cvrList')
+                ->with('success', 'Reference number updated successfully.');
+
+        } catch (\Exception $e) {
+
+            return redirect()
+                ->route('cashVoucherRequests.cvrList')
+                ->with('error', 'Failed to update reference number.');
+        }
+    }
+
+
+    public function printViewCVR($id, $cvr_number, $mtm, $sequence)
+    {
+         $cashVoucherRequest = CashVoucher::with([
+                'deliveryRequest',
+                'withholdingTax:id,description,percentage'
+            ])
+            ->where('id', $id)
+            ->where('dr_id', $cvr_number)
+            ->where('sequence', $sequence)
+            ->first();
+
+            // Check if the remarks column contains a JSON string
+            if (is_string($cashVoucherRequest->remarks) && $this->isJson($cashVoucherRequest->remarks)) {
+                // Decode JSON if it is in JSON format
+                $remarks = json_decode($cashVoucherRequest->remarks, true);
+            } else {
+                // Otherwise, just explode the string (assuming it is comma-separated)
+                $remarks = explode(',', $cashVoucherRequest->remarks);
+            }
+    
+            $remarks = array_map('trim', $remarks);
+    
+            $deliveryLineItems = DB::table('delivery_request_line_items')
+            ->select(
+                'delivery_request_line_items.*'
+            )
+            ->where('delivery_request_line_items.dr_id', $cvr_number)
+            ->get();
+
+    
+            $deliveryRequest = DeliveryRequest::with('company','customer')
+            ->where('id', $cashVoucherRequest->dr_id)
+            ->first();
+    
+            $requestTypes = DB::table('cash_vouchers')
+            ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
+            ->where('cash_vouchers.dr_id', $cvr_number) 
+            ->where('cash_vouchers.cvr_type', $mtm) 
+            ->first();
+    
+            $drivers = DB::table('allocations')
+            ->join('users', 'allocations.driver_id', '=', 'users.id')
+            ->where('allocations.dr_id', $cvr_number) 
+            ->where('allocations.trip_type', $mtm) 
+            ->where('sequence', $cashVoucherRequest->sequence)
+            ->first();
+
+            $allocations = Allocation::with('truck')
+            ->where('dr_id', $cashVoucherRequest->dr_id)
+            ->where('allocations.trip_type', $mtm) 
+            ->where('sequence', $cashVoucherRequest->sequence)
+            ->first();
+    
+            $fleets = DB::table('allocations')
+            ->join('fleet_cards', 'allocations.fleet_card_id', '=', 'fleet_cards.id')
+            ->where('allocations.dr_id', $cvr_number) 
+            ->where('allocations.trip_type', $mtm) 
+            ->where('sequence', $cashVoucherRequest->sequence)
+            ->first();
+    
+            $employees = DB::table('cash_vouchers')
+            ->join('users', 'cash_vouchers.requestor', '=', 'users.id')
+            ->select('users.*', 'cash_vouchers.*') 
+            ->where('cash_vouchers.dr_id', $cvr_number) 
+            ->where('cash_vouchers.cvr_type', $mtm) 
+            ->where('sequence', $cashVoucherRequest->sequence)
+            ->first();
+
+            $cvrApprovals = cvr_approval::where('cvr_id', $id)
+            ->first();
+
+            $approvers = DB::table('cvr_approvals')
+                ->leftjoin('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
+                ->where('cvr_approvals.cvr_number', $cashVoucherRequest->cvr_number)
+                ->first();
+
+            if ($cashVoucherRequest->voucher_type === 'with_tax') {
+                $baseAmount = $cashVoucherRequest->tax_based_amount ?? 0;
+                $vatAmount = $baseAmount * 0.12;
+                $taxPercentage = $cashVoucherRequest->withholdingTax->percentage ?? 0;
+                $taxDeduction = $baseAmount * $taxPercentage;
+                $finalAmount = $baseAmount + $vatAmount - $taxDeduction;
+            } elseif ($cashVoucherRequest->voucher_type === 'regular') {
+                $baseAmount = $cvrApprovals->amount ?? 0;
+                $vatAmount = 0;
+                $taxDeduction = 0;
+                $finalAmount = $cvrApprovals->amount ?? 0;
+            } else {
+                $baseAmount = 0;
+                $vatAmount = 0;
+                $taxDeduction = 0;
+                $finalAmount = 0;
+            }
+
+            $amountInWords = $finalAmount > 0 ? $this->convertAmountToWords($finalAmount) : 'N/A';
+   
+        // Return the print view with the data
+        return view(
+            'cashVoucherRequests.printView', compact('cashVoucherRequest', 'amountInWords', 
+            'deliveryLineItems', 'employees', 'approvers', 'drivers', 'fleets', 'requestTypes', 'deliveryRequest', 'remarks', 'allocations', 'cvrApprovals'
         ));
     }
 
     public function updatePrintStatus(Request $request)
     {
-        // validate & extract ids
+        $user = Auth::user();
+        $employeeCode = $user->id;
+
+        // Log the authenticated user and their employee code
+        Log::info('User authenticated:', ['user_id' => $user->id, 'employee_code' => $employeeCode]);
+
+        // Validate & extract ids
         $cvrIds = $request->input('cvr_ids', []);
         $voucherIds = $request->input('voucher_ids', []);
 
-        // update as needed
-        cvr_approval::whereIn('id', $cvrIds)->update(['print_status' => '1']);
-        CashVoucher::whereIn('id', $voucherIds)->update(['print_status' => '1']);
+        // Log the ids being updated
+        Log::info('Received CVR IDs:', ['cvr_ids' => $cvrIds]);
+        Log::info('Received Voucher IDs:', ['voucher_ids' => $voucherIds]);
+
+        // Check if there are any IDs to update
+        if (empty($cvrIds) && empty($voucherIds)) {
+            Log::warning('No CVR or Voucher IDs provided!');
+        }
+
+        // Update print status and printed_by for CashVoucher and cvr_approval
+        $cvrUpdateResult = CashVoucher::whereIn('id', $cvrIds)->update([
+            'print_status' => '1',
+            'printed_by' => $employeeCode
+        ]);
+
+        $voucherUpdateResult = cvr_approval::whereIn('id', $voucherIds)->update([
+            'print_status' => '1',
+            'printed_by' => $employeeCode
+        ]);
+
+        // Log the result of the update operations
+        Log::info('CashVoucher update result:', ['rows_affected' => $cvrUpdateResult]);
+        Log::info('cvr_approval update result:', ['rows_affected' => $voucherUpdateResult]);
+
+        // If no rows were affected, log a warning
+        if ($cvrUpdateResult == 0) {
+            Log::warning('No rows were updated for CashVoucher.');
+        }
+        if ($voucherUpdateResult == 0) {
+            Log::warning('No rows were updated for cvr_approval.');
+        }
 
         return response()->json(['message' => 'Print status updated']);
     }
+
 
     private function isJson($string)
     {
@@ -807,12 +1122,12 @@ class CashVoucherController extends Controller
         Log::info("Approval request ID: $id");
     
         
-        $cashVouchers = CashVoucher::where('cvr_number', $id)->firstOrFail();
+        $cashVouchers = CashVoucher::where('id', $id)->firstOrFail();
         $deliveryRequestId = $cashVouchers->id;
-        $employees = User::all();
+        $employees = User::where('status', '!=', 0)->get();
         $approves = Approver::all();
         $requestType = cvr_request_type::all();
-        $fleetCards = FleetCard::All();
+        $fleetCards = FleetCard::where('status', 1)->get();
         $trucks = Truck::All();
 
         $remarks = json_decode($cashVouchers->remarks ?? '[]', true);
@@ -857,23 +1172,17 @@ class CashVoucherController extends Controller
         }
 
 
-        public function showCustomCVR($id, $cvr_number)
-        {
-            $cashVoucherRequest = DB::table('cash_vouchers')
-            ->join('delivery_request', 'cash_vouchers.dr_id', '=', 'delivery_request.id')
-            // ->join('cvr_approver', 'cvr_approvals.source', '=', 'cvr_approver.id')
-            // ->join('employees', 'cvr_approvals.receiver', '=', 'employees.id')
-            ->select(
-                'cash_vouchers.*',
-                'cash_vouchers.id as cash_vouchers_id',
-                'delivery_request.*'
-                // 'cvr_approver.*',
-                // 'employees.*',
-            )
-            ->where('cash_vouchers.id', $id)
-            ->where('cash_vouchers.dr_id', $cvr_number) 
+        public function showCustomCVR($id, $cvr_number, $cvr_type)
+        {   
+
+            $cashVoucherRequest = CashVoucher::with([
+                'deliveryRequest',
+                'withholdingTax:id,description,percentage'
+            ])
+            ->where('id', $id)
+            ->where('dr_id', $cvr_number)
             ->first();
-    
+                
             // Check if the remarks column contains a JSON string
             if (is_string($cashVoucherRequest->remarks) && $this->isJson($cashVoucherRequest->remarks)) {
                 // Decode JSON if it is in JSON format
@@ -892,39 +1201,79 @@ class CashVoucherController extends Controller
             ->where('delivery_request_line_items.mtm', $cashVoucherRequest->mtm)
             ->get();
     
-            $deliveryRequest = DB::table('delivery_request')
-            ->leftjoin('customers', 'delivery_request.customer_id', '=', 'customers.id')
-            ->where('delivery_request.mtm', $cashVoucherRequest->mtm) 
+            // $_POST = DB::table('delivery_request')
+            // ->leftjoin('customers', 'delivery_request.customer_id', '=', 'customers.id')
+            // ->where('delivery_request.id', $cashVoucherRequest->dr_id) 
+            // ->first();
+
+            $deliveryRequest = DeliveryRequest::with('company','customer')
+            ->where('id', $cashVoucherRequest->dr_id)
             ->first();
     
             $requestTypes = DB::table('cash_vouchers')
             ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
             ->where('cash_vouchers.dr_id', $cvr_number) 
+            ->where('cash_vouchers.id', $id) 
+            ->where('cvr_type', $cvr_type)
             ->first();
     
             $drivers = DB::table('allocations')
             ->join('users', 'allocations.driver_id', '=', 'users.id')
             ->where('allocations.dr_id', $cvr_number) 
+            ->where('allocations.trip_type', $cvr_type)
+            ->where('allocations.sequence', $cashVoucherRequest->sequence)
+            ->first();
+
+            $allocations = Allocation::with('truck')
+            ->where('dr_id', $cashVoucherRequest->dr_id)
+            ->where('trip_type', $cvr_type)
+            ->where('sequence', $cashVoucherRequest->sequence)
             ->first();
     
             $fleets = DB::table('allocations')
             ->join('fleet_cards', 'allocations.fleet_card_id', '=', 'fleet_cards.id')
             ->where('allocations.dr_id', $cvr_number) 
+            ->where('trip_type', $cvr_type)
+            ->where('sequence', $cashVoucherRequest->sequence)
             ->first();
     
-            $employees = DB::table('cash_vouchers')
-            ->join('users', 'cash_vouchers.requestor', '=', 'users.id')
-            ->select('users.*', 'cash_vouchers.*') 
-            ->where('cash_vouchers.dr_id', $cvr_number) 
+            $employees = DB::table('allocations')
+            ->join('users', 'allocations.requestor_id', '=', 'users.id')
+            ->select('users.*', 'allocations.*') 
+            ->where('allocations.dr_id', $cvr_number) 
+            ->where('trip_type', $cvr_type)
+            ->where('sequence', $cashVoucherRequest->sequence)
+            ->first();
+
+
+            $cvrApprovals = cvr_approval::where('cvr_id', $id)
             ->first();
     
-            // Check if the amount exists and convert it to words
-            $amountInWords = $cashVoucherRequest->amount ? $this->convertAmountToWordsPreview($cashVoucherRequest->amount) : 'N/A';
+            // Recalculate the amount to match the view logic
+            if ($cashVoucherRequest->voucher_type === 'with_tax') {
+                $baseAmount = $cashVoucherRequest->tax_based_amount ?? 0;
+                $vatAmount = $baseAmount * 0.12;
+                $taxPercentage = $cashVoucherRequest->withholdingTax->percentage ?? 0;
+                $taxDeduction = $baseAmount * $taxPercentage;
+                $finalAmount = $baseAmount + $vatAmount - $taxDeduction;
+            } elseif ($cashVoucherRequest->voucher_type === 'regular') {
+                $baseAmount = $cashVoucherRequest->amount ?? 0;
+                $vatAmount = 0;
+                $taxDeduction = 0;
+                $finalAmount = $cashVoucherRequest->amount ?? 0;
+            } else {
+                $baseAmount = 0;
+                $vatAmount = 0;
+                $taxDeduction = 0;
+                $finalAmount = 0;
+            }
+
+            $amountInWords = $finalAmount > 0 ? $this->convertAmountToWordsPreview($finalAmount) : 'N/A';
     
             // Return the print view with the data
             return view(
                 'cashVoucherRequests.printPreview', compact('cashVoucherRequest', 'amountInWords', 
-                'deliveryLineItems', 'employees', 'drivers', 'fleets', 'requestTypes', 'deliveryRequest', 'remarks'
+                'deliveryLineItems', 'employees', 'drivers', 'fleets', 'requestTypes', 'deliveryRequest', 'remarks', 'allocations', 'cvrApprovals'
             ));
         }
 
@@ -1004,10 +1353,40 @@ class CashVoucherController extends Controller
         {
             $user = Auth::user();
             $employeeCode = $user->id;
-            $cashVouchers = CashVoucher::where('status', 3)
-            ->where('cvr_type', 'basic')
-            ->where('created_by', $employeeCode)
+
+            $cashVouchers = CashVoucher::with([
+                'deliveryRequest.deliveryAllocations',
+                'deliveryRequest.pulloutAllocations',
+                'deliveryRequest.accessorialAllocations',
+                'deliveryRequest.freightAllocations',
+                'deliveryRequest.othersAllocations',
+                'deliveryRequest.company',
+                'deliveryRequest.expenseType',
+            ])
+            ->where('status', 3)
+            ->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial', 'freight', 'others'])
+            // ->where('created_by', $employeeCode)
             ->get();
+
+            // Attach matched allocation dynamically
+            foreach ($cashVouchers as $cashVoucher) {
+                $allAllocations = collect([
+                    ...($cashVoucher->deliveryRequest->deliveryAllocations ?? []),
+                    ...($cashVoucher->deliveryRequest->pulloutAllocations ?? []),
+                    ...($cashVoucher->deliveryRequest->accessorialAllocations ?? []),
+                    ...($cashVoucher->deliveryRequest->othersAllocations ?? []),
+                    ...($cashVoucher->deliveryRequest->freightAllocations ?? []),
+                ]);
+
+                $matchedAllocation = $allAllocations->first(function ($allocation) use ($cashVoucher) {
+                    return $allocation->dr_id == $cashVoucher->dr_id &&
+                        strtolower($allocation->trip_type) === strtolower($cashVoucher->cvr_type) &&
+                        $allocation->sequence == $cashVoucher->sequence;
+                });
+
+                $cashVoucher->matched_allocation = $matchedAllocation;
+            }
+
             return view('cashVoucherRequests.rejectView', compact('cashVouchers'));
         }
 
@@ -1019,7 +1398,7 @@ class CashVoucherController extends Controller
             ->where('id', $cashVoucher->dr_id)
             ->get();
 
-            $employees = User::all();
+            $employees = User::where('status', '!=', 0)->get();
             $approves = Approver::all();
             $taxes = WithholdingTax::all();
             $requestType = cvr_request_type::all();
@@ -1071,5 +1450,208 @@ class CashVoucherController extends Controller
 
             return redirect()->route('cashVoucherRequests.rejectView')->with('success', 'Cash Voucher updated successfully.');
         }
+
+    public function rejectPrintView($id, $cvr_number, $cvr_type)
+    {
+        $cashVoucherRequest = CashVoucher::with([
+            'deliveryRequest',
+            'withholdingTax:id,description,percentage'
+        ])
+        ->where('id', $id)
+        ->where('dr_id', $cvr_number)
+        ->first();
+                
+        // Check if the remarks column contains a JSON string
+        if (is_string($cashVoucherRequest->remarks) && $this->isJson($cashVoucherRequest->remarks)) {
+            // Decode JSON if it is in JSON format
+            $remarks = json_decode($cashVoucherRequest->remarks, true);
+        } else {
+            // Otherwise, just explode the string (assuming it is comma-separated)
+            $remarks = explode(',', $cashVoucherRequest->remarks);
+        }
+    
+        $remarks = array_map('trim', $remarks);
+    
+        $deliveryLineItems = DB::table('delivery_request_line_items')
+        ->select(
+            'delivery_request_line_items.*'
+        )
+        ->where('delivery_request_line_items.mtm', $cashVoucherRequest->mtm)
+        ->get();
+
+        $deliveryRequest = DeliveryRequest::with('company','customer')
+        ->where('id', $cashVoucherRequest->dr_id)
+        ->first();
+    
+        $requestTypes = DB::table('cash_vouchers')
+        ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
+        ->where('cash_vouchers.dr_id', $cvr_number) 
+        ->where('cash_vouchers.id', $id) 
+        ->where('cvr_type', $cvr_type)
+        ->first();
+    
+        $drivers = DB::table('allocations')
+        ->join('users', 'allocations.driver_id', '=', 'users.id')
+        ->where('allocations.dr_id', $cvr_number) 
+        ->where('allocations.trip_type', $cvr_type)
+        ->where('allocations.sequence', $cashVoucherRequest->sequence)
+        ->first();
+
+        $allocations = Allocation::with('truck')
+        ->where('dr_id', $cashVoucherRequest->dr_id)
+        ->where('trip_type', $cvr_type)
+        ->where('sequence', $cashVoucherRequest->sequence)
+        ->first();
+    
+        $fleets = DB::table('allocations')
+        ->join('fleet_cards', 'allocations.fleet_card_id', '=', 'fleet_cards.id')
+        ->where('allocations.dr_id', $cvr_number) 
+        ->where('trip_type', $cvr_type)
+        ->where('sequence', $cashVoucherRequest->sequence)
+        ->first();
+    
+        $employees = DB::table('allocations')
+        ->join('users', 'allocations.requestor_id', '=', 'users.id')
+        ->select('users.*', 'allocations.*') 
+        ->where('allocations.dr_id', $cvr_number) 
+        ->where('trip_type', $cvr_type)
+        ->where('sequence', $cashVoucherRequest->sequence)
+        ->first();
+
+
+        $cvrApprovals = cvr_approval::where('cvr_id', $id)
+        ->first();
+    
+        // Recalculate the amount to match the view logic
+        if ($cashVoucherRequest->voucher_type === 'with_tax') {
+            $baseAmount = $cashVoucherRequest->tax_based_amount ?? 0;
+            $vatAmount = $baseAmount * 0.12;
+            $taxPercentage = $cashVoucherRequest->withholdingTax->percentage ?? 0;
+            $taxDeduction = $baseAmount * $taxPercentage;
+            $finalAmount = $baseAmount + $vatAmount - $taxDeduction;
+        } elseif ($cashVoucherRequest->voucher_type === 'regular') {
+            $baseAmount = $cashVoucherRequest->amount ?? 0;
+            $vatAmount = 0;
+            $taxDeduction = 0;
+            $finalAmount = $cashVoucherRequest->amount ?? 0;
+        } else {
+            $baseAmount = 0;
+            $vatAmount = 0;
+            $taxDeduction = 0;
+            $finalAmount = 0;
+        }
+
+        $amountInWords = $finalAmount > 0 ? $this->convertAmountToWordsPreview($finalAmount) : 'N/A';
+
+        $rejectRemarks = [];
+
+        if (!empty($cashVoucherRequest->reject_remarks) && $this->isJson($cashVoucherRequest->reject_remarks)) {
+            $rejectRemarks = json_decode($cashVoucherRequest->reject_remarks, true);
+        }
+    
+        // Return the print view with the data
+        return view(
+            'cashVoucherRequests.reject_print', compact('cashVoucherRequest', 'amountInWords', 
+            'deliveryLineItems', 'employees', 'drivers', 'fleets', 'requestTypes', 'deliveryRequest', 'remarks', 'allocations', 'cvrApprovals','rejectRemarks'
+        ));       
+    }
+
+    public function rejectPrintViewMultiple(Request $request)
+    {
+        $ids = $request->input('ids'); // already an array from the form
+
+        if (empty($ids) || !is_array($ids)) {
+            abort(400, 'No voucher IDs provided.');
+        }
+
+        $vouchers = [];
+
+        foreach ($ids as $id) {
+            $cashVoucherRequest = CashVoucher::with([
+                'deliveryRequest',
+                'withholdingTax:id,description,percentage'
+            ])->find($id);
+
+            if (!$cashVoucherRequest) continue;
+
+            $remarks = [];
+            if (is_string($cashVoucherRequest->remarks) && $this->isJson($cashVoucherRequest->remarks)) {
+                $remarks = json_decode($cashVoucherRequest->remarks, true);
+            } else {
+                $remarks = is_string($cashVoucherRequest->remarks) 
+                    ? explode(',', $cashVoucherRequest->remarks) 
+                    : [];
+            }
+            $remarks = array_map('trim', $remarks);
+
+            $deliveryRequest = DeliveryRequest::with('company', 'customer')->find($cashVoucherRequest->dr_id);
+
+            $requestTypes = DB::table('cash_vouchers')
+                ->join('cvr_request_type', 'cash_vouchers.request_type', '=', 'cvr_request_type.id')
+                ->where('cash_vouchers.id', $id)
+                ->first();
+
+            $drivers = DB::table('allocations')
+                ->join('users', 'allocations.driver_id', '=', 'users.id')
+                ->where('allocations.dr_id', $cashVoucherRequest->dr_id)
+                ->where('allocations.trip_type', $cashVoucherRequest->cvr_type)
+                ->where('allocations.sequence', $cashVoucherRequest->sequence)
+                ->first();
+
+            $allocations = Allocation::with('truck')
+                ->where('dr_id', $cashVoucherRequest->dr_id)
+                ->where('trip_type', $cashVoucherRequest->cvr_type)
+                ->where('sequence', $cashVoucherRequest->sequence)
+                ->first();
+
+            $fleets = DB::table('allocations')
+                ->join('fleet_cards', 'allocations.fleet_card_id', '=', 'fleet_cards.id')
+                ->where('allocations.dr_id', $cashVoucherRequest->dr_id)
+                ->where('trip_type', $cashVoucherRequest->cvr_type)
+                ->where('sequence', $cashVoucherRequest->sequence)
+                ->first();
+
+            $employees = DB::table('allocations')
+                ->join('users', 'allocations.requestor_id', '=', 'users.id')
+                ->select('users.*', 'allocations.*')
+                ->where('allocations.dr_id', $cashVoucherRequest->dr_id)
+                ->where('trip_type', $cashVoucherRequest->cvr_type)
+                ->where('sequence', $cashVoucherRequest->sequence)
+                ->first();
+
+            $deliveryLineItems = DB::table('delivery_request_line_items')
+                ->where('mtm', $cashVoucherRequest->mtm)
+                ->get();
+
+            $cvrApprovals = cvr_approval::where('cvr_id', $id)->first();
+
+            // Recalculate the amount
+            if ($cashVoucherRequest->voucher_type === 'with_tax') {
+                $baseAmount = $cashVoucherRequest->tax_based_amount ?? 0;
+                $vatAmount = $baseAmount * 0.12;
+                $taxPercentage = $cashVoucherRequest->withholdingTax->percentage ?? 0;
+                $taxDeduction = $baseAmount * $taxPercentage;
+                $finalAmount = $baseAmount + $vatAmount - $taxDeduction;
+            } else {
+                $finalAmount = $cashVoucherRequest->amount ?? 0;
+            }
+
+            $amountInWords = $finalAmount > 0 ? $this->convertAmountToWordsPreview($finalAmount) : 'N/A';
+
+            $rejectRemarks = [];
+            if (!empty($cashVoucherRequest->reject_remarks) && $this->isJson($cashVoucherRequest->reject_remarks)) {
+                $rejectRemarks = json_decode($cashVoucherRequest->reject_remarks, true);
+            }
+
+            $vouchers[] = compact(
+                'cashVoucherRequest', 'amountInWords', 'deliveryLineItems', 'employees',
+                'drivers', 'fleets', 'requestTypes', 'deliveryRequest', 'remarks', 'allocations',
+                'cvrApprovals', 'rejectRemarks'
+            );
+        }
+
+        return view('cashVoucherRequests.reject_print_multiple', compact('vouchers'));
+    }
+
 
 }

@@ -14,6 +14,6 @@ class Role extends Model
     // Define the relationship to users
     public function users()
     {
-        return $this->hasMany(User::class);
+        return $this->belongsToMany(User::class);
     }
 }

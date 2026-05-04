@@ -1,26 +1,5 @@
 @extends('layouts.app')
 
-{{-- @section('content')
-    <h1>Create Fleet Card</h1>
-
-    <form action="{{ route('fleetCards.store') }}" method="POST">
-@csrf
-<div class="form-group">
-    <label for="account">Account</label>
-    <input type="text" name="account" id="account" class="form-control" required>
-</div>
-<div class="form-group">
-    <label for="account_name">Account Name</label>
-    <input type="text" name="account_name" id="account_name" class="form-control" required>
-</div>
-<div class="form-group">
-    <label for="account_number">Account Number</label>
-    <input type="text" name="account_number" id="account_number" class="form-control" required>
-</div>
-<button type="submit" class="btn btn-primary mt-4">Create Fleet Card</button>
-</form>
-@endsection --}}
-
 @section('content')
 <div class="max-w-4xl mx-auto bg-white p-10 mt-10 rounded-2xl shadow-lg">
     <h1 class="text-3xl font-semibold text-gray-800 mb-8">Create Fleet Card</h1>
@@ -53,6 +32,8 @@
             <label for="account_number" class="block text-sm font-medium text-gray-700">Account Number</label>
             <input type="text" name="account_number" id="account_number" class="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-xl shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
         </div>
+
+        <input type="hidden" name="status" value="1">
 
         <div>
             <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-3 px-6 rounded-xl hover:bg-blue-700 transition duration-300">

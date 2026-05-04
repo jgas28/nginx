@@ -36,95 +36,98 @@
             </a>
         </div>
 
+        @php
+            $user = auth()->user();
+        @endphp
+
         <!-- Navigation -->
         <nav class="flex-1 px-2 py-4 overflow-y-auto space-y-1">
-            <!-- Dashboard -->
-            <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
-                <i class="fas fa-tachometer-alt"></i>
-                <span x-show="sidebarOpen" x-transition>Dashboard</span>
-            </a>
 
-            <!-- Settings with nested Basic Settings -->
+            {{-- Show Dashboard or No Access --}}
+            @php
+                $hasDashboardRole = $user->hasAnyRoleId([37, 38, 39, 40, 41]);
+            @endphp
+
+            @if($hasDashboardRole)
+                <a href="{{ route('dashboard') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span x-show="sidebarOpen" x-transition>Dashboard</span>
+                </a>
+            @else
+                <a href="{{ route('no.dashboard') }}" class="flex items-center space-x-3 px-3 py-2 rounded text-red-400 hover:bg-gray-700">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span x-show="sidebarOpen" x-transition>No Dashboard Assigned</span>
+                </a>
+            @endif
+
+
+            @if(in_array($user->id, [1, 97]))
+                <a href="{{ route('delivery.details') }}" class="flex items-center space-x-3 px-3 py-2 rounded hover:bg-gray-700">
+                    <span x-show="sidebarOpen" x-transition>Delivery Details</span>
+                </a>
+            @endif
+
+            {{-- Settings nav (role_id = 28) --}}
+            @if($user->hasAnyRoleId([1, 2, 3, 28]))
             <div x-data="{ open: false, basicOpen: false, cvOpen: false, dliOpen: false, allocationOpen: false }">
-                <!-- Settings Button -->
-                <button 
-                    @click="open = !open; if (!open) basicOpen = false;" 
-                    class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700"
-                >
+                <button @click="open = !open; if (!open) { basicOpen = false; cvOpen = false; dliOpen = false; allocationOpen = false; }" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
                     <div class="flex items-center space-x-3">
                         <i class="fas fa-cogs"></i>
                         <span x-show="sidebarOpen" x-transition>Settings</span>
                     </div>
-                    <svg 
-                        x-show="sidebarOpen" 
-                        :class="open ? 'rotate-90' : ''" 
-                        class="w-4 h-4 transform transition-transform" 
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    >
+                    <svg x-show="sidebarOpen" :class="open ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                     </svg>
                 </button>
-
-                <!-- Settings Submenu -->
                 <div x-show="open && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
-                    @if(auth()->user()->role_id != 1)
-                        <a href="{{ route('password.change') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            Change Password
-                        </a>
-                    @endif
-                    @if(auth()->user()->role_id = 1)
-                        <a href="{{ route('running_balance.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            Running Balance
-                        </a>
-                    @endif
-                    <!-- Basic Settings -->
+                    @if($user->hasAnyRoleId([1, 2, 3, 34]))<a href="{{ route('password.change') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Change Password</a>@endif
+                    {{-- Basic Settings (role_id = 3) --}}
+                    @if($user->hasAnyRoleId([1, 2, 3, 36]))
                     <div>
-                        <button 
-                            @click="basicOpen = !basicOpen" 
-                            class="w-full flex items-center justify-between px-3 py-1 rounded hover:bg-gray-700 text-sm"
-                        >
-                            <div class="flex items-center space-x-2">
-                                <span>Delivery Request</span>
-                            </div>
-                            <svg 
-                                :class="basicOpen ? 'rotate-90' : ''" 
-                                class="w-4 h-4 transform transition-transform" 
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                            >
+                        <button @click="basicOpen = !basicOpen" class="w-full flex items-center justify-between px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            <span>Delivery Request</span>
+                            <svg :class="basicOpen ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
                         </button>
-                        
                         <div x-show="basicOpen" x-transition class="ml-6 mt-1 space-y-1">
-                            <a href="{{ route('companies.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Companies</a>
-                             <a href="{{ route('regions.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Region</a>
-                            <a href="{{ route('areas.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Areas</a>
-                            <a href="{{ route('customers.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Customer</a>
-                            <a href="{{ route('trucks.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Trucks</a>
-                            <a href="{{ route('trucksTypes.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Truck Type</a>
-                            <a href="{{ route('suppliers.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Suppliers</a>
-                            
+                            @if($user->hasAnyRoleId([1, 2, 3]))
+                                <a href="{{ route('companies.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Companies</a>
+                            @endif
+                            @if($user->hasAnyRoleId([1, 2, 3]))
+                                <a href="{{ route('regions.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Region</a>
+                            @endif
+                            @if($user->hasAnyRoleId([1, 2, 3]))
+                                <a href="{{ route('areas.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Areas</a>
+                            @endif
+                            @if($user->hasAnyRoleId([1, 2, 3]))
+                                <a href="{{ route('customers.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Customer</a>
+                            @endif
+                            @if($user->hasAnyRoleId([1, 2, 3, 5]))
+                                <a href="{{ route('trucks.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Trucks</a>
+                            @endif
+                            @if($user->hasAnyRoleId([1, 2, 3]))
+                                <a href="{{ route('trucksTypes.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Truck Type</a>
+                            @endif
+                            @if($user->hasAnyRoleId([1, 2, 3]))
+                                <a href="{{ route('suppliers.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Suppliers</a>
+                            @endif
+                            @if($user->hasAnyRoleId([1, 2, 3, 4]))
+                                <a href="{{ route('employees.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Employees</a>
+                            @endif
                         </div>
                     </div>
+                    @endif
 
-                    <!-- Delivery Line Items Settings -->
+                    {{-- DR Items (role_id = 20) --}}
+                    @if($user->hasAnyRoleId([1, 2, 3]))
                     <div>
-                        <button 
-                            @click="dliOpen = !dliOpen" 
-                            class="w-full flex items-center justify-between px-3 py-1 rounded hover:bg-gray-700 text-sm"
-                        >
-                            <div class="flex items-center space-x-2">
-                                <span>DR Items</span>
-                            </div>
-                            <svg 
-                                :class="dliOpen ? 'rotate-90' : ''" 
-                                class="w-4 h-4 transform transition-transform" 
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                            >
+                        <button @click="dliOpen = !dliOpen" class="w-full flex items-center justify-between px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            <span>DR Items</span>
+                            <svg :class="dliOpen ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
                         </button>
-                        
                         <div x-show="dliOpen" x-transition class="ml-6 mt-1 space-y-1">
                             <a href="{{ route('accessorialTypes.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Accesorial Type</a>
                             <a href="{{ route('addOnRates.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Add On Rate</a>
@@ -133,261 +136,246 @@
                             <a href="{{ route('distanceTypes.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Distance</a>
                             <a href="{{ route('warehouses.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Warehouse</a>
                             <a href="{{ route('deliveryRequestType.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">DR Types</a>
-                            
                         </div>
                     </div>
+                    @endif
 
-                    <!-- Cash Voucher Settings -->
+                    {{-- Cash Voucher nav (role_id = 12) --}}
+                    @if($user->hasAnyRoleId([1, 2, 3]))
                     <div>
-                        <button 
-                            @click="cvOpen = !cvOpen" 
-                            class="w-full flex items-center justify-between px-3 py-1 rounded hover:bg-gray-700 text-sm"
-                        >
-                            <div class="flex items-center space-x-2">
-                                <span>Cash Voucher</span>
-                            </div>
-                            <svg 
-                                :class="cvOpen ? 'rotate-90' : ''" 
-                                class="w-4 h-4 transform transition-transform" 
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                            >
+                        <button @click="cvOpen = !cvOpen" class="w-full flex items-center justify-between px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            <span>Cash Voucher</span>
+                            <svg :class="cvOpen ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
                         </button>
-                        
                         <div x-show="cvOpen" x-transition class="ml-6 mt-1 space-y-1">
                             <a href="{{ route('monthly-series.reset.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Reset Series</a>
                             <a href="{{ route('approvers.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Approver</a>
                             <a href="{{ route('taxes.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Tax</a>
                             <a href="{{ route('expenseTypes.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Expense Types</a>
                             <a href="{{ route('cvr_request_types.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">CV Types</a>
-                            
                         </div>
                     </div>
+                    @endif
 
-                    <!-- Allocation -->
+                    {{-- Allocation nav (role_id = 8) --}}
+                    @if($user->hasAnyRoleId([1, 2, 3]))
                     <div>
-                        <button 
-                            @click="allocationOpen = !allocationOpen" 
-                            class="w-full flex items-center justify-between px-3 py-1 rounded hover:bg-gray-700 text-sm"
-                        >
-                            <div class="flex items-center space-x-2">
-                                <span>Allocation</span>
-                            </div>
-                            <svg 
-                                :class="allocationOpen ? 'rotate-90' : ''" 
-                                class="w-4 h-4 transform transition-transform" 
-                                fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                            >
+                        <button @click="allocationOpen = !allocationOpen" class="w-full flex items-center justify-between px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            <span>Allocation</span>
+                            <svg :class="allocationOpen ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
                         </button>
-                        
                         <div x-show="allocationOpen" x-transition class="ml-6 mt-1 space-y-1">
                             <a href="{{ route('fleetCards.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Fleet Card</a>
                         </div>
                     </div>
+                    @endif
+
                 </div>
             </div>
-            @if(auth()->user()->role_id == 1 || auth()->user()->role_id == 2)
-                <div x-data="{ openDR: false }">
-                    <button 
-                        @click="openDR = !openDR" 
-                        class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700"
-                    >
-                        <div class="flex items-center space-x-3">
-                            <i class="fas fa-box"></i>
-                            <span x-show="sidebarOpen" x-transition>Delivery Request</span>
-                        </div>
-                        <svg 
-                            x-show="sidebarOpen" 
-                            :class="openDR ? 'rotate-90' : ''" 
-                            class="w-4 h-4 transform transition-transform" 
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        >
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                    </button>
-
-                    <div x-show="openDR && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
-                        <a href="{{ route('deliveryRequest.create') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            Create
-                        </a>
-                        <a href="{{ route('deliveryRequest.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            List
-                        </a>
-                    </div>
-                </div>
             @endif
-            @if(auth()->user()->role_id == 1 || auth()->user()->role_id == 4)
-                <div x-data="{ openAllocate: false }">
-                    <button 
-                        @click="openAllocate = !openAllocate" 
-                        class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700"
-                    >
-                        <div class="flex items-center space-x-3">
-                            <i class="fas fa-truck"></i>
-                            <span x-show="sidebarOpen" x-transition>Allocation</span>
-                        </div>
-                        <svg 
-                            x-show="sidebarOpen" 
-                            :class="openAllocate ? 'rotate-90' : ''" 
-                            class="w-4 h-4 transform transition-transform" 
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        >
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                    </button>
 
-                    <div x-show="openAllocate && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
-                        <a href="{{ route('allocations.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            Allocate
-                        </a>
+            {{-- Delivery Request nav (role_id = 6 or 7) --}}
+            @if($user->hasAnyRoleId([1, 2, 3, 35]))
+            <div x-data="{ openBalance: false }">
+                <button @click="openBalance = !openBalance" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-scale-balanced"></i>
+                        <span x-show="sidebarOpen" x-transition>Running Balance</span>
                     </div>
+                    <svg x-show="sidebarOpen" :class="openBalance ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <div x-show="openBalance && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+                      @if($user->hasAnyRoleId([1, 2, 3, 43]))<a href="{{ route('running_balance.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Running Balance</a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 44]))<a href="{{ route('running_balance.adminFunds') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Running Balance - Laguna</a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 45]))<a href="{{ route('running_balance.davaoFunds') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Running Balance - Davao</a>@endif
                 </div>
+            </div>
             @endif
-            @if(auth()->user()->role_id == 1 || auth()->user()->role_id == 4)
-                <div x-data="{ openCoordinator: false }">
-                    <button 
-                        @click="openCoordinator = !openCoordinator" 
-                        class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700"
-                    >
-                        <div class="flex items-center space-x-3">
-                            <i class="fas fa-project-diagram"></i>
-                            <span x-show="sidebarOpen" x-transition>Coordinator</span>
-                        </div>
-                        <svg 
-                            x-show="sidebarOpen" 
-                            :class="openCoordinator ? 'rotate-90' : ''" 
-                            class="w-4 h-4 transform transition-transform" 
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        >
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                    </button>
 
-                    <div x-show="openCoordinator && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
-                        <a href="{{ route('coordinators.create') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            Create Request
-                        </a>
-                        <a href="{{ route('coordinators.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            List
-                        </a>
+            {{-- Allocation List nav (role_id = 9) --}}
+            @if($user->hasAnyRoleId([1, 2, 3, 30]))
+            <div x-data="{ openAllocate: false }">
+                <button @click="openAllocate = !openAllocate" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-truck"></i>
+                        <span x-show="sidebarOpen" x-transition>Allocation</span>
                     </div>
+                    <svg x-show="sidebarOpen" :class="openAllocate ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <div x-show="openAllocate && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+                    @if($user->hasAnyRoleId([8]))<a href="{{ route('allocations.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Allocate</a>@endif
+                    @if($user->hasAnyRoleId([9]))<a href="{{ route('allocation.drlist') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">List</a>@endif
                 </div>
+            </div>
             @endif
-            @if(auth()->user()->role_id == 1 || auth()->user()->role_id == 3)
-                <div x-data="{ openCVR: false }">
-                    <button 
-                        @click="openCVR = !openCVR" 
-                        class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700"
-                    >
-                        <div class="flex items-center space-x-3">
-                            <i class="fas fa-money-bill"></i>
-                            <span x-show="sidebarOpen" x-transition>Cash Voucher</span>
-                        </div>
-                        <svg 
-                            x-show="sidebarOpen" 
-                            :class="openCVR ? 'rotate-90' : ''" 
-                            class="w-4 h-4 transform transition-transform" 
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        >
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                    </button>
 
-                    <div x-show="openCVR && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+            {{-- Delivery Request nav (role_id = 6 or 7) --}}
+            @if($user->hasAnyRoleId([1, 2, 3,29]))
+            <div x-data="{ openDR: false }">
+                <button @click="openDR = !openDR" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-box"></i>
+                        <span x-show="sidebarOpen" x-transition>Delivery Request</span>
+                    </div>
+                    <svg x-show="sidebarOpen" :class="openDR ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <div x-show="openDR && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+                    @if($user->hasAnyRoleId([1, 2, 3, 6]))<a href="{{ route('deliveryRequest.create') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Create</a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 7]))<a href="{{ route('deliveryRequest.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">List</a>@endif
+                </div>
+            </div>
+            @endif
+
+            {{-- Coordinator nav (role_id = 10 or 11) --}}
+            @if($user->hasAnyRoleId([1, 2, 3, 31]))
+            <div x-data="{ openCoordinator: false }">
+                <button @click="openCoordinator = !openCoordinator" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-project-diagram"></i>
+                        <span x-show="sidebarOpen" x-transition>Coordinator</span>
+                    </div>
+                    <svg x-show="sidebarOpen" :class="openCoordinator ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <div x-show="openCoordinator && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+                    @if($user->hasAnyRoleId([1, 2, 3, 10]))<a href="{{ route('coordinators.create') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Create Request</a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 11]))<a href="{{ route('coordinators.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">List</a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 11]))<a href="{{ route('reports.dr') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">Report</a>@endif
+                </div>
+            </div>
+            @endif
+
+            {{-- Cash Voucher List Admin (role_id = 14) --}}
+            @if($user->hasAnyRoleId([1, 2, 3, 32]))
+            <div x-data="{ openCVR: false }">
+                <button @click="openCVR = !openCVR" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-money-bill"></i>
+                        <span x-show="sidebarOpen" x-transition>Cash Voucher</span>
+                    </div>
+                    <svg x-show="sidebarOpen" :class="openCVR ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <div x-show="openCVR && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+                    {{-- Add CV List Admin links here --}}
+                    @if($user->hasAnyRoleId([1, 2, 3, 13]))
                         <a href="{{ route('cashVoucherRequests.approval') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             DR Approval
                         </a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 12]))
                         <a href="{{ route('adminCV.approval') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Admin/RPM Approval
                         </a>
-                        <a href="{{ route('cashVoucherRequests.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 14]))
+                        <a href="{{ route('adminCV.cvrList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             List - Admin
                         </a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 15]))
+                        <a href="{{ route('cashVoucherRequests.cvrList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            List - DR
+                        </a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 16]))
                         <a href="{{ route('cashVoucherRequests.rejectView') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Reject - DR
                         </a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 17]))
+                        <a href="{{ route('adminCV.rejectView') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            Reject - Admin
+                        </a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 18]))
                         <a href="{{ route('admin.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Admin/RPM Request
                         </a>
-                    </div>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 18]))
+                        <a href="{{ route('reports.cv') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            Admin Report
+                        </a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 18]))
+                        <a href="{{ route('reports.rpm') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            RPM Report
+                        </a>
+                    @endif
                 </div>
+            </div>
             @endif
-            @if(auth()->user()->role_id == 1 || auth()->user()->role_id == 4)
-                <div x-data="{ openCoordinator: false }">
-                    <button 
-                        @click="openCoordinator = !openCoordinator" 
-                        class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700"
-                    >
-                        <div class="flex items-center space-x-3">
-                            <i class="fas fa-file-invoice-dollar"></i>
-                            <span x-show="sidebarOpen" x-transition>Liquidation DR</span>
-                        </div>
-                        <svg 
-                            x-show="sidebarOpen" 
-                            :class="openCoordinator ? 'rotate-90' : ''" 
-                            class="w-4 h-4 transform transition-transform" 
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        >
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                    </button>
 
-                    <div x-show="openCoordinator && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+            {{-- Liquidation nav (roles 20 to 27) --}}
+            @if($user->hasAnyRoleId([1, 2, 3, 33]))
+            <div x-data="{ openLiquidation: false }">
+                <button @click="openLiquidation = !openLiquidation" class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <span x-show="sidebarOpen" x-transition>Liquidation</span>
+                    </div>
+                    <svg x-show="sidebarOpen" :class="openLiquidation ? 'rotate-90' : ''" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <div x-show="openLiquidation && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+                    @if($user->hasAnyRoleId([1, 2, 3, 20]))
                         <a href="{{ route('liquidations.index') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            Liquidate
+                            Liquidate - DR
                         </a>
-                        <a href="{{ route('liquidations.reviewList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            Validate Liquidation
-                        </a>
-                        <a href="{{ route('liquidations.validatedList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            Collect Liquidation
-                        </a>
-                        <a href="{{ route('liquidations.approvalList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            Approved Liquidation
-                        </a>
-                    </div>
-                </div>
-            @endif
-
-            @if(auth()->user()->role_id == 1 || auth()->user()->role_id == 4)
-                <div x-data="{ openCoordinator: false }">
-                    <button 
-                        @click="openCoordinator = !openCoordinator" 
-                        class="w-full flex items-center justify-between px-3 py-2 rounded hover:bg-gray-700"
-                    >
-                        <div class="flex items-center space-x-3">
-                            <i class="fas fa-file-invoice-dollar"></i>
-                            <span x-show="sidebarOpen" x-transition>Liquidation Admin</span>
-                        </div>
-                        <svg 
-                            x-show="sidebarOpen" 
-                            :class="openCoordinator ? 'rotate-90' : ''" 
-                            class="w-4 h-4 transform transition-transform" 
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        >
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                        </svg>
-                    </button>
-
-                    <div x-show="openCoordinator && sidebarOpen" x-transition class="ml-8 mt-1 space-y-1">
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 21]))
                         <a href="{{ route('liquidations.indexAdmin') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
-                            Liquidate
+                            Liquidate - Admin
                         </a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 22]))
                         <a href="{{ route('liquidations.reviewList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Validate Liquidation
                         </a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 23]))
                         <a href="{{ route('liquidations.validatedList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Collect Liquidation
                         </a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 24]))
                         <a href="{{ route('liquidations.approvalList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
                             Approved Liquidation
                         </a>
-                    </div>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 25]))
+                        <a href="{{ route('liquidations.liquidationList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            List -DR
+                        </a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 26]))
+                        <a href="{{ route('liquidations.overall') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            Overall
+                        </a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 27]))
+                        <a href="{{ route('liquidations.rejectedList') }}" class="block px-3 py-1 rounded hover:bg-gray-700 text-sm">
+                            Rejected List
+                        </a>
+                    @endif
                 </div>
+            </div>
             @endif
+
         </nav>
 
         <!-- Logout -->

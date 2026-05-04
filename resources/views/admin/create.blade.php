@@ -26,7 +26,7 @@
                     <legend class="text-blue-600 font-semibold text-sm px-2">Voucher Type</legend>
                     <div class="flex space-x-4 mt-2">
                         <label class="flex-1 cursor-pointer">
-                            <input type="radio" name="cvr_type" value="Admin" checked class="sr-only peer">
+                            <input type="radio" name="cvr_type" value="admin" checked class="sr-only peer">
                             <div class="w-full text-center px-4 py-2 rounded-lg border border-gray-300
                                         text-gray-700 font-medium
                                         peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600
@@ -36,7 +36,7 @@
                         </label>
 
                         <label class="flex-1 cursor-pointer">
-                            <input type="radio" name="cvr_type" value="RPM" class="sr-only peer">
+                            <input type="radio" name="cvr_type" value="rpm" class="sr-only peer">
                             <div class="w-full text-center px-4 py-2 rounded-lg border border-gray-300
                                         text-gray-700 font-medium
                                         peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600
@@ -78,7 +78,7 @@
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-gray-700">Tax Base Amount</label>
                             <input type="number" name="tax_base_amount" id="tax_base_amount"
-                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                                class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" step="0.01">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Withholding Tax</label>
@@ -117,7 +117,7 @@
                             <select name="supplier_id" id="supplier_id" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
                                 <option value="" disabled selected>Select Supplier</option>
                                 @foreach($suppliers as $supplier)
-                                    <option value="{{ $supplier->id }}">{{ $supplier->supplier_code }}</option>
+                                    <option value="{{ $supplier->id }}">{{ $supplier->supplier_name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -128,6 +128,16 @@
                                 <option value="" disabled selected>Select Expense Type</option>
                                 @foreach($expenseTypes as $expenseType)
                                     <option value="{{ $expenseType->id }}">{{ $expenseType->expense_code }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                         <div>
+                            <label class="block text-sm font-medium text-gray-700">Request Type</label>
+                            <select name="request_type" id="request_type" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2" required>
+                                <option value="" disabled selected>Select Request Type</option>
+                                @foreach($cvrTypes as $cvrType)
+                                    <option value="{{ $cvrType->id }}">{{ $cvrType->request_type }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -286,7 +296,7 @@
         function toggleTruckField() {
             const selectedType = document.querySelector('input[name="cvr_type"]:checked').value;
 
-            if (selectedType === 'RPM') {
+            if (selectedType === 'rpm') {
                 truckField.style.display = 'block';
             } else {
                 truckField.style.display = 'none';

@@ -14,7 +14,7 @@ class DeliveryRequest extends Model
     protected $fillable = [
         'mtm', 'booking_date', 'delivery_date', 'delivery_type', 'delivery_rate', 
         'company_id', 'project_name', 'region_id', 'status', 'customer_id', 'truck_type_id','area_id', 'expense_type_id', 'delivery_request_type', 
-        'created_by'
+        'created_by','delivery_status'
     ];
 
     // Define relationships
@@ -35,12 +35,93 @@ class DeliveryRequest extends Model
 
     public function lineItems()
     {
-        return $this->hasMany(DeliveryRequestLineItem::class, 'mtm', 'mtm');
+        return $this->hasMany(DeliveryRequestLineItem::class, 'dr_id', 'id');
     }
 
     public function cashVoucher()
     {
         return $this->hasMany(CashVoucher::class, 'mtm', 'mtm');
+    }
+
+    public function cashVouchers()
+    {
+        return $this->hasMany(CashVoucher::class, 'dr_id', 'id');
+    }
+
+    public function cvrApprovals()
+    {
+        return $this->hasManyThrough(
+            cvr_approval::class,
+            CashVoucher::class,
+            'dr_id',     // CashVoucher.dr_id
+            'cvr_id',    // cvr_approval.cvr_id
+            'id',        // DeliveryRequest.id
+            'id'         // CashVoucher.id
+        );
+    }
+
+    public function liquidations()
+    {
+        return $this->hasManyThrough(
+            Liquidation::class,
+            cvr_approval::class,
+            'cvr_id',           // cvr_approval.cvr_id
+            'cvr_approval_id',  // liquidation.cvr_approval_id
+            'id',               // delivery_request.id
+            'id'                // cvr_approval.id
+        );
+    }
+
+    public function getLiquidationsTotalsAttribute()
+    {
+        $this->loadMissing('cashVoucher.cvrApprovals.liquidations');
+
+        $totalCash = 0;
+        $totalCard = 0;
+
+        foreach ($this->cashVoucher as $cv) {
+            foreach ($cv->cvrApprovals as $approval) {
+                foreach ($approval->liquidations as $liq) {
+                    $totalCash += ($liq->allowance ?? 0)
+                        + ($liq->manpower ?? 0)
+                        + ($liq->hauling ?? 0)
+                        + ($liq->right_of_way ?? 0)
+                        + ($liq->roro_expense ?? 0)
+                        + ($liq->cash_charge ?? 0);
+
+                    if (is_array($liq->gasoline)) {
+                        foreach ($liq->gasoline as $gas) {
+                            if (($gas['type'] ?? '') === 'cash') {
+                                $totalCash += (float)($gas['amount'] ?? 0);
+                            } elseif (($gas['type'] ?? '') === 'card') {
+                                $totalCard += (float)($gas['amount'] ?? 0);
+                            }
+                        }
+                    }
+
+                    if (is_array($liq->rfid)) {
+                        foreach ($liq->rfid as $rfid) {
+                            if (($rfid['type'] ?? '') === 'cash') {
+                                $totalCash += (float)($rfid['amount'] ?? 0);
+                            } elseif (($rfid['type'] ?? '') === 'card') {
+                                $totalCard += (float)($rfid['amount'] ?? 0);
+                            }
+                        }
+                    }
+
+                    if (is_array($liq->others)) {
+                        foreach ($liq->others as $other) {
+                            $totalCash += (float)($other['amount'] ?? 0);
+                        }
+                    }
+                }
+            }
+        }
+
+        return [
+            'cash' => $totalCash,
+            'card' => $totalCard,
+        ];
     }
 
     public function customer()
@@ -55,7 +136,7 @@ class DeliveryRequest extends Model
 
     public function truckType()
     {
-        return $this->belongsTo(truckType::class, 'truck_type_id');
+        return $this->belongsTo(TruckType::class, 'truck_type_id');
     }
 
     public function area()
@@ -68,4 +149,40 @@ class DeliveryRequest extends Model
         // delivery_request.id = allocation.dr_id
         return $this->hasMany(Allocation::class, 'dr_id', 'id');
     }
+
+    public function deliveryAllocations()
+    {
+        return $this->hasMany(Allocation::class, 'dr_id')->where('trip_type', 'delivery');
+    }
+
+    public function pulloutAllocations()
+    {
+        return $this->hasMany(Allocation::class, 'dr_id')->where('trip_type', 'pullout');
+    }
+
+    public function accessorialAllocations()
+    {
+        return $this->hasMany(Allocation::class, 'dr_id')->where('trip_type', 'accessorial');
+    }
+
+     public function freightAllocations()
+    {
+        return $this->hasMany(Allocation::class, 'dr_id')->where('trip_type', 'freight');
+    }
+
+    public function othersAllocations()
+    {
+        return $this->hasMany(Allocation::class, 'dr_id')->where('trip_type', 'others');
+    }
+
+    public function deliveryStatus()
+    {
+        return $this->belongsTo(DeliveryStatus::class, 'delivery_status');
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
 }

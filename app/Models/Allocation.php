@@ -12,18 +12,23 @@ class Allocation extends Model
 
      protected $fillable = [
         'dr_id',
-        'line_item_id',
         'truck_id',
         'amount',
         'fleet_card_id',
         'driver_id',
         'helper',
+        'remarks',
         'created_by',
+        'requestor_id',
+        'trip_type',
+        'sequence',
+        'dr_stats',
     ];
 
     // Automatically casts the `helper` column to an array
     protected $casts = [
         'helper' => 'array',
+        'remarks' => 'array',
     ];
 
     public function deliveryRequest()
@@ -35,5 +40,10 @@ class Allocation extends Model
     public function truck()
     {
         return $this->belongsTo(Truck::class, 'truck_id', 'id');
+    }
+
+    public function requestorNames()
+    {
+        return $this->belongsTo(User::class, 'requestor_id', 'id');
     }
 }

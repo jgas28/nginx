@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="mx-auto bg-white border border-gray-300 rounded-lg p-6">
+<div class="w-full mx-auto bg-white border border-gray-300 rounded-lg p-6 shadow-sm">
     <form action="{{ route('liquidations.storeSummary', ['id' => $liquidation->id]) }}" method="POST" class="space-y-8">
         @csrf
         <input type="hidden" name="cvr_id" value="{{ $liquidation->cashVoucher->id ?? '' }}">
@@ -9,56 +9,75 @@
         <input type="hidden" name="cvr_number" value="{{ $liquidation->cashVoucher->cvr_number ?? '' }}">
 
         <!-- Expenses -->
-        <div class="space-y-4">
-            <label class="font-semibold">Expenses</label>
-            @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
+        <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Expenses</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                            {{ $field === 'roro_expense' ? 'Freight' : str_replace('_', ' ', $field) }}
+                        </label>
+                        <input 
+                            type="number" 
+                            step="0.01" 
+                            name="expenses[{{ $field }}]" 
+                            class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                    </div>
+                @endforeach
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1 capitalize">{{ str_replace('_', ' ', $field) }}</label>
-                    <input type="number" step="0.01" name="expenses[{{ $field }}]" class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Cash Charge</label>
+                    <input 
+                        type="number" 
+                        step="0.01" 
+                        name="expenses[cash_charge]" 
+                        value="{{ $liquidation->charge ?? '' }}" 
+                        readonly 
+                        class="w-full bg-gray-100 text-gray-500 cursor-not-allowed rounded-md border border-gray-300 px-3 py-2"
+                    />
                 </div>
-            @endforeach
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Cash Charge</label>
-                <input type="number" step="0.01" name="expenses[cash_charge]" value="{{ $liquidation->charge ?? '' }}" readonly class="block w-full bg-gray-100 cursor-not-allowed rounded-md border-gray-300 shadow-sm" />
             </div>
         </div>
 
         <!-- Gasoline -->
-        <div>
-            <label class="block font-semibold mb-2">Gasoline</label>
+        <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Gasoline</h2>
             <div id="gasoline-wrapper" class="space-y-3"></div>
-            <button type="button" onclick="addGasolineField()" class="bg-indigo-600 text-white text-sm px-3 py-1 rounded hover:bg-indigo-700">+ Add Gasoline</button>
+            <button type="button" onclick="addGasolineField()" class="mt-2 bg-indigo-600 text-white text-sm px-4 py-2 rounded hover:bg-indigo-700">+ Add Gasoline</button>
         </div>
 
         <!-- RFID -->
-        <div>
-            <label class="block font-semibold mb-2">RFID</label>
+        <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">RFID</h2>
             <div id="rfid-wrapper" class="space-y-3"></div>
-            <button type="button" onclick="addRFIDField()" class="bg-indigo-600 text-white text-sm px-3 py-1 rounded hover:bg-indigo-700">+ Add RFID</button>
+            <button type="button" onclick="addRFIDField()" class="mt-2 bg-indigo-600 text-white text-sm px-4 py-2 rounded hover:bg-indigo-700">+ Add RFID</button>
         </div>
 
         <!-- Others -->
-        <div>
-            <label class="block font-semibold mb-2">Others</label>
+        <div class="bg-gray-50 p-4 rounded-md border border-gray-200">
+            <h2 class="text-lg font-semibold mb-4 text-gray-700">Others</h2>
             <div id="others-wrapper" class="space-y-3">
-                <div class="flex space-x-3 other-item">
+                <div class="flex flex-col md:flex-row gap-3 other-item">
                     <input type="text" name="others[0][description]" placeholder="Description" class="flex-1 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
-                    <input type="number" step="0.01" name="others[0][amount]" placeholder="Amount" class="w-24 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
-                    <button type="button" class="text-white bg-red-600 hover:bg-red-700 rounded px-3" onclick="this.parentElement.remove()">×</button>
+                    <input type="number" step="0.01" name="others[0][amount]" placeholder="Amount" class="w-32 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                    <button type="button" class="text-white bg-red-600 hover:bg-red-700 rounded px-3 py-2" onclick="this.parentElement.remove()">×</button>
                 </div>
             </div>
-            <button type="button" class="mt-2 text-indigo-600 hover:text-indigo-800 underline" onclick="addOther()">Add Another</button>
+            <button type="button" class="mt-3 text-indigo-600 hover:text-indigo-800 underline text-sm" onclick="addOther()">+ Add Another</button>
         </div>
 
         <!-- People Involved -->
-        <div class="space-y-4">
-            @foreach (['prepared_by' => 'Prepared By', 'noted_by' => 'Noted By'] as $field => $label)
+        <div class="bg-gray-50 p-4 rounded-md border border-gray-200 space-y-4">
+            @foreach ([
+                'prepared_by' => ['label' => 'Prepared By', 'list' => $preparers],
+                'noted_by' => ['label' => 'Noted By', 'list' => $employees]
+            ] as $field => $config)
                 <div>
-                    <label class="block font-medium text-gray-700 mb-1">{{ $label }}</label>
-                    <select name="{{ $field }}" class="w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
-                        <option value="">Select {{ $label }}</option>
-                        @foreach ($employees as $employee)
-                            <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ $config['label'] }}</label>
+                    <select name="{{ $field }}" class="w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="">Select {{ $config['label'] }}</option>
+                        @foreach ($config['list'] as $person)
+                            <option value="{{ $person->id }}">{{ $person->fname }} {{ $person->lname }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -82,13 +101,13 @@
     function addGasolineField() {
         const wrapper = document.getElementById('gasoline-wrapper');
         wrapper.insertAdjacentHTML('beforeend', `
-            <div class="flex gap-2 items-center" data-index="${gasolineIndex}">
-                <select name="gasoline[${gasolineIndex}][type]" class="w-32 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500">
+            <div class="flex flex-col md:flex-row gap-3 items-center" data-index="${gasolineIndex}">
+                <select name="gasoline[${gasolineIndex}][type]" class="w-full md:w-32 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500">
                     <option value="">Type</option>
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                 </select>
-                <input type="number" step="0.01" name="gasoline[${gasolineIndex}][amount]" placeholder="Amount" class="w-40 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                <input type="number" step="0.01" name="gasoline[${gasolineIndex}][amount]" placeholder="Amount" class="w-full md:w-40 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
                 <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
             </div>
         `);
@@ -98,18 +117,18 @@
     function addRFIDField() {
         const wrapper = document.getElementById('rfid-wrapper');
         wrapper.insertAdjacentHTML('beforeend', `
-            <div class="flex flex-wrap gap-2 items-center" data-index="${rfidIndex}">
-                <select name="rfid[${rfidIndex}][tag]" class="w-32 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500">
+            <div class="flex flex-col md:flex-row gap-3 items-center" data-index="${rfidIndex}">
+                <select name="rfid[${rfidIndex}][tag]" class="w-full md:w-32 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500">
                     <option value="">Select Tag</option>
                     <option value="autosweep">AutoSweep</option>
                     <option value="easytrip">EasyTrip</option>
                 </select>
-                <select name="rfid[${rfidIndex}][type]" class="w-28 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500">
+                <select name="rfid[${rfidIndex}][type]" class="w-full md:w-28 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500">
                     <option value="">Type</option>
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                 </select>
-                <input type="number" step="0.01" name="rfid[${rfidIndex}][amount]" placeholder="Amount" class="w-36 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                <input type="number" step="0.01" name="rfid[${rfidIndex}][amount]" placeholder="Amount" class="w-full md:w-36 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
                 <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
             </div>
         `);
@@ -120,10 +139,10 @@
         const wrapper = document.getElementById('others-wrapper');
         const index = wrapper.children.length;
         wrapper.insertAdjacentHTML('beforeend', `
-            <div class="flex space-x-3 other-item">
+            <div class="flex flex-col md:flex-row gap-3 other-item">
                 <input type="text" name="others[${index}][description]" placeholder="Description" class="flex-1 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
-                <input type="number" step="0.01" name="others[${index}][amount]" placeholder="Amount" class="w-24 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
-                <button type="button" class="text-white bg-red-600 hover:bg-red-700 rounded px-3" onclick="this.parentElement.remove()">×</button>
+                <input type="number" step="0.01" name="others[${index}][amount]" placeholder="Amount" class="w-32 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                <button type="button" class="text-white bg-red-600 hover:bg-red-700 rounded px-3 py-2" onclick="this.parentElement.remove()">×</button>
             </div>
         `);
     }

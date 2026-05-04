@@ -17,6 +17,13 @@
                 @endforeach
             </select>
 
+            <select name="adjustment_type" class="border rounded px-4 py-2 w-full">
+                <option value="">All Movement Types</option>
+                <option value="In" {{ request('adjustment_type') == 'In' ? 'selected' : '' }}>In</option>
+                <option value="Out" {{ request('adjustment_type') == 'Out' ? 'selected' : '' }}>Out</option>
+                <option value="Float" {{ request('adjustment_type') == 'Float' ? 'selected' : '' }}>Float</option>
+            </select>
+
             <select name="sort" class="border rounded px-4 py-2 w-full">
                 <option value="created_at" {{ request('sort') == 'created_at' ? 'selected' : '' }}>Sort by Date</option>
                 <option value="amount" {{ request('sort') == 'amount' ? 'selected' : '' }}>Sort by Amount</option>
@@ -31,37 +38,11 @@
         </div>
     </form>
 
-    <!-- Transaction Form -->
-    <form method="POST" action="{{ route('running_balance.store') }}" class="mb-6">
-        @csrf
-        <div class="grid grid-cols-1 sm:grid-cols-6 gap-4">
-            <select name="type" class="border px-3 py-2 rounded" required>
-                <option value="">Select Type</option>
-                <option value="1">Top-up</option>
-                <option value="5">Salary Deduction</option>
-            </select>
-
-            <input type="number" step="0.01" name="amount" class="border px-3 py-2 rounded" placeholder="Amount" required>
-
-            <input type="text" name="description" class="border px-3 py-2 rounded" placeholder="Description">
-
-            <select name="employee_id" class="border px-3 py-2 rounded">
-                <option value="">Select Employee</option>
-                @foreach($employees as $emp)
-                    <option value="{{ $emp->id }}">{{ $emp->fname }} {{ $emp->lname }}</option>
-                @endforeach
-            </select>
-
-            <select name="approver_id" class="border px-3 py-2 rounded" required>
-                <option value="">Select Approver</option>
-                @foreach($approvers as $ap)
-                    <option value="{{ $ap->id }}">{{ $ap->name }}</option>
-                @endforeach
-            </select>
-
-            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded w-full">Submit</button>
-        </div>
-    </form>
+    <div class="mb-4">
+        <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-4 py-2 rounded">
+            + New Transaction
+        </button>
+    </div> 
 
     <!-- Running Balances Per Source -->
     <div class="mb-6">
@@ -91,6 +72,7 @@
                     <th class="border px-4 py-2">Date</th>
                     <th class="border px-4 py-2">Source</th>
                     <th class="border px-4 py-2">Type</th>
+                    <th class="border px-4 py-2">Movement Type</th>
                     <th class="border px-4 py-2">Amount</th>
                     <th class="border px-4 py-2">Description</th>
                     <th class="border px-4 py-2">Employee</th>
@@ -118,21 +100,136 @@
                         @elseif($balance->type == 7)
                             Transfer
                         @elseif($balance->type == 8)
-                            Release Aprroved Amount
+                            Release Approved Amount
+                        @elseif($balance->type == 10)
+                            Transfer
+                        @elseif($balance->type == 11)
+                            Adjustment
+                        @elseif($balance->type == 12)
+                            Adjustment for Uncollected
                         @else
                             Reimbursement
                         @endif
                     </td>
+                    <td class="px-4 py-2">{{ $balance->adjustment_type }}</td>
                     <td class="px-4 py-2 font-semibold {{ $balance->amount < 0 ? 'text-red-600' : 'text-green-600' }}">
                         {{ number_format($balance->amount, 2) }}
                     </td>
                     <td class="px-4 py-2">{{ $balance->description }}</td>
-                    <td class="px-4 py-2">{{ $balance->employee->fname ?? 'N/A' }}</td>
+                    <td class="px-4 py-2">
+                        {{ $balance->employee->fname ?? $balance->suppliers->supplier_name ?? 'N/A' }}
+                    </td>
                     <td class="px-4 py-2">{{ $balance->creator->fname ?? 'N/A' }}</td>
                 </tr>
                 @endforeach
             </tbody>
         </table>
     </div>
+    <!-- Modal -->
+<div id="transactionModal" class="fixed inset-0 z-50 bg-black bg-opacity-50 hidden flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-lg w-full max-w-3xl p-6 relative">
+        <button onclick="closeModal()" class="absolute top-2 right-2 text-gray-500 hover:text-red-500 text-2xl">&times;</button>
+
+        <h2 class="text-xl font-semibold mb-4">New Transaction</h2>
+
+        <form method="POST" action="{{ route('running_balance.store') }}">
+            @csrf
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <!-- Type -->
+                <div>
+                    <label for="type" class="block text-sm font-medium text-gray-700">Transaction Type</label>
+                    <select name="type" id="modal_type" class="border px-3 py-2 rounded w-full" required>
+                        <option value="">Select Type</option>
+                        <option value="1">Top-up</option>
+                        <option value="5">Salary Deduction</option>
+                        <option value="10">Transfer</option>
+                        <option value="11">Adjustment</option>
+                        <option value="12">Adjustment for Uncollected</option>
+                    </select>
+                </div>
+
+                <!-- Amount -->
+                <div>
+                    <label for="amount" class="block text-sm font-medium text-gray-700">Amount</label>
+                    <input type="number" step="0.01" name="amount" class="border px-3 py-2 rounded w-full" required>
+                </div>
+
+                <!-- Description -->
+                <div class="sm:col-span-2">
+                    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <input type="text" name="description" class="border px-3 py-2 rounded w-full">
+                </div>
+
+                <!-- Employee -->
+                <div>
+                    <label for="employee_id" class="block text-sm font-medium text-gray-700">Employee</label>
+                    <select name="employee_id" class="border px-3 py-2 rounded w-full">
+                        <option value="">Select Employee</option>
+                        @foreach($employees as $emp)
+                            <option value="{{ $emp->id }}">{{ $emp->fname }} {{ $emp->lname }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Destination Approver -->
+                <div>
+                    <label for="approver_id" class="block text-sm font-medium text-gray-700">To Source</label>
+                    <select name="approver_id" class="border px-3 py-2 rounded w-full" required>
+                        <option value="">Select Approver</option>
+                        @foreach($approvers as $ap)
+                            <option value="{{ $ap->id }}">{{ $ap->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <!-- Source Approver (for Transfer) -->
+                <div class="sm:col-span-2 hidden" id="modal_from_approver_wrapper">
+                    <label for="from_approver_id" class="block text-sm font-medium text-gray-700">From Source</label>
+                    <select name="from_approver_id" id="modal_from_approver_id" class="border px-3 py-2 rounded w-full">
+                        <option value="">Select Source Approver</option>
+                        @foreach($approvers as $ap)
+                            <option value="{{ $ap->id }}">{{ $ap->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-6 text-right">
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">
+                    Submit
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
+</div>
+<script>
+    function openModal() {
+        document.getElementById('transactionModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('transactionModal').classList.add('hidden');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const typeSelect = document.getElementById('modal_type');
+        const fromApproverWrapper = document.getElementById('modal_from_approver_wrapper');
+        const fromApproverSelect = document.getElementById('modal_from_approver_id');
+
+        function toggleSourceField() {
+            if (typeSelect.value === '10') {
+                fromApproverWrapper.classList.remove('hidden');
+                fromApproverSelect.setAttribute('required', 'required');
+            } else {
+                fromApproverWrapper.classList.add('hidden');
+                fromApproverSelect.removeAttribute('required');
+            }
+        }
+
+        typeSelect.addEventListener('change', toggleSourceField);
+        toggleSourceField();
+    });
+</script>
+
 @endsection

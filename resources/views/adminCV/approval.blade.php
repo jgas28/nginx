@@ -19,11 +19,15 @@
                     <th class="py-2 px-4 border-b">Type</th>
                     <th class="py-2 px-4 border-b">Actions</th>
                 </tr>
-            </thead>
+            </thead> 
             <tbody>
                 @forelse($cashVouchers as $voucher)
                     <tr class="hover:bg-gray-50">
-                        <td class="py-2 px-4 border-b">{{ $voucher->cvr_number }}</td>
+                        @if($voucher->cvr_type === 'admin')
+                            <td class="py-2 px-4 border-b">{{ preg_replace('/\/\d+$/', '',$voucher->cvr_number) }}-{{ $voucher->company->company_code }}{{ $voucher->expenseTypes->expense_code }}</td>
+                        @elseif($voucher->cvr_type === 'rpm')
+                            <td class="py-2 px-4 border-b">{{ preg_replace('/\/\d+$/', '',$voucher->cvr_number) }}-{{ $voucher->trucks->truck_name ?? '' }}-{{ $voucher->company->company_code }}{{ $voucher->expenseTypes->expense_code }}</td>
+                        @endif
                         <td class="py-2 px-4 border-b">{{ $voucher->company->company_code ?? 'N/A' }}</td>
                         <td class="py-2 px-4 border-b">
                             @php
@@ -36,7 +40,7 @@
                             <a href="{{ route('admin.approvalRequest', $voucher->id) }}" class="btn bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600" title="Confirm Release">
                                 Confirm
                             </a>
-                            <a href="{{ route('admin.editApproval', $voucher->id) }}" class="btn bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600" title="Edit">
+                            <a href="{{ route('admin.edit', $voucher->id) }}" class="btn bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600" title="Edit">
                                 Edit
                             </a>
                         </td>

@@ -14,6 +14,7 @@ class FleetCard extends Model
         'account',
         'account_name',
         'account_number',
+        'status',
     ];
 
 }

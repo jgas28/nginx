@@ -31,26 +31,38 @@ use App\Http\Controllers\CoordinatorsController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\LiquidationController;
 use App\Http\Controllers\RunningBalanceController;
+use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DetailsController;
+use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\BillingController;
+use App\Exports\SoaExcel;
+use App\Exports\SoaDownload;
+use App\Exports\CashVoucherReportExport;
+use Maatwebsite\Excel\Facades\Excel;
 
-// Redirect to dashboard or login
+// 🏠 Root route — redirect based on auth status
 Route::get('/', function () {
     return Auth::check()
-        ? redirect()->route('dashboard')
-        : redirect()->route('login');
+        ? redirect()->action([DashboardController::class, 'index']) // Role-based redirection
+        : redirect()->route('login'); // If not logged in, go to login
 });
+
+// 🧭 This route handles role-based dashboard rendering
+Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
 
 // Public Auth Routes
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+Route::get('/no-dashboard', function () {
+    return view('no_dashboard');
+})->name('no.dashboard');
 
 // Authenticated Routes
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
-
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
     Route::post('/register', [AuthController::class, 'register']);
     Route::get('/password/change', [PasswordController::class, 'showChangeForm'])->name('password.change');
@@ -78,19 +90,25 @@ Route::middleware('auth')->group(function () {
     Route::resource('deliveryRequestType', DeliveryRequestTypeController::class);
     Route::resource('deliveryRequest', DeliveryRequestController::class);
     Route::resource('cashVoucherRequests', CashVoucherController::class);
-    Route::resource('coordinators', CoordinatorsController::class)->parameters([
-        'coordinators' => 'deliveryRequest'
-    ]);
+    Route::resource('employees', EmployeeController::class);
+    Route::resource('coordinators', CoordinatorsController::class)
+        ->parameters(['coordinators' => 'deliveryRequest'])
+        ->except(['show']);
     Route::resource('admin', AdminController::class);
     Route::get('/running-balance', [RunningBalanceController::class, 'index'])->name('running_balance.index');
     Route::post('/running-balance/store', [RunningBalanceController::class, 'store'])->name('running_balance.store');
-
+    Route::get('/reports/deliveryRequest', [ReportsController::class, 'deliveryRequestReport'])->name('reports.dr');
+    Route::get('/reports/cashVoucher', [ReportsController::class, 'cashVoucherReport'])->name('reports.cv');
+    Route::get('/reports/rpm', [ReportsController::class, 'rpmCashVoucherReport'])->name('reports.rpm');
+    Route::get('/rpm-cash-voucher-export', [ReportsController::class, 'RPMexport'])->name('reports.rpm.export');
+    Route::get('/reports/export', [ReportsController::class, 'export'])->name('reports.export');
+    
     Route::get('/liquidations/admin', [LiquidationController::class, 'indexAdmin'])
     ->name('liquidations.indexAdmin');
     // 🟢 Put this first
     Route::get('/liquidations/{id}/liquidate', [LiquidationController::class, 'liquidate'])
         ->name('liquidations.liquidate');
-    Route::post('/liquidations/{id}/liquidate', [App\Http\Controllers\LiquidationController::class, 'storeSummary'])
+    Route::post('/liquidations/{id}/liquidate', [LiquidationController::class, 'storeSummary'])
     ->name('liquidations.storeSummary');
 
     Route::get('/liquidations/{id}/review', [LiquidationController::class, 'review'])->name('liquidations.review');
@@ -103,12 +121,23 @@ Route::middleware('auth')->group(function () {
     Route::get('/liquidations/approval-list', [LiquidationController::class, 'approvalList'])->name('liquidations.approvalList');
     Route::post('/liquidations/{id}/approved', [LiquidationController::class, 'approvedLiquidation'])->name('liquidations.approved');
 
+    Route::get('/liquidations/liquidationList', [LiquidationController::class, 'liquidationList'])
+    ->name('liquidations.liquidationList');
+    Route::get('/liquidations/{id}/reject-edit', [LiquidationController::class, 'rejectEdit'])->name('liquidations.rejectEdit');
+    Route::put('/liquidations/{id}/reject-update', [LiquidationController::class, 'rejectUpdate'])->name('liquidations.rejectUpdate');
+
+        // Route to show rejected liquidations
+    Route::get('/liquidations/rejectedList', [LiquidationController::class, 'rejectedList'])->name('liquidations.rejectedList');
+    Route::post('/liquidations/{id}/reject', [LiquidationController::class, 'reject'])->name('liquidations.reject');
+
     Route::post('/running-balance/reimburse', [RunningBalanceController::class, 'storeReimbursement'])->name('running-balance.reimburse');
     Route::post('/running-balance/collected', [RunningBalanceController::class, 'storeCollected'])->name('running-balance.collected');
-
+    Route::post('/running-balance/uncollected', [RunningBalanceController::class, 'storeUncollected'])->name('running-balance.uncollected');
+    Route::post('/running-balance/reimburse-admin', [RunningBalanceController::class, 'storeReimbursementAdmin'])->name('running-balance.reimburseAdmin');
+    Route::post('/running-balance/collected-admin', [RunningBalanceController::class, 'storeCollectedAdmin'])->name('running-balance.collectedAdmin');
     // ⚠️ Put this after
     Route::resource('liquidations', LiquidationController::class);
-    
+
     //others
     Route::get('/regions/by-area/{area}', [RegionController::class, 'getByArea']);
     Route::get('/deliveryRequest/splitView/{deliveryRequest}', [DeliveryRequestController::class, 'splitView'])->name('deliveryRequest.splitView');
@@ -120,7 +149,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/allocations/allocate', [AllocationController::class, 'allocate'])
     ->name('allocations.allocate');
     Route::resource('allocations', AllocationController::class)->except(['show']);
-
+    Route::get('/allocation/dr-list', [AllocationController::class, 'DRList'])->name('allocation.drlist');
     Route::post('/generate-multiple-cvr', [AllocationController::class, 'generateMultipleCvrNumbers'])->name('cvr.generateMultiple');
 
     Route::get('/coordinators/splitView/{deliveryRequest}', [CoordinatorsController::class, 'splitView'])->name('coordinators.splitView');
@@ -128,10 +157,17 @@ Route::middleware('auth')->group(function () {
     Route::post('/coordinators/split/{id}', [CoordinatorsController::class, 'performSplit'])->name('coordinators.split.perform');
     Route::get('/coordinators/{deliveryRequest}/edit-allocation', [CoordinatorsController::class, 'editAllocation'])
     ->name('coordinators.editAllocation');
+    Route::get('/coordinators/{deliveryRequest}/edit-allocated', [CoordinatorsController::class, 'editAllocated'])
+    ->name('coordinators.editAllocated');
     Route::put('/coordinators/{deliveryRequest}/update-allocation', [CoordinatorsController::class, 'updateAllocation'])
     ->name('coordinators.updateAllocation');
+      Route::put('/coordinators/{deliveryRequest}/update-allocated', [CoordinatorsController::class, 'updateAllocated'])
+    ->name('coordinators.updateAllocated');
     Route::get('coordinators/{id}/request', [CoordinatorsController::class, 'request'])->name('coordinators.coordinators');
     Route::post('coordinators/store-pullout', [CoordinatorsController::class, 'storePullout'])->name('coordinators.storePullout');
+    Route::get('/coordinators/load-tab-data', [CoordinatorsController::class, 'loadTabData'])->name('coordinators.loadTabData');
+    Route::get('coordinators/{id}/requestAccessorial', [CoordinatorsController::class, 'requestAccessorial'])->name('coordinators.requestAccessorial');
+    Route::post('coordinators/store-accessorial', [CoordinatorsController::class, 'storeAccessorial'])->name('coordinators.storeAccessorial');
 
     Route::get('cashVoucherRequests/{id}/request', [CashVoucherController::class, 'request'])->name('cashVoucherRequests.request');
     Route::get('/cash-voucher-accessorial', [CashVoucherController::class, 'accessorial'])->name('cashVoucherRequests.accessorial');
@@ -142,7 +178,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/cash-voucher/edit/{id}', [CashVoucherController::class, 'editView'])->name('cashVoucherRequests.editView');
     Route::put('/cash-voucher/{id}/update', [CashVoucherController::class, 'cvrUpdate'])
     ->name('cashVoucherRequests.cvrUpdate');
-    Route::get('/cvr/{id}/{cvr_number}', [CashVoucherController::class, 'showCustomCVR'])->name('cashVoucherRequests.showCustomCVR');
+    Route::get('/cash-voucher/{id}/{cvr_number}/{cvr_type}', [CashVoucherController::class, 'showCustomCVR'])->name('cashVoucherRequests.showCustomCVR');
     Route::post('cashVoucherRequests/approvalRequestStore', [CashVoucherController::class, 'approvalRequestStore'])->name('cashVoucherRequests.approvalRequestStore');
     Route::post('/cash-voucher/reject', [CashVoucherController::class, 'reject'])->name('cashVoucherRequests.reject');
     Route::get('/cash-voucher/rejectView', [CashVoucherController::class, 'rejectView'])->name('cashVoucherRequests.rejectView');
@@ -150,23 +186,84 @@ Route::middleware('auth')->group(function () {
         ->name('cashVoucherRequests.editCVR');
     Route::put('/cash-voucher-requests/{id}/update-cvr', [CashVoucherController::class, 'updateCVR'])
     ->name('cashVoucherRequests.updateCVR');
+    Route::get('/cash-voucher-list', [CashVoucherController::class, 'cvrList'])->name('cashVoucherRequests.cvrList');
+    Route::put('/cvr/update-reference/{id}', [CashVoucherController::class, 'updateReference'])->name('cvr.updateReference');
+    Route::get('/cash-voucher/{id}/{cvr_number}/{mtm}/{sequence}/print', [CashVoucherController::class, 'printCVR'])->name('cashVoucherRequests.print');
+    Route::get('/cash-voucher/{id}/{cvr_number}/{mtm}/{sequence}/printView', [CashVoucherController::class, 'printViewCVR'])->name('cashVoucherRequests.printView');
+    //edit Print View
+    Route::get('/cash-voucher/{id}/{cvr_number}/{mtm}/{sequence}/edit-print-view', [CashVoucherController::class, 'editPrint'])->name('cashVoucherRequests.editPrint');
+    Route::post('/cash-voucher/print-multiple', [CashVoucherController::class, 'printMultiple'])
+    ->name('cashVoucherRequests.printMultiple');
+    Route::get('/cash-voucher/reject-print/{id}/{cvr_number}/{cvr_type}', [CashVoucherController::class, 'rejectPrintView'])->name('cashVoucherRequests.rejectPrintView');
+    Route::get('/cash-voucher-requests/reject-print-multiple', [CashVoucherController::class, 'rejectPrintViewMultiple'])->name('cashVoucherRequests.rejectPrintViewMultiple');
 
+    Route::post('/update-print-status', [CashVoucherController::class, 'updatePrintStatus']);
+    Route::post('/update-print-admin-status', [AdminController::class, 'updatePrintStatus']);
     //admin
     Route::post('/cvr/generate', [AdminController::class, 'generateCvrNumber'])->name('cvr.generate');
     Route::post('/admin/generate-cvr-number', [AdminController::class, 'generateCvrNumber'])->name('admin.generate-cvr-number');
     Route::get('/adminCV/approval', [AdminController::class, 'approvals'])->name('adminCV.approval');
     Route::put('/adminCV/{id}', [AdminController::class, 'update'])->name('adminCV.update');
     Route::get('/admin/{id}/viewPrint', [AdminController::class, 'viewPrint'])->name('admin.viewPrint');
-    
+    Route::post('/adminCV/print-multiple', [AdminController::class, 'printMultiple'])->name('adminCV.printMultiple');
+    Route::get('/adminCV/{id}/{cvr_number}/print', [AdminController::class, 'printCVR'])->name('adminCV.print');
+    Route::get('/adminCV/{id}/{cvr_number}/printView', [AdminController::class, 'printViewCVR'])->name('adminCV.printView');
+    Route::get('/admin-cvr-list', [AdminController::class, 'cvrList'])->name('adminCV.cvrList');
+    //edit print view
+    Route::get('/adminCV/{id}/{cvr_number}/edit-print-view', [AdminController::class, 'editPrintView'])->name('adminCV.editPrintView');
+    Route::put('/adminCV/update-reference/{id}', [AdminController::class, 'updateReference'])->name('adminCV.updateReference');
+    Route::post('/adminCV/reject', [AdminController::class, 'reject'])->name('adminCV.reject');
+    Route::get('/adminCV/rejectView', [AdminController::class, 'rejectView'])->name('adminCV.rejectView');
+        Route::get('/adminCV/{id}/edit-cvr', [AdminController::class, 'editCVR'])
+        ->name('adminCV.editCVR');
+    Route::put('/adminCV/updateCVR/{id}', [AdminController::class, 'updateCVR'])->name('adminCV.updateCVR');
     // Edit Approval View
     Route::get('/admin/approval/edit/{id}', [AdminController::class, 'editApproval'])->name('admin.editApproval');
+    Route::get('/adminCV/reject-print/{id}', [AdminController::class, 'rejectPrintView'])
+    ->name('adminCV.rejectPrintView');
+    Route::post('/adminCV/reject-print-multiple', [AdminController::class, 'rejectPrintMultiple'])->name('adminCV.rejectPrintMultiple');
+
 
     // Confirm/Release Request
     Route::get('/admin/approval-request/{id}', [AdminController::class, 'approvalRequest'])->name('admin.approvalRequest');
-    Route::get('/admin/cashvoucher/print-preview/{id}', [AdminController::class, 'printPreview'])->name('admin.cashvoucher.printPreview');
+    Route::get('/admin/cashvoucher/print-preview/{id}', [AdminController::class, 'printPreview'])->name('adminCV.printPreview');
     Route::post('/admin-update', [AdminController::class, 'StoreApprovalRequest'])->name('admin.storeRequest');
 
+    Route::get('/reimbursements/print/{id}', [RunningBalanceController::class, 'print'])->name('reimbursements.print');
+    Route::get('/refund/print/{id}', [RunningBalanceController::class, 'printRefund'])->name('refunds.print');
+    Route::get('/return/print/{id}', [RunningBalanceController::class, 'printReturn'])->name('returns.print');
+    Route::get('/running-balance/laguna', [RunningBalanceController::class, 'adminFunds'])->name('running_balance.adminFunds');
+    Route::get('/running-balance/davao', [RunningBalanceController::class, 'davaoFunds'])->name('running_balance.davaoFunds');
+    
+    Route::post('/liquidations/{id}/approvedEdit', [LiquidationController::class, 'approvedLiqUpdate'])->name('liquidations.approvedEdit');
 
+    Route::get('/cash-vouchers-status', [LiquidationController::class, 'Overall'])->name('liquidations.overall');
+    
+    Route::prefix('running-balance')->group(function () {
+        Route::get('refunds/{id}/edit', [RunningBalanceController::class, 'editRefund'])->name('refunds.edit');
+        Route::put('refunds/{id}', [RunningBalanceController::class, 'updateRefund'])->name('refunds.update');
+
+        Route::get('returns/{id}/edit', [RunningBalanceController::class, 'editReturn'])->name('returns.edit');
+        Route::put('returns/{id}', [RunningBalanceController::class, 'updateReturn'])->name('returns.update');
+    });
+    
+    Route::get('/delivery-details', [DetailsController::class, 'index'])->name('delivery.details');
+    Route::get('/allocation/show/{id}', [AllocationController::class, 'show'])->name('allocation.show');
+
+    // Show delivery requests (index view) with company filter
+    Route::get('billing', [BillingController::class, 'index'])->name('billing.index');
+    Route::get('billing/accessorial', [BillingController::class, 'indexAccessorial'])->name('billing.indexAccessorial');
+
+    // Show the form for creating SOA (after selecting delivery requests)
+    Route::get('/billing/create-soa', [BillingController::class, 'createSOAForm'])->name('billing.createSOA.form');
+    Route::get('/billing/create-acc', [BillingController::class, 'createSOAFormAccessorial'])->name('billing.createSOA-acc.form');
+    // Save SOA after the form is submitted
+    Route::post('/billing/create-soa', [BillingController::class, 'createSOA'])->name('billing.createSOA');
+    Route::post('/billing/create-acc', [BillingController::class, 'createAccessorialSOA'])->name('billing.createSOA-acc');
+    Route::get('/billing/show-soa', [BillingController::class, 'showSoa'])->name('billing.showSoa');
+    
+    Route::get('/billing/{soa}/print', [BillingController::class, 'print'])->name('soa.print');
+    Route::get('admin-cv-report/export', [ReportsController::class, 'AdminExport'])->name('cashVoucherReport.export');
 });
 
 // Admin-only Routes (if needed separately)
@@ -177,3 +274,4 @@ Route::middleware(['auth', 'role:administrator'])->group(function () {
 
     
 });
+ 

@@ -26,10 +26,17 @@
                     CVR Information
                 </legend>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label for="cvr_number" class="block text-sm font-medium text-gray-700">CVR Number</label>
-                        <input type="text" name="cvr_number" id="cvr_number" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->cvr_number }}" readonly>
-                    </div>
+                    @if ($cashVouchers->cvr_type === 'admin')
+                        <div>
+                            <label for="cvr_number" class="block text-sm font-medium text-gray-700">CVR Number</label>
+                            <input type="text" name="cvr_number" id="cvr_number" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ preg_replace('/\/\d+$/', '',$cashVouchers->cvr_number) }}-{{ $cashVouchers->company->company_code }}{{ $cashVouchers->expenseTypes->expense_code }}" readonly>
+                        </div>
+                    @elseif ($cashVouchers->cvr_type === 'rpm')
+                        <div>
+                            <label for="cvr_number" class="block text-sm font-medium text-gray-700">CVR Number</label>
+                            <input type="text" name="cvr_number" id="cvr_number" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ preg_replace('/\/\d+$/', '',$cashVouchers->cvr_number) }}-{{ $cashVouchers->trucks->truck_name }}-{{ $cashVouchers->company->company_code }}{{ $cashVouchers->expenseTypes->expense_code }}  " readonly>
+                        </div>
+                    @endif
 
                    @php
                         $amounts = json_decode($cashVouchers->amount_details, true);
@@ -50,7 +57,7 @@
 
                     <div>
                         <label for="supplier_id" class="block text-sm font-medium text-gray-700">Supplier</label>
-                        <input type="text" name="supplier_id" id="supplier_id" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->suppliers->supplier_code }}" readonly>
+                        <input type="text" name="supplier_id" id="supplier_id" class="mt-1 block w-full rounded border-gray-300 shadow-sm bg-gray-100" value="{{ $cashVouchers->suppliers->supplier_name }}" readonly>
                     </div>
 
                     <div>
@@ -92,7 +99,7 @@
                     @endif
                 </div>
                 <div class="my-2">
-                   <a href="{{ route('admin.cashvoucher.printPreview', $cashVouchers->id) }}"
+                   <a href="{{ route('adminCV.printPreview', $cashVouchers->id) }}"
                         target="_blank"
                         class="inline-block bg-yellow-500 text-white px-5 py-2 rounded hover:bg-yellow-600 transition">
                         View CVR
@@ -123,6 +130,11 @@
                     <input type="radio" name="payment_type" value="outlet_transfer" class="mr-3" />
                     <span>Outlet Transfer</span>
                 </label>
+
+                <label class="flex items-center bg-white border rounded p-4 shadow cursor-pointer">
+                    <input type="radio" name="payment_type" value="cheque_transfer" class="mr-3" />
+                    <span>Cheque Transfer</span>
+                </label>
             </div>
         </fieldset>
 
@@ -136,7 +148,16 @@
             </div>
             <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="cash_amount" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="number" name="cash_amount" step="0.01" class="w-full border border-gray-300 rounded px-3 py-2" />
+            </div> 
+            <div>
+                <label class="block text-gray-700">Receiver</label>
+                <select name="cash_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
+                    <option value="">Select Receiver</option>
+                    @foreach($employees as $employee)
+                        <option value="{{ $employee->id }}">{{ $employee->supplier_name }}</option>
+                    @endforeach
+                </select>
             </div>
             <div>
                 <label class="block text-gray-700">Fund Source</label>
@@ -163,14 +184,14 @@
             </div>
             <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="bank_amount" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="number" name="bank_amount" step="0.01" class="w-full border border-gray-300 rounded px-3 py-2" />
             </div>
             <div>
                 <label class="block text-gray-700">Receiver</label>
                 <select nambere="bank_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
                     <option value="">Select Receiver</option>
                     @foreach($employees as $employee)
-                        <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
+                        <option value="{{ $employee->id }}">{{ $employee->supplier_name }}</option>
                     @endforeach
                 </select>
             </div>
@@ -203,14 +224,14 @@
             </div>
             <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="outlet_amount" class="w-full border border-gray-300 rounded px-3 py-2" />
+                <input type="number" name="outlet_amount" step="0.01" class="w-full border border-gray-300 rounded px-3 py-2" />
             </div>
             <div>
                 <label class="block text-gray-700">Receiver</label>
                 <select name="outlet_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
                     <option value="">Select Receiver</option>
                     @foreach($employees as $employee)
-                        <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
+                        <option value="{{ $employee->id }}">{{ $employee->supplier_name }}</option>
                     @endforeach
                 </select>
             </div>
@@ -226,6 +247,46 @@
             <div>
                 <label class="block text-gray-700">Outlet Charge</label>
                 <input type="text" name="outlet_charge" class="w-full border border-gray-300 rounded px-3 py-2" />
+            </div>
+        </fieldset>
+
+        <!-- Cheque Fields -->
+        <fieldset id="chequeFields" class="hidden mb-6 p-4 border border-gray-200 rounded bg-gray-50 space-y-4">
+            <legend class="text-blue-600 font-semibold text-sm mb-3">Cheque Transfer Details</legend>
+
+            <div>
+                <label class="block text-gray-700">Bank Name</label>
+                <input type="text" name="cheque_bank_name" class="w-full border border-gray-300 rounded px-3 py-2" />
+            </div>
+            <div>
+                <label class="block text-gray-700">Cheque Number</label>
+                <input type="text" name="cheque_number" class="w-full border border-gray-300 rounded px-3 py-2" />
+            </div>
+            <div>
+                <label class="block text-gray-700">Amount</label>
+                <input type="number" name="cheque_amount" step="0.01" class="w-full border border-gray-300 rounded px-3 py-2" />
+            </div>
+            <div>
+                <label class="block text-gray-700">Receiver</label>
+                <select nambere="cheque_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
+                    <option value="">Select Receiver</option>
+                    @foreach($employees as $employee)
+                        <option value="{{ $employee->id }}">{{ $employee->supplier_name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-gray-700">Fund Source</label>
+                <select name="cheque_fund_source" class="w-full border border-gray-300 rounded px-3 py-2">
+                    <option value="">Select Funds</option>
+                    @foreach($approves as $approve)
+                        <option value="{{ $approve->id }}">{{ $approve->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-gray-700">Cheque Charge</label>
+                <input type="text" name="cheque_charge" class="w-full border border-gray-300 rounded px-3 py-2" />
             </div>
         </fieldset>
 
@@ -245,7 +306,7 @@
 <div id="rejectModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden">
     <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
         <h2 class="text-xl font-semibold mb-4">Reject Cash Voucher</h2>
-        <form method="POST" action="">
+        <form method="POST" action="{{ route('adminCV.reject') }}">
             @csrf
             <input type="hidden" name="cvr_number" value="{{ $cashVouchers->cvr_number }}" />
             <div class="mb-4">
@@ -292,7 +353,8 @@
         const paymentFields = {
             cash: document.getElementById('cashFields'),
             bank_transfer: document.getElementById('bankTransferFields'),
-            outlet_transfer: document.getElementById('storeTransferFields')
+            outlet_transfer: document.getElementById('storeTransferFields'),
+            cheque_transfer: document.getElementById('chequeFields')
         };
 
         document.querySelectorAll('input[name="payment_type"]').forEach(radio => {

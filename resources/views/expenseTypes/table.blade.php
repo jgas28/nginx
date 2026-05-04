@@ -4,7 +4,7 @@
         <tr>
             <th class="py-2 px-4 border-b">Expense Code</th>
             <th class="py-2 px-4 border-b">Expense Name</th>
-            <th class="py-2 px-4 border-b">Type</th>
+            <!-- <th class="py-2 px-4 border-b">Type</th> -->
             <th class="py-2 px-4 border-b">Actions</th>
         </tr>
     </thead>
@@ -13,7 +13,7 @@
             <tr class="hover:bg-gray-50">
                 <td class="py-2 px-4 border-b">{{ $expenseType->expense_code }}</td>
                 <td class="py-2 px-4 border-b">{{ $expenseType->expense_name }}</td>
-                <td>{{ $expenseType->deliveryRequestType->description ?? 'N/A' }}</td>
+                <!-- <td>{{ $expenseType->deliveryRequestType->description ?? 'N/A' }}</td> -->
                 <td class="py-2 px-4 border-b">
                     <a href="{{ route('expenseTypes.edit', $expenseType) }}" class="btn btn-warning bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">
                         Edit

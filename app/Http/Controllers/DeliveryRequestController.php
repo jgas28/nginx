@@ -135,6 +135,7 @@ class DeliveryRequestController extends Controller
             'area_id' => 'required',
             'delivery_type' => 'required', // This is always required
             'expense_type_id' => 'required',
+            'delivery_status' => 'required',
         ];
 
         // Add specific validation for delivery types
@@ -143,7 +144,6 @@ class DeliveryRequestController extends Controller
             // $validationRules['regular.*.warehouse_id'] = 'nullable|string';
             $validationRules['regular.*.site_name'] = 'nullable|string';
             $validationRules['regular.*.delivery_number'] = 'nullable|string';
-            $validationRules['regular.*.delivery_status'] = 'nullable|string';
             $validationRules['regular.*.delivery_address'] = 'nullable|string';
             $validationRules['regular.*.distance_type'] = 'nullable|string';
             $validationRules['regular.*.accessorial_type'] = 'nullable|string';
@@ -156,7 +156,6 @@ class DeliveryRequestController extends Controller
             $validationRules['multi_drop.*.warehouse_id'] = 'nullable|string';
             // $validationRules['multi_drop.*.site_name'] = 'nullable|string';
             $validationRules['multi_drop.*.delivery_number'] = 'nullable|string';
-            $validationRules['multi_drop.*.delivery_status'] = 'nullable|string';
             // $validationRules['multi_drop.*.delivery_address'] = 'nullable|string';
             $validationRules['multi_drop.*.distance_type'] = 'nullable|string';
             $validationRules['multi_drop.*.accessorial_type'] = 'nullable|string';
@@ -168,7 +167,6 @@ class DeliveryRequestController extends Controller
             $validationRules['multi_pickup'] = 'nullable|array';
             $validationRules['multi_pickup.*.warehouse_id'] = 'nullable|string';
             $validationRules['multi_pickup.*.site_name'] = 'nullable|string';
-            $validationRules['multi_pickup.*.delivery_status'] = 'nullable|string';
             $validationRules['multi_pickup.*.delivery_address'] = 'nullable|string';
             $validationRules['multi_pickup.*.distance_type'] = 'nullable|string';
             $validationRules['multi_pickup.*.add_on_rate'] = 'nullable|string';
@@ -200,6 +198,7 @@ class DeliveryRequestController extends Controller
                 'area_id' => $request->area_id,
                 'status' => 1,
                 'expense_type_id' => $request->expense_type_id,
+                'delivery_status' => $request->delivery_status,
                 'created_by' => $employeeCode,
             ]);
             $deliveryRequest->save();
@@ -275,7 +274,7 @@ class DeliveryRequestController extends Controller
             // Commit the transaction if everything is successful
             DB::commit();
 
-            return redirect()->route('allocations.index')->with('success', 'Delivery Request created successfully.');
+            return redirect()->route('coordinators.index')->with('success', 'Delivery Request created successfully.');
         } catch (\Exception $e) {
             // Rollback if there is an error
             DB::rollBack();
@@ -351,7 +350,8 @@ class DeliveryRequestController extends Controller
             'region_id' => 'required',
             'area_id' => 'required',
             'delivery_type' => 'required', // This is always required
-            'expense_type_id' => 'required',     
+            'expense_type_id' => 'required',    
+            'delivery_status' => 'required',
         ];
 
         // Add specific validation for delivery types
@@ -359,36 +359,33 @@ class DeliveryRequestController extends Controller
             $validationRules['regular'] = 'nullable|array';
             $validationRules['regular.*.site_name'] = 'nullable|string';
             $validationRules['regular.*.delivery_number'] = 'nullable|string';
-            $validationRules['regular.*.delivery_status'] = 'nullable|string';
             $validationRules['regular.*.delivery_address'] = 'nullable|string';
             $validationRules['regular.*.distance_type'] = 'nullable|string';
 
             $validationRules['regular.*.accessorial_type'] = 'nullable|string';
-            $validationRules['regular.*.accessorial_rate'] = 'nullable|string';
+            $validationRules['regular.*.accessorial_rate'] = 'nullable|numeric';
         }
 
         if ($request->delivery_type == 'Multi-Drop') {
             $validationRules['multi_drop'] = 'nullable|array';
             $validationRules['multi_drop.*.warehouse_id'] = 'nullable|string';
             $validationRules['multi_drop.*.delivery_number'] = 'nullable|string';
-            $validationRules['multi_drop.*.delivery_status'] = 'nullable|string';
             $validationRules['multi_drop.*.distance_type'] = 'nullable|string';
 
             $validationRules['multi_drop.*.accessorial_type'] = 'nullable|string';
-            $validationRules['multi_drop.*.accessorial_rate'] = 'nullable|string';
+            $validationRules['multi_drop.*.accessorial_rate'] = 'nullable|numeric';
         }
 
         if ($request->delivery_type == 'Multi Pick-Up') {
             $validationRules['multi_pickup'] = 'nullable|array';
             $validationRules['multi_pickup.*.warehouse_id'] = 'nullable|string';
             $validationRules['multi_pickup.*.site_name'] = 'nullable|string';
-            $validationRules['multi_pickup.*.delivery_status'] = 'nullable|string';
             $validationRules['multi_pickup.*.delivery_address'] = 'nullable|string';
             $validationRules['multi_pickup.*.distance_type'] = 'nullable|string';
             $validationRules['multi_pickup.*.add_on_rate'] = 'nullable|string';
 
             $validationRules['multi_pickup.*.accessorial_type'] = 'nullable|string';
-            $validationRules['multi_pickup.*.accessorial_rate'] = 'nullable|string';
+            $validationRules['multi_pickup.*.accessorial_rate'] = 'nullable|numeric';
         }
 
         Log::debug('Starting Validation...', $request->all());
@@ -416,6 +413,7 @@ class DeliveryRequestController extends Controller
             $deliveryRequest->area_id = $request->area_id;
             $deliveryRequest->expense_type_id = $request->expense_type_id;
             $deliveryRequest->status = '1';
+            $deliveryRequest->delivery_status = $request->delivery_status;
 
             $deliveryRequest->update();
             Log::debug('DeliveryRequest saved:', $deliveryRequest->toArray());
@@ -527,7 +525,6 @@ class DeliveryRequestController extends Controller
                     'warehouse_id' => $lineItem['warehouse_id'] ?? null,
                     'site_name' => $lineItem['site_name'] ?? null,
                     'delivery_number' => $lineItem['delivery_number'] ?? null,
-                    'delivery_status' => trim($lineItem['delivery_status']) ?? null,
                     'delivery_address' => $lineItem['delivery_address'] ?? null,
                     'distance_type' => $lineItem['distance_type'] ?? null,
                     'add_on_rate' => $lineItem['add_on_rate'] ?? null,
@@ -577,7 +574,7 @@ class DeliveryRequestController extends Controller
     
                 // Explicitly check and set fields to null if they're empty
                 $lineItem['accessorial_type'] = empty($lineItem['accessorial_type']) ? null : $lineItem['accessorial_type'];
-                $lineItem['accessorial_rate'] = empty($lineItem['accessorial_rate']) ? null : $lineItem['accessorial_rate'];
+                $lineItem['accessorial_rate'] = !empty($lineItem['accessorial_rate']) ? (float) $lineItem['accessorial_rate'] : null;
                 $lineItem['delivery_address'] = empty($lineItem['delivery_address']) ? null : $lineItem['delivery_address'];
     
                 // Check if the line item exists for this mtm (foreign key) and its unique id
@@ -590,7 +587,6 @@ class DeliveryRequestController extends Controller
                         'warehouse_id' => $lineItem['warehouse_id'] ?? $deliveryRequestLineItem->warehouse_id,
                         'site_name' => $lineItem['site_name'] ?? $deliveryRequestLineItem->site_name,
                         'delivery_number' => $lineItem['delivery_number'], // Update the delivery number
-                        'delivery_status' => $lineItem['delivery_status'] ?? $deliveryRequestLineItem->delivery_status,
                         'delivery_address' => $lineItem['delivery_address'], // Use the modified value
                         'distance_type' => $lineItem['distance_type'] ?? $deliveryRequestLineItem->distance_type,
                         'add_on_rate' => $lineItem['add_on_rate'] ?? $deliveryRequestLineItem->add_on_rate,
@@ -691,27 +687,21 @@ class DeliveryRequestController extends Controller
     {
         $user = Auth::user();
         $employeeCode = $user->id;
+
         // Step 1: Retrieve all form data
         $data = $request->all();
 
         // Step 2: Retrieve the existing delivery request using the provided $id
         $deliveryRequest = DeliveryRequest::findOrFail($id);
 
-        // Step 3: Update the MTM by appending '-1' to the existing MTM
-        // $updatedMtm = $deliveryRequest->mtm . '-1';
-        // $deliveryRequest->mtm = $updatedMtm;
-        // $deliveryRequest->save(); // Save the updated DeliveryRequest
-
-        // Step 4: Initialize the lineItemIds array
+        // Step 3: Initialize the lineItemIds array
         $lineItemIds = [];
 
-        // Step 5: Update line items and track lineItemIds for selected ones
+        // Step 4: Update line items and track lineItemIds for selected ones
         if (isset($data['regular'])) {
             foreach ($data['regular'] as $index => $lineItemData) {
                 // Extract the line item ID
                 $lineItemId = $lineItemData['id'];
-        
-                // Store the line item ID in the array for later use
                 $lineItemIds[] = $lineItemId;
 
                 // Find the corresponding DeliveryLineItem
@@ -720,25 +710,24 @@ class DeliveryRequestController extends Controller
                 // Check if the line item exists
                 if ($lineItem) {
                     // Update MTM to append '-2' to line items that have been split
-                    $lineItem->mtm = $lineItem->mtm . '-1';
+                    $lineItem->mtm = $lineItem->mtm; // Appending '-2' for split items
                     $lineItem->status = 0; // Set the status to 0 for items that have been split
                     $lineItem->save();
                 }
             }
         }
 
-        // Step 6: Update the DeliveryRequestLineItems that have not been selected
+        // Step 5: Update the DeliveryRequestLineItems that have not been selected (if needed)
+        // If you're updating non-selected line items, you can uncomment the next block:
         // $allLineItems = DeliveryRequestLineItem::where('mtm', $deliveryRequest->mtm)->get();
         // foreach ($allLineItems as $lineItem) {
-        //     // Check if the line item ID is not in the selected list (those that were not selected)
         //     if (!in_array($lineItem->id, $lineItemIds)) {
-        //         // Update the MTM to append '-2' for those not selected
-        //         $lineItem->mtm = $lineItem->mtm . '-1';
+        //         $lineItem->mtm = $lineItem->mtm . '-1'; // Appending '-1' for non-selected items
         //         $lineItem->save();
         //     }
         // }
 
-        // Step 7: Create the new DeliveryRequest with the provided data
+        // Step 6: Create the new DeliveryRequest with the provided data
         $deliveryRequestData = [
             'mtm' => $data['mtm'], // Assuming only 'mtm' is user-editable
             'booking_date' => $data['booking_date'],
@@ -754,27 +743,30 @@ class DeliveryRequestController extends Controller
             'delivery_type' => $data['delivery_type'],
             'status' => 1,
             'created_by' => $employeeCode,
+            'delivery_status' => $data['delivery_status'],
         ];
 
         // Create the new DeliveryRequest entry in the database
-        $deliveryRequest  = DeliveryRequest::create($deliveryRequestData);
-
+        $deliveryRequest = DeliveryRequest::create($deliveryRequestData);
         $newlyCreatedId = $deliveryRequest->id;
 
-        // Step 8: Handle DeliveryLineItems for the new request
+        // Step 7: Handle DeliveryLineItems for the new request
         if (isset($data['regular'])) {
             foreach ($data['regular'] as $index => $lineItemData) {
                 // Create the new line item associated with the new delivery request
+                $accessorialRate = isset($lineItemData['accessorial_rate']) ? (float) $lineItemData['accessorial_rate'] : 0.0;
+
                 $lineItem = [
-                    'mtm' => $data['mtm'],
+                    'mtm' => $data['mtm'], // Using the provided MTM for the new request
                     'warehouse_id' => $lineItemData['warehouse_id'],
                     'delivery_number' => $lineItemData['delivery_number'],
                     'site_name' => $lineItemData['site_name'],
-                    'delivery_status' => $lineItemData['delivery_status'],
                     'delivery_address' => $lineItemData['delivery_address'],
                     'status' => 1,
                     'created_by' => $employeeCode,
-                    'dr_id' =>  $newlyCreatedId,
+                    'dr_id' => $newlyCreatedId,
+                    'accessorial_type' => $lineItemData['accessorial_type'] ?? null, // Ensure default is null
+                    'accessorial_rate' => $accessorialRate,  // Ensure default is 0
                 ];
 
                 // Create the DeliveryLineItem in the database
@@ -782,8 +774,9 @@ class DeliveryRequestController extends Controller
             }
         }
 
-        // Step 9: Redirect or show a success message
+        // Step 8: Redirect or show a success message
         return redirect()->route('deliveryRequest.index')->with('success', 'Delivery request created and line items updated successfully!');
     }
+
 
 }

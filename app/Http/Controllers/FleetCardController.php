@@ -58,6 +58,7 @@ class FleetCardController extends Controller
             'account' => $request->account,
             'account_name' => $request->account_name,
             'account_number' => $request->account_number,
+            'status' => $request->status,
         ]);
 
         $fleetCard->save();
@@ -91,12 +92,14 @@ class FleetCardController extends Controller
             'account' => 'required',
             'account_name' => 'required',
             'account_number' => 'required',
+            'status' => 'required',
         ]);
 
         // Update the employee details
         $fleetCard->account = $request->account;
         $fleetCard->account_name = $request->account_name;
         $fleetCard->account_number = $request->account_number;
+        $fleetCard->status = $request->status;
 
         $fleetCard->save();
 
@@ -109,8 +112,13 @@ class FleetCardController extends Controller
      */ 
     public function destroy(FleetCard $fleetCard)
     {
-        $fleetCard->delete();
+        $fleetCard->update([
+            'status' => 0,
+        ]);
 
-        return redirect()->route('fleetCards.index')->with('success', 'Fleet Card deleted successfully.');
+        return redirect()
+            ->route('fleetCards.index')
+            ->with('success', 'Fleet Card deactivated successfully.');
     }
+
 }
