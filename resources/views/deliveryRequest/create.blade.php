@@ -48,6 +48,7 @@
                         name="delivery_rate" 
                         id="delivery_rate" 
                         step="0.01" 
+                        min="0"
                         required
                         class="block w-full border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     >

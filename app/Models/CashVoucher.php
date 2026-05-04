@@ -16,6 +16,34 @@ class CashVoucher extends Model
         'amount_details', 'dr_id', 'created_by', 'reject_remarks', 'truck_id','sequence', 'printed_by','print_status'
     ];
 
+    protected $casts = [
+        'amount' => 'decimal:2',
+        'tax_based_amount' => 'decimal:2',
+    ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $cashVoucher) {
+            $cashVoucher->amount = self::normalizeCurrencyValue($cashVoucher->amount);
+            $cashVoucher->tax_based_amount = self::normalizeCurrencyValue($cashVoucher->tax_based_amount);
+        });
+    }
+
+    public static function normalizeCurrencyValue(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $amount = round((float) $value, 2);
+
+        if ($amount >= -0.01 && $amount < 0) {
+            $amount = 0.0;
+        }
+
+        return number_format($amount, 2, '.', '');
+    }
+
     // Conditional logic to store line_item_id only for accessorial CVRs
     public function setLineItemIdAttribute($value)
     {

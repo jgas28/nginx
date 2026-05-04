@@ -22,7 +22,7 @@
                 ] as $field => $label)
                     <div>
                         <label class="block text-sm font-medium text-gray-700">{{ $label }}</label>
-                        <input type="number" step="0.01" name="{{ $field }}"
+                        <input type="number" step="0.01" min="0" name="{{ $field }}"
                             value="{{ old($field, $liquidation->$field ?? 0) }}"
                             class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
                     </div>
@@ -56,7 +56,7 @@
                                 <option value="cash" {{ $item['type'] == 'cash' ? 'selected' : '' }}>Cash</option>
                                 <option value="card" {{ $item['type'] == 'card' ? 'selected' : '' }}>Card</option>
                             </select>
-                            <input type="number" step="0.01" name="gasoline[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}" placeholder="Amount" class="w-36 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                            <input type="number" step="0.01" min="0" name="gasoline[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}" placeholder="Amount" class="w-36 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
                             <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
                         </div>
                     @endforeach
@@ -83,7 +83,7 @@
                                 <option value="cash" {{ $item['type'] == 'cash' ? 'selected' : '' }}>Cash</option>
                                 <option value="card" {{ $item['type'] == 'card' ? 'selected' : '' }}>Card</option>
                             </select>
-                            <input type="number" step="0.01" name="rfid[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}" placeholder="Amount" class="w-32 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                            <input type="number" step="0.01" min="0" name="rfid[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}" placeholder="Amount" class="w-32 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
                             <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
                         </div>
                     @endforeach
@@ -103,7 +103,7 @@
                 @foreach ($others as $index => $item)
                     <div class="flex space-x-3 other-item">
                         <input type="text" name="others[{{ $index }}][description]" value="{{ $item['description'] ?? '' }}" placeholder="Description" class="flex-1 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
-                        <input type="number" step="0.01" name="others[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}" placeholder="Amount" class="w-24 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                        <input type="number" step="0.01" min="0" name="others[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}" placeholder="Amount" class="w-24 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
                         <button type="button" class="text-white bg-red-600 hover:bg-red-700 rounded px-3" onclick="this.parentElement.remove()">×</button>
                     </div>
                 @endforeach
@@ -157,7 +157,7 @@
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                 </select>
-                <input type="number" step="0.01" name="gasoline[${gasolineIndex}][amount]" placeholder="Amount" class="w-40 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                <input type="number" step="0.01" min="0" name="gasoline[${gasolineIndex}][amount]" placeholder="Amount" class="w-40 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
                 <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
             </div>
         `);
@@ -178,7 +178,7 @@
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                 </select>
-                <input type="number" step="0.01" name="rfid[${rfidIndex}][amount]" placeholder="Amount" class="w-36 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                <input type="number" step="0.01" min="0" name="rfid[${rfidIndex}][amount]" placeholder="Amount" class="w-36 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
                 <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
             </div>
         `);
@@ -191,7 +191,7 @@
         wrapper.insertAdjacentHTML('beforeend', `
             <div class="flex space-x-3 other-item">
                 <input type="text" name="others[${index}][description]" placeholder="Description" class="flex-1 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
-                <input type="number" step="0.01" name="others[${index}][amount]" placeholder="Amount" class="w-24 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                <input type="number" step="0.01" min="0" name="others[${index}][amount]" placeholder="Amount" class="w-24 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
                 <button type="button" class="text-white bg-red-600 hover:bg-red-700 rounded px-3" onclick="this.parentElement.remove()">×</button>
             </div>
         `);

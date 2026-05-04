@@ -24,7 +24,7 @@
                     <label class="block font-medium">
                         {{ $field === 'roro_expense' ? 'Freight' : ucwords(str_replace('_', ' ', $field)) }}
                     </label>
-                    <input type="number" step="0.01" name="{{ $field }}" value="{{ old($field, $liquidation->$field) }}" class="w-full px-3 py-2 border rounded" />
+                    <input type="number" step="0.01" min="0" name="{{ $field }}" value="{{ old($field, $liquidation->$field) }}" class="w-full px-3 py-2 border rounded" />
                 </div>
             @endforeach 
 
@@ -104,8 +104,11 @@
         });
 
         // Final difference, adjusted by refund and returns
-        $difference = $rawDifference + $refundTotal + $returnedTotal;
-        $difference = round($difference, 2); // Optional rounding
+        $difference = round($rawDifference + $refundTotal + $returnedTotal, 2);
+        $differenceIsZero = abs($difference) <= 0.01;
+        if ($differenceIsZero) {
+            $difference = 0;
+        }
     @endphp
 
     <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 font-medium text-lg">
@@ -183,7 +186,7 @@
     </div>
 
     {{-- Refund Modal Trigger --}}
-    @if ($difference > 0 && abs($difference) > 0.009)
+    @if ($difference > 0 && !$differenceIsZero)
         <button id="openModalBtn" class="mt-6 bg-red-600 text-white px-5 py-2 rounded hover:bg-red-700 transition">
             Create Refund
         </button>
@@ -217,7 +220,7 @@
         <form id="liquidation-form" action="{{ route('liquidations.validate', $liquidation->id) }}" method="POST" class="bg-gray-50 p-4 rounded-lg shadow-sm">
             @csrf
             {{-- Show collector if there's a return (user owes money) --}}
-            @if (($difference < 0 && abs($difference) > 0.009) || $liquidation->collector_id)
+            @if (($difference < 0 && !$differenceIsZero) || $liquidation->collector_id)
                 <label for="collector_id" class="block mb-2 font-medium text-gray-700">Collector</label>
                 <select id="collector_id" name="collector_id" required class="w-full border rounded px-3 py-2 mb-4">
                     @foreach ($collectors as $employee)
@@ -260,7 +263,7 @@
             <h3 class="text-xl font-semibold mb-4 text-indigo-700">Confirm Validation</h3>
             <p class="text-sm text-gray-600 mb-3">
                 Are you sure you want to confirm the validation?
-                @if (abs($difference) > 0.009)
+                @if (!$differenceIsZero)
                     <span class="text-red-600 font-medium">There's still a difference between approved and liquidated amount.</span>
                 @endif
             </p>

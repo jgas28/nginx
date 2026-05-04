@@ -14,7 +14,7 @@
             @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
                 <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1 capitalize">{{ str_replace('_', ' ', $field) }}</label>
-                    <input type="number" step="0.01" name="expenses[{{ $field }}]" class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
+                    <input type="number" step="0.01" min="0" name="expenses[{{ $field }}]" class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
                 </div>
             @endforeach
             <div>
@@ -43,7 +43,7 @@
             <div id="others-wrapper" class="space-y-3">
                 <div class="flex space-x-3 other-item">
                     <input type="text" name="others[0][description]" placeholder="Description" class="flex-1 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
-                    <input type="number" step="0.01" name="others[0][amount]" placeholder="Amount" class="w-24 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                    <input type="number" step="0.01" min="0" name="others[0][amount]" placeholder="Amount" class="w-24 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
                     <button type="button" class="text-white bg-red-600 hover:bg-red-700 rounded px-3" onclick="this.parentElement.remove()">×</button>
                 </div>
             </div>
@@ -91,7 +91,7 @@
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                 </select>
-                <input type="number" step="0.01" name="gasoline[${gasolineIndex}][amount]" placeholder="Amount" class="w-40 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                <input type="number" step="0.01" min="0" name="gasoline[${gasolineIndex}][amount]" placeholder="Amount" class="w-40 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
                 <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
             </div>
         `);
@@ -112,7 +112,7 @@
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                 </select>
-                <input type="number" step="0.01" name="rfid[${rfidIndex}][amount]" placeholder="Amount" class="w-36 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
+                <input type="number" step="0.01" min="0" name="rfid[${rfidIndex}][amount]" placeholder="Amount" class="w-36 rounded-md border border-gray-300 px-2 py-1 focus:ring-indigo-500 focus:border-indigo-500" />
                 <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-600 hover:text-red-800 text-sm">✕</button>
             </div>
         `);
@@ -125,7 +125,7 @@
         wrapper.insertAdjacentHTML('beforeend', `
             <div class="flex space-x-3 other-item">
                 <input type="text" name="others[${index}][description]" placeholder="Description" class="flex-1 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
-                <input type="number" step="0.01" name="others[${index}][amount]" placeholder="Amount" class="w-24 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
+                <input type="number" step="0.01" min="0" name="others[${index}][amount]" placeholder="Amount" class="w-24 rounded-md border border-gray-300 px-3 py-2 focus:ring-indigo-500 focus:border-indigo-500" />
                 <button type="button" class="text-white bg-red-600 hover:bg-red-700 rounded px-3" onclick="this.parentElement.remove()">×</button>
             </div>
         `);

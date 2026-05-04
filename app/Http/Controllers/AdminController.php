@@ -70,9 +70,9 @@ class AdminController extends Controller
         'description' => 'required|array|min:1',
         'amount_details' => 'required|array|min:1',
         'description.*' => 'required|string',
-        'amount_details.*' => 'required|numeric',
+        'amount_details.*' => 'required|numeric|min:0',
         'withholding_tax' => 'nullable|numeric',
-        'tax_base_amount' => 'nullable|numeric',
+        'tax_base_amount' => 'nullable|numeric|min:0',
         'remarks' => 'nullable|array',
         'remarks.*' => 'nullable|string',
         'request_type' => 'required|exists:cvr_request_type,id',
@@ -218,7 +218,7 @@ class AdminController extends Controller
         $request->validate([
             'cvr_type' => 'required|in:admin,rpm',
             'voucher_type' => 'required|in:regular,with_tax',
-            'tax_base_amount' => 'nullable|numeric',
+            'tax_base_amount' => 'nullable|numeric|min:0',
             'withholding_tax' => 'nullable|string|max:255',
             'company_id' => 'required|integer|exists:companies,id',
             'supplier_id' => 'required|integer|exists:suppliers,id',
@@ -228,7 +228,7 @@ class AdminController extends Controller
             'description' => 'required|array',
             'description.*' => 'required|string',
             'amount_details' => 'required|array',
-            'amount_details.*' => 'required|numeric',
+            'amount_details.*' => 'required|numeric|min:0',
             'remarks' => 'nullable|array',
             'remarks.*' => 'nullable|string',
         ]);
@@ -294,13 +294,36 @@ class AdminController extends Controller
 
     public function StoreApprovalRequest(Request $request)
     {
-        $cvr_id = $request->cvr_id;
-        $cashVouchers = CashVoucher::where('id', $cvr_id)->first();
+        $request->validate([
+            'cvr_id' => 'required|exists:cash_vouchers,id',
+            'cvr_number' => 'required|string',
+            'payment_type' => 'required|in:cash,bank_transfer,outlet_transfer,cheque_transfer',
+            'cash_amount' => 'sometimes|required_if:payment_type,cash|numeric|min:0',
+            'cash_receiver' => 'sometimes|required_if:payment_type,cash|string',
+            'cash_fund_source' => 'sometimes|required_if:payment_type,cash|string',
+            'reference_number' => 'nullable|string',
+            'bank_name' => 'sometimes|required_if:payment_type,bank_transfer|string',
+            'bank_reference_number' => 'sometimes|required_if:payment_type,bank_transfer|string',
+            'bank_amount' => 'sometimes|required_if:payment_type,bank_transfer|numeric|min:0',
+            'bank_receiver' => 'sometimes|required_if:payment_type,bank_transfer|string',
+            'bank_fund_source' => 'sometimes|required_if:payment_type,bank_transfer|string',
+            'bank_charge' => 'nullable|numeric|min:0',
+            'outlet_name' => 'sometimes|required_if:payment_type,outlet_transfer|string',
+            'outlet_reference_number' => 'sometimes|required_if:payment_type,outlet_transfer|string',
+            'outlet_amount' => 'sometimes|required_if:payment_type,outlet_transfer|numeric|min:0',
+            'outlet_receiver' => 'sometimes|required_if:payment_type,outlet_transfer|string',
+            'outlet_fund_source' => 'sometimes|required_if:payment_type,outlet_transfer|string',
+            'outlet_charge' => 'nullable|numeric|min:0',
+            'cheque_bank_name' => 'sometimes|required_if:payment_type,cheque_transfer|string',
+            'cheque_number' => 'sometimes|required_if:payment_type,cheque_transfer|string',
+            'cheque_amount' => 'sometimes|required_if:payment_type,cheque_transfer|numeric|min:0',
+            'cheque_receiver' => 'sometimes|required_if:payment_type,cheque_transfer|string',
+            'cheque_fund_source' => 'sometimes|required_if:payment_type,cheque_transfer|string',
+            'cheque_charge' => 'nullable|numeric|min:0',
+        ]);
 
-        if ($cashVouchers) {
-            $cashVouchers->status = 2;
-            $cashVouchers->save();
-        }
+        $cvr_id = $request->cvr_id;
+        $cashVouchers = CashVoucher::where('id', $cvr_id)->firstOrFail();
 
         Log::info('Full Request Data', $request->all());
 

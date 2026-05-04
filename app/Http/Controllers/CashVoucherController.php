@@ -239,7 +239,7 @@ class CashVoucherController extends Controller
 
         try {
             $validated = $request->validate([
-                'amount' => 'required|numeric',
+                'amount' => 'required|numeric|min:0',
                 'request_type' => 'required',
                 'requestor' => 'required',
                 'mtm' => 'required',
@@ -367,7 +367,7 @@ class CashVoucherController extends Controller
         try {
             $validated = $request->validate([
                 'cvr_number' => 'required|unique:cash_vouchers,cvr_number',
-                'amount' => 'required|numeric',
+                'amount' => 'required|numeric|min:0',
                 'request_type' => 'required',
                 'requestor' => 'required',
                 'mtm' => 'required',
@@ -504,10 +504,10 @@ class CashVoucherController extends Controller
         $validated = $request->validate([
             'cvr_id' => 'required|exists:cash_vouchers,id',
             'cvr_number' => 'required|string',
-            'payment_type' => 'required|in:cash,bank_transfer,outlet_transfer',
+            'payment_type' => 'required|in:cash,bank_transfer,outlet_transfer,cheque_transfer',
 
             // Cash fields
-            'cash_amount' => 'sometimes|required_if:payment_type,cash|numeric',
+            'cash_amount' => 'sometimes|required_if:payment_type,cash|numeric|min:0',
             'cash_receiver' => 'sometimes|required_if:payment_type,cash|string',
             'cash_fund_source' => 'sometimes|required_if:payment_type,cash|string',
             'reference_number' => 'nullable|string',
@@ -515,26 +515,26 @@ class CashVoucherController extends Controller
             // Bank fields
             'bank_name' => 'sometimes|required_if:payment_type,bank_transfer|string',
             'bank_reference_number' => 'sometimes|required_if:payment_type,bank_transfer|string',
-            'bank_amount' => 'sometimes|required_if:payment_type,bank_transfer|numeric',
+            'bank_amount' => 'sometimes|required_if:payment_type,bank_transfer|numeric|min:0',
             'bank_receiver' => 'sometimes|required_if:payment_type,bank_transfer|string',
             'bank_fund_source' => 'sometimes|required_if:payment_type,bank_transfer|string',
-            'bank_charge' => 'nullable|numeric',
+            'bank_charge' => 'nullable|numeric|min:0',
 
             // Outlet fields
             'outlet_name' => 'sometimes|required_if:payment_type,outlet_transfer|string',
             'outlet_reference_number' => 'sometimes|required_if:payment_type,outlet_transfer|string',
-            'outlet_amount' => 'sometimes|required_if:payment_type,outlet_transfer|numeric',
+            'outlet_amount' => 'sometimes|required_if:payment_type,outlet_transfer|numeric|min:0',
             'outlet_receiver' => 'sometimes|required_if:payment_type,outlet_transfer|string',
             'outlet_fund_source' => 'sometimes|required_if:payment_type,outlet_transfer|string',
-            'outlet_charge' => 'nullable|numeric',
+            'outlet_charge' => 'nullable|numeric|min:0',
 
             // Cheque fields
             'cheque_bank_name' => 'sometimes|required_if:payment_type,cheque_transfer|string',
             'cheque_number' => 'sometimes|required_if:payment_type,cheque_transfer|string',
-            'cheque_amount' => 'sometimes|required_if:payment_type,cheque_transfer|numeric',
+            'cheque_amount' => 'sometimes|required_if:payment_type,cheque_transfer|numeric|min:0',
             'cheque_receiver' => 'sometimes|required_if:payment_type,cheque_transfer|string',
             'cheque_fund_source' => 'sometimes|required_if:payment_type,cheque_transfer|string',
-            'cheque_charge' => 'nullable|numeric',
+            'cheque_charge' => 'nullable|numeric|min:0',
         ]);
 
 
@@ -1416,9 +1416,9 @@ class CashVoucherController extends Controller
                 'company_id' => 'nullable|integer',
                 'voucher_type' => 'required|string',
                 'withholding_tax' => 'nullable|integer',
-                'tax_base_amount' => 'nullable|numeric',
+                'tax_base_amount' => 'nullable|numeric|min:0',
                 'cvr_number' => 'required|string',
-                'amount' => 'required|numeric',
+                'amount' => 'required|numeric|min:0',
                 'request_type' => 'required|integer',
                 'requestor' => 'required|integer',
                 'remarks' => 'nullable|array',

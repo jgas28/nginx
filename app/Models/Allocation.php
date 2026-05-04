@@ -29,7 +29,30 @@ class Allocation extends Model
     protected $casts = [
         'helper' => 'array',
         'remarks' => 'array',
+        'amount' => 'decimal:2',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $allocation) {
+            $allocation->amount = self::normalizeCurrencyValue($allocation->amount);
+        });
+    }
+
+    public static function normalizeCurrencyValue(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $amount = round((float) $value, 2);
+
+        if ($amount >= -0.01 && $amount < 0) {
+            $amount = 0.0;
+        }
+
+        return number_format($amount, 2, '.', '');
+    }
 
     public function deliveryRequest()
     {

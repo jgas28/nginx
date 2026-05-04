@@ -17,6 +17,32 @@ class DeliveryRequest extends Model
         'created_by','delivery_status'
     ];
 
+    protected $casts = [
+        'delivery_rate' => 'decimal:2',
+    ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $deliveryRequest) {
+            $deliveryRequest->delivery_rate = self::normalizeCurrencyValue($deliveryRequest->delivery_rate);
+        });
+    }
+
+    public static function normalizeCurrencyValue(mixed $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        $amount = round((float) $value, 2);
+
+        if ($amount >= -0.01 && $amount < 0) {
+            $amount = 0.0;
+        }
+
+        return number_format($amount, 2, '.', '');
+    }
+
     // Define relationships
     public function company()
     {

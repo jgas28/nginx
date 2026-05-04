@@ -56,7 +56,7 @@
             <div class="flex flex-wrap -mx-2">
                 <div class="w-full md:w-2/12 px-2 mb-4 md:mb-0">
                 <label for="delivery_rate" class="block text-sm font-medium text-gray-700 mb-1">Delivery Rate</label>
-                <input type="text" name="delivery_rate" id="delivery_rate" required
+                <input type="number" name="delivery_rate" id="delivery_rate" step="0.01" min="0" required
                         value="{{ old('delivery_rate', $deliveryRequest->delivery_rate) }}"
                         class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm
                                 focus:ring-blue-500 focus:border-blue-500">
