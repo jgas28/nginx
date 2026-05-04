@@ -265,6 +265,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/billing/show-soa/{soa}', [BillingController::class, 'showSoa'])->name('billing.showSoa');
     Route::get('/billing/{soa}/edit', [BillingController::class, 'editSOAForm'])->name('billing.editSoa');
     Route::put('/billing/{soa}', [BillingController::class, 'updateSOA'])->name('billing.updateSoa');
+    Route::post('/billing/{soa}/mark-paid', [BillingController::class, 'markAsPaid'])->name('billing.markPaid');
     Route::delete('/billing/{soa}', [BillingController::class, 'destroySOA'])->name('billing.destroySoa');
     Route::get('/billing/{soa}/print', [BillingController::class, 'print'])->name('soa.print');
     Route::get('/billing/{soa}/download-pdf', [BillingController::class, 'downloadPdf'])->name('soa.downloadPdf');

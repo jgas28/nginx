@@ -298,6 +298,14 @@
                                             <a href="{{ route('billing.editSoa', $soa->id) }}" class="text-indigo-600 hover:text-indigo-800" title="Edit">
                                                 <i class="fas fa-edit"></i>
                                             </a>
+                                            @if($soa->status !== 'paid')
+                                                <form method="POST" action="{{ route('billing.markPaid', $soa->id) }}" class="inline js-mark-paid-form" data-soa-number="{{ $soa->soa_number }}">
+                                                    @csrf
+                                                    <button type="submit" class="text-emerald-600 hover:text-emerald-800" title="Mark as Paid">
+                                                        <i class="fas fa-circle-check"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
                                             <form method="POST" action="{{ route('billing.destroySoa', $soa->id) }}" onsubmit="return confirm('Delete this SOA?');" class="inline">
                                                 @csrf
                                                 @method('DELETE')
@@ -437,6 +445,52 @@
             }
         });
     });
+
+    document.addEventListener('submit', async function (event) {
+        const form = event.target;
+
+        if (!(form instanceof HTMLFormElement) || !form.classList.contains('js-mark-paid-form')) {
+            return;
+        }
+
+        if (form.dataset.confirmed === 'true') {
+            return;
+        }
+
+        event.preventDefault();
+
+        if (typeof Swal === 'undefined') {
+            form.dataset.confirmed = 'true';
+            form.submit();
+            return;
+        }
+
+        const soaNumber = form.dataset.soaNumber || 'this SOA';
+
+        const result = await Swal.fire({
+            title: 'Mark SOA as Paid?',
+            html: `<p class="text-sm text-slate-600">You are about to update <strong>${soaNumber}</strong> to <strong>Paid</strong>.</p><p class="mt-2 text-sm text-slate-500">This will set the paid amount to the full total and clear the outstanding amount.</p>`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, mark as paid',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true,
+            focusCancel: true,
+            customClass: {
+                popup: 'rounded-[24px]',
+                confirmButton: 'swal-success-btn',
+                cancelButton: 'swal-cancel-btn'
+            },
+            buttonsStyling: false
+        });
+
+        if (!result.isConfirmed) {
+            return;
+        }
+
+        form.dataset.confirmed = 'true';
+        form.submit();
+    }, true);
 
     // ── SOA data from server ──────────────────────────────────────
     @php

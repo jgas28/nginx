@@ -186,6 +186,23 @@ class BillingController extends Controller
         }
     }
 
+    public function markAsPaid(Soa $soa)
+    {
+        try {
+            $totalAmount = (float) ($soa->total_amount ?? 0);
+
+            $soa->update([
+                'status' => 'paid',
+                'paid_amount' => $totalAmount,
+                'outstanding_amount' => 0,
+            ]);
+
+            return redirect()->route('billing.index')->with('success', 'SOA marked as paid successfully.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Unable to mark SOA as paid: ' . $e->getMessage()]);
+        }
+    }
+
     public function dashboard()
     {
         // Calculate stats for dashboard

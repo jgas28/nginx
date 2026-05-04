@@ -1024,6 +1024,7 @@
 
 <style>
     .swal-confirm-btn,
+    .swal-success-btn,
     .swal-cancel-btn {
         border: 0;
         border-radius: 9999px;
@@ -1039,6 +1040,12 @@
         box-shadow: 0 10px 25px rgba(239, 68, 68, 0.25);
     }
 
+    .swal-success-btn {
+        background: linear-gradient(135deg, #059669, #22c55e);
+        color: #fff;
+        box-shadow: 0 10px 25px rgba(34, 197, 94, 0.25);
+    }
+
     .swal-cancel-btn {
         background: #f8fafc;
         color: #334155;
@@ -1046,6 +1053,7 @@
     }
 
     .swal-confirm-btn:hover,
+    .swal-success-btn:hover,
     .swal-cancel-btn:hover {
         transform: translateY(-1px);
     }
