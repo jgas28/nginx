@@ -300,6 +300,19 @@
                                 <span class="flex items-center gap-1.5"><i class="fas fa-boxes text-gray-400 text-xs"></i> Selected Line Items</span>
                                 <span id="selectedRequests" class="font-semibold text-gray-800">0</span>
                             </div>
+
+                            <!-- Rate source breakdown (delivery + accessorial) -->
+                            <div id="summaryRateBreakdown" class="hidden flex-col gap-1 pl-1">
+                                <div class="flex justify-between text-sky-600 text-xs">
+                                    <span class="flex items-center gap-1"><i class="fas fa-truck text-xs w-3"></i> Delivery Rate</span>
+                                    <span id="summaryDeliveryRateAmt" class="font-medium">₱0.00</span>
+                                </div>
+                                <div class="flex justify-between text-purple-600 text-xs">
+                                    <span class="flex items-center gap-1"><i class="fas fa-tags text-xs w-3"></i> Accessorial</span>
+                                    <span id="summaryAccessorialAmt" class="font-medium">₱0.00</span>
+                                </div>
+                            </div>
+
                             <div class="flex justify-between text-gray-600">
                                 <span class="flex items-center gap-1.5"><i class="fas fa-receipt text-gray-400 text-xs"></i> Subtotal</span>
                                 <span id="summarySubtotal" class="font-semibold text-gray-800">₱0.00</span>
@@ -321,6 +334,18 @@
                             <div class="flex justify-between font-bold text-gray-900 border-t border-gray-300 pt-2">
                                 <span class="flex items-center gap-1.5"><i class="fas fa-check-circle text-emerald-500 text-xs"></i> Final Total</span>
                                 <span id="totalAmount" class="text-emerald-700 text-base">₱0.00</span>
+                            </div>
+
+                            <!-- Who is affected -->
+                            <div id="summaryAffectedInfo" class="hidden pt-1 border-t border-gray-100 text-xs text-gray-400 space-y-0.5">
+                                <div id="summaryAffectedCompany" class="flex items-center gap-1.5">
+                                    <i class="fas fa-building w-3 text-gray-300"></i>
+                                    <span></span>
+                                </div>
+                                <div id="summaryAffectedCustomer" class="flex items-center gap-1.5">
+                                    <i class="fas fa-user w-3 text-gray-300"></i>
+                                    <span></span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -391,14 +416,22 @@
             </div>
 
             <div id="calculateTotalModalContent" class="hidden">
-                <div class="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div class="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
                     <div class="rounded-lg bg-blue-50 px-4 py-3">
-                        <p class="text-sm text-blue-700">Selected Requests</p>
+                        <p class="text-xs text-blue-600 font-medium">Selected</p>
                         <p id="modalSelectedCount" class="mt-1 text-2xl font-bold text-blue-900">0</p>
                     </div>
-                    <div class="rounded-lg bg-emerald-50 px-4 py-3 md:col-span-2">
-                        <p class="text-sm text-emerald-700">Subtotal</p>
-                        <p id="modalGrandTotal" class="mt-1 text-2xl font-bold text-emerald-700">PHP 0.00</p>
+                    <div class="rounded-lg bg-sky-50 px-4 py-3">
+                        <p class="text-xs text-sky-600 font-medium flex items-center gap-1"><i class="fas fa-truck text-xs"></i> Delivery Rate</p>
+                        <p id="modalDeliveryRateTotal" class="mt-1 text-lg font-bold text-sky-700">PHP 0.00</p>
+                    </div>
+                    <div class="rounded-lg bg-purple-50 px-4 py-3">
+                        <p class="text-xs text-purple-600 font-medium flex items-center gap-1"><i class="fas fa-tags text-xs"></i> Accessorial</p>
+                        <p id="modalAccessorialTotal" class="mt-1 text-lg font-bold text-purple-700">PHP 0.00</p>
+                    </div>
+                    <div class="rounded-lg bg-emerald-50 px-4 py-3">
+                        <p class="text-xs text-emerald-600 font-medium">Grand Subtotal</p>
+                        <p id="modalGrandTotal" class="mt-1 text-lg font-bold text-emerald-700">PHP 0.00</p>
                     </div>
                 </div>
 
@@ -420,11 +453,14 @@
                         <thead class="bg-gray-100 text-left text-gray-700">
                             <tr>
                                 <th class="px-4 py-3 font-semibold">MTM / Line Item</th>
-                                <th class="px-4 py-3 font-semibold">Booking Date</th>
-                                <th class="px-4 py-3 font-semibold">Delivery Date</th>
+                                <th class="px-4 py-3 font-semibold">Booking</th>
+                                <th class="px-4 py-3 font-semibold">Delivery</th>
                                 <th class="px-4 py-3 font-semibold">Company</th>
                                 <th class="px-4 py-3 font-semibold">Customer</th>
-                                <th class="px-4 py-3 font-semibold">Amount</th>
+                                <th class="px-4 py-3 font-semibold">Billed For</th>
+                                <th class="px-4 py-3 font-semibold text-sky-700">Delivery Rate</th>
+                                <th class="px-4 py-3 font-semibold text-purple-700">Accessorial</th>
+                                <th class="px-4 py-3 font-semibold">Total</th>
                             </tr>
                         </thead>
                         <tbody id="calculateTotalModalRows" class="divide-y divide-gray-200 text-gray-700"></tbody>
@@ -523,6 +559,69 @@ function getStatusBadge(status) {
     return { cls: 'bg-gray-100 text-gray-500', text: status || 'N/A' };
 }
 
+// ── Billing selections Map: itemId → {delivery: bool, accessorial: bool} ──
+const billingSelections = new Map();
+
+function getBillingType(itemId) {
+    const li = deliveryLineItems.find(i => i.id === itemId);
+    const sel = billingSelections.get(itemId) || {};
+    const hasDR = Number(li?.requestAmount || 0) > 0 && sel.delivery === true;
+    const hasAC = (Number(li?.accessorialRate || 0) + Number(li?.addOnRate || 0)) > 0 && sel.accessorial === true;
+    if (hasDR && hasAC) return 'both';
+    if (hasDR) return 'delivery_only';
+    if (hasAC) return 'accessorial_only';
+    return 'both';
+}
+
+function onBillingToggle(itemId, type, checked, event) {
+    if (event) event.stopPropagation();
+    const sel = billingSelections.get(itemId) || { delivery: true, accessorial: true };
+    sel[type] = checked;
+    billingSelections.set(itemId, sel);
+
+    // Update label styling
+    const label = document.querySelector(`.bill-toggle-label[data-item="${itemId}"][data-type="${type}"]`);
+    if (label) {
+        const isDelivery = type === 'delivery';
+        const activeOn  = isDelivery
+            ? ['border-blue-600',  'bg-blue-600',  'text-white', 'shadow-md', 'shadow-blue-200']
+            : ['border-emerald-600','bg-emerald-600','text-white','shadow-md', 'shadow-emerald-200'];
+        const activeOff = ['border-gray-300','bg-gray-100','text-gray-400','opacity-60'];
+
+        if (checked) {
+            label.classList.remove(...activeOff);
+            label.classList.add(...activeOn);
+        } else {
+            label.classList.remove(...activeOn);
+            label.classList.add(...activeOff);
+        }
+        // Toggle the icon inside the circle: check when active, type-icon when inactive
+        const iconEl = label.querySelector('span > i');
+        if (iconEl) {
+            if (checked) {
+                iconEl.classList.remove(isDelivery ? 'fa-truck' : 'fa-tags');
+                iconEl.classList.add('fa-check');
+            } else {
+                iconEl.classList.remove('fa-check');
+                iconEl.classList.add(isDelivery ? 'fa-truck' : 'fa-tags');
+            }
+        }
+    }
+
+    // Recalculate this card's billed total
+    const li = deliveryLineItems.find(i => i.id === itemId);
+    if (li) {
+        const drAmt = Number(li.requestAmount || 0);
+        const acAmt = Number(li.accessorialRate || 0) + Number(li.addOnRate || 0);
+        const newSel = billingSelections.get(itemId);
+        const billed = (newSel.delivery !== false && drAmt > 0 ? drAmt : 0)
+                     + (newSel.accessorial !== false && acAmt > 0 ? acAmt : 0);
+        const el = document.getElementById(`item-billed-${itemId}`);
+        if (el) el.textContent = `₱${billed.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+    }
+    updateSummary();
+}
+
 // ── Card interactivity ────────────────────────────────────────
 function toggleCard(cardEl) {
     const cb = cardEl.querySelector('.delivery-checkbox');
@@ -539,7 +638,42 @@ function toggleCardStyle(cb) {
     } else {
         card.classList.remove('border-blue-400', 'bg-blue-50', 'shadow-sm');
         card.classList.add('border-gray-200');
+
+        // Reset billing selection to unchecked when card is deselected
+        const itemId = parseInt(cb.value);
+        billingSelections.set(itemId, { delivery: false, accessorial: false });
+
+        // Reset toggle visuals back to gray inactive
+        card.querySelectorAll('.bill-toggle-label').forEach(label => {
+            const type = label.dataset.type;
+            label.classList.remove(
+                'border-blue-600','bg-blue-600',
+                'border-emerald-600','bg-emerald-600',
+                'text-white','shadow-md','shadow-blue-200','shadow-emerald-200','cursor-pointer'
+            );
+            label.classList.add('border-gray-300','bg-gray-100','text-gray-400');
+            // Reset circle icon back to type icon
+            const iconEl = label.querySelector('span > i');
+            if (iconEl) {
+                iconEl.classList.remove('fa-check');
+                iconEl.classList.add(type === 'delivery' ? 'fa-truck' : 'fa-tags');
+            }
+            // Update the item billed total display to ₱0.00
+            const totalEl = document.getElementById(`item-billed-${itemId}`);
+            if (totalEl) totalEl.textContent = '₱0.00';
+        });
     }
+
+    // Enable or disable billing toggles
+    card.querySelectorAll('.bill-toggle-label').forEach(label => {
+        if (cb.checked) {
+            label.classList.remove('pointer-events-none', 'opacity-30', 'cursor-not-allowed');
+            label.classList.add('cursor-pointer');
+        } else {
+            label.classList.add('pointer-events-none', 'opacity-30', 'cursor-not-allowed');
+            label.classList.remove('cursor-pointer');
+        }
+    });
     updateSummary();
 }
 
@@ -557,8 +691,31 @@ function validateAndSubmit() {
     if (!document.querySelectorAll('.delivery-checkbox:checked').length)
         errors.push({ icon: 'fa-boxes',         color: 'orange', field: 'Delivery Requests',   msg: 'Select at least one delivery request.' });
 
+    // Ensure every selected item has at least one billing component chosen
+    document.querySelectorAll('.delivery-checkbox:checked').forEach(cb => {
+        const itemId = parseInt(cb.value);
+        const sel = billingSelections.get(itemId) || {};
+        if (!sel.delivery && !sel.accessorial) {
+            errors.push({ icon: 'fa-tag', color: 'orange', field: `MTM billing not set`,
+                msg: `Please select Delivery Rate and/or Accessorial for at least one selected item (Line Item #${itemId}).` });
+        }
+    });
+
     if (errors.length) { showValidationModal(errors); return; }
-    document.getElementById('soaForm').submit();
+
+    // Inject billing type hidden inputs for each selected item
+    const form = document.getElementById('soaForm');
+    form.querySelectorAll('input[name^="item_billing"]').forEach(el => el.remove());
+    document.querySelectorAll('.delivery-checkbox:checked').forEach(cb => {
+        const itemId = parseInt(cb.value);
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = `item_billing[${itemId}]`;
+        input.value = getBillingType(itemId);
+        form.appendChild(input);
+    });
+
+    form.submit();
 }
 
 function showValidationModal(errors) {
@@ -624,9 +781,14 @@ function formatDisplayDate(dateValue) {
 }
 
 function getLineItemAmount(lineItem) {
-    return Number(lineItem.requestAmount || 0) > 0
-        ? Number(lineItem.requestAmount || 0)
-        : (Number(lineItem.accessorialRate || 0) + Number(lineItem.addOnRate || 0));
+    const drAmt = Number(lineItem.requestAmount || 0);
+    const acAmt = Number(lineItem.accessorialRate || 0) + Number(lineItem.addOnRate || 0);
+    const sel = billingSelections.get(lineItem.id);
+    if (sel) {
+        return (sel.delivery !== false && drAmt > 0 ? drAmt : 0)
+             + (sel.accessorial !== false && acAmt > 0 ? acAmt : 0);
+    }
+    return drAmt > 0 ? drAmt : acAmt;
 }
 
 function getSelectedLineItems() {
@@ -649,19 +811,38 @@ function renderCalculateTotalModalRows() {
     const endIndex = Math.min(startIndex + pageSize, totalRows);
     const visibleRows = calculateTotalModalItems.slice(startIndex, endIndex);
 
-    rowsContainer.innerHTML = visibleRows.map((lineItem) => `
+    rowsContainer.innerHTML = visibleRows.map((lineItem) => {
+        const drAmt  = Number(lineItem.requestAmount || 0);
+        const acAmt  = Number(lineItem.accessorialRate || 0) + Number(lineItem.addOnRate || 0);
+        const sel    = billingSelections.get(lineItem.id) || {};
+        const billedDr = (sel.delivery !== false && drAmt > 0) ? drAmt : 0;
+        const billedAc = (sel.accessorial !== false && acAmt > 0) ? acAmt : 0;
+        const total    = billedDr + billedAc;
+        const typeMap  = {
+            both:             ['Both',              'bg-green-100 text-green-700'],
+            delivery_only:    ['Delivery Only',     'bg-sky-100 text-sky-700'],
+            accessorial_only: ['Accessorial Only',  'bg-purple-100 text-purple-700'],
+        };
+        const billingType = getBillingType(lineItem.id);
+        const [typeLabel, typeCls] = typeMap[billingType] || typeMap.both;
+        return `
         <tr class="hover:bg-gray-50">
             <td class="px-4 py-3 align-top">
                 <div class="font-medium text-gray-900">${lineItem.mtm}</div>
                 <div class="text-xs text-gray-500">Line Item #${lineItem.id}</div>
             </td>
-            <td class="px-4 py-3 align-top">${formatDisplayDate(lineItem.bookingDate)}</td>
-            <td class="px-4 py-3 align-top">${formatDisplayDate(lineItem.deliveryRequest ? lineItem.deliveryRequest.deliveryDate : '')}</td>
-            <td class="px-4 py-3 align-top">${lineItem.deliveryRequest ? lineItem.deliveryRequest.companyName : 'N/A'}</td>
-            <td class="px-4 py-3 align-top">${lineItem.deliveryRequest ? lineItem.deliveryRequest.customerName : 'N/A'}</td>
-            <td class="px-4 py-3 align-top font-semibold text-gray-900">${formatPeso(getLineItemAmount(lineItem))}</td>
-        </tr>
-    `).join('');
+            <td class="px-4 py-3 align-top text-sm">${formatDisplayDate(lineItem.bookingDate)}</td>
+            <td class="px-4 py-3 align-top text-sm">${formatDisplayDate(lineItem.deliveryRequest ? lineItem.deliveryRequest.deliveryDate : '')}</td>
+            <td class="px-4 py-3 align-top text-sm">${lineItem.deliveryRequest ? lineItem.deliveryRequest.companyName : 'N/A'}</td>
+            <td class="px-4 py-3 align-top text-sm">${lineItem.deliveryRequest ? lineItem.deliveryRequest.customerName : 'N/A'}</td>
+            <td class="px-4 py-3 align-top">
+                <span class="px-2 py-0.5 rounded-full text-xs font-semibold ${typeCls}">${typeLabel}</span>
+            </td>
+            <td class="px-4 py-3 align-top text-sm ${billedDr > 0 ? 'text-sky-700 font-medium' : 'text-gray-300'}">${billedDr > 0 ? formatPeso(billedDr) : '—'}</td>
+            <td class="px-4 py-3 align-top text-sm ${billedAc > 0 ? 'text-purple-700 font-medium' : 'text-gray-300'}">${billedAc > 0 ? formatPeso(billedAc) : '—'}</td>
+            <td class="px-4 py-3 align-top font-bold text-gray-900">${formatPeso(total)}</td>
+        </tr>`;
+    }).join('');
 
     const startDisplay = totalRows === 0 ? 0 : startIndex + 1;
     const endDisplay = totalRows === 0 ? 0 : endIndex;
@@ -807,6 +988,23 @@ function filterDeliveryRequests() {
                         const badge = getStatusBadge(lineItem.requestStatus || lineItem.deliveryStatusName);
                         const cName = lineItem.deliveryRequest ? lineItem.deliveryRequest.companyName : 'N/A';
                         const cuName = lineItem.deliveryRequest ? lineItem.deliveryRequest.customerName : 'N/A';
+
+                        // Billing components
+                        const drAmt  = Number(lineItem.requestAmount || 0);
+                        const acAmt  = Number(lineItem.accessorialRate || 0) + Number(lineItem.addOnRate || 0);
+                        const hasDelivery     = drAmt > 0;
+                        const hasAccessorial  = acAmt > 0;
+
+                        // Init billing selection for this item (default: nothing selected — user must pick)
+                        if (!billingSelections.has(lineItem.id)) {
+                            billingSelections.set(lineItem.id, { delivery: false, accessorial: false });
+                        }
+                        const sel = billingSelections.get(lineItem.id);
+                        const billedTotal = (sel.delivery && hasDelivery ? drAmt : 0) + (sel.accessorial && hasAccessorial ? acAmt : 0);
+
+                        const drActive  = sel.delivery    && hasDelivery;
+                        const acActive  = sel.accessorial && hasAccessorial;
+
                         html += `
                             <div class="dr-card border border-gray-200 rounded-xl p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 transition-all duration-150 dr-card-enter"
                                  style="animation-delay:${visibleItems * 35}ms; opacity:0;"
@@ -845,10 +1043,49 @@ function filterDeliveryRequests() {
                                                 <span class="truncate">${lineItem.siteName || 'N/A'}</span>
                                             </div>
                                         </div>
-                                        <div class="flex flex-wrap items-center gap-3 mt-2.5 pt-2 border-t border-gray-100 text-xs">
-                                            <span class="text-gray-400"><i class="fas fa-tags mr-1"></i>Accessorial: ₱${lineItem.accessorialRate.toFixed(2)}</span>
-                                            <span class="text-gray-400"><i class="fas fa-plus-circle mr-1"></i>Add-on: ₱${lineItem.addOnRate.toFixed(2)}</span>
-                                            <span class="ml-auto font-bold text-emerald-600 text-sm">₱${totalRate.toFixed(2)}</span>
+
+                                        <!-- Billing type toggles -->
+                                        <div class="mt-2.5 pt-2 border-t border-gray-100">
+                                            <p class="text-xs text-gray-500 font-medium mb-2">Bill for:</p>
+                                            <div class="flex flex-wrap gap-2">
+                                                ${hasDelivery ? `
+                                                <label class="bill-toggle-label inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 text-xs font-bold select-none transition-all duration-150 active:scale-95 pointer-events-none opacity-30 cursor-not-allowed
+                                                       ${drActive
+                                                           ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200'
+                                                           : 'border-gray-300 bg-gray-100 text-gray-400'}"
+                                                       data-item="${lineItem.id}" data-type="delivery"
+                                                       onclick="event.stopPropagation()">
+                                                    <input type="checkbox" class="sr-only" ${drActive ? 'checked' : ''}
+                                                           onchange="onBillingToggle(${lineItem.id}, 'delivery', this.checked, event)">
+                                                    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full ${drActive ? 'bg-white/30' : 'bg-gray-300/50'}">
+                                                        <i class="fas ${drActive ? 'fa-check' : 'fa-truck'} text-xs"></i>
+                                                    </span>
+                                                    <i class="fas fa-truck text-xs ${drActive ? '' : 'hidden'}"></i>
+                                                    Delivery Rate
+                                                    <span class="font-extrabold tracking-tight">₱${drAmt.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                                                </label>` : ''}
+                                                ${hasAccessorial ? `
+                                                <label class="bill-toggle-label inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 text-xs font-bold select-none transition-all duration-150 active:scale-95 pointer-events-none opacity-30 cursor-not-allowed
+                                                       ${acActive
+                                                           ? 'border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-200'
+                                                           : 'border-gray-300 bg-gray-100 text-gray-400'}"
+                                                       data-item="${lineItem.id}" data-type="accessorial"
+                                                       onclick="event.stopPropagation()">
+                                                    <input type="checkbox" class="sr-only" ${acActive ? 'checked' : ''}
+                                                           onchange="onBillingToggle(${lineItem.id}, 'accessorial', this.checked, event)">
+                                                    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full ${acActive ? 'bg-white/30' : 'bg-gray-300/50'}">
+                                                        <i class="fas ${acActive ? 'fa-check' : 'fa-tags'} text-xs"></i>
+                                                    </span>
+                                                    Accessorial
+                                                    <span class="font-extrabold tracking-tight">₱${acAmt.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                                                </label>` : ''}
+                                                ${!hasDelivery && !hasAccessorial ? `<span class="text-xs text-gray-400 italic">No rate data</span>` : ''}
+                                            </div>
+                                            <div class="flex justify-end mt-2">
+                                                <span class="font-bold text-emerald-700 text-sm" id="item-billed-${lineItem.id}">
+                                                    ₱${billedTotal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -900,8 +1137,50 @@ function updateSummary() {
     const selectedLineItems = getSelectedLineItems();
     const count = selectedLineItems.length;
     document.getElementById('selectedRequests').textContent = count;
-    const subtotal = selectedLineItems.reduce((sum, lineItem) => sum + getLineItemAmount(lineItem), 0);
-    // Store subtotal on the modal element so syncAdjustments can read it
+
+    // Per-component totals
+    let drTotal = 0, acTotal = 0;
+    selectedLineItems.forEach(li => {
+        const drAmt = Number(li.requestAmount || 0);
+        const acAmt = Number(li.accessorialRate || 0) + Number(li.addOnRate || 0);
+        const sel   = billingSelections.get(li.id) || {};
+        if (sel.delivery !== false && drAmt > 0)    drTotal += drAmt;
+        if (sel.accessorial !== false && acAmt > 0) acTotal += acAmt;
+    });
+
+    // Rate breakdown panel
+    const ratePanel = document.getElementById('summaryRateBreakdown');
+    if (ratePanel) {
+        if (count > 0 && (drTotal > 0 || acTotal > 0)) {
+            document.getElementById('summaryDeliveryRateAmt').textContent = `₱${drTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+            document.getElementById('summaryAccessorialAmt').textContent  = `₱${acTotal.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+            ratePanel.classList.remove('hidden');
+            ratePanel.classList.add('flex');
+        } else {
+            ratePanel.classList.add('hidden');
+            ratePanel.classList.remove('flex');
+        }
+    }
+
+    // Who is affected
+    const affectedEl = document.getElementById('summaryAffectedInfo');
+    if (affectedEl) {
+        const companyDisplay = document.getElementById('company-display')?.textContent?.trim();
+        const customerDisplay = document.getElementById('customer-display')?.textContent?.trim();
+        const companyValid  = companyDisplay  && companyDisplay  !== 'Select Company';
+        const customerValid = customerDisplay && customerDisplay !== 'Select Customer';
+        if (count > 0 && (companyValid || customerValid)) {
+            if (companyValid)  document.querySelector('#summaryAffectedCompany span').textContent  = companyDisplay;
+            if (customerValid) document.querySelector('#summaryAffectedCustomer span').textContent = customerDisplay;
+            document.getElementById('summaryAffectedCompany').classList.toggle('hidden', !companyValid);
+            document.getElementById('summaryAffectedCustomer').classList.toggle('hidden', !customerValid);
+            affectedEl.classList.remove('hidden');
+        } else {
+            affectedEl.classList.add('hidden');
+        }
+    }
+
+    const subtotal = drTotal + acTotal;
     const grandTotalEl = document.getElementById('modalGrandTotal');
     if (grandTotalEl) grandTotalEl.dataset.subtotal = subtotal;
     syncAdjustments();
@@ -943,6 +1222,19 @@ function openCalculateTotalModal(selectedLineItems, total) {
         emptyState.classList.add('hidden');
         content.classList.remove('hidden');
         document.getElementById('modalSelectedCount').textContent = selectedLineItems.length;
+
+        // Compute per-component totals
+        let drTotal = 0, acTotal = 0;
+        selectedLineItems.forEach(li => {
+            const drAmt = Number(li.requestAmount || 0);
+            const acAmt = Number(li.accessorialRate || 0) + Number(li.addOnRate || 0);
+            const sel   = billingSelections.get(li.id) || {};
+            if (sel.delivery !== false && drAmt > 0)    drTotal += drAmt;
+            if (sel.accessorial !== false && acAmt > 0) acTotal += acAmt;
+        });
+        document.getElementById('modalDeliveryRateTotal').textContent = formatPeso(drTotal);
+        document.getElementById('modalAccessorialTotal').textContent  = formatPeso(acTotal);
+
         const grandTotalEl = document.getElementById('modalGrandTotal');
         grandTotalEl.textContent = formatPeso(total);
         grandTotalEl.dataset.subtotal = total;

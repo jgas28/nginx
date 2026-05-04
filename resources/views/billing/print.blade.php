@@ -51,11 +51,24 @@
                         <th class="border border-gray-300 px-4 py-2 text-left">MTM</th>
                         <th class="border border-gray-300 px-4 py-2 text-left">Date</th>
                         <th class="border border-gray-300 px-4 py-2 text-left">Description</th>
-                        <th class="border border-gray-300 px-4 py-2 text-right">Amount</th>
+                        <th class="border border-gray-300 px-4 py-2 text-center">Billed For</th>
+                        <th class="border border-gray-300 px-4 py-2 text-right">Delivery Rate</th>
+                        <th class="border border-gray-300 px-4 py-2 text-right">Accessorial</th>
+                        <th class="border border-gray-300 px-4 py-2 text-right">Total</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($attachedDeliveryRequests as $dr)
+                        @php
+                            $billingType  = $dr->billing_type ?? 'both';
+                            $drAmt        = (float)($dr->delivery_rate_amount ?? 0);
+                            $acAmt        = (float)($dr->accessorial_rate_amount ?? 0);
+                            $billingLabel = match($billingType) {
+                                'delivery_only'    => 'Delivery Only',
+                                'accessorial_only' => 'Accessorial Only',
+                                default            => 'Both',
+                            };
+                        @endphp
                         <tr>
                             <td class="border border-gray-300 px-4 py-2">{{ $dr->mtm }}</td>
                             <td class="border border-gray-300 px-4 py-2">
@@ -63,11 +76,16 @@
                             </td>
                             <td class="border border-gray-300 px-4 py-2">
                                 Delivery Service - {{ $dr->company_name ?? 'N/A' }}
-                                @if($dr->customer_name)
-                                    ({{ $dr->customer_name }})
-                                @endif
+                                @if($dr->customer_name) ({{ $dr->customer_name }}) @endif
                             </td>
-                            <td class="border border-gray-300 px-4 py-2 text-right">P{{ number_format($dr->amount ?? 0, 2) }}</td>
+                            <td class="border border-gray-300 px-4 py-2 text-center text-xs font-semibold">{{ $billingLabel }}</td>
+                            <td class="border border-gray-300 px-4 py-2 text-right">
+                                {{ $billingType !== 'accessorial_only' ? '₱'.number_format($drAmt, 2) : '—' }}
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2 text-right">
+                                {{ $billingType !== 'delivery_only' ? '₱'.number_format($acAmt, 2) : '—' }}
+                            </td>
+                            <td class="border border-gray-300 px-4 py-2 text-right font-semibold">₱{{ number_format($dr->amount ?? 0, 2) }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -80,12 +98,12 @@
                     @endphp
                     @if($hasAdj)
                     <tr>
-                        <td colspan="3" class="border border-gray-300 px-4 py-2 text-right font-semibold text-gray-600">Subtotal:</td>
+                        <td colspan="6" class="border border-gray-300 px-4 py-2 text-right font-semibold text-gray-600">Subtotal:</td>
                         <td class="border border-gray-300 px-4 py-2 text-right text-gray-600">₱{{ number_format($subtotal, 2) }}</td>
                     </tr>
                     @if($discountAmt > 0)
                     <tr class="bg-red-50">
-                        <td colspan="3" class="border border-gray-300 px-4 py-2 text-right text-red-700">
+                        <td colspan="6" class="border border-gray-300 px-4 py-2 text-right text-red-700">
                             <span class="font-semibold">{{ $soa->discount_type === 'dispute' ? 'Dispute' : 'Discount' }}:</span>
                             @if($soa->discount_remarks)
                                 <span class="italic text-xs text-red-500 ml-1">({{ $soa->discount_remarks }})</span>
@@ -96,7 +114,7 @@
                     @endif
                     @if($adjustmentAmt != 0)
                     <tr class="bg-blue-50">
-                        <td colspan="3" class="border border-gray-300 px-4 py-2 text-right text-blue-700">
+                        <td colspan="6" class="border border-gray-300 px-4 py-2 text-right text-blue-700">
                             <span class="font-semibold">Manual Adjustment:</span>
                             @if($soa->adjustment_remarks)
                                 <span class="italic text-xs text-blue-500 ml-1">({{ $soa->adjustment_remarks }})</span>
@@ -107,15 +125,15 @@
                     @endif
                     @endif
                     <tr>
-                        <td colspan="3" class="border border-gray-300 px-4 py-3 text-right font-bold">Final Total:</td>
+                        <td colspan="6" class="border border-gray-300 px-4 py-3 text-right font-bold">Final Total:</td>
                         <td class="border border-gray-300 px-4 py-3 text-right font-bold text-lg text-green-700">₱{{ number_format($soa->total_amount, 2) }}</td>
                     </tr>
                     <tr>
-                        <td colspan="3" class="border border-gray-300 px-4 py-3 text-right font-semibold">Paid Amount:</td>
+                        <td colspan="6" class="border border-gray-300 px-4 py-3 text-right font-semibold">Paid Amount:</td>
                         <td class="border border-gray-300 px-4 py-3 text-right">₱{{ number_format($soa->paid_amount, 2) }}</td>
                     </tr>
                     <tr class="bg-red-50">
-                        <td colspan="3" class="border border-gray-300 px-4 py-3 text-right font-semibold">Outstanding Amount:</td>
+                        <td colspan="6" class="border border-gray-300 px-4 py-3 text-right font-semibold">Outstanding Amount:</td>
                         <td class="border border-gray-300 px-4 py-3 text-right font-bold text-red-600">₱{{ number_format($soa->outstanding_amount, 2) }}</td>
                     </tr>
                 </tfoot>

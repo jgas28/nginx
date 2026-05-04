@@ -178,18 +178,40 @@
                                 <th class="px-4 py-3">Delivery Date</th>
                                 <th class="px-4 py-3">Company</th>
                                 <th class="px-4 py-3">Customer</th>
-                                <th class="px-4 py-3">Amount</th>
+                                <th class="px-4 py-3">Billed For</th>
+                                <th class="px-4 py-3">Delivery Rate</th>
+                                <th class="px-4 py-3">Accessorial</th>
+                                <th class="px-4 py-3">Total</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
-                            @foreach($attachedDeliveryRequests as $deliveryRequest)
+                            @foreach($attachedDeliveryRequests as $dr)
+                                @php
+                                    $billingType = $dr->billing_type ?? 'both';
+                                    $drAmt = (float)($dr->delivery_rate_amount ?? 0);
+                                    $acAmt = (float)($dr->accessorial_rate_amount ?? 0);
+                                    $billingLabel = match($billingType) {
+                                        'delivery_only'    => ['text' => 'Delivery Only',    'cls' => 'bg-blue-100 text-blue-700'],
+                                        'accessorial_only' => ['text' => 'Accessorial Only', 'cls' => 'bg-purple-100 text-purple-700'],
+                                        default            => ['text' => 'Both',              'cls' => 'bg-green-100 text-green-700'],
+                                    };
+                                @endphp
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-4 py-3 font-medium">{{ $deliveryRequest->mtm ?? 'N/A' }}</td>
-                                    <td class="px-4 py-3">{{ $deliveryRequest->booking_date ? \Carbon\Carbon::parse($deliveryRequest->booking_date)->format('M d, Y') : 'N/A' }}</td>
-                                    <td class="px-4 py-3">{{ $deliveryRequest->delivery_date ? \Carbon\Carbon::parse($deliveryRequest->delivery_date)->format('M d, Y') : 'N/A' }}</td>
-                                    <td class="px-4 py-3">{{ $deliveryRequest->company_name ?? 'N/A' }}</td>
-                                    <td class="px-4 py-3">{{ $deliveryRequest->customer_name ?? 'N/A' }}</td>
-                                    <td class="px-4 py-3 font-semibold">P{{ number_format($deliveryRequest->amount ?? 0, 2) }}</td>
+                                    <td class="px-4 py-3 font-medium">{{ $dr->mtm ?? 'N/A' }}</td>
+                                    <td class="px-4 py-3">{{ $dr->booking_date ? \Carbon\Carbon::parse($dr->booking_date)->format('M d, Y') : 'N/A' }}</td>
+                                    <td class="px-4 py-3">{{ $dr->delivery_date ? \Carbon\Carbon::parse($dr->delivery_date)->format('M d, Y') : 'N/A' }}</td>
+                                    <td class="px-4 py-3">{{ $dr->company_name ?? 'N/A' }}</td>
+                                    <td class="px-4 py-3">{{ $dr->customer_name ?? 'N/A' }}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold {{ $billingLabel['cls'] }}">{{ $billingLabel['text'] }}</span>
+                                    </td>
+                                    <td class="px-4 py-3 {{ $billingType === 'accessorial_only' ? 'text-gray-300' : 'text-gray-700' }}">
+                                        {{ $billingType !== 'accessorial_only' ? '₱'.number_format($drAmt, 2) : '—' }}
+                                    </td>
+                                    <td class="px-4 py-3 {{ $billingType === 'delivery_only' ? 'text-gray-300' : 'text-gray-700' }}">
+                                        {{ $billingType !== 'delivery_only' ? '₱'.number_format($acAmt, 2) : '—' }}
+                                    </td>
+                                    <td class="px-4 py-3 font-semibold text-gray-900">₱{{ number_format($dr->amount ?? 0, 2) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>

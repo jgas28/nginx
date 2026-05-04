@@ -396,35 +396,43 @@ class BillingController extends Controller
                 ->whereIn('delivery_request_line_items.id', $deliveryLineItemIds)
                 ->get();
 
+            $itemBilling = $request->input('item_billing', []);
+
             $requestSummaries = $selectedLineItems
                 ->groupBy(function ($lineItem) {
                     return $lineItem->delivery_request_id ?: $lineItem->dr_id ?: $lineItem->mtm;
                 })
-                ->map(function ($group) {
+                ->map(function ($group) use ($itemBilling) {
                     $firstItem = $group->first();
                     $requestId = $firstItem->delivery_request_id ?: $firstItem->dr_id;
 
-                    $amount = $group->sum(function ($lineItem) {
-                        $requestAmount = (float) ($lineItem->delivery_request_amount ?? 0);
+                    // Compute per-component amounts for the group
+                    $deliveryRateAmt = 0;
+                    $accessorialAmt  = 0;
+                    foreach ($group as $lineItem) {
+                        $drAmt = (float) ($lineItem->delivery_request_amount ?? 0);
+                        $acRate = is_array($lineItem->accessorial_rate) ? array_sum($lineItem->accessorial_rate) : (float) ($lineItem->accessorial_rate ?? 0);
+                        $addOn  = is_array($lineItem->add_on_rate)      ? array_sum($lineItem->add_on_rate)      : (float) ($lineItem->add_on_rate ?? 0);
+                        $deliveryRateAmt += $drAmt;
+                        $accessorialAmt  += $acRate + $addOn;
+                    }
 
-                        if ($requestAmount > 0) {
-                            return $requestAmount;
-                        }
+                    // Determine billing type from JS selection (keyed by line item id)
+                    $lineItemId  = $firstItem->id;
+                    $billingType = $itemBilling[$lineItemId] ?? 'both';
 
-                        $accessorialRate = is_array($lineItem->accessorial_rate)
-                            ? array_sum($lineItem->accessorial_rate)
-                            : (float) ($lineItem->accessorial_rate ?? 0);
-
-                        $addOnRate = is_array($lineItem->add_on_rate)
-                            ? array_sum($lineItem->add_on_rate)
-                            : (float) ($lineItem->add_on_rate ?? 0);
-
-                        return $accessorialRate + $addOnRate;
-                    });
+                    $amount = match ($billingType) {
+                        'delivery_only'    => $deliveryRateAmt,
+                        'accessorial_only' => $accessorialAmt,
+                        default            => $deliveryRateAmt > 0 ? ($deliveryRateAmt + $accessorialAmt) : $accessorialAmt,
+                    };
 
                     return [
-                        'delivery_request_id' => $requestId,
-                        'amount' => $amount,
+                        'delivery_request_id'    => $requestId,
+                        'amount'                 => $amount,
+                        'delivery_rate_amount'   => $deliveryRateAmt,
+                        'accessorial_rate_amount'=> $accessorialAmt,
+                        'billing_type'           => $billingType,
                     ];
                 })
                 ->filter(fn ($summary) => !empty($summary['delivery_request_id']))
@@ -464,11 +472,14 @@ class BillingController extends Controller
             if (Schema::hasTable('soa_delivery_requests')) {
                 foreach ($requestSummaries as $summary) {
                     DB::table('soa_delivery_requests')->insert([
-                        'soa_id' => $soa->id,
-                        'delivery_request_id' => $summary['delivery_request_id'],
-                        'amount' => $summary['amount'],
-                        'created_at' => now(),
-                        'updated_at' => now(),
+                        'soa_id'                  => $soa->id,
+                        'delivery_request_id'     => $summary['delivery_request_id'],
+                        'amount'                  => $summary['amount'],
+                        'delivery_rate_amount'    => $summary['delivery_rate_amount'],
+                        'accessorial_rate_amount' => $summary['accessorial_rate_amount'],
+                        'billing_type'            => $summary['billing_type'],
+                        'created_at'              => now(),
+                        'updated_at'              => now(),
                     ]);
                 }
             }
@@ -528,6 +539,9 @@ class BillingController extends Controller
             ->select([
                 'soa_delivery_requests.delivery_request_id',
                 'soa_delivery_requests.amount',
+                'soa_delivery_requests.delivery_rate_amount',
+                'soa_delivery_requests.accessorial_rate_amount',
+                'soa_delivery_requests.billing_type',
                 $deliveryRequestTable . '.mtm',
                 $deliveryRequestTable . '.booking_date',
                 $deliveryRequestTable . '.delivery_date',

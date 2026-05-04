@@ -201,28 +201,46 @@
         <table class="services-table">
             <thead>
                 <tr>
-                    <th style="width:18%;">MTM</th>
-                    <th style="width:14%;">Date</th>
+                    <th style="width:14%;">MTM</th>
+                    <th style="width:11%;">Date</th>
                     <th>Description</th>
-                    <th class="right" style="width:16%;">Amount</th>
+                    <th style="width:13%;">Billed For</th>
+                    <th class="right" style="width:12%;">Delivery Rate</th>
+                    <th class="right" style="width:12%;">Accessorial</th>
+                    <th class="right" style="width:12%;">Total</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($attachedDeliveryRequests as $dr)
+                    @php
+                        $billingType  = $dr->billing_type ?? 'both';
+                        $drAmt        = (float)($dr->delivery_rate_amount ?? 0);
+                        $acAmt        = (float)($dr->accessorial_rate_amount ?? 0);
+                        $billingLabel = match($billingType) {
+                            'delivery_only'    => 'Delivery Only',
+                            'accessorial_only' => 'Accessorial Only',
+                            default            => 'Both',
+                        };
+                    @endphp
                     <tr>
                         <td>{{ $dr->mtm }}</td>
                         <td>{{ $dr->delivery_date ? \Carbon\Carbon::parse($dr->delivery_date)->format('M d, Y') : 'N/A' }}</td>
                         <td>
                             Delivery Service - {{ $dr->company_name ?? 'N/A' }}
-                            @if($dr->customer_name)
-                                ({{ $dr->customer_name }})
-                            @endif
+                            @if($dr->customer_name) ({{ $dr->customer_name }}) @endif
                         </td>
-                        <td class="right">P{{ number_format($dr->amount ?? 0, 2) }}</td>
+                        <td style="text-align:center; font-size:10px; font-weight:600;">{{ $billingLabel }}</td>
+                        <td class="right" style="{{ $billingType === 'accessorial_only' ? 'color:#9CA3AF;' : '' }}">
+                            {{ $billingType !== 'accessorial_only' ? '&#8369;'.number_format($drAmt, 2) : '—' }}
+                        </td>
+                        <td class="right" style="{{ $billingType === 'delivery_only' ? 'color:#9CA3AF;' : '' }}">
+                            {{ $billingType !== 'delivery_only' ? '&#8369;'.number_format($acAmt, 2) : '—' }}
+                        </td>
+                        <td class="right">&#8369;{{ number_format($dr->amount ?? 0, 2) }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" style="text-align:center; color:#6B7280; padding:12px;">No delivery requests attached.</td>
+                        <td colspan="7" style="text-align:center; color:#6B7280; padding:12px;">No delivery requests attached.</td>
                     </tr>
                 @endforelse
             </tbody>
@@ -235,12 +253,12 @@
                 @endphp
                 @if($hasAdj)
                 <tr class="totals-row subtotal-row">
-                    <td colspan="3" class="right">Subtotal:</td>
+                    <td colspan="6" class="right">Subtotal:</td>
                     <td class="right">&#8369;{{ number_format($subtotal, 2) }}</td>
                 </tr>
                 @if($discountAmt > 0)
                 <tr class="discount-row">
-                    <td colspan="3" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">
+                    <td colspan="6" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">
                         {{ $soa->discount_type === 'dispute' ? 'Dispute' : 'Discount' }}:
                         @if($soa->discount_remarks)
                             <span class="remarks-note">({{ $soa->discount_remarks }})</span>
@@ -251,7 +269,7 @@
                 @endif
                 @if($adjustmentAmt != 0)
                 <tr class="adjustment-row">
-                    <td colspan="3" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">
+                    <td colspan="6" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">
                         Manual Adjustment:
                         @if($soa->adjustment_remarks)
                             <span class="remarks-note">({{ $soa->adjustment_remarks }})</span>
@@ -262,15 +280,15 @@
                 @endif
                 @endif
                 <tr class="totals-row total-amount">
-                    <td colspan="3" class="right">Final Total:</td>
+                    <td colspan="6" class="right">Final Total:</td>
                     <td class="right">&#8369;{{ number_format($soa->total_amount, 2) }}</td>
                 </tr>
                 <tr class="totals-row">
-                    <td colspan="3" class="right">Paid Amount:</td>
+                    <td colspan="6" class="right">Paid Amount:</td>
                     <td class="right">&#8369;{{ number_format($soa->paid_amount, 2) }}</td>
                 </tr>
                 <tr class="outstanding-row">
-                    <td colspan="3" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">Outstanding Amount:</td>
+                    <td colspan="6" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">Outstanding Amount:</td>
                     <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">&#8369;{{ number_format($soa->outstanding_amount, 2) }}</td>
                 </tr>
             </tfoot>
