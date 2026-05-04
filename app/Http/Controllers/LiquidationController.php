@@ -20,68 +20,6 @@ use Carbon\Carbon;
 
 class LiquidationController extends Controller
 {
-    private const LIQUIDATION_DIFFERENCE_TOLERANCE = 0.01;
-
-    private function normalizeLiquidationRequest(Request $request, bool $nestedExpenses = false): void
-    {
-        if ($nestedExpenses) {
-            $request->merge([
-                'expenses' => $this->normalizeExpenseFields((array) $request->input('expenses', [])),
-            ]);
-        } else {
-            $request->merge($this->normalizeExpenseFields($request->only(Liquidation::MONEY_FIELDS)));
-        }
-
-        $request->merge([
-            'gasoline' => Liquidation::normalizeLineItems($request->input('gasoline', [])),
-            'rfid' => Liquidation::normalizeLineItems($request->input('rfid', [])),
-            'others' => Liquidation::normalizeLineItems($request->input('others', [])),
-        ]);
-    }
-
-    private function normalizeExpenseFields(array $values): array
-    {
-        $normalized = [];
-
-        foreach (Liquidation::MONEY_FIELDS as $field) {
-            $normalized[$field] = Liquidation::normalizeCurrencyValue($values[$field] ?? null);
-        }
-
-        return $normalized;
-    }
-
-    private function liquidationAmountRules(bool $nestedExpenses = false): array
-    {
-        $rules = [
-            'gasoline' => 'nullable|array',
-            'gasoline.*.type' => 'nullable|string',
-            'gasoline.*.amount' => 'nullable|numeric|min:0',
-            'rfid' => 'nullable|array',
-            'rfid.*.tag' => 'nullable|string',
-            'rfid.*.type' => 'nullable|string',
-            'rfid.*.amount' => 'nullable|numeric|min:0',
-            'others' => 'nullable|array',
-            'others.*.description' => 'nullable|string',
-            'others.*.amount' => 'nullable|numeric|min:0',
-        ];
-
-        foreach (Liquidation::MONEY_FIELDS as $field) {
-            $key = $nestedExpenses ? "expenses.{$field}" : $field;
-            $rules[$key] = 'nullable|numeric|min:0';
-        }
-
-        return $rules;
-    }
-
-    private function normalizeDifferenceValue(float $difference): float
-    {
-        $difference = round($difference, 2);
-
-        return abs($difference) <= self::LIQUIDATION_DIFFERENCE_TOLERANCE
-            ? 0.0
-            : $difference;
-    }
-
     /**
      * Display a listing of the resource.
      */
@@ -159,10 +97,11 @@ class LiquidationController extends Controller
 
     public function storeSummary(Request $request, $id)
     {
-        $this->normalizeLiquidationRequest($request, true);
-
         $validated = $request->validate([
             'expenses' => 'array',
+            'gasoline' => 'array',
+            'rfid' => 'array',
+            'others' => 'array',
             'cvr_id' => 'required|integer',
             'cvr_number' => 'required|string',
             'cvr_approval_id' => 'nullable|integer',
@@ -171,12 +110,12 @@ class LiquidationController extends Controller
             'validated_by' => 'nullable|integer',
             'collected_by' => 'nullable|integer',
             'approved_by' => 'nullable|integer',
-        ] + $this->liquidationAmountRules(true));
+        ]);
 
-        $expenses = $validated['expenses'] ?? [];
-        $gasoline = $validated['gasoline'] ?? [];
-        $rfid = $validated['rfid'] ?? [];
-        $others = $validated['others'] ?? [];
+        $expenses = $request->input('expenses', []);
+        $gasoline = $request->input('gasoline', []);
+        $rfid = $request->input('rfid', []);
+        $others = $request->input('others', []);
 
         // Calculate total liquidated amount (CASH ONLY for gasoline & RFID)
         $totalLiquidated = 0;
@@ -384,14 +323,14 @@ class LiquidationController extends Controller
         });
 
         // Adjusted difference
-        $adjustedDifference = $this->normalizeDifferenceValue($difference + $refundTotal + $returnedTotal);
+        $adjustedDifference = round($difference + $refundTotal + $returnedTotal, 2);
 
         // Decide next step
         $nextStatus = 4; // default to "For Approval"
         $refund = false;
         $return = false;
 
-        if ($adjustedDifference == 0.0) {
+        if (round($adjustedDifference, 2) == 0) {
             // Fully reconciled: either no transaction, or liquidated + refund/return balances match the CVR
             $nextStatus = 4;
         } elseif ($adjustedDifference > 0) {
@@ -453,7 +392,7 @@ class LiquidationController extends Controller
             $totalCash += floatval($item['amount'] ?? 0);
         }
 
-        $difference = $this->normalizeDifferenceValue($totalCash - $approvedAmount);
+        $difference = round($totalCash - $approvedAmount, 2);
 
         // Base validation (always needed)
         $rules = [
@@ -578,7 +517,7 @@ class LiquidationController extends Controller
         }
 
         $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
-        $difference = $this->normalizeDifferenceValue($totalCash - $approvedAmount);
+        $difference = $totalCash - $approvedAmount;
 
         // Logic for display and next step status
         $nextStatus = 4; // default: approval
@@ -796,7 +735,7 @@ class LiquidationController extends Controller
         // Use epsilon for floating point tolerance
         $epsilon = 0.01; // 1 cent tolerance
 
-        if (abs($difference) <= $epsilon) {
+        if (abs($difference) < $epsilon) {
             $difference = 0;
             $refund = false;
             $return = false;
@@ -883,15 +822,13 @@ class LiquidationController extends Controller
         }
 
 
-        $difference = $this->normalizeDifferenceValue($totalCash - $approvedAmount);
+        $difference = $totalCash - $approvedAmount;
 
         // Assign status based on difference
         if ($difference > 0) {
             $liquidation->status = 4; // Refund, go to approval
-        } elseif ($difference < 0) {
-            $liquidation->status = 3; // Returned cash, go to collection
         } else {
-            $liquidation->status = 4;
+            $liquidation->status = 3; // Returned cash, go to collection
         }
 
         $liquidation->validated_by = $request->validated_by;
@@ -1064,10 +1001,25 @@ class LiquidationController extends Controller
         // Find the liquidation by ID
         $liquidation = Liquidation::findOrFail($id);
 
-        $this->normalizeLiquidationRequest($request);
-
         // Validate the request data (e.g., approved_by and expenses)
-        $request->validate($this->liquidationAmountRules());
+        $request->validate([
+            'allowance' => 'nullable|numeric',
+            'manpower' => 'nullable|numeric',
+            'hauling' => 'nullable|numeric',
+            'right_of_way' => 'nullable|numeric',
+            'roro_expense' => 'nullable|numeric',
+            'cash_charge' => 'nullable|numeric',
+            'gasoline' => 'nullable|array',
+            'gasoline.*.type' => 'nullable|string',
+            'gasoline.*.amount' => 'nullable|numeric',
+            'rfid' => 'nullable|array',
+            'rfid.*.tag' => 'nullable|string',
+            'rfid.*.type' => 'nullable|string',
+            'rfid.*.amount' => 'nullable|numeric',
+            'others' => 'nullable|array',
+            'others.*.description' => 'nullable|string',
+            'others.*.amount' => 'nullable|numeric',
+        ]);
 
         // Update fields with the form data
         $liquidation->update([
@@ -1093,10 +1045,25 @@ class LiquidationController extends Controller
         // Find the liquidation by ID
         $liquidation = Liquidation::findOrFail($id);
 
-        $this->normalizeLiquidationRequest($request);
-
         // Validate the request data (e.g., approved_by and expenses)
-        $request->validate($this->liquidationAmountRules());
+        $request->validate([
+            'allowance' => 'nullable|numeric',
+            'manpower' => 'nullable|numeric',
+            'hauling' => 'nullable|numeric',
+            'right_of_way' => 'nullable|numeric',
+            'roro_expense' => 'nullable|numeric',
+            'cash_charge' => 'nullable|numeric',
+            'gasoline' => 'nullable|array',
+            'gasoline.*.type' => 'nullable|string',
+            'gasoline.*.amount' => 'nullable|numeric',
+            'rfid' => 'nullable|array',
+            'rfid.*.tag' => 'nullable|string',
+            'rfid.*.type' => 'nullable|string',
+            'rfid.*.amount' => 'nullable|numeric',
+            'others' => 'nullable|array',
+            'others.*.description' => 'nullable|string',
+            'others.*.amount' => 'nullable|numeric',
+        ]);
 
         // Update fields with the form data
         $liquidation->update([
@@ -1122,10 +1089,25 @@ class LiquidationController extends Controller
         // Find the liquidation by ID
         $liquidation = Liquidation::findOrFail($id);
 
-        $this->normalizeLiquidationRequest($request);
-
         // Validate the request data (e.g., approved_by and expenses)
-        $request->validate($this->liquidationAmountRules());
+        $request->validate([
+            'allowance' => 'nullable|numeric',
+            'manpower' => 'nullable|numeric',
+            'hauling' => 'nullable|numeric',
+            'right_of_way' => 'nullable|numeric',
+            'roro_expense' => 'nullable|numeric',
+            'cash_charge' => 'nullable|numeric',
+            'gasoline' => 'nullable|array',
+            'gasoline.*.type' => 'nullable|string',
+            'gasoline.*.amount' => 'nullable|numeric',
+            'rfid' => 'nullable|array',
+            'rfid.*.tag' => 'nullable|string',
+            'rfid.*.type' => 'nullable|string',
+            'rfid.*.amount' => 'nullable|numeric',
+            'others' => 'nullable|array',
+            'others.*.description' => 'nullable|string',
+            'others.*.amount' => 'nullable|numeric',
+        ]);
 
         // Update fields with the form data
         $liquidation->update([
@@ -1257,12 +1239,19 @@ class LiquidationController extends Controller
 
         $liquidation = Liquidation::findOrFail($id);
 
-        $this->normalizeLiquidationRequest($request);
-
         $data = $request->validate([
+            'allowance' => 'nullable|numeric',
+            'manpower' => 'nullable|numeric',
+            'hauling' => 'nullable|numeric',
+            'right_of_way' => 'nullable|numeric',
+            'roro_expense' => 'nullable|numeric',
+            'cash_charge' => 'nullable|numeric',
+            'gasoline' => 'nullable|array',
+            'rfid' => 'nullable|array',
+            'others' => 'nullable|array',
             'prepared_by' => 'required|exists:users,id',
             'noted_by' => 'nullable|exists:users,id',
-        ] + $this->liquidationAmountRules());
+        ]);
 
         // Log extracted arrays individually
         Log::info('Parsed Arrays:', [

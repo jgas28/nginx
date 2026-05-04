@@ -129,11 +129,8 @@
         });
 
         // Final difference, adjusted by refund and returns
-        $difference = round($rawDifference - $refundTotal + $returnedTotal, 2);
-        $differenceIsZero = abs($difference) <= 0.01;
-        if ($differenceIsZero) {
-            $difference = 0;
-        }
+        $difference = $rawDifference - $refundTotal + $returnedTotal;
+        $difference = round($difference, 2); // Optional rounding
     @endphp
     <div class="mt-10 grid grid-cols-1 md:grid-cols-2 gap-6 font-medium text-lg">
         <div class="p-4 rounded-lg shadow-inner 
@@ -220,7 +217,7 @@
 
 
     <!-- Existing Create Return Button -->
-    @if ($return && !$differenceIsZero)
+    @if ($return && $difference != 0)
         <button id="openCollectedModalBtn" 
             class="mt-6 bg-indigo-600 text-white px-5 py-2 rounded hover:bg-indigo-700 transition">
             Create Return Collected
@@ -411,7 +408,7 @@
     <div class="bg-white p-6 rounded shadow-lg w-full max-w-md">
         <h2 class="text-lg font-semibold mb-4 text-gray-800">Confirm Validation</h2>
         
-        @if(!$differenceIsZero)
+        @if($difference != 0)
             <p class="text-red-600 font-medium mb-4">There's still a difference between approved and liquidated amount.</p>
         @else
             <p class="text-gray-700 mb-4">Are you sure you want to confirm the validation?</p>
@@ -419,7 +416,7 @@
 
         <div class="flex justify-end space-x-2">
             <button id="cancelConfirmBtn" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">Cancel</button>
-            @if($differenceIsZero)
+            @if($difference == 0)
                 <button id="confirmSubmitBtn" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Confirm</button>
             @endif
         </div>

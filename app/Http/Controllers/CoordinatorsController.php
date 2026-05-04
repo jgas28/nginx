@@ -206,7 +206,7 @@ class CoordinatorsController extends Controller
             'customer_id' => 'required',
             'booking_date' => 'required',
             'delivery_date' => 'required',
-            'delivery_rate' => 'required|numeric|min:0',
+            'delivery_rate' => 'required',
             'truck_type_id' => 'required',
             'company_id' => 'required',
             'project_name' => 'required',
@@ -226,7 +226,7 @@ class CoordinatorsController extends Controller
             $validationRules['regular.*.delivery_address'] = 'nullable|string';
             $validationRules['regular.*.distance_type'] = 'nullable|string';
             $validationRules['regular.*.accessorial_type'] = 'nullable|string';
-            $validationRules['regular.*.accessorial_rate'] = 'nullable|numeric|min:0';
+            $validationRules['regular.*.accessorial_rate'] = 'nullable|string';
             // $validationRules['regular.*.add_on_rate'] = 'nullable|string';
         }
 
@@ -238,7 +238,7 @@ class CoordinatorsController extends Controller
             // $validationRules['multi_drop.*.delivery_address'] = 'nullable|string';
             $validationRules['multi_drop.*.distance_type'] = 'nullable|string';
             $validationRules['multi_drop.*.accessorial_type'] = 'nullable|string';
-            $validationRules['multi_drop.*.accessorial_rate'] = 'nullable|numeric|min:0';
+            $validationRules['multi_drop.*.accessorial_rate'] = 'nullable|string';
             // $validationRules['multi_drop.*.add_on_rate'] = 'nullable|string';
         }
 
@@ -250,7 +250,7 @@ class CoordinatorsController extends Controller
             $validationRules['multi_pickup.*.distance_type'] = 'nullable|string';
             $validationRules['multi_pickup.*.add_on_rate'] = 'nullable|string';
             $validationRules['multi_pickup.*.accessorial_type'] = 'nullable|string';
-            $validationRules['multi_pickup.*.accessorial_rate'] = 'nullable|numeric|min:0';
+            $validationRules['multi_pickup.*.accessorial_rate'] = 'nullable|string';
         }
 
         // Perform the validation
@@ -448,7 +448,7 @@ class CoordinatorsController extends Controller
             'customer_id' => 'required',
             'booking_date' => 'required',
             'delivery_date' => 'required',
-            'delivery_rate' => 'required|numeric|min:0',
+            'delivery_rate' => 'required',
             'truck_type_id' => 'required',
             'company_id' => 'required',
             'project_name' => 'required',
@@ -468,7 +468,7 @@ class CoordinatorsController extends Controller
             $validationRules['regular.*.distance_type'] = 'nullable|string';
 
             $validationRules['regular.*.accessorial_type'] = 'nullable|string';
-            $validationRules['regular.*.accessorial_rate'] = 'nullable|numeric|min:0';
+            $validationRules['regular.*.accessorial_rate'] = 'nullable|numeric';
         }
 
         if ($request->delivery_type == 'Multi-Drop') {
@@ -478,7 +478,7 @@ class CoordinatorsController extends Controller
             $validationRules['multi_drop.*.distance_type'] = 'nullable|string';
 
             $validationRules['multi_drop.*.accessorial_type'] = 'nullable|string';
-            $validationRules['multi_drop.*.accessorial_rate'] = 'nullable|numeric|min:0';
+            $validationRules['multi_drop.*.accessorial_rate'] = 'nullable|numeric';
         }
 
         if ($request->delivery_type == 'Multi Pick-Up') {
@@ -490,7 +490,7 @@ class CoordinatorsController extends Controller
             $validationRules['multi_pickup.*.add_on_rate'] = 'nullable|string';
 
             $validationRules['multi_pickup.*.accessorial_type'] = 'nullable|string';
-            $validationRules['multi_pickup.*.accessorial_rate'] = 'nullable|numeric|min:0';
+            $validationRules['multi_pickup.*.accessorial_rate'] = 'nullable|numeric';
         }
 
         Log::debug('Starting Validation...', $request->all());
@@ -934,17 +934,28 @@ class CoordinatorsController extends Controller
         DB::beginTransaction();
 
         try {
-            $request->validate([
-                'delivery_date' => 'required|date',
-                'delivery_rate' => 'required|numeric|min:0',
-                'truck_type_id' => 'required|integer|exists:truck_types,id',
-                'regular' => 'nullable|array',
-                'regular.*.accessorial_rate' => 'nullable|numeric|min:0',
-                'multi_drop' => 'nullable|array',
-                'multi_drop.*.accessorial_rate' => 'nullable|numeric|min:0',
-                'multi_pickup' => 'nullable|array',
-                'multi_pickup.*.accessorial_rate' => 'nullable|numeric|min:0',
-            ]);
+            // $request->validate([
+            //     // Validation rules
+            //     'allocation_id' => 'nullable|array',
+            //     'allocation_id.*' => 'nullable|integer|exists:allocations,id',
+            //     'amount' => 'required|array',
+            //     'amount.*' => 'required|numeric|min:0',
+            //     'fleet_card_id' => 'nullable|array',
+            //     'fleet_card_id.*' => 'nullable|integer|exists:fleet_cards,id',
+            //     'truck_id' => 'required|array',
+            //     'truck_id.*' => 'required|integer|exists:trucks,id',
+            //     'driver_id' => 'required|array',
+            //     'driver_id.*' => 'required|integer|exists:users,id',
+            //     'helper' => 'nullable|array',
+            //     'helper.*' => 'nullable|array',
+            //     'helper.*.*' => 'nullable|string',
+
+            //     // DeliveryRequest fields
+            //     'delivery_date' => 'required|date',
+            //     'delivery_rate' => 'required|numeric',
+            //     'truck_type_id' => 'required|integer|exists:truck_types,id',
+            //     // Add any additional validation rules if needed
+            // ]);
 
             // Update DeliveryRequest fields
             $deliveryRequest->update([
@@ -1081,14 +1092,8 @@ class CoordinatorsController extends Controller
 
                 // DeliveryRequest fields
                 'delivery_date' => 'required|date',
-                'delivery_rate' => 'required|numeric|min:0',
+                'delivery_rate' => 'required|numeric',
                 'truck_type_id' => 'required|integer|exists:truck_types,id',
-                'regular' => 'nullable|array',
-                'regular.*.accessorial_rate' => 'nullable|numeric|min:0',
-                'multi_drop' => 'nullable|array',
-                'multi_drop.*.accessorial_rate' => 'nullable|numeric|min:0',
-                'multi_pickup' => 'nullable|array',
-                'multi_pickup.*.accessorial_rate' => 'nullable|numeric|min:0',
                 // Add any additional validation rules if needed
             ]);
 
@@ -1285,7 +1290,7 @@ class CoordinatorsController extends Controller
 
         try {
             $validated = $request->validate([
-                'amount' => 'required|numeric|min:0',
+                'amount' => 'required|numeric',
                 'request_type' => 'required',
                 'requestor' => 'required',
                 'mtm' => 'required',
@@ -1294,10 +1299,6 @@ class CoordinatorsController extends Controller
                 'voucher_type' => 'required|in:regular,with_tax',
                 'withholding_tax' => 'nullable|exists:withholding_taxes,id',
                 'tax_base_amount' => 'nullable|numeric|min:0',
-                'truck_id' => 'required|exists:trucks,id',
-                'driver_id' => 'required|exists:users,id',
-                'fleet_card_id' => 'required|exists:fleet_cards,id',
-                'trip_type' => 'required|in:pullout',
             ]);
             Log::info('Validation Passed:', ['validated_data' => $validated]);
 
@@ -1493,7 +1494,7 @@ class CoordinatorsController extends Controller
 
         try {
             $validated = $request->validate([
-                'amount' => 'required|numeric|min:0',
+                'amount' => 'required|numeric',
                 'request_type' => 'required',
                 'requestor' => 'required',
                 'mtm' => 'required',
@@ -1502,10 +1503,6 @@ class CoordinatorsController extends Controller
                 'voucher_type' => 'required|in:regular,with_tax',
                 'withholding_tax' => 'nullable|exists:withholding_taxes,id',
                 'tax_base_amount' => 'nullable|numeric|min:0',
-                'truck_id' => 'required|exists:trucks,id',
-                'driver_id' => 'required|exists:users,id',
-                'fleet_card_id' => 'required|exists:fleet_cards,id',
-                'trip_type' => 'required|in:accessorial,freight,others',
             ]);
             Log::info('Validation Passed:', ['validated_data' => $validated]);
 

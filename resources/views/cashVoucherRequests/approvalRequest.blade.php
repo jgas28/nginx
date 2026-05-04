@@ -120,7 +120,7 @@
             </div>
             <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="cash_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" min="0" />
+                <input type="number" name="cash_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
             </div>
 
             <div>
@@ -157,11 +157,11 @@
             </div>
            <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="bank_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" min="0" />
+                <input type="number" name="bank_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
             </div>
             <div>
                 <label class="block text-gray-700">Receiver</label>
-                <select name="bank_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
+                <select nambere="bank_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
                     <option value="">Select Receiver</option>
                     @foreach($employees as $employee)
                         <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
@@ -179,7 +179,7 @@
             </div>
             <div>
                 <label class="block text-gray-700">Bank Charge</label>
-                <input type="number" name="bank_charge" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" min="0" />
+                <input type="text" name="bank_charge" class="w-full border border-gray-300 rounded px-3 py-2" />
             </div>
         </fieldset>
 
@@ -197,7 +197,7 @@
             </div>
             <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="outlet_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" min="0" />
+                <input type="number" name="outlet_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
             </div>
             <div>
                 <label class="block text-gray-700">Receiver</label>
@@ -219,7 +219,7 @@
             </div>
             <div>
                 <label class="block text-gray-700">Outlet Charge</label>
-                <input type="number" name="outlet_charge" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" min="0" />
+                <input type="text" name="outlet_charge" class="w-full border border-gray-300 rounded px-3 py-2" />
             </div>
         </fieldset>
 
@@ -237,11 +237,11 @@
             </div>
            <div>
                 <label class="block text-gray-700">Amount</label>
-                <input type="number" name="cheque_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" min="0" />
+                <input type="number" name="cheque_amount" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" />
             </div>
             <div>
                 <label class="block text-gray-700">Receiver</label>
-                <select name="cheque_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
+                <select nambere="cheque_receiver" class="w-full border border-gray-300 rounded px-3 py-2">
                     <option value="">Select Receiver</option>
                     @foreach($employees as $employee)
                         <option value="{{ $employee->id }}">{{ $employee->fname }} {{ $employee->lname }}</option>
@@ -259,7 +259,7 @@
             </div>
             <div>
                 <label class="block text-gray-700">Bank Charge</label>
-                <input type="number" name="cheque_charge" class="w-full border border-gray-300 rounded px-3 py-2" step="0.01" min="0" />
+                <input type="text" name="cheque_charge" class="w-full border border-gray-300 rounded px-3 py-2" />
             </div>
         </fieldset>
 

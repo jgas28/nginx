@@ -38,7 +38,7 @@
                         {{ $field === 'roro_expense' ? 'Freight' : str_replace('_', ' ', $field) }}
                     </label>
                     <input 
-                        type="number" step="0.01" min="0" name="{{ $field }}"
+                        type="number" step="0.01" name="{{ $field }}"
                         value="{{ old($field, $liquidation->$field ?? 0) }}"
                         class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                     />
@@ -77,7 +77,7 @@
                             <option value="cash" {{ ($item['type'] ?? '') === 'cash' ? 'selected' : '' }}>Cash</option>
                             <option value="card" {{ ($item['type'] ?? '') === 'card' ? 'selected' : '' }}>Card</option>
                         </select>
-                        <input type="number" step="0.01" min="0" name="gasoline[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}"
+                        <input type="number" step="0.01" name="gasoline[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}"
                             placeholder="Amount" class="w-36 border rounded px-2 py-1 text-sm" />
                         <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
                     </div>
@@ -106,7 +106,7 @@
                             <option value="cash" {{ ($item['type'] ?? '') === 'cash' ? 'selected' : '' }}>Cash</option>
                             <option value="card" {{ ($item['type'] ?? '') === 'card' ? 'selected' : '' }}>Card</option>
                         </select>
-                        <input type="number" step="0.01" min="0" name="rfid[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}"
+                        <input type="number" step="0.01" name="rfid[{{ $index }}][amount]" value="{{ $item['amount'] ?? '' }}"
                             placeholder="Amount" class="w-32 border rounded px-2 py-1 text-sm" />
                         <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
                     </div>
@@ -128,7 +128,7 @@
                 <div class="flex flex-wrap gap-2 items-center" data-index="{{ $index }}">
                     <input type="text" name="others[{{ $index }}][description]" placeholder="Description" value="{{ $item['description'] ?? '' }}"
                         class="w-64 border rounded px-3 py-1 text-sm" />
-                    <input type="number" step="0.01" min="0" name="others[{{ $index }}][amount]" placeholder="Amount" value="{{ $item['amount'] ?? '' }}"
+                    <input type="number" step="0.01" name="others[{{ $index }}][amount]" placeholder="Amount" value="{{ $item['amount'] ?? '' }}"
                         class="w-32 border rounded px-3 py-1 text-sm" />
                     <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
                 </div>
@@ -266,14 +266,7 @@
         </div>
     </div>
 
-    @php
-        $differenceIsZero = abs($difference) <= 0.01;
-        if ($differenceIsZero) {
-            $difference = 0;
-        }
-    @endphp
-
-    @if (!$differenceIsZero)
+    @if ($difference != 0)
         <!-- <button id="openModalBtn"
             class="mt-6 {{ $difference > 0 ? 'bg-yellow-500' : 'bg-red-600' }} text-white px-5 py-2 rounded hover:{{ $difference > 0 ? 'bg-yellow-600' : 'bg-red-700' }} transition">
             {{ $difference > 0 ? 'Create Return' : 'Create Refund' }}
@@ -675,7 +668,7 @@
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                 </select>
-                <input type="number" step="0.01" min="0" name="gasoline[${gasolineIndex}][amount]" placeholder="Amount" class="w-36 border rounded px-2 py-1 text-sm" />
+                <input type="number" step="0.01" name="gasoline[${gasolineIndex}][amount]" placeholder="Amount" class="w-36 border rounded px-2 py-1 text-sm" />
                 <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
             </div>
         `);
@@ -696,7 +689,7 @@
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                 </select>
-                <input type="number" step="0.01" min="0" name="rfid[${rfidIndex}][amount]" placeholder="Amount" class="w-32 border rounded px-2 py-1 text-sm" />
+                <input type="number" step="0.01" name="rfid[${rfidIndex}][amount]" placeholder="Amount" class="w-32 border rounded px-2 py-1 text-sm" />
                 <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
             </div>
         `);
@@ -708,7 +701,7 @@
         wrapper.insertAdjacentHTML('beforeend', `
             <div class="flex gap-2 items-center" data-index="${othersIndex}">
                 <input type="text" name="others[${othersIndex}][description]" placeholder="Description" class="w-64 border rounded px-3 py-1 text-sm" />
-                <input type="number" step="0.01" min="0" name="others[${othersIndex}][amount]" placeholder="Amount" class="w-32 border rounded px-3 py-1 text-sm" />
+                <input type="number" step="0.01" name="others[${othersIndex}][amount]" placeholder="Amount" class="w-32 border rounded px-3 py-1 text-sm" />
                 <button type="button" onclick="this.closest('[data-index]').remove()" class="text-red-500 hover:text-red-700 text-sm">✕</button>
             </div>
         `);
@@ -787,7 +780,6 @@
     const cancelConfirmValidationBtn = document.getElementById('cancelConfirmValidationBtn');
     const validationForm = document.getElementById('approvalForm');
     const difference = parseFloat({{ abs($difference) }});
-    const differenceTolerance = 0.01;
     const warningSpan = confirmValidationModal.querySelector('.text-red-600');
     const differenceAmount = document.getElementById('differenceAmount');
     
@@ -804,7 +796,7 @@
     validateBtn?.addEventListener('click', function () {
         confirmValidationModal?.classList.remove('hidden');
 
-        if (difference > differenceTolerance) {
+        if (difference !== 0) {
             warningSpan?.classList.remove('hidden');
             differenceAmount.textContent = difference.toFixed(2);
             confirmValidationBtn.disabled = true;
@@ -885,16 +877,9 @@
     addEmployeeUncollectedBtn?.addEventListener('click', function () {
         const employeeRow = document.createElement('div');
         employeeRow.classList.add('flex', 'space-x-2', 'mt-2');
-        let employeeOptions = '';
-        @foreach ($staffs as $staff)
-            employeeOptions += `<option value="{{ $staff->id }}">{{ $staff->fname }} {{ $staff->lname }}</option>`;
-        @endforeach
         employeeRow.innerHTML = `
-            <select name="employee_id_uncollected[]" class="w-full border border-gray-300 rounded px-3 py-2" required>
-                <option value="" disabled selected>Select employee</option>
-                ${employeeOptions}
-            </select>
-            <input type="number" step="0.01" min="0" name="deduction_amount_uncollected[]" placeholder="Deduction Amount" class="w-full border border-gray-300 rounded px-3 py-2" required oninput="calculateUncollected()" />
+            <input type="text" name="employee_name[]" placeholder="Employee Name" class="w-full border border-gray-300 rounded px-3 py-2" />
+            <input type="number" step="0.01" name="deduction_amount[]" placeholder="Deduction Amount" class="w-full border border-gray-300 rounded px-3 py-2" />
             <button type="button" class="remove-employee-btn px-2 text-red-600" style="cursor: pointer;">Remove</button>
         `;
         employeeDeductionsUncollectedContainer?.appendChild(employeeRow);

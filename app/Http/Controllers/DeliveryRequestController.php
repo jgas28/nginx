@@ -127,7 +127,7 @@ class DeliveryRequestController extends Controller
             'customer_id' => 'required',
             'booking_date' => 'required',
             'delivery_date' => 'required',
-            'delivery_rate' => 'required|numeric|min:0',
+            'delivery_rate' => 'required',
             'truck_type_id' => 'required',
             'company_id' => 'required',
             'project_name' => 'required',
@@ -147,7 +147,7 @@ class DeliveryRequestController extends Controller
             $validationRules['regular.*.delivery_address'] = 'nullable|string';
             $validationRules['regular.*.distance_type'] = 'nullable|string';
             $validationRules['regular.*.accessorial_type'] = 'nullable|string';
-            $validationRules['regular.*.accessorial_rate'] = 'nullable|numeric|min:0';
+            $validationRules['regular.*.accessorial_rate'] = 'nullable|string';
             // $validationRules['regular.*.add_on_rate'] = 'nullable|string';
         }
 
@@ -159,7 +159,7 @@ class DeliveryRequestController extends Controller
             // $validationRules['multi_drop.*.delivery_address'] = 'nullable|string';
             $validationRules['multi_drop.*.distance_type'] = 'nullable|string';
             $validationRules['multi_drop.*.accessorial_type'] = 'nullable|string';
-            $validationRules['multi_drop.*.accessorial_rate'] = 'nullable|numeric|min:0';
+            $validationRules['multi_drop.*.accessorial_rate'] = 'nullable|string';
             // $validationRules['multi_drop.*.add_on_rate'] = 'nullable|string';
         }
 
@@ -171,7 +171,7 @@ class DeliveryRequestController extends Controller
             $validationRules['multi_pickup.*.distance_type'] = 'nullable|string';
             $validationRules['multi_pickup.*.add_on_rate'] = 'nullable|string';
             $validationRules['multi_pickup.*.accessorial_type'] = 'nullable|string';
-            $validationRules['multi_pickup.*.accessorial_rate'] = 'nullable|numeric|min:0';
+            $validationRules['multi_pickup.*.accessorial_rate'] = 'nullable|string';
         }
 
         // Perform the validation
@@ -343,7 +343,7 @@ class DeliveryRequestController extends Controller
             'customer_id' => 'required',
             'booking_date' => 'required',
             'delivery_date' => 'required',
-            'delivery_rate' => 'required|numeric|min:0',
+            'delivery_rate' => 'required',
             'truck_type_id' => 'required',
             'company_id' => 'required',
             'project_name' => 'required',
@@ -363,7 +363,7 @@ class DeliveryRequestController extends Controller
             $validationRules['regular.*.distance_type'] = 'nullable|string';
 
             $validationRules['regular.*.accessorial_type'] = 'nullable|string';
-            $validationRules['regular.*.accessorial_rate'] = 'nullable|numeric|min:0';
+            $validationRules['regular.*.accessorial_rate'] = 'nullable|numeric';
         }
 
         if ($request->delivery_type == 'Multi-Drop') {
@@ -373,7 +373,7 @@ class DeliveryRequestController extends Controller
             $validationRules['multi_drop.*.distance_type'] = 'nullable|string';
 
             $validationRules['multi_drop.*.accessorial_type'] = 'nullable|string';
-            $validationRules['multi_drop.*.accessorial_rate'] = 'nullable|numeric|min:0';
+            $validationRules['multi_drop.*.accessorial_rate'] = 'nullable|numeric';
         }
 
         if ($request->delivery_type == 'Multi Pick-Up') {
@@ -385,7 +385,7 @@ class DeliveryRequestController extends Controller
             $validationRules['multi_pickup.*.add_on_rate'] = 'nullable|string';
 
             $validationRules['multi_pickup.*.accessorial_type'] = 'nullable|string';
-            $validationRules['multi_pickup.*.accessorial_rate'] = 'nullable|numeric|min:0';
+            $validationRules['multi_pickup.*.accessorial_rate'] = 'nullable|numeric';
         }
 
         Log::debug('Starting Validation...', $request->all());
