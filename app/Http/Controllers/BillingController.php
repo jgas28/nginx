@@ -269,8 +269,12 @@ class BillingController extends Controller
                     'request_delivery_status.status_name as joined_delivery_status_name',
                 ])
                 ->where('delivery_request_line_items.status', '1')
+                ->where(function ($q) {
+                    $q->where('request_delivery_status.status_name', 'like', '%deliver%')
+                      ->orWhere('request_delivery_status.status_name', 'like', '%complet%');
+                })
                 ->orderBy('delivery_request_line_items.created_at', 'desc')
-                ->limit(100) // Limit results to prevent timeout
+                ->limit(100)
                 ->get();
 
             // Filter out fully-billed items; keep partially-billed items with component tracking
@@ -613,6 +617,10 @@ class BillingController extends Controller
             ->where($deliveryRequestTable . '.customer_id', $soa->customer_id)
             ->whereBetween($deliveryRequestTable . '.delivery_date', [$soa->billing_period_from->format('Y-m-d'), $soa->billing_period_to->format('Y-m-d')])
             ->whereNotIn($deliveryRequestTable . '.id', $usedElsewhereIds)
+            ->where(function ($q) {
+                $q->where('delivery_status.status_name', 'like', '%deliver%')
+                  ->orWhere('delivery_status.status_name', 'like', '%complet%');
+            })
             ->orWhere(function ($query) use ($deliveryRequestTable, $selectedIds, $soa) {
                 $query->whereIn($deliveryRequestTable . '.id', $selectedIds)
                     ->where($deliveryRequestTable . '.company_id', $soa->company_id)

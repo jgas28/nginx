@@ -562,6 +562,8 @@ function getStatusBadge(status) {
 
 // ── Billing selections Map: itemId → {delivery: bool, accessorial: bool} ──
 const billingSelections = new Map();
+// ── Checked item IDs — persists across filter/search re-renders ──
+const checkedItemIds = new Set();
 
 function getBillingType(itemId) {
     const li = deliveryLineItems.find(i => i.id === itemId);
@@ -640,15 +642,21 @@ function toggleCard(cardEl) {
 function toggleCardStyle(cb) {
     const card = cb.closest('.dr-card');
     if (!card) return;
+    const itemId = parseInt(cb.value);
     if (cb.checked) {
+        checkedItemIds.add(itemId);
         card.classList.add('border-blue-400', 'bg-blue-50', 'shadow-sm');
-        card.classList.remove('border-gray-200');
+        card.classList.remove('border-gray-200', 'border-amber-200', 'bg-amber-50/30');
     } else {
-        card.classList.remove('border-blue-400', 'bg-blue-50', 'shadow-sm');
-        card.classList.add('border-gray-200');
+        checkedItemIds.delete(itemId);
+        card.classList.remove('border-blue-400', 'bg-blue-50', 'shadow-sm', 'border-gray-200', 'border-amber-200', 'bg-amber-50/30');
+        if (card.dataset.partiallyBilled === '1') {
+            card.classList.add('border-amber-200', 'bg-amber-50/30');
+        } else {
+            card.classList.add('border-gray-200');
+        }
 
         // Reset billing selection to unchecked when card is deselected
-        const itemId = parseInt(cb.value);
         billingSelections.set(itemId, { delivery: false, accessorial: false });
 
         // Reset toggle visuals back to gray inactive
@@ -911,6 +919,12 @@ function filterDeliveryRequests() {
                 try {
                     let shouldShow = true;
 
+                    // Only show delivered/completed items
+                    const statusVal = (lineItem.requestStatus || lineItem.deliveryStatusName || '').toLowerCase();
+                    if (!statusVal.includes('deliver') && !statusVal.includes('complet')) {
+                        shouldShow = false;
+                    }
+
                     // Always extract delivery request data for display purposes
                     const drDate = lineItem.deliveryRequest ? lineItem.deliveryRequest.deliveryDate : null;
                     const drCompanyId = lineItem.deliveryRequest ? lineItem.deliveryRequest.companyId : '';
@@ -1014,6 +1028,9 @@ function filterDeliveryRequests() {
                         const drAlreadyPaid = lineItem.alreadyBilled === 'delivery_only';
                         const acAlreadyPaid = lineItem.alreadyBilled === 'accessorial_only';
 
+                        // Restore checked state from persistent Set (survives filter re-renders)
+                        const isChecked = checkedItemIds.has(lineItem.id);
+
                         // Init billing selection for this item (default: nothing selected — user must pick)
                         if (!billingSelections.has(lineItem.id)) {
                             billingSelections.set(lineItem.id, { delivery: false, accessorial: false });
@@ -1023,6 +1040,11 @@ function filterDeliveryRequests() {
 
                         const drActive  = sel.delivery    && hasDelivery    && !drAlreadyPaid;
                         const acActive  = sel.accessorial && hasAccessorial && !acAlreadyPaid;
+
+                        // Toggle labels are interactive only when the card is checked
+                        const toggleInteractClass = isChecked
+                            ? 'cursor-pointer'
+                            : 'pointer-events-none opacity-30 cursor-not-allowed';
 
                         // "Already billed" badge shown for locked components
                         const drBilledBadge = hasDelivery && drAlreadyPaid ? `
@@ -1050,13 +1072,15 @@ function filterDeliveryRequests() {
                             </span>` : '';
 
                         html += `
-                            <div class="dr-card border ${lineItem.alreadyBilled ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200'} rounded-xl p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 transition-all duration-150 dr-card-enter"
+                            <div class="dr-card border ${isChecked ? 'border-blue-400 bg-blue-50 shadow-sm' : (lineItem.alreadyBilled ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200')} rounded-xl p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 transition-all duration-150 dr-card-enter"
                                  style="animation-delay:${visibleItems * 35}ms; opacity:0;"
+                                 data-partially-billed="${lineItem.alreadyBilled ? '1' : '0'}"
                                  onclick="toggleCard(this)">
                                 <div class="flex items-start gap-3">
                                     <div class="flex-shrink-0 pt-0.5">
                                         <input type="checkbox" name="delivery_line_item_ids[]" value="${lineItem.id}"
                                                id="line_item_${lineItem.id}" class="delivery-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 cursor-pointer accent-blue-600"
+                                               ${isChecked ? 'checked' : ''}
                                                onclick="event.stopPropagation()" onchange="toggleCardStyle(this)">
                                     </div>
                                     <div class="flex-1 min-w-0">
@@ -1095,7 +1119,7 @@ function filterDeliveryRequests() {
                                             <div class="flex flex-wrap gap-2">
                                                 ${drBilledBadge}
                                                 ${hasDelivery && !drAlreadyPaid ? `
-                                                <label class="bill-toggle-label inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 text-xs font-bold select-none transition-all duration-150 active:scale-95 pointer-events-none opacity-30 cursor-not-allowed
+                                                <label class="bill-toggle-label inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 text-xs font-bold select-none transition-all duration-150 active:scale-95 ${toggleInteractClass}
                                                        ${drActive
                                                            ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200'
                                                            : 'border-gray-300 bg-gray-100 text-gray-400'}"
@@ -1112,7 +1136,7 @@ function filterDeliveryRequests() {
                                                 </label>` : ''}
                                                 ${acBilledBadge}
                                                 ${hasAccessorial && !acAlreadyPaid ? `
-                                                <label class="bill-toggle-label inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 text-xs font-bold select-none transition-all duration-150 active:scale-95 pointer-events-none opacity-30 cursor-not-allowed
+                                                <label class="bill-toggle-label inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 text-xs font-bold select-none transition-all duration-150 active:scale-95 ${toggleInteractClass}
                                                        ${acActive
                                                            ? 'border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-200'
                                                            : 'border-gray-300 bg-gray-100 text-gray-400'}"
