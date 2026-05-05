@@ -18,19 +18,36 @@ use Carbon\Carbon;
 
 class BillingController extends Controller
 {
+    // ── Table-existence cache — Schema::hasTable() hits information_schema; resolve once per process ──
+    private static array $tableCache = [];
+
+    private function tableExists(string $table): bool
+    {
+        return static::$tableCache[$table] ??= Schema::hasTable($table);
+    }
+
+    private function drTable(): string
+    {
+        return $this->tableExists('delivery_request') ? 'delivery_request' : 'delivery_requests';
+    }
+
+    private function soaStats(): array
+    {
+        $raw = DB::table('soas')->selectRaw('
+            COUNT(*) as total_billings,
+            COALESCE(SUM(total_amount), 0) as total_amount,
+            COALESCE(SUM(paid_amount), 0) as paid_amount,
+            COALESCE(SUM(outstanding_amount), 0) as outstanding_amount
+        ')->first();
+        return (array) $raw;
+    }
+
     public function index(Request $request)
     {
         $query = $this->buildSoaIndexQuery($request);
 
-        $soas = $query->orderBy('created_at', 'desc')->get();
-
-        // Calculate stats
-        $stats = [
-            'total_billings' => Soa::count(),
-            'total_amount' => Soa::sum('total_amount'),
-            'paid_amount' => Soa::sum('paid_amount'),
-            'outstanding_amount' => Soa::sum('outstanding_amount'),
-        ];
+        $soas  = $query->orderBy('created_at', 'desc')->get();
+        $stats = $this->soaStats();
 
         return view('billing.index', compact('soas', 'stats'));
     }
@@ -244,20 +261,23 @@ class BillingController extends Controller
                 'delivery_request_ids' => $deliveryRequestIds,
             ]);
 
-            if (Schema::hasTable('soa_delivery_requests')) {
+            if ($this->tableExists('soa_delivery_requests')) {
                 DB::table('soa_delivery_requests')->where('soa_id', $soa->id)->delete();
 
-                foreach ($requestSummaries as $summary) {
-                    DB::table('soa_delivery_requests')->insert([
-                        'soa_id' => $soa->id,
-                        'delivery_request_id' => $summary['delivery_request_id'],
-                        'amount' => $summary['amount'],
-                        'delivery_rate_amount' => $summary['delivery_rate_amount'],
-                        'accessorial_rate_amount' => $summary['accessorial_rate_amount'],
-                        'billing_type' => $summary['billing_type'],
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ]);
+                if ($requestSummaries->isNotEmpty()) {
+                    $now = now();
+                    DB::table('soa_delivery_requests')->insert(
+                        $requestSummaries->map(fn ($s) => [
+                            'soa_id'                  => $soa->id,
+                            'delivery_request_id'     => $s['delivery_request_id'],
+                            'amount'                  => $s['amount'],
+                            'delivery_rate_amount'    => $s['delivery_rate_amount'],
+                            'accessorial_rate_amount' => $s['accessorial_rate_amount'],
+                            'billing_type'            => $s['billing_type'],
+                            'created_at'              => $now,
+                            'updated_at'              => $now,
+                        ])->all()
+                    );
                 }
             }
 
@@ -275,7 +295,7 @@ class BillingController extends Controller
         DB::beginTransaction();
 
         try {
-            if (Schema::hasTable('soa_delivery_requests')) {
+            if ($this->tableExists('soa_delivery_requests')) {
                 DB::table('soa_delivery_requests')->where('soa_id', $soa->id)->delete();
             }
 
@@ -308,15 +328,7 @@ class BillingController extends Controller
 
     public function dashboard()
     {
-        // Calculate stats for dashboard
-        $stats = [
-            'total_billings' => Soa::count(),
-            'total_amount' => Soa::sum('total_amount'),
-            'paid_amount' => Soa::sum('paid_amount'),
-            'outstanding_amount' => Soa::sum('outstanding_amount'),
-        ];
-
-        return view('billing.dashboard', compact('stats'));
+        return view('billing.dashboard', ['stats' => $this->soaStats()]);
     }
 
     public function createSOAForm(Request $request)
@@ -324,40 +336,30 @@ class BillingController extends Controller
         $companies = Company::orderBy('company_name')->get();
         $customers = Customer::orderBy('name')->get();
 
-        // Debug information
+        $hasLineItems   = $this->tableExists('delivery_request_line_items');
+        $hasSoaDR       = $this->tableExists('soa_delivery_requests');
+        $deliveryRequestTable = $this->drTable();
+
+        // Keep a minimal debug bag — no extra count/distinct queries on production
         $debug = [
-            'delivery_requests_table_exists' => Schema::hasTable('delivery_requests') || Schema::hasTable('delivery_request'),
-            'delivery_request_source_table' => Schema::hasTable('delivery_request') ? 'delivery_request' : 'delivery_requests',
-            'delivery_request_line_items_table_exists' => Schema::hasTable('delivery_request_line_items'),
-            'soa_delivery_requests_table_exists' => Schema::hasTable('soa_delivery_requests'),
+            'delivery_requests_table_exists'      => true,
+            'delivery_request_source_table'       => $deliveryRequestTable,
+            'delivery_request_line_items_table_exists' => $hasLineItems,
+            'soa_delivery_requests_table_exists'  => $hasSoaDR,
         ];
 
-        if ($debug['delivery_requests_table_exists']) {
-            $deliveryRequestTable = $debug['delivery_request_source_table'];
-            $debug['total_delivery_requests'] = DB::table($deliveryRequestTable)->count();
-            $debug['delivery_request_statuses'] = DB::table($deliveryRequestTable)->select('status')->distinct()->pluck('status')->toArray();
-        }
+        $deliveryLineItems = collect();
 
-        if ($debug['delivery_request_line_items_table_exists']) {
-            $debug['total_line_items'] = \App\Models\DeliveryRequestLineItem::count();
-        }
-
-        // Get delivery request line items that are not yet included in any SOA
-        $deliveryLineItems = collect(); // Start with empty collection
-
-        if ($debug['delivery_request_line_items_table_exists']) {
-            $deliveryRequestTable = $debug['delivery_request_source_table'];
-
-            // Pull display data from the delivery request source table used by the live database.
+        if ($hasLineItems) {
+            // Pull display data; join eliminates the separate ->with('deliveryStatus') eager-load
             $deliveryLineItems = \App\Models\DeliveryRequestLineItem::query()
                 ->leftJoin($deliveryRequestTable, function ($join) use ($deliveryRequestTable) {
                     $join->on($deliveryRequestTable . '.id', '=', 'delivery_request_line_items.dr_id')
                         ->orOn($deliveryRequestTable . '.mtm', '=', 'delivery_request_line_items.mtm');
                 })
-                ->leftJoin('companies', 'companies.id', '=', $deliveryRequestTable . '.company_id')
-                ->leftJoin('customers', 'customers.id', '=', $deliveryRequestTable . '.customer_id')
+                ->leftJoin('companies',  'companies.id',  '=', $deliveryRequestTable . '.company_id')
+                ->leftJoin('customers',  'customers.id',  '=', $deliveryRequestTable . '.customer_id')
                 ->leftJoin('delivery_status as request_delivery_status', 'request_delivery_status.id', '=', $deliveryRequestTable . '.delivery_status')
-                ->with('deliveryStatus')
                 ->select([
                     'delivery_request_line_items.*',
                     $deliveryRequestTable . '.booking_date as delivery_request_booking_date',
@@ -380,19 +382,23 @@ class BillingController extends Controller
                 ->limit(100)
                 ->get();
 
-            // Filter out fully-billed items; keep partially-billed items with component tracking
-            if ($debug['soa_delivery_requests_table_exists']) {
+            // Filter out fully-billed items — query only the dr_ids in the result set, not the whole table
+            if ($hasSoaDR && $deliveryLineItems->isNotEmpty()) {
+                $drIdsInView = $deliveryLineItems->pluck('dr_id')->filter()
+                    ->map(fn ($id) => (int) $id)->unique()->values()->all();
+
                 $usedBillingMap = DB::table('soa_delivery_requests')
-                    ->select('delivery_request_id', 'billing_type')
-                    ->get()
+                    ->selectRaw("delivery_request_id,
+                        MAX(CASE WHEN billing_type IN ('delivery_only','both') OR billing_type IS NULL THEN 1 ELSE 0 END) as has_delivery,
+                        MAX(CASE WHEN billing_type IN ('accessorial_only','both') OR billing_type IS NULL THEN 1 ELSE 0 END) as has_accessorial")
+                    ->whereIn('delivery_request_id', $drIdsInView)
                     ->groupBy('delivery_request_id')
-                    ->map(function ($records) {
-                        $hasDelivery    = $records->contains(fn ($r) => in_array($r->billing_type, ['delivery_only', 'both'], true) || is_null($r->billing_type));
-                        $hasAccessorial = $records->contains(fn ($r) => in_array($r->billing_type, ['accessorial_only', 'both'], true) || is_null($r->billing_type));
-                        if ($hasDelivery && $hasAccessorial) return 'both';
-                        if ($hasDelivery)    return 'delivery_only';
-                        if ($hasAccessorial) return 'accessorial_only';
-                        return 'both';
+                    ->get()
+                    ->mapWithKeys(function ($row) {
+                        $type = ($row->has_delivery && $row->has_accessorial) ? 'both'
+                            : ($row->has_delivery    ? 'delivery_only'
+                            : ($row->has_accessorial ? 'accessorial_only' : 'both'));
+                        return [(int) $row->delivery_request_id => $type];
                     });
 
                 $deliveryLineItems = $deliveryLineItems
@@ -606,19 +612,20 @@ class BillingController extends Controller
                 'delivery_request_ids' => $deliveryRequestIds,
             ]);
 
-            if (Schema::hasTable('soa_delivery_requests')) {
-                foreach ($requestSummaries as $summary) {
-                    DB::table('soa_delivery_requests')->insert([
+            if ($this->tableExists('soa_delivery_requests') && $requestSummaries->isNotEmpty()) {
+                $now = now();
+                DB::table('soa_delivery_requests')->insert(
+                    $requestSummaries->map(fn ($s) => [
                         'soa_id'                  => $soa->id,
-                        'delivery_request_id'     => $summary['delivery_request_id'],
-                        'amount'                  => $summary['amount'],
-                        'delivery_rate_amount'    => $summary['delivery_rate_amount'],
-                        'accessorial_rate_amount' => $summary['accessorial_rate_amount'],
-                        'billing_type'            => $summary['billing_type'],
-                        'created_at'              => now(),
-                        'updated_at'              => now(),
-                    ]);
-                }
+                        'delivery_request_id'     => $s['delivery_request_id'],
+                        'amount'                  => $s['amount'],
+                        'delivery_rate_amount'    => $s['delivery_rate_amount'],
+                        'accessorial_rate_amount' => $s['accessorial_rate_amount'],
+                        'billing_type'            => $s['billing_type'],
+                        'created_at'              => $now,
+                        'updated_at'              => $now,
+                    ])->all()
+                );
             }
 
             DB::commit();
@@ -663,11 +670,11 @@ class BillingController extends Controller
 
     private function getAttachedDeliveryRequests(Soa $soa)
     {
-        if (!Schema::hasTable('soa_delivery_requests')) {
+        if (!$this->tableExists('soa_delivery_requests')) {
             return collect();
         }
 
-        $deliveryRequestTable = Schema::hasTable('delivery_request') ? 'delivery_request' : 'delivery_requests';
+        $deliveryRequestTable = $this->drTable();
 
         return DB::table('soa_delivery_requests')
             ->join($deliveryRequestTable, $deliveryRequestTable . '.id', '=', 'soa_delivery_requests.delivery_request_id')
@@ -692,51 +699,33 @@ class BillingController extends Controller
 
     private function getEditableDeliveryRequests(Soa $soa, $attachedDeliveryRequests = null, $companies = null, $customers = null)
     {
-        if (!Schema::hasTable('soa_delivery_requests')) {
+        if (!$this->tableExists('soa_delivery_requests')) {
             return collect($soa->delivery_request_ids ?? []);
         }
 
-        $deliveryRequestTable = Schema::hasTable('delivery_request') ? 'delivery_request' : 'delivery_requests';
+        $deliveryRequestTable = $this->drTable();
         $attachedDeliveryRequests = $attachedDeliveryRequests ?: $this->getAttachedDeliveryRequests($soa);
-        $companyNameMap = ($companies ?: Company::query()->get(['id', 'company_name']))
-            ->pluck('company_name', 'id');
-        $customerNameMap = ($customers ?: Customer::query()->get(['id', 'name']))
-            ->pluck('name', 'id');
+        $companyNameMap = ($companies ?: Company::query()->get(['id', 'company_name']))->pluck('company_name', 'id');
+        $customerNameMap = ($customers ?: Customer::query()->get(['id', 'name']))->pluck('name', 'id');
+
         $selectedIds = collect($soa->delivery_request_ids ?? [])
-            ->merge(
-                $attachedDeliveryRequests->pluck('delivery_request_id')
-            )
+            ->merge($attachedDeliveryRequests->pluck('delivery_request_id'))
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->all();
-        $usedElsewhereMap = DB::table('soa_delivery_requests')
-            ->select('delivery_request_id', 'billing_type')
+
+        $currentBillingMap = $attachedDeliveryRequests->keyBy('delivery_request_id');
+
+        // Use SQL GROUP BY/HAVING — DB returns only IDs, no PHP-side row grouping needed
+        $fullyBilledIds = DB::table('soa_delivery_requests')
+            ->selectRaw('delivery_request_id')
             ->where('soa_id', '!=', $soa->id)
-            ->get()
             ->groupBy('delivery_request_id')
-            ->map(function ($records) {
-                $hasDelivery = $records->contains(fn ($record) => in_array($record->billing_type, ['delivery_only', 'both'], true) || is_null($record->billing_type));
-                $hasAccessorial = $records->contains(fn ($record) => in_array($record->billing_type, ['accessorial_only', 'both'], true) || is_null($record->billing_type));
-
-                if ($hasDelivery && $hasAccessorial) {
-                    return 'both';
-                }
-
-                if ($hasDelivery) {
-                    return 'delivery_only';
-                }
-
-                if ($hasAccessorial) {
-                    return 'accessorial_only';
-                }
-
-                return null;
-            });
-        $currentBillingMap = $attachedDeliveryRequests
-            ->keyBy('delivery_request_id');
-        $fullyBilledIds = $usedElsewhereMap
-            ->filter(fn ($billingType) => $billingType === 'both')
-            ->keys()
+            ->havingRaw("
+                MAX(CASE WHEN billing_type IN ('delivery_only','both') OR billing_type IS NULL THEN 1 ELSE 0 END) = 1
+                AND MAX(CASE WHEN billing_type IN ('accessorial_only','both') OR billing_type IS NULL THEN 1 ELSE 0 END) = 1
+            ")
+            ->pluck('delivery_request_id')
             ->map(fn ($id) => (int) $id)
             ->all();
         $deliveryStatusMap = DB::table('delivery_status')
@@ -785,43 +774,44 @@ class BillingController extends Controller
             ->get()
             ->values();
 
-        // Attach accessorial totals from line items
-        if (Schema::hasTable('delivery_request_line_items')) {
-            if ($result->isNotEmpty()) {
-                [$accessorialMap, $siteMap] = $this->buildDeliveryRequestLineItemMaps($result);
-                $result = $result->map(function ($item) use ($accessorialMap, $siteMap, $usedElsewhereMap, $currentBillingMap, $companyNameMap, $customerNameMap, $deliveryStatusMap) {
-                    $currentBilling = $currentBillingMap->get($item->id);
-                    $item->company_name = $companyNameMap->get((int) $item->company_id, 'N/A');
-                    $item->customer_name = $customerNameMap->get((int) $item->customer_id, 'N/A');
-                    $item->status_name = $deliveryStatusMap->get((int) $item->delivery_status, 'Delivered');
-                    $item->accessorial_total = (float) ($accessorialMap->get($item->id) ?? 0);
-                    $item->site_name = $siteMap->get($item->id, '');
-                    $item->already_billed = $usedElsewhereMap->get($item->id);
-                    $item->current_billing_type = $currentBilling ? ($currentBilling->billing_type ?? 'both') : null;
-                    return $item;
+        // Load billing types only for IDs in this result set — not the whole table
+        $usedElsewhereMap = collect();
+        if ($result->isNotEmpty()) {
+            $resultIds = $result->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
+            $usedElsewhereMap = DB::table('soa_delivery_requests')
+                ->selectRaw("delivery_request_id,
+                    MAX(CASE WHEN billing_type IN ('delivery_only','both') OR billing_type IS NULL THEN 1 ELSE 0 END) as has_delivery,
+                    MAX(CASE WHEN billing_type IN ('accessorial_only','both') OR billing_type IS NULL THEN 1 ELSE 0 END) as has_accessorial")
+                ->whereIn('delivery_request_id', $resultIds)
+                ->where('soa_id', '!=', $soa->id)
+                ->groupBy('delivery_request_id')
+                ->get()
+                ->mapWithKeys(function ($row) {
+                    $type = ($row->has_delivery && $row->has_accessorial) ? 'both'
+                        : ($row->has_delivery    ? 'delivery_only'
+                        : ($row->has_accessorial ? 'accessorial_only' : null));
+                    return [(int) $row->delivery_request_id => $type];
                 });
-            } else {
-                $result = $result->map(function ($item) use ($usedElsewhereMap, $currentBillingMap, $companyNameMap, $customerNameMap, $deliveryStatusMap) {
-                    $currentBilling = $currentBillingMap->get($item->id);
-                    $item->company_name = $companyNameMap->get((int) $item->company_id, 'N/A');
-                    $item->customer_name = $customerNameMap->get((int) $item->customer_id, 'N/A');
-                    $item->status_name = $deliveryStatusMap->get((int) $item->delivery_status, 'Delivered');
-                    $item->already_billed = $usedElsewhereMap->get($item->id);
-                    $item->current_billing_type = $currentBilling ? ($currentBilling->billing_type ?? 'both') : null;
-                    return $item;
-                });
-            }
-        } else {
-            $result = $result->map(function ($item) use ($usedElsewhereMap, $currentBillingMap, $companyNameMap, $customerNameMap, $deliveryStatusMap) {
-                $currentBilling = $currentBillingMap->get($item->id);
-                $item->company_name = $companyNameMap->get((int) $item->company_id, 'N/A');
-                $item->customer_name = $customerNameMap->get((int) $item->customer_id, 'N/A');
-                $item->status_name = $deliveryStatusMap->get((int) $item->delivery_status, 'Delivered');
-                $item->already_billed = $usedElsewhereMap->get($item->id);
-                $item->current_billing_type = $currentBilling ? ($currentBilling->billing_type ?? 'both') : null;
-                return $item;
-            });
         }
+
+        // Attach accessorial totals, site names, company/customer names, and billing flags
+        if ($this->tableExists('delivery_request_line_items') && $result->isNotEmpty()) {
+            [$accessorialMap, $siteMap] = $this->buildDeliveryRequestLineItemMaps($result);
+        } else {
+            [$accessorialMap, $siteMap] = [collect(), collect()];
+        }
+
+        $result = $result->map(function ($item) use ($accessorialMap, $siteMap, $usedElsewhereMap, $currentBillingMap, $companyNameMap, $customerNameMap, $deliveryStatusMap) {
+            $currentBilling = $currentBillingMap->get($item->id);
+            $item->company_name         = $companyNameMap->get((int) $item->company_id, 'N/A');
+            $item->customer_name        = $customerNameMap->get((int) $item->customer_id, 'N/A');
+            $item->status_name          = $deliveryStatusMap->get((int) $item->delivery_status, 'Delivered');
+            $item->accessorial_total    = (float) ($accessorialMap->get($item->id) ?? 0);
+            $item->site_name            = $siteMap->get($item->id, '');
+            $item->already_billed       = $usedElsewhereMap->get($item->id);
+            $item->current_billing_type = $currentBilling ? ($currentBilling->billing_type ?? 'both') : null;
+            return $item;
+        });
 
         return $result;
     }
@@ -830,7 +820,7 @@ class BillingController extends Controller
     {
         $requests = collect($deliveryRequests)->filter(fn ($request) => filled($request->id))->values();
 
-        if ($requests->isEmpty() || !Schema::hasTable('delivery_request_line_items')) {
+        if ($requests->isEmpty() || !$this->tableExists('delivery_request_line_items')) {
             return [collect(), collect()];
         }
 
