@@ -597,7 +597,7 @@ class BillingController extends Controller
             ->map(fn ($id) => (int) $id)
             ->all();
 
-        return DB::table($deliveryRequestTable)
+        $result = DB::table($deliveryRequestTable)
             ->leftJoin('companies', 'companies.id', '=', $deliveryRequestTable . '.company_id')
             ->leftJoin('customers', 'customers.id', '=', $deliveryRequestTable . '.customer_id')
             ->leftJoin('delivery_status', 'delivery_status.id', '=', $deliveryRequestTable . '.delivery_status')
@@ -631,6 +631,27 @@ class BillingController extends Controller
             ->get()
             ->unique('id')
             ->values();
+
+        // Attach accessorial totals from line items
+        if (Schema::hasTable('delivery_request_line_items')) {
+            $requestIds = $result->pluck('id')->filter()->all();
+            if (!empty($requestIds)) {
+                $lineItems = \App\Models\DeliveryRequestLineItem::whereIn('dr_id', $requestIds)->get();
+                $accessorialMap = $lineItems->groupBy('dr_id')->map(function ($items) {
+                    return $items->sum(function ($item) {
+                        $ar = is_array($item->accessorial_rate) ? array_sum($item->accessorial_rate) : (float) ($item->accessorial_rate ?? 0);
+                        $ao = is_array($item->add_on_rate)      ? array_sum($item->add_on_rate)      : (float) ($item->add_on_rate      ?? 0);
+                        return $ar + $ao;
+                    });
+                });
+                $result = $result->map(function ($item) use ($accessorialMap) {
+                    $item->accessorial_total = (float) ($accessorialMap->get($item->id) ?? 0);
+                    return $item;
+                });
+            }
+        }
+
+        return $result;
     }
 
     private function buildSoaIndexQuery(Request $request)
