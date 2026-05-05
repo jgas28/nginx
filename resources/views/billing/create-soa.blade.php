@@ -704,12 +704,11 @@ function validateAndSubmit() {
         errors.push({ icon: 'fa-calendar-alt',  color: 'green',  field: 'Billing Period From', msg: 'Set the billing period start date.' });
     if (!document.getElementById('billing_period_to').value)
         errors.push({ icon: 'fa-calendar-check',color: 'green',  field: 'Billing Period To',   msg: 'Set the billing period end date.' });
-    if (!document.querySelectorAll('.delivery-checkbox:checked').length)
+    if (!checkedItemIds.size)
         errors.push({ icon: 'fa-boxes',         color: 'orange', field: 'Delivery Requests',   msg: 'Select at least one delivery request.' });
 
     // Ensure every selected item has at least one available (non-locked) billing component chosen
-    document.querySelectorAll('.delivery-checkbox:checked').forEach(cb => {
-        const itemId = parseInt(cb.value);
+    checkedItemIds.forEach(itemId => {
         const sel = billingSelections.get(itemId) || {};
         const li = deliveryLineItems.find(i => i.id === itemId);
         const drLocked = li?.alreadyBilled === 'delivery_only';
@@ -724,11 +723,24 @@ function validateAndSubmit() {
 
     if (errors.length) { showValidationModal(errors); return; }
 
-    // Inject billing type hidden inputs for each selected item
     const form = document.getElementById('soaForm');
+
+    // Inject hidden inputs for checked items not currently rendered in the DOM
+    form.querySelectorAll('input[data-checked-hidden]').forEach(el => el.remove());
+    checkedItemIds.forEach(itemId => {
+        if (!document.querySelector(`.delivery-checkbox[value="${itemId}"]`)) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'delivery_line_item_ids[]';
+            input.value = itemId;
+            input.dataset.checkedHidden = '1';
+            form.appendChild(input);
+        }
+    });
+
+    // Inject billing type hidden inputs for ALL checked items (visible + hidden)
     form.querySelectorAll('input[name^="item_billing"]').forEach(el => el.remove());
-    document.querySelectorAll('.delivery-checkbox:checked').forEach(cb => {
-        const itemId = parseInt(cb.value);
+    checkedItemIds.forEach(itemId => {
         const input = document.createElement('input');
         input.type = 'hidden';
         input.name = `item_billing[${itemId}]`;
@@ -813,8 +825,9 @@ function getLineItemAmount(lineItem) {
 }
 
 function getSelectedLineItems() {
-    return Array.from(document.querySelectorAll('.delivery-checkbox:checked'))
-        .map((checkbox) => deliveryLineItems.find((item) => item.id === parseInt(checkbox.value, 10)))
+    // Use checkedItemIds Set so items checked but currently filtered/hidden are included
+    return Array.from(checkedItemIds)
+        .map(itemId => deliveryLineItems.find(item => item.id === itemId))
         .filter(Boolean);
 }
 
@@ -1349,6 +1362,9 @@ function selectAllItems() {
 }
 
 function selectNoneItems() {
+    // Clear all checked items including those not currently rendered
+    checkedItemIds.clear();
+    billingSelections.clear();
     document.querySelectorAll('.delivery-checkbox').forEach(cb => {
         cb.checked = false;
         toggleCardStyle(cb);
