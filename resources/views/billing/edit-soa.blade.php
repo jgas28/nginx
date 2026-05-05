@@ -77,13 +77,40 @@
                     </div>
                 </div>
 
+                <div class="mb-4 flex flex-col gap-4 lg:flex-row">
+                    <div class="flex-1">
+                        <input type="text" id="editSearchDeliveryRequests" placeholder="Search by MTM, site, or company..."
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               oninput="filterEditDeliveryRequests()">
+                    </div>
+                    <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:w-auto">
+                        <select id="editFilterByCompany" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="filterEditDeliveryRequests()">
+                            <option value="">All Companies</option>
+                        </select>
+                        <select id="editFilterByCustomer" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" onchange="filterEditDeliveryRequests()">
+                            <option value="">All Customers</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4 text-sm text-gray-600">
+                    <span id="editResultsCount">{{ count($editableDeliveryRequests) }}</span> delivery requests found
+                </div>
+
                 <div id="editDeliveryRequestsContainer" class="max-h-96 overflow-y-auto border border-gray-200 rounded-lg">
                     @forelse($editableDeliveryRequests as $deliveryRequest)
                         @php
                             $selectedIds = old('delivery_request_ids', $selectedDeliveryRequestIds);
                             $isSelected = in_array((int) $deliveryRequest->id, collect($selectedIds)->map(fn ($id) => (int) $id)->all(), true);
                         @endphp
-                        <div class="border-b border-gray-200 p-4 hover:bg-gray-50">
+                        <div class="edit-delivery-item border-b border-gray-200 p-4 hover:bg-gray-50"
+                             data-id="{{ $deliveryRequest->id }}"
+                             data-mtm="{{ strtolower($deliveryRequest->mtm ?? '') }}"
+                             data-site="{{ strtolower($deliveryRequest->site_name ?? '') }}"
+                             data-company-id="{{ $deliveryRequest->company_id ?? '' }}"
+                             data-company-name="{{ strtolower($deliveryRequest->company_name ?? '') }}"
+                             data-customer-id="{{ $deliveryRequest->customer_id ?? '' }}"
+                             data-customer-name="{{ strtolower($deliveryRequest->customer_name ?? '') }}">
                             <div class="flex items-start gap-3">
                                 <input
                                     type="checkbox"
@@ -101,6 +128,7 @@
                                         MTM: {{ $deliveryRequest->mtm ?? 'N/A' }} | Delivery Request #{{ $deliveryRequest->id }}
                                     </div>
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-1 mt-1 text-sm text-gray-600">
+                                        <div>Site: {{ $deliveryRequest->site_name ?: 'N/A' }}</div>
                                         <div>Booking Date: {{ $deliveryRequest->booking_date ? \Carbon\Carbon::parse($deliveryRequest->booking_date)->format('M d, Y') : 'N/A' }}</div>
                                         <div>Delivery Date: {{ $deliveryRequest->delivery_date ? \Carbon\Carbon::parse($deliveryRequest->delivery_date)->format('M d, Y') : 'N/A' }}</div>
                                         <div>Amount: P{{ number_format((float) ($deliveryRequest->delivery_rate ?? 0), 2) }}</div>
@@ -117,6 +145,12 @@
                             <p>No delivery requests available for this SOA.</p>
                         </div>
                     @endforelse
+                    @if(count($editableDeliveryRequests) > 0)
+                        <div id="editDeliveryRequestsEmptyState" class="hidden text-center py-8 text-gray-500">
+                            <i class="fas fa-search text-3xl mb-4"></i>
+                            <p>No delivery requests found for the selected criteria.</p>
+                        </div>
+                    @endif
                 </div>
                 @error('delivery_request_ids')<p class="mt-3 text-sm text-red-600">{{ $message }}</p>@enderror
             </div>
@@ -335,11 +369,14 @@ const editLineItems = [
     {
         id: {{ $req->id }},
         mtm: '{{ addslashes($req->mtm ?? 'N/A') }}',
+        siteName: '{{ addslashes($req->site_name ?? '') }}',
         bookingDate: '{{ $req->booking_date ?? '' }}',
         deliveryDate: '{{ $req->delivery_date ?? '' }}',
         deliveryRate: {{ (float) ($req->delivery_rate ?? 0) }},
         accessorialTotal: {{ (float) ($req->accessorial_total ?? 0) }},
+        companyId: '{{ $req->company_id ?? '' }}',
         companyName: '{{ addslashes($req->company_name ?? 'N/A') }}',
+        customerId: '{{ $req->customer_id ?? '' }}',
         customerName: '{{ addslashes($req->customer_name ?? 'N/A') }}'
     }@if(!$loop->last),@endif
     @endforeach
@@ -504,17 +541,105 @@ function closeEditSummaryModal() {
     document.body.classList.remove('overflow-hidden');
 }
 
+function populateEditFilterDropdowns() {
+    const companySelect = document.getElementById('editFilterByCompany');
+    const customerSelect = document.getElementById('editFilterByCustomer');
+
+    if (!companySelect || !customerSelect) {
+        return;
+    }
+
+    companySelect.innerHTML = '<option value="">All Companies</option>';
+    customerSelect.innerHTML = '<option value="">All Customers</option>';
+
+    const companies = new Map();
+    const customers = new Map();
+
+    editLineItems.forEach((item) => {
+        if (item.companyId && item.companyName) {
+            companies.set(String(item.companyId), item.companyName);
+        }
+
+        if (item.customerId && item.customerName) {
+            customers.set(String(item.customerId), item.customerName);
+        }
+    });
+
+    Array.from(companies.entries())
+        .sort((a, b) => a[1].localeCompare(b[1]))
+        .forEach(([id, name]) => {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = name;
+            companySelect.appendChild(option);
+        });
+
+    Array.from(customers.entries())
+        .sort((a, b) => a[1].localeCompare(b[1]))
+        .forEach(([id, name]) => {
+            const option = document.createElement('option');
+            option.value = id;
+            option.textContent = name;
+            customerSelect.appendChild(option);
+        });
+}
+
+function filterEditDeliveryRequests() {
+    const items = document.querySelectorAll('.edit-delivery-item');
+    const searchTerm = (document.getElementById('editSearchDeliveryRequests')?.value || '').toLowerCase().trim();
+    const companyId = document.getElementById('editFilterByCompany')?.value || '';
+    const customerId = document.getElementById('editFilterByCustomer')?.value || '';
+    const emptyState = document.getElementById('editDeliveryRequestsEmptyState');
+    const resultsCount = document.getElementById('editResultsCount');
+
+    let visibleCount = 0;
+
+    items.forEach((item) => {
+        const mtm = item.dataset.mtm || '';
+        const site = item.dataset.site || '';
+        const companyName = item.dataset.companyName || '';
+        const customerName = item.dataset.customerName || '';
+        const itemCompanyId = item.dataset.companyId || '';
+        const itemCustomerId = item.dataset.customerId || '';
+
+        const matchesSearch = !searchTerm
+            || mtm.includes(searchTerm)
+            || site.includes(searchTerm)
+            || companyName.includes(searchTerm)
+            || customerName.includes(searchTerm);
+        const matchesCompany = !companyId || itemCompanyId === companyId;
+        const matchesCustomer = !customerId || itemCustomerId === customerId;
+        const isVisible = matchesSearch && matchesCompany && matchesCustomer;
+
+        item.classList.toggle('hidden', !isVisible);
+
+        if (isVisible) {
+            visibleCount++;
+        }
+    });
+
+    if (resultsCount) {
+        resultsCount.textContent = visibleCount;
+    }
+
+    if (emptyState) {
+        emptyState.classList.toggle('hidden', visibleCount !== 0);
+    }
+}
+
 function selectAllRequests() {
-    document.querySelectorAll('.edit-delivery-checkbox').forEach((cb) => { cb.checked = true; });
+    document.querySelectorAll('.edit-delivery-item:not(.hidden) .edit-delivery-checkbox').forEach((cb) => { cb.checked = true; });
     updateEditSummary();
 }
 
 function unselectAllRequests() {
-    document.querySelectorAll('.edit-delivery-checkbox').forEach((cb) => { cb.checked = false; });
+    document.querySelectorAll('.edit-delivery-item:not(.hidden) .edit-delivery-checkbox').forEach((cb) => { cb.checked = false; });
     updateEditSummary();
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    populateEditFilterDropdowns();
+    filterEditDeliveryRequests();
     updateEditSummary();
 
     document.getElementById('editSummaryModal').addEventListener('click', function (e) {

@@ -644,8 +644,26 @@ class BillingController extends Controller
                         return $ar + $ao;
                     });
                 });
-                $result = $result->map(function ($item) use ($accessorialMap) {
+                $siteMap = $lineItems->groupBy('dr_id')->map(function ($items) {
+                    return $items->flatMap(function ($item) {
+                        $sites = $item->site_name;
+
+                        if (is_array($sites)) {
+                            return $sites;
+                        }
+
+                        return filled($sites) ? [$sites] : [];
+                    })
+                    ->filter()
+                    ->map(fn ($site) => trim((string) $site))
+                    ->unique()
+                    ->values()
+                    ->implode(', ');
+                });
+
+                $result = $result->map(function ($item) use ($accessorialMap, $siteMap) {
                     $item->accessorial_total = (float) ($accessorialMap->get($item->id) ?? 0);
+                    $item->site_name = $siteMap->get($item->id, '');
                     return $item;
                 });
             }
