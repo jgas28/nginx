@@ -47,10 +47,10 @@ class BillingController extends Controller
     {
         $soa->load(['company', 'customer', 'creator']);
 
-        $companies = Company::orderBy('company_name')->get();
-        $customers = Customer::orderBy('name')->get();
-        $editableDeliveryRequests = $this->getEditableDeliveryRequests($soa);
+        $companies = Company::orderBy('company_name')->get(['id', 'company_name']);
+        $customers = Customer::orderBy('name')->get(['id', 'name']);
         $attachedDeliveryRequests = $this->getAttachedDeliveryRequests($soa);
+        $editableDeliveryRequests = $this->getEditableDeliveryRequests($soa, $attachedDeliveryRequests, $companies, $customers);
         $selectedDeliveryRequestIds = collect($soa->delivery_request_ids ?? [])
             ->merge(
                 $attachedDeliveryRequests
@@ -690,16 +690,21 @@ class BillingController extends Controller
             ->get();
     }
 
-    private function getEditableDeliveryRequests(Soa $soa)
+    private function getEditableDeliveryRequests(Soa $soa, $attachedDeliveryRequests = null, $companies = null, $customers = null)
     {
         if (!Schema::hasTable('soa_delivery_requests')) {
             return collect($soa->delivery_request_ids ?? []);
         }
 
         $deliveryRequestTable = Schema::hasTable('delivery_request') ? 'delivery_request' : 'delivery_requests';
+        $attachedDeliveryRequests = $attachedDeliveryRequests ?: $this->getAttachedDeliveryRequests($soa);
+        $companyNameMap = ($companies ?: Company::query()->get(['id', 'company_name']))
+            ->pluck('company_name', 'id');
+        $customerNameMap = ($customers ?: Customer::query()->get(['id', 'name']))
+            ->pluck('name', 'id');
         $selectedIds = collect($soa->delivery_request_ids ?? [])
             ->merge(
-                $this->getAttachedDeliveryRequests($soa)->pluck('delivery_request_id')
+                $attachedDeliveryRequests->pluck('delivery_request_id')
             )
             ->map(fn ($id) => (int) $id)
             ->unique()
@@ -727,56 +732,68 @@ class BillingController extends Controller
 
                 return null;
             });
-        $currentBillingMap = $this->getAttachedDeliveryRequests($soa)
+        $currentBillingMap = $attachedDeliveryRequests
             ->keyBy('delivery_request_id');
+        $fullyBilledIds = $usedElsewhereMap
+            ->filter(fn ($billingType) => $billingType === 'both')
+            ->keys()
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $deliveryStatusMap = DB::table('delivery_status')
+            ->select('id', 'status_name')
+            ->get()
+            ->mapWithKeys(fn ($status) => [(int) $status->id => (string) $status->status_name]);
+        $deliveredStatusIds = $deliveryStatusMap
+            ->filter(function ($statusName) {
+                $normalizedStatusName = strtolower($statusName);
+                return str_contains($normalizedStatusName, 'deliver') || str_contains($normalizedStatusName, 'complet');
+            })
+            ->keys()
+            ->all();
 
         $result = DB::table($deliveryRequestTable)
-            ->leftJoin('companies', 'companies.id', '=', $deliveryRequestTable . '.company_id')
-            ->leftJoin('customers', 'customers.id', '=', $deliveryRequestTable . '.customer_id')
-            ->leftJoin('delivery_status', 'delivery_status.id', '=', $deliveryRequestTable . '.delivery_status')
             ->select([
                 $deliveryRequestTable . '.id',
                 $deliveryRequestTable . '.mtm',
                 $deliveryRequestTable . '.booking_date',
                 $deliveryRequestTable . '.delivery_date',
                 $deliveryRequestTable . '.delivery_rate',
+                $deliveryRequestTable . '.delivery_status',
                 $deliveryRequestTable . '.company_id',
                 $deliveryRequestTable . '.customer_id',
-                'companies.company_name',
-                'customers.name as customer_name',
-                'delivery_status.status_name',
             ])
-            ->where(function ($query) use ($deliveryRequestTable, $usedElsewhereMap) {
-                $fullyBilledIds = $usedElsewhereMap
-                    ->filter(fn ($billingType) => $billingType === 'both')
-                    ->keys()
-                    ->map(fn ($id) => (int) $id)
-                    ->all();
+            ->where(function ($query) use ($deliveryRequestTable, $fullyBilledIds, $deliveredStatusIds, $selectedIds) {
+                $query->where(function ($eligibleQuery) use ($deliveryRequestTable, $fullyBilledIds, $deliveredStatusIds) {
+                    if (!empty($fullyBilledIds)) {
+                        $eligibleQuery->whereNotIn($deliveryRequestTable . '.id', $fullyBilledIds);
+                    }
 
-                if (!empty($fullyBilledIds)) {
-                    $query->whereNotIn($deliveryRequestTable . '.id', $fullyBilledIds);
+                    if (!empty($deliveredStatusIds)) {
+                        $eligibleQuery->whereIn($deliveryRequestTable . '.delivery_status', $deliveredStatusIds);
+                    } else {
+                        $eligibleQuery->whereRaw('1 = 0');
+                    }
+                });
+
+                if (!empty($selectedIds)) {
+                    $query->orWhereIn($deliveryRequestTable . '.id', $selectedIds);
                 }
-            })
-            ->where(function ($q) {
-                $q->where('delivery_status.status_name', 'like', '%deliver%')
-                  ->orWhere('delivery_status.status_name', 'like', '%complet%');
-            })
-            ->orWhere(function ($query) use ($deliveryRequestTable, $selectedIds) {
-                $query->whereIn($deliveryRequestTable . '.id', $selectedIds);
             })
             ->orderByRaw('CASE WHEN ' . $deliveryRequestTable . '.id IN (' . (count($selectedIds) ? implode(',', $selectedIds) : '0') . ') THEN 0 ELSE 1 END')
             ->orderByDesc($deliveryRequestTable . '.created_at')
             ->orderByDesc($deliveryRequestTable . '.delivery_date')
             ->get()
-            ->unique('id')
             ->values();
 
         // Attach accessorial totals from line items
         if (Schema::hasTable('delivery_request_line_items')) {
             if ($result->isNotEmpty()) {
                 [$accessorialMap, $siteMap] = $this->buildDeliveryRequestLineItemMaps($result);
-                $result = $result->map(function ($item) use ($accessorialMap, $siteMap, $usedElsewhereMap, $currentBillingMap) {
+                $result = $result->map(function ($item) use ($accessorialMap, $siteMap, $usedElsewhereMap, $currentBillingMap, $companyNameMap, $customerNameMap, $deliveryStatusMap) {
                     $currentBilling = $currentBillingMap->get($item->id);
+                    $item->company_name = $companyNameMap->get((int) $item->company_id, 'N/A');
+                    $item->customer_name = $customerNameMap->get((int) $item->customer_id, 'N/A');
+                    $item->status_name = $deliveryStatusMap->get((int) $item->delivery_status, 'Delivered');
                     $item->accessorial_total = (float) ($accessorialMap->get($item->id) ?? 0);
                     $item->site_name = $siteMap->get($item->id, '');
                     $item->already_billed = $usedElsewhereMap->get($item->id);
@@ -784,16 +801,22 @@ class BillingController extends Controller
                     return $item;
                 });
             } else {
-                $result = $result->map(function ($item) use ($usedElsewhereMap, $currentBillingMap) {
+                $result = $result->map(function ($item) use ($usedElsewhereMap, $currentBillingMap, $companyNameMap, $customerNameMap, $deliveryStatusMap) {
                     $currentBilling = $currentBillingMap->get($item->id);
+                    $item->company_name = $companyNameMap->get((int) $item->company_id, 'N/A');
+                    $item->customer_name = $customerNameMap->get((int) $item->customer_id, 'N/A');
+                    $item->status_name = $deliveryStatusMap->get((int) $item->delivery_status, 'Delivered');
                     $item->already_billed = $usedElsewhereMap->get($item->id);
                     $item->current_billing_type = $currentBilling ? ($currentBilling->billing_type ?? 'both') : null;
                     return $item;
                 });
             }
         } else {
-            $result = $result->map(function ($item) use ($usedElsewhereMap, $currentBillingMap) {
+            $result = $result->map(function ($item) use ($usedElsewhereMap, $currentBillingMap, $companyNameMap, $customerNameMap, $deliveryStatusMap) {
                 $currentBilling = $currentBillingMap->get($item->id);
+                $item->company_name = $companyNameMap->get((int) $item->company_id, 'N/A');
+                $item->customer_name = $customerNameMap->get((int) $item->customer_id, 'N/A');
+                $item->status_name = $deliveryStatusMap->get((int) $item->delivery_status, 'Delivered');
                 $item->already_billed = $usedElsewhereMap->get($item->id);
                 $item->current_billing_type = $currentBilling ? ($currentBilling->billing_type ?? 'both') : null;
                 return $item;
@@ -826,21 +849,48 @@ class BillingController extends Controller
             return [collect(), collect()];
         }
 
-        $lineItems = \App\Models\DeliveryRequestLineItem::query()
-            ->where(function ($query) use ($requestIds, $mtms) {
-                if (!empty($requestIds)) {
-                    $query->whereIn('dr_id', $requestIds);
-                }
+        $lineItems = collect();
+        $lineItemColumns = ['dr_id', 'mtm', 'accessorial_rate', 'add_on_rate', 'site_name'];
 
-                if (!empty($mtms)) {
-                    if (!empty($requestIds)) {
-                        $query->orWhereIn('mtm', $mtms);
-                    } else {
-                        $query->whereIn('mtm', $mtms);
-                    }
-                }
-            })
-            ->get();
+        $matchedRequestIds = [];
+
+        if (!empty($requestIds)) {
+            $directLineItems = DB::table('delivery_request_line_items')
+                ->select($lineItemColumns)
+                ->whereIn('dr_id', $requestIds)
+                ->get();
+
+            $lineItems = $lineItems->concat($directLineItems);
+            $matchedRequestIds = $directLineItems
+                ->pluck('dr_id')
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        if (!empty($mtms)) {
+            $fallbackMtms = collect($mtmToRequestId)
+                ->reject(fn ($requestId) => in_array($requestId, $matchedRequestIds, true))
+                ->keys()
+                ->values()
+                ->all();
+
+            if (!empty($fallbackMtms)) {
+                $lineItems = $lineItems->concat(
+                    DB::table('delivery_request_line_items')
+                        ->select($lineItemColumns)
+                        ->whereNull('dr_id')
+                        ->whereIn('mtm', $fallbackMtms)
+                        ->get()
+                );
+            }
+        }
+
+        if ($lineItems->isEmpty()) {
+            return [collect(), collect()];
+        }
 
         $accessorialTotals = [];
         $siteNames = [];
@@ -854,14 +904,11 @@ class BillingController extends Controller
                 continue;
             }
 
-            $accessorial = is_array($lineItem->accessorial_rate) ? array_sum($lineItem->accessorial_rate) : (float) ($lineItem->accessorial_rate ?? 0);
-            $addOn = is_array($lineItem->add_on_rate) ? array_sum($lineItem->add_on_rate) : (float) ($lineItem->add_on_rate ?? 0);
+            $accessorial = $this->normalizeNumericField($lineItem->accessorial_rate ?? 0);
+            $addOn = $this->normalizeNumericField($lineItem->add_on_rate ?? 0);
             $accessorialTotals[$requestId] = ($accessorialTotals[$requestId] ?? 0) + $accessorial + $addOn;
 
-            $sites = $lineItem->site_name;
-            $normalizedSites = is_array($sites) ? $sites : (filled($sites) ? [$sites] : []);
-            foreach ($normalizedSites as $site) {
-                $site = trim((string) $site);
+            foreach ($this->normalizeStringListField($lineItem->site_name ?? null) as $site) {
                 if ($site === '') {
                     continue;
                 }
@@ -873,6 +920,58 @@ class BillingController extends Controller
             collect($accessorialTotals),
             collect($siteNames)->map(fn ($sites) => implode(', ', array_keys($sites))),
         ];
+    }
+
+    private function normalizeNumericField($value): float
+    {
+        if (is_array($value)) {
+            return array_sum(array_map(fn ($item) => (float) $item, $value));
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+
+        if (is_string($value)) {
+            $trimmedValue = trim($value);
+            $decoded = json_decode($trimmedValue, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return array_sum(array_map(fn ($item) => (float) $item, $decoded));
+            }
+
+            return is_numeric($trimmedValue) ? (float) $trimmedValue : 0.0;
+        }
+
+        return 0.0;
+    }
+
+    private function normalizeStringListField($value): array
+    {
+        if (is_array($value)) {
+            return collect($value)
+                ->map(fn ($item) => trim((string) $item))
+                ->filter()
+                ->values()
+                ->all();
+        }
+
+        if (is_string($value)) {
+            $trimmedValue = trim($value);
+            $decoded = json_decode($trimmedValue, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return collect($decoded)
+                    ->map(fn ($item) => trim((string) $item))
+                    ->filter()
+                    ->values()
+                    ->all();
+            }
+
+            return $trimmedValue !== '' ? [$trimmedValue] : [];
+        }
+
+        return [];
     }
 
     private function buildSoaIndexQuery(Request $request)

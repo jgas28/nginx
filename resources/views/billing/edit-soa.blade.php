@@ -157,13 +157,18 @@
                 </div>
 
                 <div id="editDeliveryRequestsContainer" class="max-h-96 overflow-y-auto border border-gray-200 rounded-xl bg-white">
+                    @php
+                        $selectedIdLookup = array_fill_keys(
+                            collect(old('delivery_request_ids', $selectedDeliveryRequestIds))
+                                ->map(fn ($id) => (int) $id)
+                                ->all(),
+                            true
+                        );
+                    @endphp
                     @forelse($editableDeliveryRequests as $deliveryRequest)
                         @php
                             $requestId = (int) $deliveryRequest->id;
-                            $selectedIds = collect(old('delivery_request_ids', $selectedDeliveryRequestIds))
-                                ->map(fn ($id) => (int) $id)
-                                ->all();
-                            $isSelected = in_array($requestId, $selectedIds, true);
+                            $isSelected = isset($selectedIdLookup[$requestId]);
                             $hasCurrentBillingSelection = array_key_exists($requestId, $currentBillingSelections);
                             $billingType = old('item_billing.' . $deliveryRequest->id, $hasCurrentBillingSelection ? $currentBillingSelections[$requestId] : ($deliveryRequest->current_billing_type ?? null));
                             $alreadyBilled = $deliveryRequest->already_billed ?? null;
@@ -182,7 +187,16 @@
                              data-company-name="{{ strtolower($deliveryRequest->company_name ?? '') }}"
                              data-customer-id="{{ $deliveryRequest->customer_id ?? '' }}"
                              data-customer-name="{{ strtolower($deliveryRequest->customer_name ?? '') }}"
+                             data-mtm-display="{{ $deliveryRequest->mtm ?? 'N/A' }}"
+                             data-site-display="{{ $deliveryRequest->site_name ?? '' }}"
+                             data-booking-date="{{ $deliveryRequest->booking_date ?? '' }}"
                              data-delivery-date="{{ $deliveryRequest->delivery_date ?? '' }}"
+                             data-delivery-rate="{{ (float) ($deliveryRequest->delivery_rate ?? 0) }}"
+                             data-accessorial-total="{{ (float) ($deliveryRequest->accessorial_total ?? 0) }}"
+                             data-company-display="{{ $deliveryRequest->company_name ?? 'N/A' }}"
+                             data-customer-display="{{ $deliveryRequest->customer_name ?? 'N/A' }}"
+                             data-already-billed="{{ $alreadyBilled ?? '' }}"
+                             data-current-billing-type="{{ $billingType ?? '' }}"
                              data-partially-billed="{{ $partiallyBilled ? '1' : '0' }}"
                              onclick="toggleEditCard(this)">
                             <div class="flex items-start gap-3">
@@ -585,25 +599,21 @@
 </div>
 
 <script>
-const editLineItems = [
-    @foreach($editableDeliveryRequests as $req)
-    {
-        id: {{ $req->id }},
-        mtm: '{{ addslashes($req->mtm ?? 'N/A') }}',
-        siteName: '{{ addslashes($req->site_name ?? '') }}',
-        bookingDate: '{{ $req->booking_date ?? '' }}',
-        deliveryDate: '{{ $req->delivery_date ?? '' }}',
-        deliveryRate: {{ (float) ($req->delivery_rate ?? 0) }},
-        accessorialTotal: {{ (float) ($req->accessorial_total ?? 0) }},
-        companyId: '{{ $req->company_id ?? '' }}',
-        companyName: '{{ addslashes($req->company_name ?? 'N/A') }}',
-        customerId: '{{ $req->customer_id ?? '' }}',
-        customerName: '{{ addslashes($req->customer_name ?? 'N/A') }}',
-        alreadyBilled: '{{ $req->already_billed ?? '' }}',
-        currentBillingType: '{{ old('item_billing.' . $req->id, array_key_exists((int) $req->id, $currentBillingSelections) ? $currentBillingSelections[(int) $req->id] : ($req->current_billing_type ?? '')) }}'
-    }@if(!$loop->last),@endif
-    @endforeach
-];
+const editLineItems = Array.from(document.querySelectorAll('.edit-delivery-item')).map((item) => ({
+    id: parseInt(item.dataset.id || '0', 10),
+    mtm: item.dataset.mtmDisplay || 'N/A',
+    siteName: item.dataset.siteDisplay || '',
+    bookingDate: item.dataset.bookingDate || '',
+    deliveryDate: item.dataset.deliveryDate || '',
+    deliveryRate: Number(item.dataset.deliveryRate || 0),
+    accessorialTotal: Number(item.dataset.accessorialTotal || 0),
+    companyId: item.dataset.companyId || '',
+    companyName: item.dataset.companyDisplay || 'N/A',
+    customerId: item.dataset.customerId || '',
+    customerName: item.dataset.customerDisplay || 'N/A',
+    alreadyBilled: item.dataset.alreadyBilled || '',
+    currentBillingType: item.dataset.currentBillingType || '',
+}));
 
 let editModalItems = [];
 let editModalCurrentPage = 1;
@@ -614,6 +624,7 @@ const _editDrStyle = document.createElement('style');
 _editDrStyle.textContent = `
 @keyframes drFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 .dr-card-enter { animation: drFadeIn 0.2s ease forwards; }
+.edit-delivery-item { content-visibility: auto; contain-intrinsic-size: 220px; }
 `;
 document.head.appendChild(_editDrStyle);
 
