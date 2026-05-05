@@ -272,8 +272,8 @@
                         <tbody class="divide-y divide-gray-200">
                             @foreach($soas ?? [] as $soa)
                                 <tr class="hover:bg-gray-50">
-                                    <td class="px-6 py-4 font-medium">{{ $soa->soa_number }}</td>
-                                    <td class="px-6 py-4">{{ optional($soa->statement_date)->format('M d, Y') }}</td>
+                                    <td class="px-6 py-4 font-medium" data-order="{{ optional($soa->created_at)->timestamp ?? 0 }}">{{ $soa->soa_number }}</td>
+                                    <td class="px-6 py-4" data-order="{{ optional($soa->statement_date)->format('Ymd') ?? '' }}">{{ optional($soa->statement_date)->format('M d, Y') }}</td>
                                     <td class="px-6 py-4">{{ $soa->company->company_name ?? 'N/A' }}</td>
                                     <td class="px-6 py-4">{{ $soa->customer->name ?? 'N/A' }}</td>
                                     <td class="px-6 py-4">
@@ -425,7 +425,7 @@
     $(document).ready(function () {
         $('#soaTable').DataTable({
             pageLength: 10,
-            order: [[1, 'desc']],
+            order: [[0, 'desc']],
             autoWidth: false,
             dom: '<"billing-table-toolbar"lf>t<"billing-table-footer"ip>',
             columns: [
