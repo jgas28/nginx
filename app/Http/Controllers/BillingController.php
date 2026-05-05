@@ -273,13 +273,33 @@ class BillingController extends Controller
                 ->limit(100) // Limit results to prevent timeout
                 ->get();
 
-            // Filter out items already in SOAs if the pivot table exists
+            // Filter out fully-billed items; keep partially-billed items with component tracking
             if ($debug['soa_delivery_requests_table_exists']) {
-                $usedDeliveryRequestIds = DB::table('soa_delivery_requests')->pluck('delivery_request_id')->toArray();
-                $deliveryLineItems = $deliveryLineItems->filter(function ($item) use ($usedDeliveryRequestIds) {
-                    $deliveryRequestId = $item->dr_id ?: null;
-                    return !$deliveryRequestId || !in_array($deliveryRequestId, $usedDeliveryRequestIds);
-                });
+                $usedBillingMap = DB::table('soa_delivery_requests')
+                    ->select('delivery_request_id', 'billing_type')
+                    ->get()
+                    ->groupBy('delivery_request_id')
+                    ->map(function ($records) {
+                        $hasDelivery    = $records->contains(fn ($r) => in_array($r->billing_type, ['delivery_only', 'both'], true) || is_null($r->billing_type));
+                        $hasAccessorial = $records->contains(fn ($r) => in_array($r->billing_type, ['accessorial_only', 'both'], true) || is_null($r->billing_type));
+                        if ($hasDelivery && $hasAccessorial) return 'both';
+                        if ($hasDelivery)    return 'delivery_only';
+                        if ($hasAccessorial) return 'accessorial_only';
+                        return 'both';
+                    });
+
+                $deliveryLineItems = $deliveryLineItems
+                    ->filter(function ($item) use ($usedBillingMap) {
+                        $drId = $item->dr_id ?: null;
+                        if (!$drId || !$usedBillingMap->has($drId)) return true;
+                        return $usedBillingMap->get($drId) !== 'both';
+                    })
+                    ->map(function ($item) use ($usedBillingMap) {
+                        $drId = $item->dr_id ?: null;
+                        $item->already_billed = ($drId && $usedBillingMap->has($drId)) ? $usedBillingMap->get($drId) : null;
+                        return $item;
+                    })
+                    ->values();
             }
         } else {
             // Mock data for testing when tables don't exist

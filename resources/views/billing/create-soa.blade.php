@@ -511,7 +511,8 @@ const deliveryLineItems = [
             customerName: '{{ addslashes($lineItem->joined_customer_name ?? ($lineItem->deliveryRequest && $lineItem->deliveryRequest->customer ? $lineItem->deliveryRequest->customer->name : 'N/A')) }}'
         },
         deliveryStatusId: '{{ $lineItem->delivery_status ?? '' }}',
-        deliveryStatusName: '{{ addslashes(optional($lineItem->deliveryStatus)->status_name ?? 'N/A') }}'
+        deliveryStatusName: '{{ addslashes(optional($lineItem->deliveryStatus)->status_name ?? 'N/A') }}',
+        alreadyBilled: '{{ $lineItem->already_billed ?? '' }}'
     }@if(!$loop->last),@endif
     @endforeach
 ];
@@ -575,6 +576,11 @@ function getBillingType(itemId) {
 
 function onBillingToggle(itemId, type, checked, event) {
     if (event) event.stopPropagation();
+    const liData = deliveryLineItems.find(i => i.id === itemId);
+    if (liData && ((type === 'delivery' && liData.alreadyBilled === 'delivery_only') ||
+                   (type === 'accessorial' && liData.alreadyBilled === 'accessorial_only'))) {
+        return;
+    }
     const sel = billingSelections.get(itemId) || { delivery: true, accessorial: true };
     sel[type] = checked;
     billingSelections.set(itemId, sel);
@@ -608,14 +614,16 @@ function onBillingToggle(itemId, type, checked, event) {
         }
     }
 
-    // Recalculate this card's billed total
+    // Recalculate this card's billed total (exclude already-billed components)
     const li = deliveryLineItems.find(i => i.id === itemId);
     if (li) {
         const drAmt = Number(li.requestAmount || 0);
         const acAmt = Number(li.accessorialRate || 0) + Number(li.addOnRate || 0);
         const newSel = billingSelections.get(itemId);
-        const billed = (newSel.delivery !== false && drAmt > 0 ? drAmt : 0)
-                     + (newSel.accessorial !== false && acAmt > 0 ? acAmt : 0);
+        const drLocked = li.alreadyBilled === 'delivery_only';
+        const acLocked = li.alreadyBilled === 'accessorial_only';
+        const billed = (!drLocked && newSel.delivery !== false && drAmt > 0 ? drAmt : 0)
+                     + (!acLocked && newSel.accessorial !== false && acAmt > 0 ? acAmt : 0);
         const el = document.getElementById(`item-billed-${itemId}`);
         if (el) el.textContent = `₱${billed.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}`;
     }
@@ -691,11 +699,16 @@ function validateAndSubmit() {
     if (!document.querySelectorAll('.delivery-checkbox:checked').length)
         errors.push({ icon: 'fa-boxes',         color: 'orange', field: 'Delivery Requests',   msg: 'Select at least one delivery request.' });
 
-    // Ensure every selected item has at least one billing component chosen
+    // Ensure every selected item has at least one available (non-locked) billing component chosen
     document.querySelectorAll('.delivery-checkbox:checked').forEach(cb => {
         const itemId = parseInt(cb.value);
         const sel = billingSelections.get(itemId) || {};
-        if (!sel.delivery && !sel.accessorial) {
+        const li = deliveryLineItems.find(i => i.id === itemId);
+        const drLocked = li?.alreadyBilled === 'delivery_only';
+        const acLocked = li?.alreadyBilled === 'accessorial_only';
+        const drSelected = !drLocked && sel.delivery;
+        const acSelected = !acLocked && sel.accessorial;
+        if (!drSelected && !acSelected) {
             errors.push({ icon: 'fa-tag', color: 'orange', field: `MTM billing not set`,
                 msg: `Please select Delivery Rate and/or Accessorial for at least one selected item (Line Item #${itemId}).` });
         }
@@ -815,8 +828,10 @@ function renderCalculateTotalModalRows() {
         const drAmt  = Number(lineItem.requestAmount || 0);
         const acAmt  = Number(lineItem.accessorialRate || 0) + Number(lineItem.addOnRate || 0);
         const sel    = billingSelections.get(lineItem.id) || {};
-        const billedDr = (sel.delivery !== false && drAmt > 0) ? drAmt : 0;
-        const billedAc = (sel.accessorial !== false && acAmt > 0) ? acAmt : 0;
+        const drLocked = lineItem.alreadyBilled === 'delivery_only';
+        const acLocked = lineItem.alreadyBilled === 'accessorial_only';
+        const billedDr = (!drLocked && sel.delivery !== false && drAmt > 0) ? drAmt : 0;
+        const billedAc = (!acLocked && sel.accessorial !== false && acAmt > 0) ? acAmt : 0;
         const total    = billedDr + billedAc;
         const typeMap  = {
             both:             ['Both',              'bg-green-100 text-green-700'],
@@ -995,18 +1010,47 @@ function filterDeliveryRequests() {
                         const hasDelivery     = drAmt > 0;
                         const hasAccessorial  = acAmt > 0;
 
+                        // Which components are locked (already billed in a previous SOA)
+                        const drAlreadyPaid = lineItem.alreadyBilled === 'delivery_only';
+                        const acAlreadyPaid = lineItem.alreadyBilled === 'accessorial_only';
+
                         // Init billing selection for this item (default: nothing selected — user must pick)
                         if (!billingSelections.has(lineItem.id)) {
                             billingSelections.set(lineItem.id, { delivery: false, accessorial: false });
                         }
                         const sel = billingSelections.get(lineItem.id);
-                        const billedTotal = (sel.delivery && hasDelivery ? drAmt : 0) + (sel.accessorial && hasAccessorial ? acAmt : 0);
+                        const billedTotal = (sel.delivery && hasDelivery && !drAlreadyPaid ? drAmt : 0) + (sel.accessorial && hasAccessorial && !acAlreadyPaid ? acAmt : 0);
 
-                        const drActive  = sel.delivery    && hasDelivery;
-                        const acActive  = sel.accessorial && hasAccessorial;
+                        const drActive  = sel.delivery    && hasDelivery    && !drAlreadyPaid;
+                        const acActive  = sel.accessorial && hasAccessorial && !acAlreadyPaid;
+
+                        // "Already billed" badge shown for locked components
+                        const drBilledBadge = hasDelivery && drAlreadyPaid ? `
+                            <span class="inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 border-amber-200 bg-amber-50 text-xs font-bold text-amber-600 select-none cursor-not-allowed"
+                                  title="Delivery rate already billed in a previous SOA">
+                                <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-200">
+                                    <i class="fas fa-check text-xs text-amber-700"></i>
+                                </span>
+                                <i class="fas fa-truck text-xs"></i>
+                                Delivery Rate
+                                <span class="font-extrabold tracking-tight">₱${drAmt.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                                <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-700 text-xs font-semibold">Billed</span>
+                            </span>` : '';
+
+                        const acBilledBadge = hasAccessorial && acAlreadyPaid ? `
+                            <span class="inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 border-amber-200 bg-amber-50 text-xs font-bold text-amber-600 select-none cursor-not-allowed"
+                                  title="Accessorial already billed in a previous SOA">
+                                <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-200">
+                                    <i class="fas fa-check text-xs text-amber-700"></i>
+                                </span>
+                                <i class="fas fa-tags text-xs"></i>
+                                Accessorial
+                                <span class="font-extrabold tracking-tight">₱${acAmt.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
+                                <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-700 text-xs font-semibold">Billed</span>
+                            </span>` : '';
 
                         html += `
-                            <div class="dr-card border border-gray-200 rounded-xl p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 transition-all duration-150 dr-card-enter"
+                            <div class="dr-card border ${lineItem.alreadyBilled ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200'} rounded-xl p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 transition-all duration-150 dr-card-enter"
                                  style="animation-delay:${visibleItems * 35}ms; opacity:0;"
                                  onclick="toggleCard(this)">
                                 <div class="flex items-start gap-3">
@@ -1020,6 +1064,7 @@ function filterDeliveryRequests() {
                                             <span class="font-semibold text-gray-900 text-sm">MTM: ${lineItem.mtm}</span>
                                             <span class="text-xs text-gray-400">#${lineItem.id}</span>
                                             <span class="px-2 py-0.5 rounded-full text-xs font-medium ${badge.cls}">${badge.text}</span>
+                                            ${lineItem.alreadyBilled ? `<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200"><i class="fas fa-exclamation-circle mr-1"></i>Partially billed</span>` : ''}
                                         </div>
                                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500">
                                             <div class="flex items-center gap-1.5 min-w-0">
@@ -1048,7 +1093,8 @@ function filterDeliveryRequests() {
                                         <div class="mt-2.5 pt-2 border-t border-gray-100">
                                             <p class="text-xs text-gray-500 font-medium mb-2">Bill for:</p>
                                             <div class="flex flex-wrap gap-2">
-                                                ${hasDelivery ? `
+                                                ${drBilledBadge}
+                                                ${hasDelivery && !drAlreadyPaid ? `
                                                 <label class="bill-toggle-label inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 text-xs font-bold select-none transition-all duration-150 active:scale-95 pointer-events-none opacity-30 cursor-not-allowed
                                                        ${drActive
                                                            ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200'
@@ -1064,7 +1110,8 @@ function filterDeliveryRequests() {
                                                     Delivery Rate
                                                     <span class="font-extrabold tracking-tight">₱${drAmt.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                                                 </label>` : ''}
-                                                ${hasAccessorial ? `
+                                                ${acBilledBadge}
+                                                ${hasAccessorial && !acAlreadyPaid ? `
                                                 <label class="bill-toggle-label inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 text-xs font-bold select-none transition-all duration-150 active:scale-95 pointer-events-none opacity-30 cursor-not-allowed
                                                        ${acActive
                                                            ? 'border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-200'
@@ -1138,14 +1185,16 @@ function updateSummary() {
     const count = selectedLineItems.length;
     document.getElementById('selectedRequests').textContent = count;
 
-    // Per-component totals
+    // Per-component totals (exclude already-billed components)
     let drTotal = 0, acTotal = 0;
     selectedLineItems.forEach(li => {
         const drAmt = Number(li.requestAmount || 0);
         const acAmt = Number(li.accessorialRate || 0) + Number(li.addOnRate || 0);
         const sel   = billingSelections.get(li.id) || {};
-        if (sel.delivery !== false && drAmt > 0)    drTotal += drAmt;
-        if (sel.accessorial !== false && acAmt > 0) acTotal += acAmt;
+        const drLocked = li.alreadyBilled === 'delivery_only';
+        const acLocked = li.alreadyBilled === 'accessorial_only';
+        if (!drLocked && sel.delivery !== false && drAmt > 0)    drTotal += drAmt;
+        if (!acLocked && sel.accessorial !== false && acAmt > 0) acTotal += acAmt;
     });
 
     // Rate breakdown panel
@@ -1223,14 +1272,16 @@ function openCalculateTotalModal(selectedLineItems, total) {
         content.classList.remove('hidden');
         document.getElementById('modalSelectedCount').textContent = selectedLineItems.length;
 
-        // Compute per-component totals
+        // Compute per-component totals (exclude already-billed components)
         let drTotal = 0, acTotal = 0;
         selectedLineItems.forEach(li => {
             const drAmt = Number(li.requestAmount || 0);
             const acAmt = Number(li.accessorialRate || 0) + Number(li.addOnRate || 0);
             const sel   = billingSelections.get(li.id) || {};
-            if (sel.delivery !== false && drAmt > 0)    drTotal += drAmt;
-            if (sel.accessorial !== false && acAmt > 0) acTotal += acAmt;
+            const drLocked = li.alreadyBilled === 'delivery_only';
+            const acLocked = li.alreadyBilled === 'accessorial_only';
+            if (!drLocked && sel.delivery !== false && drAmt > 0)    drTotal += drAmt;
+            if (!acLocked && sel.accessorial !== false && acAmt > 0) acTotal += acAmt;
         });
         document.getElementById('modalDeliveryRateTotal').textContent = formatPeso(drTotal);
         document.getElementById('modalAccessorialTotal').textContent  = formatPeso(acTotal);
