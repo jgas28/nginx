@@ -292,6 +292,25 @@
                                            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
                                 </div>
                             </div>
+                            <div class="mt-3 pt-3 border-t border-gray-200 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">Withholding Tax</label>
+                                    <select id="card_withholding_tax_rate" name="withholding_tax_rate" onchange="syncAdjustments()"
+                                            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                                        <option value="0">None</option>
+                                        <option value="2">2%</option>
+                                        <option value="5">5%</option>
+                                        <option value="10">10%</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600 mb-1">VAT</label>
+                                    <label class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 cursor-pointer hover:bg-gray-50 transition">
+                                        <input type="checkbox" id="card_vat_applied" name="vat_applied" value="1" onchange="syncAdjustments()" class="h-4 w-4 rounded text-orange-500 accent-orange-500">
+                                        <span class="text-sm text-gray-700">Apply 12% VAT</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- 2. Live breakdown (second) -->
@@ -331,6 +350,14 @@
                                 </div>
                                 <p id="summaryAdjustmentRemarks" class="text-xs text-gray-400 italic pl-5 hidden"></p>
                             </div>
+                            <div id="summaryVatRow" class="hidden justify-between text-orange-600">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-percentage text-xs"></i> VAT (12%)</span>
+                                <span id="summaryVatAmt" class="font-semibold">+₱0.00</span>
+                            </div>
+                            <div id="summaryWtaxRow" class="hidden justify-between text-indigo-600">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-minus-circle text-xs"></i> <span id="summaryWtaxLabel">WHT (2%)</span></span>
+                                <span id="summaryWtaxAmt" class="font-semibold">-₱0.00</span>
+                            </div>
                             <div class="flex justify-between font-bold text-gray-900 border-t border-gray-300 pt-2">
                                 <span class="flex items-center gap-1.5"><i class="fas fa-check-circle text-emerald-500 text-xs"></i> Final Total</span>
                                 <span id="totalAmount" class="text-emerald-700 text-base">₱0.00</span>
@@ -362,12 +389,14 @@
                 </div>
             </div>
 
-            <!-- Hidden inputs for adjustments (synced from modal) -->
+            <!-- Hidden inputs for adjustments (synced from JS) -->
             <input type="hidden" name="discount_type" id="hidden_discount_type">
             <input type="hidden" name="discount_amount" id="hidden_discount_amount" value="0">
             <input type="hidden" name="discount_remarks" id="hidden_discount_remarks">
             <input type="hidden" name="adjustment_amount" id="hidden_adjustment_amount" value="0">
             <input type="hidden" name="adjustment_remarks" id="hidden_adjustment_remarks">
+            <input type="hidden" name="vat_amount" id="hidden_vat_amount" value="0">
+            <input type="hidden" name="withholding_tax_amount" id="hidden_withholding_tax_amount" value="0">
         </form>
     </div>
 </div>
@@ -1474,20 +1503,28 @@ function populateFilterDropdowns() {
 
 // ── Adjustment sync ───────────────────────────────────────────
 function syncAdjustments() {
-    const subtotal        = parseFloat(document.getElementById('modalGrandTotal').dataset.subtotal || 0);
-    const discountType    = document.getElementById('card_discount_type').value;
-    const discountAmt     = Math.max(0, parseFloat(document.getElementById('card_discount_amount').value) || 0);
-    const discountRemarks = document.getElementById('card_discount_remarks').value;
-    const adjustmentAmt   = parseFloat(document.getElementById('card_adjustment_amount').value) || 0;
-    const adjustmentRemarks = document.getElementById('card_adjustment_remarks').value;
-    const finalTotal      = Math.max(0, subtotal - discountAmt + adjustmentAmt);
+    const subtotal           = parseFloat(document.getElementById('modalGrandTotal').dataset.subtotal || 0);
+    const discountType       = document.getElementById('card_discount_type').value;
+    const discountAmt        = Math.max(0, parseFloat(document.getElementById('card_discount_amount').value) || 0);
+    const discountRemarks    = document.getElementById('card_discount_remarks').value;
+    const adjustmentAmt      = parseFloat(document.getElementById('card_adjustment_amount').value) || 0;
+    const adjustmentRemarks  = document.getElementById('card_adjustment_remarks').value;
+    const vatApplied         = document.getElementById('card_vat_applied')?.checked || false;
+    const withholdingTaxRate = parseFloat(document.getElementById('card_withholding_tax_rate')?.value || 0);
+
+    const netAmount          = subtotal - discountAmt + adjustmentAmt;
+    const vatAmount          = vatApplied ? netAmount * 0.12 : 0;
+    const withholdingTaxAmt  = withholdingTaxRate > 0 ? netAmount * withholdingTaxRate / 100 : 0;
+    const finalTotal         = Math.max(0, netAmount + vatAmount - withholdingTaxAmt);
 
     // Sync hidden form inputs
-    document.getElementById('hidden_discount_type').value      = discountType;
-    document.getElementById('hidden_discount_amount').value    = discountAmt;
-    document.getElementById('hidden_discount_remarks').value   = discountRemarks;
-    document.getElementById('hidden_adjustment_amount').value  = adjustmentAmt;
-    document.getElementById('hidden_adjustment_remarks').value = adjustmentRemarks;
+    document.getElementById('hidden_discount_type').value           = discountType;
+    document.getElementById('hidden_discount_amount').value         = discountAmt;
+    document.getElementById('hidden_discount_remarks').value        = discountRemarks;
+    document.getElementById('hidden_adjustment_amount').value       = adjustmentAmt;
+    document.getElementById('hidden_adjustment_remarks').value      = adjustmentRemarks;
+    document.getElementById('hidden_vat_amount').value              = vatAmount.toFixed(2);
+    document.getElementById('hidden_withholding_tax_amount').value  = withholdingTaxAmt.toFixed(2);
 
     // Subtotal
     document.getElementById('summarySubtotal').textContent = formatPeso(subtotal);
@@ -1520,6 +1557,29 @@ function syncAdjustments() {
     } else {
         adjRow.classList.add('hidden');
         adjRow.classList.remove('flex');
+    }
+
+    // VAT row
+    const vatRow = document.getElementById('summaryVatRow');
+    if (vatApplied && vatAmount > 0) {
+        document.getElementById('summaryVatAmt').textContent = `+${formatPeso(vatAmount)}`;
+        vatRow.classList.remove('hidden');
+        vatRow.classList.add('flex');
+    } else {
+        vatRow.classList.add('hidden');
+        vatRow.classList.remove('flex');
+    }
+
+    // Withholding Tax row
+    const wtaxRow = document.getElementById('summaryWtaxRow');
+    if (withholdingTaxRate > 0 && withholdingTaxAmt > 0) {
+        document.getElementById('summaryWtaxLabel').textContent = `WHT (${withholdingTaxRate}%)`;
+        document.getElementById('summaryWtaxAmt').textContent = `-${formatPeso(withholdingTaxAmt)}`;
+        wtaxRow.classList.remove('hidden');
+        wtaxRow.classList.add('flex');
+    } else {
+        wtaxRow.classList.add('hidden');
+        wtaxRow.classList.remove('flex');
     }
 
     // Final total

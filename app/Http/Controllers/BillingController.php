@@ -47,10 +47,13 @@ class BillingController extends Controller
     {
         $soa->load(['company', 'customer', 'creator']);
 
+        $companies = Company::orderBy('company_name')->get();
+        $customers = Customer::orderBy('name')->get();
         $editableDeliveryRequests = $this->getEditableDeliveryRequests($soa);
+        $attachedDeliveryRequests = $this->getAttachedDeliveryRequests($soa);
         $selectedDeliveryRequestIds = collect($soa->delivery_request_ids ?? [])
             ->merge(
-                $this->getAttachedDeliveryRequests($soa)
+                $attachedDeliveryRequests
             ->pluck('delivery_request_id')
             ->map(fn ($id) => (int) $id)
             )
@@ -59,24 +62,34 @@ class BillingController extends Controller
             ->values()
             ->all();
 
-        return view('billing.edit-soa', compact('soa', 'editableDeliveryRequests', 'selectedDeliveryRequestIds'));
+        $currentBillingSelections = $attachedDeliveryRequests
+            ->mapWithKeys(fn ($request) => [(int) $request->delivery_request_id => $request->billing_type ?? 'both'])
+            ->all();
+
+        return view('billing.edit-soa', compact('soa', 'companies', 'customers', 'editableDeliveryRequests', 'selectedDeliveryRequestIds', 'currentBillingSelections'));
     }
 
     public function updateSOA(Request $request, Soa $soa)
     {
         $validator = Validator::make($request->all(), [
+            'company_id' => 'required|exists:companies,id',
+            'customer_id' => 'required|exists:customers,id',
             'billing_period_from' => 'required|date',
             'billing_period_to' => 'required|date|after_or_equal:billing_period_from',
             'booking_date' => 'nullable|date',
             'status' => 'required|string|in:draft,pending,approved,paid,overdue',
             'delivery_request_ids' => 'required|array|min:1',
             'delivery_request_ids.*' => 'integer',
+            'item_billing' => 'nullable|array',
             'notes' => 'nullable|string|max:1000',
             'discount_type' => 'nullable|in:discount,dispute',
             'discount_amount' => 'nullable|numeric|min:0',
             'discount_remarks' => 'nullable|string|max:1000',
             'adjustment_amount' => 'nullable|numeric',
             'adjustment_remarks' => 'nullable|string|max:1000',
+            'vat_amount' => 'nullable|numeric|min:0',
+            'withholding_tax_rate' => 'nullable|numeric|in:0,2,5,10',
+            'withholding_tax_amount' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -89,18 +102,56 @@ class BillingController extends Controller
             ->values()
             ->all();
 
+        $itemBilling = collect($request->input('item_billing', []))
+            ->mapWithKeys(fn ($billingType, $id) => [(int) $id => (string) $billingType]);
+
         if (Schema::hasTable('soa_delivery_requests')) {
-            $existingAttachedIds = DB::table('soa_delivery_requests')
+            $existingBillingMap = DB::table('soa_delivery_requests')
+                ->select('delivery_request_id', 'billing_type')
                 ->whereIn('delivery_request_id', $deliveryRequestIds)
                 ->where('soa_id', '!=', $soa->id)
-                ->pluck('delivery_request_id')
-                ->map(fn ($id) => (int) $id)
-                ->all();
+                ->get()
+                ->groupBy('delivery_request_id')
+                ->map(function ($records) {
+                    $hasDelivery = $records->contains(fn ($record) => in_array($record->billing_type, ['delivery_only', 'both'], true) || is_null($record->billing_type));
+                    $hasAccessorial = $records->contains(fn ($record) => in_array($record->billing_type, ['accessorial_only', 'both'], true) || is_null($record->billing_type));
 
-            if (!empty($existingAttachedIds)) {
+                    if ($hasDelivery && $hasAccessorial) {
+                        return 'both';
+                    }
+
+                    if ($hasDelivery) {
+                        return 'delivery_only';
+                    }
+
+                    if ($hasAccessorial) {
+                        return 'accessorial_only';
+                    }
+
+                    return null;
+                });
+
+            $conflictingIds = collect($deliveryRequestIds)->filter(function ($id) use ($itemBilling, $existingBillingMap) {
+                $selectedType = $itemBilling->get($id, 'both');
+                $existingType = $existingBillingMap->get($id);
+
+                if (!$existingType) {
+                    return false;
+                }
+
+                $selectedHasDelivery = in_array($selectedType, ['delivery_only', 'both'], true);
+                $selectedHasAccessorial = in_array($selectedType, ['accessorial_only', 'both'], true);
+                $existingHasDelivery = in_array($existingType, ['delivery_only', 'both'], true);
+                $existingHasAccessorial = in_array($existingType, ['accessorial_only', 'both'], true);
+
+                return ($selectedHasDelivery && $existingHasDelivery)
+                    || ($selectedHasAccessorial && $existingHasAccessorial);
+            })->all();
+
+            if (!empty($conflictingIds)) {
                 return back()
                     ->withErrors([
-                        'delivery_request_ids' => 'One or more selected delivery requests are already attached to another SOA.',
+                        'delivery_request_ids' => 'One or more selected delivery requests already have the same billing component attached to another SOA.',
                     ])
                     ->withInput();
             }
@@ -109,24 +160,70 @@ class BillingController extends Controller
         $deliveryRequestTable = Schema::hasTable('delivery_request') ? 'delivery_request' : 'delivery_requests';
 
         $selectedRequests = DB::table($deliveryRequestTable)
-            ->select('id', 'delivery_rate')
+            ->select('id', 'mtm', 'delivery_rate')
             ->whereIn('id', $deliveryRequestIds)
             ->get()
             ->keyBy('id');
 
-        $totalAmount = collect($deliveryRequestIds)->sum(function ($id) use ($selectedRequests) {
-            return (float) optional($selectedRequests->get($id))->delivery_rate;
-        });
+        $accessorialMap = collect();
+        if (Schema::hasTable('delivery_request_line_items')) {
+            [$accessorialMap] = $this->buildDeliveryRequestLineItemMaps($selectedRequests->values());
+        }
+
+        $requestSummaries = collect($deliveryRequestIds)->map(function ($id) use ($selectedRequests, $accessorialMap, $itemBilling) {
+            $deliveryRateAmount = (float) optional($selectedRequests->get($id))->delivery_rate;
+            $accessorialAmount = (float) ($accessorialMap->get($id) ?? 0);
+            $billingType = $itemBilling->get($id, 'both');
+
+            $amount = match ($billingType) {
+                'delivery_only' => $deliveryRateAmount,
+                'accessorial_only' => $accessorialAmount,
+                default => $deliveryRateAmount + $accessorialAmount,
+            };
+
+            return [
+                'delivery_request_id' => $id,
+                'delivery_rate_amount' => $deliveryRateAmount,
+                'accessorial_rate_amount' => $accessorialAmount,
+                'billing_type' => $billingType,
+                'amount' => $amount,
+            ];
+        })->filter(function ($summary) {
+            $hasSelectedComponent = match ($summary['billing_type']) {
+                'delivery_only' => $summary['delivery_rate_amount'] > 0,
+                'accessorial_only' => $summary['accessorial_rate_amount'] > 0,
+                default => ($summary['delivery_rate_amount'] + $summary['accessorial_rate_amount']) > 0,
+            };
+
+            return $hasSelectedComponent;
+        })->values();
+
+        if ($requestSummaries->isEmpty()) {
+            return back()
+                ->withErrors([
+                    'delivery_request_ids' => 'Select at least one billable delivery request component.',
+                ])
+                ->withInput();
+        }
+
+        $deliveryRequestIds = $requestSummaries->pluck('delivery_request_id')->all();
+        $totalAmount = $requestSummaries->sum('amount');
 
         DB::beginTransaction();
 
         try {
-            $discountType     = $request->discount_type ?: null;
-            $discountAmount   = (float) ($request->discount_amount ?? 0);
-            $adjustmentAmount = (float) ($request->adjustment_amount ?? 0);
-            $finalAmount      = max(0, $totalAmount - $discountAmount + $adjustmentAmount);
+            $discountType         = $request->discount_type ?: null;
+            $discountAmount       = (float) ($request->discount_amount ?? 0);
+            $adjustmentAmount     = (float) ($request->adjustment_amount ?? 0);
+            $vatAmount            = (float) ($request->vat_amount ?? 0);
+            $withholdingTaxRate   = (float) ($request->withholding_tax_rate ?? 0);
+            $withholdingTaxAmount = (float) ($request->withholding_tax_amount ?? 0);
+            $netAmount            = $totalAmount - $discountAmount + $adjustmentAmount;
+            $finalAmount          = max(0, $netAmount + $vatAmount - $withholdingTaxAmount);
 
             $soa->update([
+                'company_id' => $request->company_id,
+                'customer_id' => $request->customer_id,
                 'billing_period_from' => $request->billing_period_from,
                 'billing_period_to' => $request->billing_period_to,
                 'statement_date' => $request->booking_date,
@@ -137,6 +234,9 @@ class BillingController extends Controller
                 'discount_remarks' => $request->discount_remarks,
                 'adjustment_amount' => $adjustmentAmount,
                 'adjustment_remarks' => $request->adjustment_remarks,
+                'vat_amount' => $vatAmount,
+                'withholding_tax_rate' => $withholdingTaxRate > 0 ? $withholdingTaxRate : null,
+                'withholding_tax_amount' => $withholdingTaxAmount,
                 'total_amount' => $finalAmount,
                 'outstanding_amount' => max(0, $finalAmount - (float) $soa->paid_amount),
                 'status' => $request->status,
@@ -147,11 +247,14 @@ class BillingController extends Controller
             if (Schema::hasTable('soa_delivery_requests')) {
                 DB::table('soa_delivery_requests')->where('soa_id', $soa->id)->delete();
 
-                foreach ($deliveryRequestIds as $deliveryRequestId) {
+                foreach ($requestSummaries as $summary) {
                     DB::table('soa_delivery_requests')->insert([
                         'soa_id' => $soa->id,
-                        'delivery_request_id' => $deliveryRequestId,
-                        'amount' => (float) optional($selectedRequests->get($deliveryRequestId))->delivery_rate,
+                        'delivery_request_id' => $summary['delivery_request_id'],
+                        'amount' => $summary['amount'],
+                        'delivery_rate_amount' => $summary['delivery_rate_amount'],
+                        'accessorial_rate_amount' => $summary['accessorial_rate_amount'],
+                        'billing_type' => $summary['billing_type'],
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
@@ -387,6 +490,9 @@ class BillingController extends Controller
             'discount_remarks' => 'nullable|string|max:1000',
             'adjustment_amount' => 'nullable|numeric',
             'adjustment_remarks' => 'nullable|string|max:1000',
+            'vat_amount' => 'nullable|numeric|min:0',
+            'withholding_tax_rate' => 'nullable|numeric|in:0,2,5,10',
+            'withholding_tax_amount' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -465,10 +571,14 @@ class BillingController extends Controller
             $subtotalAmount = $requestSummaries->sum('amount');
             $deliveryRequestIds = $requestSummaries->pluck('delivery_request_id')->map(fn ($id) => (int) $id)->all();
 
-            $discountType    = $request->discount_type ?: null;
-            $discountAmount  = (float) ($request->discount_amount ?? 0);
-            $adjustmentAmount = (float) ($request->adjustment_amount ?? 0);
-            $totalAmount = max(0, $subtotalAmount - $discountAmount + $adjustmentAmount);
+            $discountType         = $request->discount_type ?: null;
+            $discountAmount       = (float) ($request->discount_amount ?? 0);
+            $adjustmentAmount     = (float) ($request->adjustment_amount ?? 0);
+            $vatAmount            = (float) ($request->vat_amount ?? 0);
+            $withholdingTaxRate   = (float) ($request->withholding_tax_rate ?? 0);
+            $withholdingTaxAmount = (float) ($request->withholding_tax_amount ?? 0);
+            $netAmount            = $subtotalAmount - $discountAmount + $adjustmentAmount;
+            $totalAmount          = max(0, $netAmount + $vatAmount - $withholdingTaxAmount);
 
             // Create SOA
             $soa = Soa::create([
@@ -485,6 +595,9 @@ class BillingController extends Controller
                 'discount_remarks' => $request->discount_remarks,
                 'adjustment_amount' => $adjustmentAmount,
                 'adjustment_remarks' => $request->adjustment_remarks,
+                'vat_amount' => $vatAmount,
+                'withholding_tax_rate' => $withholdingTaxRate > 0 ? $withholdingTaxRate : null,
+                'withholding_tax_amount' => $withholdingTaxAmount,
                 'total_amount' => $totalAmount,
                 'outstanding_amount' => $totalAmount,
                 'status' => 'draft',
@@ -591,11 +704,31 @@ class BillingController extends Controller
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->all();
-        $usedElsewhereIds = DB::table('soa_delivery_requests')
+        $usedElsewhereMap = DB::table('soa_delivery_requests')
+            ->select('delivery_request_id', 'billing_type')
             ->where('soa_id', '!=', $soa->id)
-            ->pluck('delivery_request_id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
+            ->get()
+            ->groupBy('delivery_request_id')
+            ->map(function ($records) {
+                $hasDelivery = $records->contains(fn ($record) => in_array($record->billing_type, ['delivery_only', 'both'], true) || is_null($record->billing_type));
+                $hasAccessorial = $records->contains(fn ($record) => in_array($record->billing_type, ['accessorial_only', 'both'], true) || is_null($record->billing_type));
+
+                if ($hasDelivery && $hasAccessorial) {
+                    return 'both';
+                }
+
+                if ($hasDelivery) {
+                    return 'delivery_only';
+                }
+
+                if ($hasAccessorial) {
+                    return 'accessorial_only';
+                }
+
+                return null;
+            });
+        $currentBillingMap = $this->getAttachedDeliveryRequests($soa)
+            ->keyBy('delivery_request_id');
 
         $result = DB::table($deliveryRequestTable)
             ->leftJoin('companies', 'companies.id', '=', $deliveryRequestTable . '.company_id')
@@ -613,63 +746,133 @@ class BillingController extends Controller
                 'customers.name as customer_name',
                 'delivery_status.status_name',
             ])
-            ->where($deliveryRequestTable . '.company_id', $soa->company_id)
-            ->where($deliveryRequestTable . '.customer_id', $soa->customer_id)
-            ->whereBetween($deliveryRequestTable . '.delivery_date', [$soa->billing_period_from->format('Y-m-d'), $soa->billing_period_to->format('Y-m-d')])
-            ->whereNotIn($deliveryRequestTable . '.id', $usedElsewhereIds)
+            ->where(function ($query) use ($deliveryRequestTable, $usedElsewhereMap) {
+                $fullyBilledIds = $usedElsewhereMap
+                    ->filter(fn ($billingType) => $billingType === 'both')
+                    ->keys()
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
+
+                if (!empty($fullyBilledIds)) {
+                    $query->whereNotIn($deliveryRequestTable . '.id', $fullyBilledIds);
+                }
+            })
             ->where(function ($q) {
                 $q->where('delivery_status.status_name', 'like', '%deliver%')
                   ->orWhere('delivery_status.status_name', 'like', '%complet%');
             })
-            ->orWhere(function ($query) use ($deliveryRequestTable, $selectedIds, $soa) {
-                $query->whereIn($deliveryRequestTable . '.id', $selectedIds)
-                    ->where($deliveryRequestTable . '.company_id', $soa->company_id)
-                    ->where($deliveryRequestTable . '.customer_id', $soa->customer_id);
+            ->orWhere(function ($query) use ($deliveryRequestTable, $selectedIds) {
+                $query->whereIn($deliveryRequestTable . '.id', $selectedIds);
             })
             ->orderByRaw('CASE WHEN ' . $deliveryRequestTable . '.id IN (' . (count($selectedIds) ? implode(',', $selectedIds) : '0') . ') THEN 0 ELSE 1 END')
-            ->orderBy($deliveryRequestTable . '.delivery_date')
+            ->orderByDesc($deliveryRequestTable . '.created_at')
+            ->orderByDesc($deliveryRequestTable . '.delivery_date')
             ->get()
             ->unique('id')
             ->values();
 
         // Attach accessorial totals from line items
         if (Schema::hasTable('delivery_request_line_items')) {
-            $requestIds = $result->pluck('id')->filter()->all();
-            if (!empty($requestIds)) {
-                $lineItems = \App\Models\DeliveryRequestLineItem::whereIn('dr_id', $requestIds)->get();
-                $accessorialMap = $lineItems->groupBy('dr_id')->map(function ($items) {
-                    return $items->sum(function ($item) {
-                        $ar = is_array($item->accessorial_rate) ? array_sum($item->accessorial_rate) : (float) ($item->accessorial_rate ?? 0);
-                        $ao = is_array($item->add_on_rate)      ? array_sum($item->add_on_rate)      : (float) ($item->add_on_rate      ?? 0);
-                        return $ar + $ao;
-                    });
-                });
-                $siteMap = $lineItems->groupBy('dr_id')->map(function ($items) {
-                    return $items->flatMap(function ($item) {
-                        $sites = $item->site_name;
-
-                        if (is_array($sites)) {
-                            return $sites;
-                        }
-
-                        return filled($sites) ? [$sites] : [];
-                    })
-                    ->filter()
-                    ->map(fn ($site) => trim((string) $site))
-                    ->unique()
-                    ->values()
-                    ->implode(', ');
-                });
-
-                $result = $result->map(function ($item) use ($accessorialMap, $siteMap) {
+            if ($result->isNotEmpty()) {
+                [$accessorialMap, $siteMap] = $this->buildDeliveryRequestLineItemMaps($result);
+                $result = $result->map(function ($item) use ($accessorialMap, $siteMap, $usedElsewhereMap, $currentBillingMap) {
+                    $currentBilling = $currentBillingMap->get($item->id);
                     $item->accessorial_total = (float) ($accessorialMap->get($item->id) ?? 0);
                     $item->site_name = $siteMap->get($item->id, '');
+                    $item->already_billed = $usedElsewhereMap->get($item->id);
+                    $item->current_billing_type = $currentBilling ? ($currentBilling->billing_type ?? 'both') : null;
+                    return $item;
+                });
+            } else {
+                $result = $result->map(function ($item) use ($usedElsewhereMap, $currentBillingMap) {
+                    $currentBilling = $currentBillingMap->get($item->id);
+                    $item->already_billed = $usedElsewhereMap->get($item->id);
+                    $item->current_billing_type = $currentBilling ? ($currentBilling->billing_type ?? 'both') : null;
                     return $item;
                 });
             }
+        } else {
+            $result = $result->map(function ($item) use ($usedElsewhereMap, $currentBillingMap) {
+                $currentBilling = $currentBillingMap->get($item->id);
+                $item->already_billed = $usedElsewhereMap->get($item->id);
+                $item->current_billing_type = $currentBilling ? ($currentBilling->billing_type ?? 'both') : null;
+                return $item;
+            });
         }
 
         return $result;
+    }
+
+    private function buildDeliveryRequestLineItemMaps($deliveryRequests)
+    {
+        $requests = collect($deliveryRequests)->filter(fn ($request) => filled($request->id))->values();
+
+        if ($requests->isEmpty() || !Schema::hasTable('delivery_request_line_items')) {
+            return [collect(), collect()];
+        }
+
+        $requestIds = $requests->pluck('id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+        $mtmToRequestId = $requests->filter(fn ($request) => filled($request->mtm))
+            ->mapWithKeys(fn ($request) => [(string) $request->mtm => (int) $request->id])
+            ->all();
+        $mtms = array_keys($mtmToRequestId);
+
+        if (empty($requestIds) && empty($mtms)) {
+            return [collect(), collect()];
+        }
+
+        $lineItems = \App\Models\DeliveryRequestLineItem::query()
+            ->where(function ($query) use ($requestIds, $mtms) {
+                if (!empty($requestIds)) {
+                    $query->whereIn('dr_id', $requestIds);
+                }
+
+                if (!empty($mtms)) {
+                    if (!empty($requestIds)) {
+                        $query->orWhereIn('mtm', $mtms);
+                    } else {
+                        $query->whereIn('mtm', $mtms);
+                    }
+                }
+            })
+            ->get();
+
+        $accessorialTotals = [];
+        $siteNames = [];
+
+        foreach ($lineItems as $lineItem) {
+            $requestId = $lineItem->dr_id
+                ? (int) $lineItem->dr_id
+                : ($mtmToRequestId[(string) $lineItem->mtm] ?? null);
+
+            if (!$requestId) {
+                continue;
+            }
+
+            $accessorial = is_array($lineItem->accessorial_rate) ? array_sum($lineItem->accessorial_rate) : (float) ($lineItem->accessorial_rate ?? 0);
+            $addOn = is_array($lineItem->add_on_rate) ? array_sum($lineItem->add_on_rate) : (float) ($lineItem->add_on_rate ?? 0);
+            $accessorialTotals[$requestId] = ($accessorialTotals[$requestId] ?? 0) + $accessorial + $addOn;
+
+            $sites = $lineItem->site_name;
+            $normalizedSites = is_array($sites) ? $sites : (filled($sites) ? [$sites] : []);
+            foreach ($normalizedSites as $site) {
+                $site = trim((string) $site);
+                if ($site === '') {
+                    continue;
+                }
+                $siteNames[$requestId][$site] = true;
+            }
+        }
+
+        return [
+            collect($accessorialTotals),
+            collect($siteNames)->map(fn ($sites) => implode(', ', array_keys($sites))),
+        ];
     }
 
     private function buildSoaIndexQuery(Request $request)

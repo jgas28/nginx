@@ -110,10 +110,13 @@
             </div>
 
             @php
-                $subtotal       = (float) ($soa->subtotal_amount ?? $soa->total_amount);
-                $discountAmt    = (float) ($soa->discount_amount ?? 0);
-                $adjustmentAmt  = (float) ($soa->adjustment_amount ?? 0);
-                $hasAdjustments = $discountAmt != 0 || $adjustmentAmt != 0;
+                $subtotal              = (float) ($soa->subtotal_amount ?? $soa->total_amount);
+                $discountAmt           = (float) ($soa->discount_amount ?? 0);
+                $adjustmentAmt         = (float) ($soa->adjustment_amount ?? 0);
+                $vatAmount             = (float) ($soa->vat_amount ?? 0);
+                $withholdingTaxRate    = (float) ($soa->withholding_tax_rate ?? 0);
+                $withholdingTaxAmount  = (float) ($soa->withholding_tax_amount ?? 0);
+                $hasAdjustments        = $discountAmt != 0 || $adjustmentAmt != 0 || $vatAmount != 0 || $withholdingTaxAmount != 0;
             @endphp
 
             @if($hasAdjustments)
@@ -156,6 +159,18 @@
                     </div>
                     @endif
 
+                    @if($vatAmount > 0)
+                    <div class="flex justify-between text-orange-600">
+                        <span class="flex items-center gap-1.5"><i class="fas fa-percentage text-xs"></i> VAT (12%)</span>
+                        <span class="font-medium">+₱{{ number_format($vatAmount, 2) }}</span>
+                    </div>
+                    @endif
+                    @if($withholdingTaxAmount > 0)
+                    <div class="flex justify-between text-indigo-600">
+                        <span class="flex items-center gap-1.5"><i class="fas fa-minus-circle text-xs"></i> WHT ({{ $withholdingTaxRate }}%)</span>
+                        <span class="font-medium">-₱{{ number_format($withholdingTaxAmount, 2) }}</span>
+                    </div>
+                    @endif
                     <div class="flex justify-between font-bold text-gray-900 border-t border-gray-300 pt-2">
                         <span>Final Total</span>
                         <span class="text-emerald-700">₱{{ number_format($soa->total_amount, 2) }}</span>
@@ -240,6 +255,18 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-blue-600 text-sm font-medium">{{ $adjustmentAmt >= 0 ? '+' : '' }}₱{{ number_format($adjustmentAmt, 2) }}</td>
+                            </tr>
+                            @endif
+                            @if($vatAmount > 0)
+                            <tr>
+                                <td colspan="5" class="px-4 py-3 text-right text-orange-600 text-sm font-semibold">VAT (12%)</td>
+                                <td class="px-4 py-3 text-orange-600 text-sm font-semibold">+₱{{ number_format($vatAmount, 2) }}</td>
+                            </tr>
+                            @endif
+                            @if($withholdingTaxAmount > 0)
+                            <tr>
+                                <td colspan="5" class="px-4 py-3 text-right text-indigo-600 text-sm font-semibold">WHT ({{ $withholdingTaxRate }}%)</td>
+                                <td class="px-4 py-3 text-indigo-600 text-sm font-semibold">-₱{{ number_format($withholdingTaxAmount, 2) }}</td>
                             </tr>
                             @endif
                             <tr class="border-t-2 border-gray-300">

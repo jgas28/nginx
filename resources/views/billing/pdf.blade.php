@@ -116,6 +116,8 @@
         .subtotal-row td { background-color: #F9FAFB; color: #4B5563; }
         .discount-row td { background-color: #FEF2F2; color: #B91C1C; font-weight: 600; }
         .adjustment-row td { background-color: #EFF6FF; color: #1D4ED8; font-weight: 600; }
+        .vat-row td { background-color: #FFF7ED; color: #C2410C; font-weight: 600; }
+        .wtax-row td { background-color: #EEF2FF; color: #4338CA; font-weight: 600; }
         .total-amount td { font-weight: 700; font-size: 13px; color: #065F46; background-color: #ECFDF5; }
         .outstanding-row td {
             background-color: #FEF2F2;
@@ -246,10 +248,13 @@
             </tbody>
             <tfoot>
                 @php
-                    $subtotal      = (float)($soa->subtotal_amount ?? $soa->total_amount);
-                    $discountAmt   = (float)($soa->discount_amount ?? 0);
-                    $adjustmentAmt = (float)($soa->adjustment_amount ?? 0);
-                    $hasAdj        = $discountAmt != 0 || $adjustmentAmt != 0;
+                    $subtotal             = (float)($soa->subtotal_amount ?? $soa->total_amount);
+                    $discountAmt          = (float)($soa->discount_amount ?? 0);
+                    $adjustmentAmt        = (float)($soa->adjustment_amount ?? 0);
+                    $vatAmount            = (float)($soa->vat_amount ?? 0);
+                    $withholdingTaxRate   = (float)($soa->withholding_tax_rate ?? 0);
+                    $withholdingTaxAmount = (float)($soa->withholding_tax_amount ?? 0);
+                    $hasAdj               = $discountAmt != 0 || $adjustmentAmt != 0 || $vatAmount != 0 || $withholdingTaxAmount != 0;
                 @endphp
                 @if($hasAdj)
                 <tr class="totals-row subtotal-row">
@@ -278,6 +283,18 @@
                     <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">{{ $adjustmentAmt >= 0 ? '+' : '' }}&#8369;{{ number_format($adjustmentAmt, 2) }}</td>
                 </tr>
                 @endif
+                @endif
+                @if($vatAmount > 0)
+                <tr class="vat-row">
+                    <td colspan="6" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">VAT (12%):</td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">+&#8369;{{ number_format($vatAmount, 2) }}</td>
+                </tr>
+                @endif
+                @if($withholdingTaxAmount > 0)
+                <tr class="wtax-row">
+                    <td colspan="6" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">WHT ({{ $withholdingTaxRate }}%):</td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">-&#8369;{{ number_format($withholdingTaxAmount, 2) }}</td>
+                </tr>
                 @endif
                 <tr class="totals-row total-amount">
                     <td colspan="6" class="right">Final Total:</td>
