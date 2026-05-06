@@ -819,17 +819,6 @@ class BillingController extends Controller
         $currentBillingMap = $attachedDeliveryRequests->keyBy('delivery_request_id');
 
         // Use SQL GROUP BY/HAVING — DB returns only IDs, no PHP-side row grouping needed
-        $fullyBilledIds = DB::table('soa_delivery_requests')
-            ->selectRaw('delivery_request_id')
-            ->where('soa_id', '!=', $soa->id)
-            ->groupBy('delivery_request_id')
-            ->havingRaw("
-                MAX(CASE WHEN billing_type IN ('delivery_only','both') OR billing_type IS NULL THEN 1 ELSE 0 END) = 1
-                AND MAX(CASE WHEN billing_type IN ('accessorial_only','both') OR billing_type IS NULL THEN 1 ELSE 0 END) = 1
-            ")
-            ->pluck('delivery_request_id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
         $deliveryStatusMap = $this->getDeliveryStatusMap();
         $deliveredStatusIds = $this->getDeliveredStatusIds($deliveryStatusMap);
 
@@ -849,13 +838,8 @@ class BillingController extends Controller
 
         $resultQuery = DB::table($deliveryRequestTable)
             ->select($selectColumns)
-            ->where(function ($query) use ($deliveryRequestTable, $fullyBilledIds, $deliveredStatusIds, $selectedIds, $hasDeliveryStatusColumn) {
-                // New eligible items: not fully billed elsewhere AND delivered status
-                $query->where(function ($eligibleQuery) use ($deliveryRequestTable, $fullyBilledIds, $deliveredStatusIds, $hasDeliveryStatusColumn) {
-                    if (!empty($fullyBilledIds)) {
-                        $eligibleQuery->whereNotIn($deliveryRequestTable . '.id', $fullyBilledIds);
-                    }
-
+            ->where(function ($query) use ($deliveryRequestTable, $deliveredStatusIds, $selectedIds, $hasDeliveryStatusColumn, $hasDeliveryRequestStatusColumn) {
+                $query->where(function ($eligibleQuery) use ($deliveryRequestTable, $deliveredStatusIds, $hasDeliveryStatusColumn, $hasDeliveryRequestStatusColumn) {
                     if ($hasDeliveryStatusColumn && !empty($deliveredStatusIds)) {
                         $eligibleQuery->whereIn($deliveryRequestTable . '.delivery_status', $deliveredStatusIds);
                     } elseif ($hasDeliveryStatusColumn) {
@@ -906,6 +890,15 @@ class BillingController extends Controller
                         : ($row->has_accessorial ? 'accessorial_only' : null));
                     return [(int) $row->delivery_request_id => $type];
                 });
+
+            $selectedIdLookup = array_fill_keys($selectedIds, true);
+            $result = $result->filter(function ($item) use ($usedElsewhereMap, $selectedIdLookup) {
+                if (isset($selectedIdLookup[(int) $item->id])) {
+                    return true;
+                }
+
+                return $usedElsewhereMap->get((int) $item->id) !== 'both';
+            })->values();
         }
 
         // Attach accessorial totals, site names, company/customer names, and billing flags

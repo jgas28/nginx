@@ -456,6 +456,8 @@
         ->values()
         ->all();
 
+    $editJsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | (defined('JSON_INVALID_UTF8_SUBSTITUTE') ? JSON_INVALID_UTF8_SUBSTITUTE : 0);
+
     $initialEditBillingTypes = collect($editableDeliveryRequests)->mapWithKeys(function ($deliveryRequest) use ($currentBillingSelections) {
         $requestId = (int) $deliveryRequest->id;
         $hasCurrentBillingSelection = array_key_exists($requestId, $currentBillingSelections);
@@ -489,8 +491,8 @@
         ];
     })->values()->all();
 @endphp
-const editLineItems = @json($editLineItemPayload);
-const initialEditSelectedIds = @json($initialEditSelectedIds);
+const editLineItems = @json($editLineItemPayload, $editJsonFlags);
+const initialEditSelectedIds = @json($initialEditSelectedIds, $editJsonFlags);
 
 let editModalItems = [];
 let editModalCurrentPage = 1;
