@@ -511,6 +511,29 @@ class BillingController extends Controller
                         $item->already_billed = $requestId ? $usedBillingMap->get($requestId) : null;
                         return $item;
                     })
+                    ->filter(function ($item) {
+                        $alreadyBilled = $item->already_billed;
+                        if (!$alreadyBilled) {
+                            return true;
+                        }
+
+                        $drAmt  = (float) ($item->delivery_request_amount ?? 0);
+                        $acRate = is_array($item->accessorial_rate) ? array_sum(array_map('floatval', (array) $item->accessorial_rate)) : (float) ($item->accessorial_rate ?? 0);
+                        $addOn  = is_array($item->add_on_rate)      ? array_sum(array_map('floatval', (array) $item->add_on_rate))      : (float) ($item->add_on_rate ?? 0);
+                        $acAmt  = $acRate + $addOn;
+
+                        // If delivery is the only available component and it's already billed, hide this item
+                        if ($alreadyBilled === 'delivery_only' && $acAmt === 0.0) {
+                            return false;
+                        }
+
+                        // If accessorial is the only available component and it's already billed, hide this item
+                        if ($alreadyBilled === 'accessorial_only' && $drAmt === 0.0) {
+                            return false;
+                        }
+
+                        return true;
+                    })
                     ->values();
             }
         } else {
@@ -919,6 +942,26 @@ class BillingController extends Controller
             $item->current_billing_type = $currentBilling ? ($currentBilling->billing_type ?? 'both') : null;
             return $item;
         });
+
+        // Remove items where the only available billing component is already billed elsewhere
+        $result = $result->filter(function ($item) use ($selectedIdLookup) {
+            if (isset($selectedIdLookup[(int) $item->id])) {
+                return true;
+            }
+
+            $alreadyBilled = $item->already_billed;
+            if (!$alreadyBilled) {
+                return true;
+            }
+
+            $drAmt = (float) ($item->delivery_rate ?? 0);
+            $acAmt = (float) ($item->accessorial_total ?? 0);
+
+            if ($alreadyBilled === 'delivery_only'    && $acAmt === 0.0) return false;
+            if ($alreadyBilled === 'accessorial_only' && $drAmt === 0.0) return false;
+
+            return true;
+        })->values();
 
         return $result;
     }

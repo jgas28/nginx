@@ -803,6 +803,15 @@ function filterEditDeliveryRequests(resetPage = true) {
         const matchesCustomerFilter = !customerFilter || itemCustomerId === customerFilter;
 
         if (matchesSearch && matchesCompanyFilter && matchesCustomerFilter) {
+            // Skip items where the only available billing component is already billed
+            if (item.alreadyBilled) {
+                const drAmt = Number(item.deliveryRate || 0);
+                const acAmt = Number(item.accessorialTotal || 0);
+                if ((item.alreadyBilled === 'delivery_only'    && acAmt === 0) ||
+                    (item.alreadyBilled === 'accessorial_only' && drAmt === 0)) {
+                    return;
+                }
+            }
             matchedItems.push(item);
         }
     });

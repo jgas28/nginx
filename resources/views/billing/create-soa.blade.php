@@ -1008,6 +1008,14 @@ function filterDeliveryRequests(resetPage = true) {
                         shouldShow = false;
                     }
 
+                    // Hide items where the only available billing component is already billed
+                    if (shouldShow && lineItem.alreadyBilled) {
+                        const drAmt = Number(lineItem.requestAmount || 0);
+                        const acAmt = Number(lineItem.accessorialRate || 0) + Number(lineItem.addOnRate || 0);
+                        if (lineItem.alreadyBilled === 'delivery_only'    && acAmt === 0) shouldShow = false;
+                        if (lineItem.alreadyBilled === 'accessorial_only' && drAmt === 0) shouldShow = false;
+                    }
+
                     // Always extract delivery request data for display purposes
                     const drDate = lineItem.deliveryRequest ? lineItem.deliveryRequest.deliveryDate : null;
                     const drCompanyId = lineItem.deliveryRequest ? lineItem.deliveryRequest.companyId : '';
