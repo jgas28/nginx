@@ -220,17 +220,41 @@
                     </div>
                 </div>
 
-                <!-- Results Summary -->
-                <div class="mb-4 text-sm text-gray-600">
-                    <span id="resultsCount">0</span> delivery requests found
+                <div class="mb-4 flex flex-col gap-3 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex items-center gap-2">
+                        <span>Show</span>
+                        <select id="deliveryPageSize" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                            <option value="5" selected>5</option>
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                        <span>entries</span>
+                    </div>
+                    <div>
+                        <span id="resultsCount">0</span> delivery requests found
+                    </div>
                 </div>
 
-                <div id="deliveryRequestsContainer" class="max-h-96 overflow-y-auto border border-gray-200 rounded-xl bg-white">
+                <div id="deliveryRequestsContainer" class="max-h-[72vh] overflow-y-auto border border-gray-200 rounded-xl bg-white">
                     <div class="flex flex-col items-center justify-center py-12 text-gray-400">
                         <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
                             <i class="fas fa-truck-loading text-blue-400 text-2xl"></i>
                         </div>
                         <p class="text-sm font-medium text-gray-500">Loading delivery requests&hellip;</p>
+                    </div>
+                </div>
+
+                <div class="mt-4 flex flex-col gap-3 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
+                    <p id="deliveryPaginationText">Showing 0 to 0 of 0 entries</p>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="deliveryPrev" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+                            Previous
+                        </button>
+                        <span id="deliveryPageIndicator" class="min-w-[88px] text-center font-medium text-gray-700">Page 1 of 1</span>
+                        <button type="button" id="deliveryNext" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+                            Next
+                        </button>
                     </div>
                 </div>
 
@@ -549,6 +573,28 @@ const deliveryLineItems = [
 console.log('Delivery line items loaded:', deliveryLineItems.length);
 let calculateTotalModalItems = [];
 let calculateTotalModalCurrentPage = 1;
+let deliveryCurrentPage = 1;
+let deliveryPageSize = 5;
+
+const _drStyle = document.createElement('style');
+_drStyle.textContent = `
+@keyframes drFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+.dr-card-enter { animation: drFadeIn 0.2s ease forwards; }
+#deliveryRequestsContainer .dr-card { padding: 0.5rem 0.625rem !important; border-radius: 0.5rem !important; }
+#deliveryRequestsContainer .dr-card > div { gap: 0.5rem !important; }
+#deliveryRequestsContainer .delivery-checkbox { width: 1rem !important; height: 1rem !important; }
+#deliveryRequestsContainer .dr-card .flex.flex-wrap.items-center { gap: 0.25rem !important; margin-bottom: 0.25rem !important; }
+#deliveryRequestsContainer .dr-card .grid { gap: 0.125rem 0.5rem !important; font-size: 0.675rem !important; line-height: 1.15 !important; }
+#deliveryRequestsContainer .dr-card .grid i { width: 0.65rem !important; font-size: 0.55rem !important; }
+#deliveryRequestsContainer .dr-card .bill-toggle-label,
+#deliveryRequestsContainer .dr-card .select-none { gap: 0.25rem !important; padding: 0.25rem 0.5rem !important; border-radius: 0.375rem !important; font-size: 0.625rem !important; }
+#deliveryRequestsContainer .dr-card .bill-toggle-label span.inline-flex,
+#deliveryRequestsContainer .dr-card .select-none span.inline-flex { width: 0.75rem !important; height: 0.75rem !important; }
+#deliveryRequestsContainer .dr-card .bill-toggle-label i,
+#deliveryRequestsContainer .dr-card .select-none i { font-size: 0.55rem !important; }
+#deliveryRequestsContainer .dr-card .font-extrabold { font-size: 0.7rem !important; }
+`;
+document.head.appendChild(_drStyle);
 
 // ── Skeleton loader ───────────────────────────────────────────
 function buildSkeletonCards(n) {
@@ -812,13 +858,6 @@ function closeValidationModal() {
 }
 
 // ── Card enter animation ──────────────────────────────────────
-const _drStyle = document.createElement('style');
-_drStyle.textContent = `
-@keyframes drFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
-.dr-card-enter { animation: drFadeIn 0.2s ease forwards; }
-`;
-document.head.appendChild(_drStyle);
-
 function formatPeso(amount) {
     return `PHP ${Number(amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -918,7 +957,7 @@ function renderCalculateTotalModalRows() {
     document.getElementById('calculateTotalModalNext').disabled = calculateTotalModalCurrentPage >= totalPages;
 }
 
-function filterDeliveryRequests() {
+function filterDeliveryRequests(resetPage = true) {
     try {
         const companyId = document.getElementById('company_id').value;
         const customerId = document.getElementById('customer_id').value;
@@ -945,12 +984,14 @@ function filterDeliveryRequests() {
         console.log('Total delivery line items to filter:', deliveryLineItems.length);
 
         const container = document.getElementById('deliveryRequestsContainer');
-        container.innerHTML = buildSkeletonCards(4);
+        if (resetPage) {
+            deliveryCurrentPage = 1;
+        }
+
+        container.innerHTML = buildSkeletonCards(Math.min(deliveryPageSize, 4));
 
         setTimeout(() => {
-            let html = '<div class="space-y-2">'; // Reduced spacing for more compact display
-            let hasItems = false;
-            let visibleItems = 0;
+            const matchedCards = [];
 
             // Get current filters
             const searchTerm = document.getElementById('searchDeliveryRequests').value.toLowerCase();
@@ -974,13 +1015,8 @@ function filterDeliveryRequests() {
 
                     // Apply filters only if they are set
                     if (companyId || customerId || (fromDate && toDate)) {
-                        console.log('Checking item:', lineItem.id, 'drCompanyId:', drCompanyId, 'drCustomerId:', drCustomerId, 'drDate:', drDate);
-                        console.log('Filters: companyId:', companyId, 'customerId:', customerId, 'fromDate:', fromDate, 'toDate:', toDate);
-
                         const companyMatch = !companyId || drCompanyId == companyId;
                         const customerMatch = !customerId || drCustomerId == customerId;
-
-                        console.log('Matches: companyMatch:', companyMatch, 'customerMatch:', customerMatch);
 
                         // Parse dates for proper comparison
                         let dateMatch = true;
@@ -990,15 +1026,12 @@ function filterDeliveryRequests() {
                                 const from = new Date(fromDate + 'T00:00:00');
                                 const to = new Date(toDate + 'T23:59:59');
                                 dateMatch = deliveryDate >= from && deliveryDate <= to;
-                                console.log('Date check:', drDate, '->', deliveryDate, '>=', from, '&&', deliveryDate, '<=', to, '=', dateMatch);
                             } catch (e) {
-                                console.log('Date parsing error for:', drDate, e);
                                 dateMatch = false;
                             }
                         }
 
                         shouldShow = companyMatch && customerMatch && dateMatch;
-                        console.log('Should show:', shouldShow, '(company:', companyMatch, 'customer:', customerMatch, 'date:', dateMatch, ')');
                     }
 
                     // Apply additional filters (search and dropdown filters)
@@ -1021,8 +1054,7 @@ function filterDeliveryRequests() {
                     }
 
                     if (shouldShow) {
-                        hasItems = true;
-                        visibleItems++;
+                        const cardIndex = matchedCards.length;
                         const totalRate = Number(lineItem.requestAmount || 0) > 0
                             ? Number(lineItem.requestAmount || 0)
                             : (lineItem.accessorialRate + lineItem.addOnRate);
@@ -1090,49 +1122,49 @@ function filterDeliveryRequests() {
 
                         // "Already billed" badge shown for locked components
                         const drBilledBadge = hasDelivery && drAlreadyPaid ? `
-                            <span class="inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 border-amber-200 bg-amber-50 text-xs font-bold text-amber-600 select-none cursor-not-allowed"
+                            <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 border-amber-200 bg-amber-50 text-[11px] font-bold text-amber-600 select-none cursor-not-allowed"
                                   title="Delivery rate already billed in a previous SOA">
-                                <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-200">
-                                    <i class="fas fa-check text-xs text-amber-700"></i>
+                                <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200">
+                                    <i class="fas fa-check text-[10px] text-amber-700"></i>
                                 </span>
-                                <i class="fas fa-truck text-xs"></i>
+                                <i class="fas fa-truck text-[10px]"></i>
                                 Delivery Rate
                                 <span class="font-extrabold tracking-tight">₱${drAmt.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-                                <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-700 text-xs font-semibold">Billed</span>
+                                <span class="px-1 py-0.5 rounded bg-amber-200 text-amber-700 text-[10px] font-semibold">Billed</span>
                             </span>` : '';
 
                         const acBilledBadge = hasAccessorial && acAlreadyPaid ? `
-                            <span class="inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 border-amber-200 bg-amber-50 text-xs font-bold text-amber-600 select-none cursor-not-allowed"
+                            <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 border-amber-200 bg-amber-50 text-[11px] font-bold text-amber-600 select-none cursor-not-allowed"
                                   title="Accessorial already billed in a previous SOA">
-                                <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-200">
-                                    <i class="fas fa-check text-xs text-amber-700"></i>
+                                <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200">
+                                    <i class="fas fa-check text-[10px] text-amber-700"></i>
                                 </span>
-                                <i class="fas fa-tags text-xs"></i>
+                                <i class="fas fa-tags text-[10px]"></i>
                                 Accessorial
                                 <span class="font-extrabold tracking-tight">₱${acAmt.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
-                                <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-700 text-xs font-semibold">Billed</span>
+                                <span class="px-1 py-0.5 rounded bg-amber-200 text-amber-700 text-[10px] font-semibold">Billed</span>
                             </span>` : '';
 
-                        html += `
-                            <div class="dr-card border ${isChecked ? 'border-blue-400 bg-blue-50 shadow-sm' : (lineItem.alreadyBilled ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200')} rounded-xl p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 transition-all duration-150 dr-card-enter"
-                                 style="animation-delay:${visibleItems * 35}ms; opacity:0;"
+                        matchedCards.push(`
+                            <div class="dr-card border ${isChecked ? 'border-blue-400 bg-blue-50 shadow-sm' : (lineItem.alreadyBilled ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200')} rounded-lg px-3 py-2.5 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 transition-all duration-150 dr-card-enter"
+                                 style="animation-delay:${cardIndex * 35}ms; opacity:0;"
                                  data-partially-billed="${lineItem.alreadyBilled ? '1' : '0'}"
                                  onclick="toggleCard(this)">
-                                <div class="flex items-start gap-3">
-                                    <div class="flex-shrink-0 pt-0.5">
+                                <div class="flex items-start gap-2.5">
+                                    <div class="flex-shrink-0 pt-0">
                                         <input type="checkbox" name="delivery_line_item_ids[]" value="${lineItem.id}"
                                                id="line_item_${lineItem.id}" class="delivery-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 cursor-pointer accent-blue-600"
                                                ${isChecked ? 'checked' : ''}
                                                onclick="event.stopPropagation()" onchange="toggleCardStyle(this)">
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <div class="flex flex-wrap items-center gap-2 mb-2">
-                                            <span class="font-semibold text-gray-900 text-sm">MTM: ${lineItem.mtm}</span>
-                                            <span class="text-xs text-gray-400">#${lineItem.id}</span>
-                                            <span class="px-2 py-0.5 rounded-full text-xs font-medium ${badge.cls}">${badge.text}</span>
-                                            ${lineItem.alreadyBilled ? `<span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200"><i class="fas fa-exclamation-circle mr-1"></i>Partially billed</span>` : ''}
+                                        <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+                                            <span class="font-semibold text-[13px] text-gray-900">MTM: ${lineItem.mtm}</span>
+                                            <span class="text-[11px] text-gray-400">#${lineItem.id}</span>
+                                            <span class="px-1.5 py-0.5 rounded-full text-[11px] font-medium ${badge.cls}">${badge.text}</span>
+                                            ${lineItem.alreadyBilled ? `<span class="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 border border-amber-200"><i class="fas fa-exclamation-circle mr-1"></i>Partially billed</span>` : ''}
                                         </div>
-                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500">
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-3 gap-y-0.5 text-[10px] text-gray-500">
                                             <div class="flex items-center gap-1.5 min-w-0">
                                                 <i class="fas fa-calendar-alt text-gray-300 w-3 flex-shrink-0"></i>
                                                 <span class="truncate">Booking: ${formattedBookingDate}</span>
@@ -1149,19 +1181,19 @@ function filterDeliveryRequests() {
                                                 <i class="fas fa-user text-gray-300 w-3 flex-shrink-0"></i>
                                                 <span class="truncate">${cuName}</span>
                                             </div>
-                                            <div class="flex items-center gap-1.5 min-w-0 sm:col-span-2">
+                                            <div class="flex items-center gap-1.5 min-w-0 sm:col-span-2 xl:col-span-1">
                                                 <i class="fas fa-map-marker-alt text-gray-300 w-3 flex-shrink-0"></i>
                                                 <span class="truncate">${lineItem.siteName || 'N/A'}</span>
                                             </div>
                                         </div>
 
                                         <!-- Billing type toggles -->
-                                        <div class="mt-2.5 pt-2 border-t border-gray-100">
-                                            <p class="text-xs text-gray-500 font-medium mb-2">Bill for:</p>
-                                            <div class="flex flex-wrap gap-2">
+                                        <div class="mt-2 pt-2 border-t border-gray-100">
+                                            <p class="text-[11px] text-gray-500 font-medium mb-1">Bill for:</p>
+                                            <div class="flex flex-wrap gap-1.5">
                                                 ${drBilledBadge}
                                                 ${hasDelivery && !drAlreadyPaid ? `
-                                                <label class="bill-toggle-label inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 text-xs font-bold select-none transition-all duration-150 active:scale-95 ${toggleInteractClass}
+                                                <label class="bill-toggle-label inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 text-[11px] font-bold select-none transition-all duration-150 active:scale-95 ${toggleInteractClass}
                                                        ${drActive
                                                            ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200'
                                                            : 'border-gray-300 bg-gray-100 text-gray-400'}"
@@ -1169,16 +1201,16 @@ function filterDeliveryRequests() {
                                                        onclick="event.stopPropagation()">
                                                     <input type="checkbox" class="sr-only" ${drActive ? 'checked' : ''}
                                                            onchange="onBillingToggle(${lineItem.id}, 'delivery', this.checked, event)">
-                                                    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full ${drActive ? 'bg-white/30' : 'bg-gray-300/50'}">
-                                                        <i class="fas ${drActive ? 'fa-check' : 'fa-truck'} text-xs"></i>
+                                                    <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full ${drActive ? 'bg-white/30' : 'bg-gray-300/50'}">
+                                                        <i class="fas ${drActive ? 'fa-check' : 'fa-truck'} text-[10px]"></i>
                                                     </span>
-                                                    <i class="fas fa-truck text-xs ${drActive ? '' : 'hidden'}"></i>
+                                                    <i class="fas fa-truck text-[10px] ${drActive ? '' : 'hidden'}"></i>
                                                     Delivery Rate
                                                     <span class="font-extrabold tracking-tight">₱${drAmt.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                                                 </label>` : ''}
                                                 ${acBilledBadge}
                                                 ${hasAccessorial && !acAlreadyPaid ? `
-                                                <label class="bill-toggle-label inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 text-xs font-bold select-none transition-all duration-150 active:scale-95 ${toggleInteractClass}
+                                                <label class="bill-toggle-label inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 text-[11px] font-bold select-none transition-all duration-150 active:scale-95 ${toggleInteractClass}
                                                        ${acActive
                                                            ? 'border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-200'
                                                            : 'border-gray-300 bg-gray-100 text-gray-400'}"
@@ -1186,15 +1218,15 @@ function filterDeliveryRequests() {
                                                        onclick="event.stopPropagation()">
                                                     <input type="checkbox" class="sr-only" ${acActive ? 'checked' : ''}
                                                            onchange="onBillingToggle(${lineItem.id}, 'accessorial', this.checked, event)">
-                                                    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full ${acActive ? 'bg-white/30' : 'bg-gray-300/50'}">
-                                                        <i class="fas ${acActive ? 'fa-check' : 'fa-tags'} text-xs"></i>
+                                                    <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full ${acActive ? 'bg-white/30' : 'bg-gray-300/50'}">
+                                                        <i class="fas ${acActive ? 'fa-check' : 'fa-tags'} text-[10px]"></i>
                                                     </span>
                                                     Accessorial
                                                     <span class="font-extrabold tracking-tight">₱${acAmt.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}</span>
                                                 </label>` : ''}
                                                 ${!hasDelivery && !hasAccessorial ? `<span class="text-xs text-gray-400 italic">No rate data</span>` : ''}
                                             </div>
-                                            <div class="flex justify-end mt-2">
+                                            <div class="flex justify-end mt-1">
                                                 <span class="font-bold text-emerald-700 text-sm" id="item-billed-${lineItem.id}">
                                                     ₱${billedTotal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2})}
                                                 </span>
@@ -1203,16 +1235,27 @@ function filterDeliveryRequests() {
                                     </div>
                                 </div>
                             </div>
-                        `;
+                        `);
                     }
                 } catch (error) {
                     console.error('Error processing line item:', lineItem, error);
                 }
             });
 
-            html += '</div>';
+            const visibleItems = matchedCards.length;
+            const totalPages = Math.max(1, Math.ceil(visibleItems / deliveryPageSize));
 
-            if (!hasItems) {
+            if (deliveryCurrentPage > totalPages) {
+                deliveryCurrentPage = totalPages;
+            }
+
+            const startIndex = visibleItems === 0 ? 0 : (deliveryCurrentPage - 1) * deliveryPageSize;
+            const endIndex = Math.min(startIndex + deliveryPageSize, visibleItems);
+            const pagedCards = matchedCards.slice(startIndex, endIndex);
+
+            let html = '';
+
+            if (visibleItems === 0) {
                 html = `
                     <div class="text-center py-8 text-gray-500">
                         <i class="fas fa-inbox text-3xl mb-4"></i>
@@ -1220,19 +1263,38 @@ function filterDeliveryRequests() {
                         <p class="text-sm mt-2">Try adjusting your filters or check if delivery requests exist in the system.</p>
                     </div>
                 `;
+            } else {
+                html = `<div class="space-y-2">${pagedCards.join('')}</div>`;
             }
 
             container.innerHTML = html;
-            document.getElementById('resultsCount').textContent = visibleItems + ' delivery requests found';
+            document.getElementById('resultsCount').textContent = visibleItems;
+
+            const paginationText = document.getElementById('deliveryPaginationText');
+            if (paginationText) {
+                paginationText.textContent = `Showing ${visibleItems === 0 ? 0 : startIndex + 1} to ${visibleItems === 0 ? 0 : endIndex} of ${visibleItems} entries`;
+            }
+
+            const pageIndicator = document.getElementById('deliveryPageIndicator');
+            if (pageIndicator) {
+                pageIndicator.textContent = `Page ${deliveryCurrentPage} of ${totalPages}`;
+            }
+
+            const prevButton = document.getElementById('deliveryPrev');
+            if (prevButton) {
+                prevButton.disabled = deliveryCurrentPage <= 1 || visibleItems === 0;
+            }
+
+            const nextButton = document.getElementById('deliveryNext');
+            if (nextButton) {
+                nextButton.disabled = deliveryCurrentPage >= totalPages || visibleItems === 0;
+            }
 
             console.log('=== SOA Filter Results ===');
             console.log('Items found:', visibleItems);
-            console.log('Has items to display:', hasItems);
+            console.log('Page size:', deliveryPageSize, 'Current page:', deliveryCurrentPage, 'Total pages:', totalPages);
             console.log('Total items processed:', deliveryLineItems.length);
             console.log('========================');
-
-            // Populate filter dropdowns with available companies/customers
-            populateFilterDropdowns();
         }, 250);
     } catch (error) {
         console.error('Error in filterDeliveryRequests:', error);
@@ -1444,10 +1506,23 @@ function filterByCustomer() {
     filterDeliveryRequests();
 }
 
+function changeDeliveryPage(page) {
+    deliveryCurrentPage = Math.max(1, page);
+    filterDeliveryRequests(false);
+}
+
+function changeDeliveryPageSize() {
+    deliveryPageSize = parseInt(document.getElementById('deliveryPageSize')?.value || '5', 10);
+    deliveryCurrentPage = 1;
+    filterDeliveryRequests(false);
+}
+
 // Populate filter dropdowns with available companies/customers
 function populateFilterDropdowns() {
     const companySelect = document.getElementById('filterByCompany');
     const customerSelect = document.getElementById('filterByCustomer');
+    const selectedCompanyValue = companySelect.value;
+    const selectedCustomerValue = customerSelect.value;
 
     // Clear existing options except the first one
     companySelect.innerHTML = '<option value="">All Companies</option>';
@@ -1499,6 +1574,14 @@ function populateFilterDropdowns() {
         option.textContent = customer.name;
         customerSelect.appendChild(option);
     });
+
+    if (selectedCompanyValue && companySelect.querySelector(`option[value="${selectedCompanyValue}"]`)) {
+        companySelect.value = selectedCompanyValue;
+    }
+
+    if (selectedCustomerValue && customerSelect.querySelector(`option[value="${selectedCustomerValue}"]`)) {
+        customerSelect.value = selectedCustomerValue;
+    }
 }
 
 // ── Adjustment sync ───────────────────────────────────────────
@@ -1661,7 +1744,21 @@ document.addEventListener('DOMContentLoaded', function() {
     populateFilterDropdowns();
 
     // Then filter delivery requests
+    deliveryPageSize = parseInt(document.getElementById('deliveryPageSize')?.value || '5', 10);
     filterDeliveryRequests();
+
+    document.getElementById('deliveryPageSize').addEventListener('change', changeDeliveryPageSize);
+    document.getElementById('deliveryPrev').addEventListener('click', function() {
+        if (deliveryCurrentPage > 1) {
+            deliveryCurrentPage -= 1;
+            filterDeliveryRequests(false);
+        }
+    });
+
+    document.getElementById('deliveryNext').addEventListener('click', function() {
+        deliveryCurrentPage += 1;
+        filterDeliveryRequests(false);
+    });
 
     document.getElementById('calculateTotalModal').addEventListener('click', function(event) {
         if (event.target === this) {

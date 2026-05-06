@@ -152,11 +152,23 @@
                     </div>
                 </div>
 
-                <div class="mb-4 text-sm text-gray-600">
-                    <span id="editResultsCount">{{ count($editableDeliveryRequests) }}</span> delivery requests found
+                <div class="mb-4 flex flex-col gap-3 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex items-center gap-2">
+                        <span>Show</span>
+                        <select id="editDeliveryPageSize" class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                            <option value="5" selected>5</option>
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                        <span>entries</span>
+                    </div>
+                    <div>
+                        <span id="editResultsCount">{{ count($editableDeliveryRequests) }}</span> delivery requests found
+                    </div>
                 </div>
 
-                <div id="editDeliveryRequestsContainer" class="max-h-96 overflow-y-auto border border-gray-200 rounded-xl bg-white">
+                <div id="editDeliveryRequestsContainer" class="max-h-[72vh] overflow-y-auto border border-gray-200 rounded-xl bg-white">
                     @php
                         $selectedIdLookup = array_fill_keys(
                             collect(old('delivery_request_ids', $selectedDeliveryRequestIds))
@@ -178,7 +190,7 @@
                             $accessorialSelected = in_array($billingType, ['accessorial_only', 'both'], true) && !$accessorialLocked;
                             $partiallyBilled = filled($alreadyBilled);
                         @endphp
-                        <div class="edit-delivery-item dr-card dr-card-enter border {{ $isSelected ? 'border-blue-400 bg-blue-50 shadow-sm' : ($partiallyBilled ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200') }} rounded-xl p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 transition-all duration-150 mb-3 last:mb-0"
+                        <div class="edit-delivery-item dr-card dr-card-enter border {{ $isSelected ? 'border-blue-400 bg-blue-50 shadow-sm' : ($partiallyBilled ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200') }} rounded-lg px-3 py-2.5 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 transition-all duration-150 mb-2 last:mb-0"
                              style="animation-delay:{{ $loop->iteration * 35 }}ms; opacity:0;"
                              data-id="{{ $deliveryRequest->id }}"
                              data-mtm="{{ strtolower($deliveryRequest->mtm ?? '') }}"
@@ -199,8 +211,8 @@
                              data-current-billing-type="{{ $billingType ?? '' }}"
                              data-partially-billed="{{ $partiallyBilled ? '1' : '0' }}"
                              onclick="toggleEditCard(this)">
-                            <div class="flex items-start gap-3">
-                                <div class="flex-shrink-0 pt-0.5">
+                            <div class="flex items-start gap-2.5">
+                                <div class="flex-shrink-0 pt-0">
                                     <input type="checkbox"
                                            name="delivery_request_ids[]"
                                            value="{{ $deliveryRequest->id }}"
@@ -210,31 +222,31 @@
                                            onchange="toggleEditCardStyle(this)">
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <div class="flex flex-wrap items-center gap-2 mb-2">
-                                        <span class="font-semibold text-gray-900 text-sm">MTM: {{ $deliveryRequest->mtm ?? 'N/A' }}</span>
-                                        <span class="text-xs text-gray-400">#{{ $deliveryRequest->id }}</span>
-                                        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">{{ $deliveryRequest->status_name ?? 'Delivered' }}</span>
+                                    <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+                                        <span class="font-semibold text-[13px] text-gray-900">MTM: {{ $deliveryRequest->mtm ?? 'N/A' }}</span>
+                                        <span class="text-[11px] text-gray-400">#{{ $deliveryRequest->id }}</span>
+                                        <span class="px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-green-100 text-green-700">{{ $deliveryRequest->status_name ?? 'Delivered' }}</span>
                                         @if($alreadyBilled === 'delivery_only')
-                                            <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">
+                                            <span class="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 border border-amber-200">
                                                 <i class="fas fa-truck mr-1 text-[10px]"></i>Delivery billed
                                             </span>
                                         @elseif($alreadyBilled === 'accessorial_only')
-                                            <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">
+                                            <span class="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 border border-amber-200">
                                                 <i class="fas fa-tags mr-1 text-[10px]"></i>Accessorial billed
                                             </span>
                                         @elseif($alreadyBilled === 'both')
-                                            <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 border border-red-200">
+                                            <span class="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 border border-red-200">
                                                 <i class="fas fa-check-circle mr-1 text-[10px]"></i>Fully billed
                                             </span>
                                         @endif
                                         @if($partiallyBilled && $alreadyBilled !== 'both')
-                                            <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">
+                                            <span class="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 border border-amber-200">
                                                 <i class="fas fa-exclamation-circle mr-1"></i>Partially billed
                                             </span>
                                         @endif
                                     </div>
 
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-500">
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-3 gap-y-0.5 text-[10px] text-gray-500">
                                         <div class="flex items-center gap-1.5 min-w-0">
                                             <i class="fas fa-calendar-alt text-gray-300 w-3 flex-shrink-0"></i>
                                             <span class="truncate">Booking: {{ $deliveryRequest->booking_date ? \Carbon\Carbon::parse($deliveryRequest->booking_date)->format('M d, Y') : 'N/A' }}</span>
@@ -251,62 +263,62 @@
                                             <i class="fas fa-user text-gray-300 w-3 flex-shrink-0"></i>
                                             <span class="truncate">{{ $deliveryRequest->customer_name ?? 'N/A' }}</span>
                                         </div>
-                                        <div class="flex items-center gap-1.5 min-w-0 sm:col-span-2">
+                                        <div class="flex items-center gap-1.5 min-w-0 sm:col-span-2 xl:col-span-1">
                                             <i class="fas fa-map-marker-alt text-gray-300 w-3 flex-shrink-0"></i>
                                             <span class="truncate">{{ $deliveryRequest->site_name ?: 'N/A' }}</span>
                                         </div>
                                     </div>
 
-                                    <div class="mt-3 pt-3 border-t border-gray-100">
-                                        <p class="text-xs text-gray-500 font-medium mb-2">Bill for:</p>
-                                        <div class="flex flex-wrap gap-2">
+                                    <div class="mt-2 pt-2 border-t border-gray-100">
+                                        <p class="text-[11px] text-gray-500 font-medium mb-1">Bill for:</p>
+                                        <div class="flex flex-wrap gap-1.5">
                                             @if($deliveryLocked)
-                                                <span class="inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 border-amber-200 bg-amber-50 text-xs font-bold text-amber-600 select-none cursor-not-allowed">
-                                                    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-200">
-                                                        <i class="fas fa-check text-xs text-amber-700"></i>
+                                                <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 border-amber-200 bg-amber-50 text-[11px] font-bold text-amber-600 select-none cursor-not-allowed">
+                                                    <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200">
+                                                        <i class="fas fa-check text-[10px] text-amber-700"></i>
                                                     </span>
-                                                    <i class="fas fa-truck text-xs"></i>
+                                                    <i class="fas fa-truck text-[10px]"></i>
                                                     Delivery Rate
                                                     <span class="font-extrabold tracking-tight">P{{ number_format((float) ($deliveryRequest->delivery_rate ?? 0), 2) }}</span>
-                                                    <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-700 text-xs font-semibold">Billed</span>
+                                                    <span class="px-1 py-0.5 rounded bg-amber-200 text-amber-700 text-[10px] font-semibold">Billed</span>
                                                 </span>
                                             @elseif((float) ($deliveryRequest->delivery_rate ?? 0) > 0)
-                                                <label class="edit-bill-toggle-label inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 text-xs font-bold select-none transition-all duration-150 active:scale-95 {{ $isSelected ? 'cursor-pointer' : 'pointer-events-none opacity-30 cursor-not-allowed' }} {{ $deliverySelected ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200' : 'border-gray-300 bg-gray-100 text-gray-400' }}"
+                                                <label class="edit-bill-toggle-label inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 text-[11px] font-bold select-none transition-all duration-150 active:scale-95 {{ $isSelected ? 'cursor-pointer' : 'pointer-events-none opacity-30 cursor-not-allowed' }} {{ $deliverySelected ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200' : 'border-gray-300 bg-gray-100 text-gray-400' }}"
                                                        data-item="{{ $deliveryRequest->id }}"
                                                        data-type="delivery"
                                                        onclick="event.stopPropagation()">
                                                     <input type="checkbox" class="sr-only" {{ $deliverySelected ? 'checked' : '' }}
                                                            onchange="onEditBillingToggle({{ $deliveryRequest->id }}, 'delivery', this.checked, event)">
-                                                    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full {{ $deliverySelected ? 'bg-white/30' : 'bg-gray-300/50' }}">
-                                                        <i class="fas {{ $deliverySelected ? 'fa-check' : 'fa-truck' }} text-xs"></i>
+                                                    <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full {{ $deliverySelected ? 'bg-white/30' : 'bg-gray-300/50' }}">
+                                                        <i class="fas {{ $deliverySelected ? 'fa-check' : 'fa-truck' }} text-[10px]"></i>
                                                     </span>
-                                                    <i class="edit-bill-type-icon fas fa-truck text-xs {{ $deliverySelected ? '' : 'hidden' }}"></i>
+                                                    <i class="edit-bill-type-icon fas fa-truck text-[10px] {{ $deliverySelected ? '' : 'hidden' }}"></i>
                                                     Delivery Rate
                                                     <span class="font-extrabold tracking-tight">P{{ number_format((float) ($deliveryRequest->delivery_rate ?? 0), 2) }}</span>
                                                 </label>
                                             @endif
 
                                             @if($accessorialLocked)
-                                                <span class="inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 border-amber-200 bg-amber-50 text-xs font-bold text-amber-600 select-none cursor-not-allowed">
-                                                    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-200">
-                                                        <i class="fas fa-check text-xs text-amber-700"></i>
+                                                <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 border-amber-200 bg-amber-50 text-[11px] font-bold text-amber-600 select-none cursor-not-allowed">
+                                                    <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200">
+                                                        <i class="fas fa-check text-[10px] text-amber-700"></i>
                                                     </span>
-                                                    <i class="fas fa-tags text-xs"></i>
+                                                    <i class="fas fa-tags text-[10px]"></i>
                                                     Accessorial
                                                     <span class="font-extrabold tracking-tight">P{{ number_format((float) ($deliveryRequest->accessorial_total ?? 0), 2) }}</span>
-                                                    <span class="px-1.5 py-0.5 rounded bg-amber-200 text-amber-700 text-xs font-semibold">Billed</span>
+                                                    <span class="px-1 py-0.5 rounded bg-amber-200 text-amber-700 text-[10px] font-semibold">Billed</span>
                                                 </span>
                                             @elseif((float) ($deliveryRequest->accessorial_total ?? 0) > 0)
-                                                <label class="edit-bill-toggle-label inline-flex items-center gap-2 rounded-xl px-3 py-2 border-2 text-xs font-bold select-none transition-all duration-150 active:scale-95 {{ $isSelected ? 'cursor-pointer' : 'pointer-events-none opacity-30 cursor-not-allowed' }} {{ $accessorialSelected ? 'border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-200' : 'border-gray-300 bg-gray-100 text-gray-400' }}"
+                                                <label class="edit-bill-toggle-label inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 text-[11px] font-bold select-none transition-all duration-150 active:scale-95 {{ $isSelected ? 'cursor-pointer' : 'pointer-events-none opacity-30 cursor-not-allowed' }} {{ $accessorialSelected ? 'border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-200' : 'border-gray-300 bg-gray-100 text-gray-400' }}"
                                                        data-item="{{ $deliveryRequest->id }}"
                                                        data-type="accessorial"
                                                        onclick="event.stopPropagation()">
                                                     <input type="checkbox" class="sr-only" {{ $accessorialSelected ? 'checked' : '' }}
                                                            onchange="onEditBillingToggle({{ $deliveryRequest->id }}, 'accessorial', this.checked, event)">
-                                                    <span class="inline-flex items-center justify-center w-4 h-4 rounded-full {{ $accessorialSelected ? 'bg-white/30' : 'bg-gray-300/50' }}">
-                                                        <i class="fas {{ $accessorialSelected ? 'fa-check' : 'fa-tags' }} text-xs"></i>
+                                                    <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full {{ $accessorialSelected ? 'bg-white/30' : 'bg-gray-300/50' }}">
+                                                        <i class="fas {{ $accessorialSelected ? 'fa-check' : 'fa-tags' }} text-[10px]"></i>
                                                     </span>
-                                                    <i class="edit-bill-type-icon fas fa-tags text-xs {{ $accessorialSelected ? '' : 'hidden' }}"></i>
+                                                    <i class="edit-bill-type-icon fas fa-tags text-[10px] {{ $accessorialSelected ? '' : 'hidden' }}"></i>
                                                     Accessorial
                                                     <span class="font-extrabold tracking-tight">P{{ number_format((float) ($deliveryRequest->accessorial_total ?? 0), 2) }}</span>
                                                 </label>
@@ -317,7 +329,7 @@
                                             @endif
                                         </div>
 
-                                        <div class="flex justify-end mt-2">
+                                        <div class="flex justify-end mt-1">
                                             <span class="font-bold text-emerald-700 text-sm" id="edit-item-billed-{{ $deliveryRequest->id }}">P0.00</span>
                                         </div>
                                     </div>
@@ -337,6 +349,19 @@
                             <p>No delivery requests found for the selected criteria.</p>
                         </div>
                     @endif
+                </div>
+
+                <div class="mt-4 flex flex-col gap-3 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
+                    <p id="editDeliveryPaginationText">Showing 0 to 0 of 0 entries</p>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="editDeliveryPrev" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+                            Previous
+                        </button>
+                        <span id="editDeliveryPageIndicator" class="min-w-[88px] text-center font-medium text-gray-700">Page 1 of 1</span>
+                        <button type="button" id="editDeliveryNext" class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50">
+                            Next
+                        </button>
+                    </div>
                 </div>
 
                 @error('delivery_request_ids')
@@ -619,12 +644,27 @@ let editModalItems = [];
 let editModalCurrentPage = 1;
 const editCheckedItemIds = new Set();
 const editBillingSelections = new Map();
+let editDeliveryCurrentPage = 1;
+let editDeliveryPageSize = 5;
 
 const _editDrStyle = document.createElement('style');
 _editDrStyle.textContent = `
 @keyframes drFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 .dr-card-enter { animation: drFadeIn 0.2s ease forwards; }
-.edit-delivery-item { content-visibility: auto; contain-intrinsic-size: 220px; }
+.edit-delivery-item { content-visibility: auto; contain-intrinsic-size: 170px; }
+#editDeliveryRequestsContainer .dr-card { padding: 0.5rem 0.625rem !important; border-radius: 0.5rem !important; margin-bottom: 0.375rem !important; }
+#editDeliveryRequestsContainer .dr-card > div { gap: 0.5rem !important; }
+#editDeliveryRequestsContainer .edit-delivery-checkbox { width: 1rem !important; height: 1rem !important; }
+#editDeliveryRequestsContainer .dr-card .flex.flex-wrap.items-center { gap: 0.25rem !important; margin-bottom: 0.25rem !important; }
+#editDeliveryRequestsContainer .dr-card .grid { gap: 0.125rem 0.5rem !important; font-size: 0.675rem !important; line-height: 1.15 !important; }
+#editDeliveryRequestsContainer .dr-card .grid i { width: 0.65rem !important; font-size: 0.55rem !important; }
+#editDeliveryRequestsContainer .dr-card .edit-bill-toggle-label,
+#editDeliveryRequestsContainer .dr-card .select-none { gap: 0.25rem !important; padding: 0.25rem 0.5rem !important; border-radius: 0.375rem !important; font-size: 0.625rem !important; }
+#editDeliveryRequestsContainer .dr-card .edit-bill-toggle-label span.inline-flex,
+#editDeliveryRequestsContainer .dr-card .select-none span.inline-flex { width: 0.75rem !important; height: 0.75rem !important; }
+#editDeliveryRequestsContainer .dr-card .edit-bill-toggle-label i,
+#editDeliveryRequestsContainer .dr-card .select-none i { font-size: 0.55rem !important; }
+#editDeliveryRequestsContainer .dr-card .font-extrabold { font-size: 0.7rem !important; }
 `;
 document.head.appendChild(_editDrStyle);
 
@@ -849,16 +889,20 @@ function populateEditFilterDropdowns() {
     });
 }
 
-function filterEditDeliveryRequests() {
+function filterEditDeliveryRequests(resetPage = true) {
     const searchTerm = (document.getElementById('editSearchDeliveryRequests')?.value || '').toLowerCase().trim();
     const companyFilter = document.getElementById('editFilterByCompany')?.value || '';
     const customerFilter = document.getElementById('editFilterByCustomer')?.value || '';
     const resultsCount = document.getElementById('editResultsCount');
     const emptyState = document.getElementById('editDeliveryRequestsEmptyState');
+    const items = Array.from(document.querySelectorAll('.edit-delivery-item'));
+    const matchedItems = [];
 
-    let visibleCount = 0;
+    if (resetPage) {
+        editDeliveryCurrentPage = 1;
+    }
 
-    document.querySelectorAll('.edit-delivery-item').forEach((item) => {
+    items.forEach((item) => {
         const mtm = item.dataset.mtm || '';
         const site = item.dataset.site || '';
         const companyName = item.dataset.companyName || '';
@@ -874,12 +918,28 @@ function filterEditDeliveryRequests() {
         const matchesCompanyFilter = !companyFilter || itemCompanyId === companyFilter;
         const matchesCustomerFilter = !customerFilter || itemCustomerId === customerFilter;
 
-        const isVisible = matchesSearch && matchesCompanyFilter && matchesCustomerFilter;
-        item.classList.toggle('hidden', !isVisible);
-
-        if (isVisible) {
-            visibleCount++;
+        if (matchesSearch && matchesCompanyFilter && matchesCustomerFilter) {
+            matchedItems.push(item);
         }
+    });
+
+    const visibleCount = matchedItems.length;
+    const totalPages = Math.max(1, Math.ceil(visibleCount / editDeliveryPageSize));
+
+    if (editDeliveryCurrentPage > totalPages) {
+        editDeliveryCurrentPage = totalPages;
+    }
+
+    const startIndex = visibleCount === 0 ? 0 : (editDeliveryCurrentPage - 1) * editDeliveryPageSize;
+    const endIndex = Math.min(startIndex + editDeliveryPageSize, visibleCount);
+
+    items.forEach((item) => {
+        item.classList.add('hidden');
+    });
+
+    matchedItems.forEach((item, index) => {
+        const isOnCurrentPage = index >= startIndex && index < endIndex;
+        item.classList.toggle('hidden', !isOnCurrentPage);
     });
 
     if (resultsCount) {
@@ -889,6 +949,37 @@ function filterEditDeliveryRequests() {
     if (emptyState) {
         emptyState.classList.toggle('hidden', visibleCount !== 0);
     }
+
+    const paginationText = document.getElementById('editDeliveryPaginationText');
+    if (paginationText) {
+        paginationText.textContent = `Showing ${visibleCount === 0 ? 0 : startIndex + 1} to ${visibleCount === 0 ? 0 : endIndex} of ${visibleCount} entries`;
+    }
+
+    const pageIndicator = document.getElementById('editDeliveryPageIndicator');
+    if (pageIndicator) {
+        pageIndicator.textContent = `Page ${totalPages === 0 ? 1 : editDeliveryCurrentPage} of ${totalPages}`;
+    }
+
+    const prevButton = document.getElementById('editDeliveryPrev');
+    if (prevButton) {
+        prevButton.disabled = editDeliveryCurrentPage <= 1 || visibleCount === 0;
+    }
+
+    const nextButton = document.getElementById('editDeliveryNext');
+    if (nextButton) {
+        nextButton.disabled = editDeliveryCurrentPage >= totalPages || visibleCount === 0;
+    }
+}
+
+function changeEditDeliveryPage(page) {
+    editDeliveryCurrentPage = Math.max(1, page);
+    filterEditDeliveryRequests(false);
+}
+
+function changeEditDeliveryPageSize() {
+    editDeliveryPageSize = parseInt(document.getElementById('editDeliveryPageSize')?.value || '5', 10);
+    editDeliveryCurrentPage = 1;
+    filterEditDeliveryRequests(false);
 }
 
 function updateEditSummary() {
@@ -1197,10 +1288,22 @@ document.addEventListener('DOMContentLoaded', function () {
         toggleEditCardStyle(checkbox);
     });
 
+    editDeliveryPageSize = parseInt(document.getElementById('editDeliveryPageSize')?.value || '5', 10);
     filterEditDeliveryRequests();
     updateEditSummary();
 
     document.getElementById('editSoaForm').addEventListener('submit', validateAndSubmitEditForm);
+    document.getElementById('editDeliveryPageSize').addEventListener('change', changeEditDeliveryPageSize);
+    document.getElementById('editDeliveryPrev').addEventListener('click', function () {
+        if (editDeliveryCurrentPage > 1) {
+            editDeliveryCurrentPage -= 1;
+            filterEditDeliveryRequests(false);
+        }
+    });
+    document.getElementById('editDeliveryNext').addEventListener('click', function () {
+        editDeliveryCurrentPage += 1;
+        filterEditDeliveryRequests(false);
+    });
     document.getElementById('editSummaryModal').addEventListener('click', function (event) {
         if (event.target === this) {
             closeEditSummaryModal();

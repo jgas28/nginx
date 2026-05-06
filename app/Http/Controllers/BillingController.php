@@ -351,17 +351,47 @@ class BillingController extends Controller
         $deliveryLineItems = collect();
 
         if ($hasLineItems) {
-            // Pull display data; join eliminates the separate ->with('deliveryStatus') eager-load
+            $fullyBilledIds = [];
+            if ($hasSoaDR) {
+                $fullyBilledIds = DB::table('soa_delivery_requests')
+                    ->selectRaw('delivery_request_id')
+                    ->groupBy('delivery_request_id')
+                    ->havingRaw("
+                        MAX(CASE WHEN billing_type IN ('delivery_only','both') OR billing_type IS NULL THEN 1 ELSE 0 END) = 1
+                        AND MAX(CASE WHEN billing_type IN ('accessorial_only','both') OR billing_type IS NULL THEN 1 ELSE 0 END) = 1
+                    ")
+                    ->pluck('delivery_request_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
+            }
+
+            $deliveryStatusMap = DB::table('delivery_status')
+                ->select('id', 'status_name')
+                ->get()
+                ->mapWithKeys(fn ($status) => [(int) $status->id => (string) $status->status_name]);
+
+            $deliveredStatusIds = $deliveryStatusMap->has(1)
+                ? [1]
+                : $deliveryStatusMap
+                    ->filter(function ($statusName) {
+                        $normalizedStatusName = strtolower($statusName);
+                        return str_contains($normalizedStatusName, 'deliver') || str_contains($normalizedStatusName, 'complet');
+                    })
+                    ->keys()
+                    ->all();
+
+            // Load every active line item attached to a delivered request that is not fully billed yet.
             $deliveryLineItems = \App\Models\DeliveryRequestLineItem::query()
                 ->leftJoin($deliveryRequestTable, function ($join) use ($deliveryRequestTable) {
                     $join->on($deliveryRequestTable . '.id', '=', 'delivery_request_line_items.dr_id')
                         ->orOn($deliveryRequestTable . '.mtm', '=', 'delivery_request_line_items.mtm');
                 })
-                ->leftJoin('companies',  'companies.id',  '=', $deliveryRequestTable . '.company_id')
-                ->leftJoin('customers',  'customers.id',  '=', $deliveryRequestTable . '.customer_id')
+                ->leftJoin('companies', 'companies.id', '=', $deliveryRequestTable . '.company_id')
+                ->leftJoin('customers', 'customers.id', '=', $deliveryRequestTable . '.customer_id')
                 ->leftJoin('delivery_status as request_delivery_status', 'request_delivery_status.id', '=', $deliveryRequestTable . '.delivery_status')
                 ->select([
                     'delivery_request_line_items.*',
+                    $deliveryRequestTable . '.id as delivery_request_id',
                     $deliveryRequestTable . '.booking_date as delivery_request_booking_date',
                     $deliveryRequestTable . '.delivery_date as delivery_request_delivery_date',
                     $deliveryRequestTable . '.delivery_rate as delivery_request_amount',
@@ -374,42 +404,47 @@ class BillingController extends Controller
                     'request_delivery_status.status_name as joined_delivery_status_name',
                 ])
                 ->where('delivery_request_line_items.status', '1')
-                ->where(function ($q) {
-                    $q->where('request_delivery_status.status_name', 'like', '%deliver%')
-                      ->orWhere('request_delivery_status.status_name', 'like', '%complet%');
+                ->where(function ($query) use ($deliveryRequestTable, $deliveredStatusIds) {
+                    if (!empty($deliveredStatusIds)) {
+                        $query->whereIn($deliveryRequestTable . '.delivery_status', $deliveredStatusIds);
+                    } else {
+                        $query->whereRaw('1 = 0');
+                    }
                 })
-                ->orderBy('delivery_request_line_items.created_at', 'desc')
-                ->limit(100)
+                ->when(!empty($fullyBilledIds), function ($query) use ($deliveryRequestTable, $fullyBilledIds) {
+                    $query->whereNotIn($deliveryRequestTable . '.id', $fullyBilledIds);
+                })
+                ->orderByDesc($deliveryRequestTable . '.created_at')
+                ->orderByDesc('delivery_request_line_items.created_at')
                 ->get();
 
-            // Filter out fully-billed items — query only the dr_ids in the result set, not the whole table
             if ($hasSoaDR && $deliveryLineItems->isNotEmpty()) {
-                $drIdsInView = $deliveryLineItems->pluck('dr_id')->filter()
-                    ->map(fn ($id) => (int) $id)->unique()->values()->all();
+                $deliveryRequestIdsInView = $deliveryLineItems
+                    ->map(fn ($item) => (int) ($item->delivery_request_id ?: $item->dr_id))
+                    ->filter()
+                    ->unique()
+                    ->values()
+                    ->all();
 
                 $usedBillingMap = DB::table('soa_delivery_requests')
                     ->selectRaw("delivery_request_id,
                         MAX(CASE WHEN billing_type IN ('delivery_only','both') OR billing_type IS NULL THEN 1 ELSE 0 END) as has_delivery,
                         MAX(CASE WHEN billing_type IN ('accessorial_only','both') OR billing_type IS NULL THEN 1 ELSE 0 END) as has_accessorial")
-                    ->whereIn('delivery_request_id', $drIdsInView)
+                    ->whereIn('delivery_request_id', $deliveryRequestIdsInView)
                     ->groupBy('delivery_request_id')
                     ->get()
                     ->mapWithKeys(function ($row) {
                         $type = ($row->has_delivery && $row->has_accessorial) ? 'both'
-                            : ($row->has_delivery    ? 'delivery_only'
-                            : ($row->has_accessorial ? 'accessorial_only' : 'both'));
+                            : ($row->has_delivery ? 'delivery_only'
+                            : ($row->has_accessorial ? 'accessorial_only' : null));
+
                         return [(int) $row->delivery_request_id => $type];
                     });
 
                 $deliveryLineItems = $deliveryLineItems
-                    ->filter(function ($item) use ($usedBillingMap) {
-                        $drId = $item->dr_id ?: null;
-                        if (!$drId || !$usedBillingMap->has($drId)) return true;
-                        return $usedBillingMap->get($drId) !== 'both';
-                    })
                     ->map(function ($item) use ($usedBillingMap) {
-                        $drId = $item->dr_id ?: null;
-                        $item->already_billed = ($drId && $usedBillingMap->has($drId)) ? $usedBillingMap->get($drId) : null;
+                        $requestId = (int) ($item->delivery_request_id ?: $item->dr_id);
+                        $item->already_billed = $requestId ? $usedBillingMap->get($requestId) : null;
                         return $item;
                     })
                     ->values();
@@ -732,13 +767,15 @@ class BillingController extends Controller
             ->select('id', 'status_name')
             ->get()
             ->mapWithKeys(fn ($status) => [(int) $status->id => (string) $status->status_name]);
-        $deliveredStatusIds = $deliveryStatusMap
-            ->filter(function ($statusName) {
-                $normalizedStatusName = strtolower($statusName);
-                return str_contains($normalizedStatusName, 'deliver') || str_contains($normalizedStatusName, 'complet');
-            })
-            ->keys()
-            ->all();
+        $deliveredStatusIds = $deliveryStatusMap->has(1)
+            ? [1]
+            : $deliveryStatusMap
+                ->filter(function ($statusName) {
+                    $normalizedStatusName = strtolower($statusName);
+                    return str_contains($normalizedStatusName, 'deliver') || str_contains($normalizedStatusName, 'complet');
+                })
+                ->keys()
+                ->all();
 
         $result = DB::table($deliveryRequestTable)
             ->select([
@@ -752,6 +789,7 @@ class BillingController extends Controller
                 $deliveryRequestTable . '.customer_id',
             ])
             ->where(function ($query) use ($deliveryRequestTable, $fullyBilledIds, $deliveredStatusIds, $selectedIds) {
+                // New eligible items: not fully billed elsewhere AND delivered status
                 $query->where(function ($eligibleQuery) use ($deliveryRequestTable, $fullyBilledIds, $deliveredStatusIds) {
                     if (!empty($fullyBilledIds)) {
                         $eligibleQuery->whereNotIn($deliveryRequestTable . '.id', $fullyBilledIds);
