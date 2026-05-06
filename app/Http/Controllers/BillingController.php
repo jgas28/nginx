@@ -20,15 +20,56 @@ class BillingController extends Controller
 {
     // ── Table-existence cache — Schema::hasTable() hits information_schema; resolve once per process ──
     private static array $tableCache = [];
+    private static array $columnCache = [];
 
     private function tableExists(string $table): bool
     {
         return static::$tableCache[$table] ??= Schema::hasTable($table);
     }
 
+    private function columnExists(string $table, string $column): bool
+    {
+        $key = $table . '.' . $column;
+
+        if (array_key_exists($key, static::$columnCache)) {
+            return static::$columnCache[$key];
+        }
+
+        return static::$columnCache[$key] = $this->tableExists($table) && Schema::hasColumn($table, $column);
+    }
+
     private function drTable(): string
     {
         return $this->tableExists('delivery_request') ? 'delivery_request' : 'delivery_requests';
+    }
+
+    private function getDeliveryStatusMap()
+    {
+        if (!$this->tableExists('delivery_status')) {
+            return collect();
+        }
+
+        return DB::table('delivery_status')
+            ->select('id', 'status_name')
+            ->get()
+            ->mapWithKeys(fn ($status) => [(int) $status->id => (string) $status->status_name]);
+    }
+
+    private function getDeliveredStatusIds($deliveryStatusMap): array
+    {
+        if ($deliveryStatusMap->has(1)) {
+            return [1];
+        }
+
+        $matchedIds = $deliveryStatusMap
+            ->filter(function ($statusName) {
+                $normalizedStatusName = strtolower($statusName);
+                return str_contains($normalizedStatusName, 'deliver') || str_contains($normalizedStatusName, 'complet');
+            })
+            ->keys()
+            ->all();
+
+        return !empty($matchedIds) ? $matchedIds : [1];
     }
 
     private function soaStats(): array
@@ -351,6 +392,12 @@ class BillingController extends Controller
         $deliveryLineItems = collect();
 
         if ($hasLineItems) {
+            $hasDeliveryStatusTable = $this->tableExists('delivery_status');
+            $hasDeliveryStatusColumn = $this->columnExists($deliveryRequestTable, 'delivery_status');
+            $hasDeliveryRequestStatusColumn = $this->columnExists($deliveryRequestTable, 'status');
+            $hasDeliveryRequestCreatedAt = $this->columnExists($deliveryRequestTable, 'created_at');
+            $hasLineItemCreatedAt = $this->columnExists('delivery_request_line_items', 'created_at');
+
             $fullyBilledIds = [];
             if ($hasSoaDR) {
                 $fullyBilledIds = DB::table('soa_delivery_requests')
@@ -365,58 +412,75 @@ class BillingController extends Controller
                     ->all();
             }
 
-            $deliveryStatusMap = DB::table('delivery_status')
-                ->select('id', 'status_name')
-                ->get()
-                ->mapWithKeys(fn ($status) => [(int) $status->id => (string) $status->status_name]);
-
-            $deliveredStatusIds = $deliveryStatusMap->has(1)
-                ? [1]
-                : $deliveryStatusMap
-                    ->filter(function ($statusName) {
-                        $normalizedStatusName = strtolower($statusName);
-                        return str_contains($normalizedStatusName, 'deliver') || str_contains($normalizedStatusName, 'complet');
-                    })
-                    ->keys()
-                    ->all();
+            $deliveryStatusMap = $this->getDeliveryStatusMap();
+            $deliveredStatusIds = $this->getDeliveredStatusIds($deliveryStatusMap);
 
             // Load every active line item attached to a delivered request that is not fully billed yet.
-            $deliveryLineItems = \App\Models\DeliveryRequestLineItem::query()
+            $selectColumns = [
+                'delivery_request_line_items.*',
+                $deliveryRequestTable . '.id as delivery_request_id',
+                $deliveryRequestTable . '.booking_date as delivery_request_booking_date',
+                $deliveryRequestTable . '.delivery_date as delivery_request_delivery_date',
+                $deliveryRequestTable . '.delivery_rate as delivery_request_amount',
+                $deliveryRequestTable . '.company_id as delivery_request_company_id',
+                $deliveryRequestTable . '.customer_id as delivery_request_customer_id',
+                'companies.company_name as joined_company_name',
+                'customers.name as joined_customer_name',
+            ];
+
+            $selectColumns[] = $hasDeliveryRequestStatusColumn
+                ? $deliveryRequestTable . '.status as delivery_request_status'
+                : DB::raw('NULL as delivery_request_status');
+
+            $selectColumns[] = $hasDeliveryStatusColumn
+                ? $deliveryRequestTable . '.delivery_status as delivery_request_delivery_status'
+                : DB::raw('NULL as delivery_request_delivery_status');
+
+            $deliveryLineItemsQuery = \App\Models\DeliveryRequestLineItem::query()
                 ->leftJoin($deliveryRequestTable, function ($join) use ($deliveryRequestTable) {
                     $join->on($deliveryRequestTable . '.id', '=', 'delivery_request_line_items.dr_id')
                         ->orOn($deliveryRequestTable . '.mtm', '=', 'delivery_request_line_items.mtm');
                 })
                 ->leftJoin('companies', 'companies.id', '=', $deliveryRequestTable . '.company_id')
                 ->leftJoin('customers', 'customers.id', '=', $deliveryRequestTable . '.customer_id')
-                ->leftJoin('delivery_status as request_delivery_status', 'request_delivery_status.id', '=', $deliveryRequestTable . '.delivery_status')
-                ->select([
-                    'delivery_request_line_items.*',
-                    $deliveryRequestTable . '.id as delivery_request_id',
-                    $deliveryRequestTable . '.booking_date as delivery_request_booking_date',
-                    $deliveryRequestTable . '.delivery_date as delivery_request_delivery_date',
-                    $deliveryRequestTable . '.delivery_rate as delivery_request_amount',
-                    $deliveryRequestTable . '.status as delivery_request_status',
-                    $deliveryRequestTable . '.delivery_status as delivery_request_delivery_status',
-                    $deliveryRequestTable . '.company_id as delivery_request_company_id',
-                    $deliveryRequestTable . '.customer_id as delivery_request_customer_id',
-                    'companies.company_name as joined_company_name',
-                    'customers.name as joined_customer_name',
-                    'request_delivery_status.status_name as joined_delivery_status_name',
-                ])
-                ->where('delivery_request_line_items.status', '1')
-                ->where(function ($query) use ($deliveryRequestTable, $deliveredStatusIds) {
-                    if (!empty($deliveredStatusIds)) {
-                        $query->whereIn($deliveryRequestTable . '.delivery_status', $deliveredStatusIds);
-                    } else {
-                        $query->whereRaw('1 = 0');
-                    }
-                })
+                ->select($selectColumns)
+                ->where('delivery_request_line_items.status', '1');
+
+            if ($hasDeliveryStatusTable && $hasDeliveryStatusColumn) {
+                $deliveryLineItemsQuery
+                    ->leftJoin('delivery_status as request_delivery_status', 'request_delivery_status.id', '=', $deliveryRequestTable . '.delivery_status')
+                    ->addSelect('request_delivery_status.status_name as joined_delivery_status_name')
+                    ->whereIn($deliveryRequestTable . '.delivery_status', $deliveredStatusIds);
+            } elseif ($hasDeliveryStatusColumn) {
+                $deliveryLineItemsQuery->where($deliveryRequestTable . '.delivery_status', 1);
+            } elseif ($hasDeliveryRequestStatusColumn) {
+                $deliveryLineItemsQuery->where(function ($query) use ($deliveryRequestTable) {
+                    $query->where($deliveryRequestTable . '.status', '1')
+                        ->orWhere($deliveryRequestTable . '.status', 'like', '%deliver%')
+                        ->orWhere($deliveryRequestTable . '.status', 'like', '%complet%');
+                });
+            } else {
+                $deliveryLineItemsQuery->whereRaw('1 = 0');
+            }
+
+            $deliveryLineItemsQuery
                 ->when(!empty($fullyBilledIds), function ($query) use ($deliveryRequestTable, $fullyBilledIds) {
                     $query->whereNotIn($deliveryRequestTable . '.id', $fullyBilledIds);
-                })
-                ->orderByDesc($deliveryRequestTable . '.created_at')
-                ->orderByDesc('delivery_request_line_items.created_at')
-                ->get();
+                });
+
+            if ($hasDeliveryRequestCreatedAt) {
+                $deliveryLineItemsQuery->orderByDesc($deliveryRequestTable . '.created_at');
+            } else {
+                $deliveryLineItemsQuery->orderByDesc($deliveryRequestTable . '.id');
+            }
+
+            if ($hasLineItemCreatedAt) {
+                $deliveryLineItemsQuery->orderByDesc('delivery_request_line_items.created_at');
+            } else {
+                $deliveryLineItemsQuery->orderByDesc('delivery_request_line_items.id');
+            }
+
+            $deliveryLineItems = $deliveryLineItemsQuery->get();
 
             if ($hasSoaDR && $deliveryLineItems->isNotEmpty()) {
                 $deliveryRequestIdsInView = $deliveryLineItems
@@ -742,6 +806,9 @@ class BillingController extends Controller
         $attachedDeliveryRequests = $attachedDeliveryRequests ?: $this->getAttachedDeliveryRequests($soa);
         $companyNameMap = ($companies ?: Company::query()->get(['id', 'company_name']))->pluck('company_name', 'id');
         $customerNameMap = ($customers ?: Customer::query()->get(['id', 'name']))->pluck('name', 'id');
+        $hasDeliveryStatusColumn = $this->columnExists($deliveryRequestTable, 'delivery_status');
+        $hasDeliveryRequestStatusColumn = $this->columnExists($deliveryRequestTable, 'status');
+        $hasDeliveryRequestCreatedAt = $this->columnExists($deliveryRequestTable, 'created_at');
 
         $selectedIds = collect($soa->delivery_request_ids ?? [])
             ->merge($attachedDeliveryRequests->pluck('delivery_request_id'))
@@ -763,40 +830,42 @@ class BillingController extends Controller
             ->pluck('delivery_request_id')
             ->map(fn ($id) => (int) $id)
             ->all();
-        $deliveryStatusMap = DB::table('delivery_status')
-            ->select('id', 'status_name')
-            ->get()
-            ->mapWithKeys(fn ($status) => [(int) $status->id => (string) $status->status_name]);
-        $deliveredStatusIds = $deliveryStatusMap->has(1)
-            ? [1]
-            : $deliveryStatusMap
-                ->filter(function ($statusName) {
-                    $normalizedStatusName = strtolower($statusName);
-                    return str_contains($normalizedStatusName, 'deliver') || str_contains($normalizedStatusName, 'complet');
-                })
-                ->keys()
-                ->all();
+        $deliveryStatusMap = $this->getDeliveryStatusMap();
+        $deliveredStatusIds = $this->getDeliveredStatusIds($deliveryStatusMap);
 
-        $result = DB::table($deliveryRequestTable)
-            ->select([
-                $deliveryRequestTable . '.id',
-                $deliveryRequestTable . '.mtm',
-                $deliveryRequestTable . '.booking_date',
-                $deliveryRequestTable . '.delivery_date',
-                $deliveryRequestTable . '.delivery_rate',
-                $deliveryRequestTable . '.delivery_status',
-                $deliveryRequestTable . '.company_id',
-                $deliveryRequestTable . '.customer_id',
-            ])
-            ->where(function ($query) use ($deliveryRequestTable, $fullyBilledIds, $deliveredStatusIds, $selectedIds) {
+        $selectColumns = [
+            $deliveryRequestTable . '.id',
+            $deliveryRequestTable . '.mtm',
+            $deliveryRequestTable . '.booking_date',
+            $deliveryRequestTable . '.delivery_date',
+            $deliveryRequestTable . '.delivery_rate',
+            $deliveryRequestTable . '.company_id',
+            $deliveryRequestTable . '.customer_id',
+        ];
+
+        $selectColumns[] = $hasDeliveryStatusColumn
+            ? $deliveryRequestTable . '.delivery_status'
+            : DB::raw('NULL as delivery_status');
+
+        $resultQuery = DB::table($deliveryRequestTable)
+            ->select($selectColumns)
+            ->where(function ($query) use ($deliveryRequestTable, $fullyBilledIds, $deliveredStatusIds, $selectedIds, $hasDeliveryStatusColumn) {
                 // New eligible items: not fully billed elsewhere AND delivered status
-                $query->where(function ($eligibleQuery) use ($deliveryRequestTable, $fullyBilledIds, $deliveredStatusIds) {
+                $query->where(function ($eligibleQuery) use ($deliveryRequestTable, $fullyBilledIds, $deliveredStatusIds, $hasDeliveryStatusColumn) {
                     if (!empty($fullyBilledIds)) {
                         $eligibleQuery->whereNotIn($deliveryRequestTable . '.id', $fullyBilledIds);
                     }
 
-                    if (!empty($deliveredStatusIds)) {
+                    if ($hasDeliveryStatusColumn && !empty($deliveredStatusIds)) {
                         $eligibleQuery->whereIn($deliveryRequestTable . '.delivery_status', $deliveredStatusIds);
+                    } elseif ($hasDeliveryStatusColumn) {
+                        $eligibleQuery->where($deliveryRequestTable . '.delivery_status', 1);
+                    } elseif ($hasDeliveryRequestStatusColumn) {
+                        $eligibleQuery->where(function ($fallbackQuery) use ($deliveryRequestTable) {
+                            $fallbackQuery->where($deliveryRequestTable . '.status', '1')
+                                ->orWhere($deliveryRequestTable . '.status', 'like', '%deliver%')
+                                ->orWhere($deliveryRequestTable . '.status', 'like', '%complet%');
+                        });
                     } else {
                         $eligibleQuery->whereRaw('1 = 0');
                     }
@@ -806,8 +875,15 @@ class BillingController extends Controller
                     $query->orWhereIn($deliveryRequestTable . '.id', $selectedIds);
                 }
             })
-            ->orderByRaw('CASE WHEN ' . $deliveryRequestTable . '.id IN (' . (count($selectedIds) ? implode(',', $selectedIds) : '0') . ') THEN 0 ELSE 1 END')
-            ->orderByDesc($deliveryRequestTable . '.created_at')
+            ->orderByRaw('CASE WHEN ' . $deliveryRequestTable . '.id IN (' . (count($selectedIds) ? implode(',', $selectedIds) : '0') . ') THEN 0 ELSE 1 END');
+
+        if ($hasDeliveryRequestCreatedAt) {
+            $resultQuery->orderByDesc($deliveryRequestTable . '.created_at');
+        } else {
+            $resultQuery->orderByDesc($deliveryRequestTable . '.id');
+        }
+
+        $result = $resultQuery
             ->orderByDesc($deliveryRequestTable . '.delivery_date')
             ->get()
             ->values();
