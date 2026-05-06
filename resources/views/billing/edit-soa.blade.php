@@ -169,186 +169,12 @@
                 </div>
 
                 <div id="editDeliveryRequestsContainer" class="max-h-[72vh] overflow-y-auto border border-gray-200 rounded-xl bg-white">
-                    @php
-                        $selectedIdLookup = array_fill_keys(
-                            collect(old('delivery_request_ids', $selectedDeliveryRequestIds))
-                                ->map(fn ($id) => (int) $id)
-                                ->all(),
-                            true
-                        );
-                    @endphp
-                    @forelse($editableDeliveryRequests as $deliveryRequest)
-                        @php
-                            $requestId = (int) $deliveryRequest->id;
-                            $isSelected = isset($selectedIdLookup[$requestId]);
-                            $hasCurrentBillingSelection = array_key_exists($requestId, $currentBillingSelections);
-                            $billingType = old('item_billing.' . $deliveryRequest->id, $hasCurrentBillingSelection ? $currentBillingSelections[$requestId] : ($deliveryRequest->current_billing_type ?? null));
-                            $alreadyBilled = $deliveryRequest->already_billed ?? null;
-                            $deliveryLocked = $alreadyBilled === 'delivery_only';
-                            $accessorialLocked = $alreadyBilled === 'accessorial_only';
-                            $deliverySelected = in_array($billingType, ['delivery_only', 'both'], true) && !$deliveryLocked;
-                            $accessorialSelected = in_array($billingType, ['accessorial_only', 'both'], true) && !$accessorialLocked;
-                            $partiallyBilled = filled($alreadyBilled);
-                        @endphp
-                        <div class="edit-delivery-item dr-card dr-card-enter border {{ $isSelected ? 'border-blue-400 bg-blue-50 shadow-sm' : ($partiallyBilled ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200') }} rounded-lg px-3 py-2.5 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 transition-all duration-150 mb-2 last:mb-0"
-                             style="animation-delay:{{ $loop->iteration * 35 }}ms; opacity:0;"
-                             data-id="{{ $deliveryRequest->id }}"
-                             data-mtm="{{ strtolower($deliveryRequest->mtm ?? '') }}"
-                             data-site="{{ strtolower($deliveryRequest->site_name ?? '') }}"
-                             data-company-id="{{ $deliveryRequest->company_id ?? '' }}"
-                             data-company-name="{{ strtolower($deliveryRequest->company_name ?? '') }}"
-                             data-customer-id="{{ $deliveryRequest->customer_id ?? '' }}"
-                             data-customer-name="{{ strtolower($deliveryRequest->customer_name ?? '') }}"
-                             data-mtm-display="{{ $deliveryRequest->mtm ?? 'N/A' }}"
-                             data-site-display="{{ $deliveryRequest->site_name ?? '' }}"
-                             data-booking-date="{{ $deliveryRequest->booking_date ?? '' }}"
-                             data-delivery-date="{{ $deliveryRequest->delivery_date ?? '' }}"
-                             data-delivery-rate="{{ (float) ($deliveryRequest->delivery_rate ?? 0) }}"
-                             data-accessorial-total="{{ (float) ($deliveryRequest->accessorial_total ?? 0) }}"
-                             data-company-display="{{ $deliveryRequest->company_name ?? 'N/A' }}"
-                             data-customer-display="{{ $deliveryRequest->customer_name ?? 'N/A' }}"
-                             data-already-billed="{{ $alreadyBilled ?? '' }}"
-                             data-current-billing-type="{{ $billingType ?? '' }}"
-                             data-partially-billed="{{ $partiallyBilled ? '1' : '0' }}"
-                             onclick="toggleEditCard(this)">
-                            <div class="flex items-start gap-2.5">
-                                <div class="flex-shrink-0 pt-0">
-                                    <input type="checkbox"
-                                           name="delivery_request_ids[]"
-                                           value="{{ $deliveryRequest->id }}"
-                                           class="edit-delivery-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 cursor-pointer accent-blue-600"
-                                           {{ $isSelected ? 'checked' : '' }}
-                                           onclick="event.stopPropagation()"
-                                           onchange="toggleEditCardStyle(this)">
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
-                                        <span class="font-semibold text-[13px] text-gray-900">MTM: {{ $deliveryRequest->mtm ?? 'N/A' }}</span>
-                                        <span class="text-[11px] text-gray-400">#{{ $deliveryRequest->id }}</span>
-                                        <span class="px-1.5 py-0.5 rounded-full text-[11px] font-medium bg-green-100 text-green-700">{{ $deliveryRequest->status_name ?? 'Delivered' }}</span>
-                                        @if($alreadyBilled === 'delivery_only')
-                                            <span class="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 border border-amber-200">
-                                                <i class="fas fa-truck mr-1 text-[10px]"></i>Delivery billed
-                                            </span>
-                                        @elseif($alreadyBilled === 'accessorial_only')
-                                            <span class="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 border border-amber-200">
-                                                <i class="fas fa-tags mr-1 text-[10px]"></i>Accessorial billed
-                                            </span>
-                                        @elseif($alreadyBilled === 'both')
-                                            <span class="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 border border-red-200">
-                                                <i class="fas fa-check-circle mr-1 text-[10px]"></i>Fully billed
-                                            </span>
-                                        @endif
-                                        @if($partiallyBilled && $alreadyBilled !== 'both')
-                                            <span class="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 border border-amber-200">
-                                                <i class="fas fa-exclamation-circle mr-1"></i>Partially billed
-                                            </span>
-                                        @endif
-                                    </div>
-
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-3 gap-y-0.5 text-[10px] text-gray-500">
-                                        <div class="flex items-center gap-1.5 min-w-0">
-                                            <i class="fas fa-calendar-alt text-gray-300 w-3 flex-shrink-0"></i>
-                                            <span class="truncate">Booking: {{ $deliveryRequest->booking_date ? \Carbon\Carbon::parse($deliveryRequest->booking_date)->format('M d, Y') : 'N/A' }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-1.5 min-w-0">
-                                            <i class="fas fa-truck text-gray-300 w-3 flex-shrink-0"></i>
-                                            <span class="truncate">Delivery: {{ $deliveryRequest->delivery_date ? \Carbon\Carbon::parse($deliveryRequest->delivery_date)->format('M d, Y') : 'N/A' }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-1.5 min-w-0">
-                                            <i class="fas fa-building text-gray-300 w-3 flex-shrink-0"></i>
-                                            <span class="truncate">{{ $deliveryRequest->company_name ?? 'N/A' }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-1.5 min-w-0">
-                                            <i class="fas fa-user text-gray-300 w-3 flex-shrink-0"></i>
-                                            <span class="truncate">{{ $deliveryRequest->customer_name ?? 'N/A' }}</span>
-                                        </div>
-                                        <div class="flex items-center gap-1.5 min-w-0 sm:col-span-2 xl:col-span-1">
-                                            <i class="fas fa-map-marker-alt text-gray-300 w-3 flex-shrink-0"></i>
-                                            <span class="truncate">{{ $deliveryRequest->site_name ?: 'N/A' }}</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="mt-2 pt-2 border-t border-gray-100">
-                                        <p class="text-[11px] text-gray-500 font-medium mb-1">Bill for:</p>
-                                        <div class="flex flex-wrap gap-1.5">
-                                            @if($deliveryLocked)
-                                                <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 border-amber-200 bg-amber-50 text-[11px] font-bold text-amber-600 select-none cursor-not-allowed">
-                                                    <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200">
-                                                        <i class="fas fa-check text-[10px] text-amber-700"></i>
-                                                    </span>
-                                                    <i class="fas fa-truck text-[10px]"></i>
-                                                    Delivery Rate
-                                                    <span class="font-extrabold tracking-tight">P{{ number_format((float) ($deliveryRequest->delivery_rate ?? 0), 2) }}</span>
-                                                    <span class="px-1 py-0.5 rounded bg-amber-200 text-amber-700 text-[10px] font-semibold">Billed</span>
-                                                </span>
-                                            @elseif((float) ($deliveryRequest->delivery_rate ?? 0) > 0)
-                                                <label class="edit-bill-toggle-label inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 text-[11px] font-bold select-none transition-all duration-150 active:scale-95 {{ $isSelected ? 'cursor-pointer' : 'pointer-events-none opacity-30 cursor-not-allowed' }} {{ $deliverySelected ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200' : 'border-gray-300 bg-gray-100 text-gray-400' }}"
-                                                       data-item="{{ $deliveryRequest->id }}"
-                                                       data-type="delivery"
-                                                       onclick="event.stopPropagation()">
-                                                    <input type="checkbox" class="sr-only" {{ $deliverySelected ? 'checked' : '' }}
-                                                           onchange="onEditBillingToggle({{ $deliveryRequest->id }}, 'delivery', this.checked, event)">
-                                                    <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full {{ $deliverySelected ? 'bg-white/30' : 'bg-gray-300/50' }}">
-                                                        <i class="fas {{ $deliverySelected ? 'fa-check' : 'fa-truck' }} text-[10px]"></i>
-                                                    </span>
-                                                    <i class="edit-bill-type-icon fas fa-truck text-[10px] {{ $deliverySelected ? '' : 'hidden' }}"></i>
-                                                    Delivery Rate
-                                                    <span class="font-extrabold tracking-tight">P{{ number_format((float) ($deliveryRequest->delivery_rate ?? 0), 2) }}</span>
-                                                </label>
-                                            @endif
-
-                                            @if($accessorialLocked)
-                                                <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 border-amber-200 bg-amber-50 text-[11px] font-bold text-amber-600 select-none cursor-not-allowed">
-                                                    <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200">
-                                                        <i class="fas fa-check text-[10px] text-amber-700"></i>
-                                                    </span>
-                                                    <i class="fas fa-tags text-[10px]"></i>
-                                                    Accessorial
-                                                    <span class="font-extrabold tracking-tight">P{{ number_format((float) ($deliveryRequest->accessorial_total ?? 0), 2) }}</span>
-                                                    <span class="px-1 py-0.5 rounded bg-amber-200 text-amber-700 text-[10px] font-semibold">Billed</span>
-                                                </span>
-                                            @elseif((float) ($deliveryRequest->accessorial_total ?? 0) > 0)
-                                                <label class="edit-bill-toggle-label inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 text-[11px] font-bold select-none transition-all duration-150 active:scale-95 {{ $isSelected ? 'cursor-pointer' : 'pointer-events-none opacity-30 cursor-not-allowed' }} {{ $accessorialSelected ? 'border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-200' : 'border-gray-300 bg-gray-100 text-gray-400' }}"
-                                                       data-item="{{ $deliveryRequest->id }}"
-                                                       data-type="accessorial"
-                                                       onclick="event.stopPropagation()">
-                                                    <input type="checkbox" class="sr-only" {{ $accessorialSelected ? 'checked' : '' }}
-                                                           onchange="onEditBillingToggle({{ $deliveryRequest->id }}, 'accessorial', this.checked, event)">
-                                                    <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full {{ $accessorialSelected ? 'bg-white/30' : 'bg-gray-300/50' }}">
-                                                        <i class="fas {{ $accessorialSelected ? 'fa-check' : 'fa-tags' }} text-[10px]"></i>
-                                                    </span>
-                                                    <i class="edit-bill-type-icon fas fa-tags text-[10px] {{ $accessorialSelected ? '' : 'hidden' }}"></i>
-                                                    Accessorial
-                                                    <span class="font-extrabold tracking-tight">P{{ number_format((float) ($deliveryRequest->accessorial_total ?? 0), 2) }}</span>
-                                                </label>
-                                            @endif
-
-                                            @if((float) ($deliveryRequest->delivery_rate ?? 0) <= 0 && (float) ($deliveryRequest->accessorial_total ?? 0) <= 0)
-                                                <span class="text-xs text-gray-400 italic">No rate data</span>
-                                            @endif
-                                        </div>
-
-                                        <div class="flex justify-end mt-1">
-                                            <span class="font-bold text-emerald-700 text-sm" id="edit-item-billed-{{ $deliveryRequest->id }}">P0.00</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="flex flex-col items-center justify-center py-12 text-gray-400">
+                        <div class="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
+                            <i class="fas fa-truck-loading text-blue-400 text-2xl"></i>
                         </div>
-                    @empty
-                        <div class="text-center py-8 text-gray-500">
-                            <i class="fas fa-inbox text-3xl mb-4"></i>
-                            <p>No delivery requests available for this SOA.</p>
-                        </div>
-                    @endforelse
-
-                    @if(count($editableDeliveryRequests) > 0)
-                        <div id="editDeliveryRequestsEmptyState" class="hidden text-center py-8 text-gray-500">
-                            <i class="fas fa-search text-3xl mb-4"></i>
-                            <p>No delivery requests found for the selected criteria.</p>
-                        </div>
-                    @endif
+                        <p class="text-sm font-medium text-gray-500">Loading delivery requests&hellip;</p>
+                    </div>
                 </div>
 
                 <div class="mt-4 flex flex-col gap-3 text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between">
@@ -624,21 +450,47 @@
 </div>
 
 <script>
-const editLineItems = Array.from(document.querySelectorAll('.edit-delivery-item')).map((item) => ({
-    id: parseInt(item.dataset.id || '0', 10),
-    mtm: item.dataset.mtmDisplay || 'N/A',
-    siteName: item.dataset.siteDisplay || '',
-    bookingDate: item.dataset.bookingDate || '',
-    deliveryDate: item.dataset.deliveryDate || '',
-    deliveryRate: Number(item.dataset.deliveryRate || 0),
-    accessorialTotal: Number(item.dataset.accessorialTotal || 0),
-    companyId: item.dataset.companyId || '',
-    companyName: item.dataset.companyDisplay || 'N/A',
-    customerId: item.dataset.customerId || '',
-    customerName: item.dataset.customerDisplay || 'N/A',
-    alreadyBilled: item.dataset.alreadyBilled || '',
-    currentBillingType: item.dataset.currentBillingType || '',
-}));
+@php
+    $initialEditSelectedIds = collect(old('delivery_request_ids', $selectedDeliveryRequestIds))
+        ->map(fn ($id) => (int) $id)
+        ->values()
+        ->all();
+
+    $initialEditBillingTypes = collect($editableDeliveryRequests)->mapWithKeys(function ($deliveryRequest) use ($currentBillingSelections) {
+        $requestId = (int) $deliveryRequest->id;
+        $hasCurrentBillingSelection = array_key_exists($requestId, $currentBillingSelections);
+
+        return [
+            $requestId => old(
+                'item_billing.' . $deliveryRequest->id,
+                $hasCurrentBillingSelection ? $currentBillingSelections[$requestId] : ($deliveryRequest->current_billing_type ?? null)
+            ),
+        ];
+    })->all();
+
+    $editLineItemPayload = collect($editableDeliveryRequests)->map(function ($deliveryRequest) use ($initialEditBillingTypes) {
+        $requestId = (int) $deliveryRequest->id;
+
+        return [
+            'id' => $requestId,
+            'mtm' => $deliveryRequest->mtm ?? 'N/A',
+            'siteName' => $deliveryRequest->site_name ?? '',
+            'bookingDate' => $deliveryRequest->booking_date ?? '',
+            'deliveryDate' => $deliveryRequest->delivery_date ?? '',
+            'deliveryRate' => (float) ($deliveryRequest->delivery_rate ?? 0),
+            'accessorialTotal' => (float) ($deliveryRequest->accessorial_total ?? 0),
+            'companyId' => (string) ($deliveryRequest->company_id ?? ''),
+            'companyName' => $deliveryRequest->company_name ?? 'N/A',
+            'customerId' => (string) ($deliveryRequest->customer_id ?? ''),
+            'customerName' => $deliveryRequest->customer_name ?? 'N/A',
+            'alreadyBilled' => $deliveryRequest->already_billed ?? '',
+            'currentBillingType' => $initialEditBillingTypes[$requestId] ?? ($deliveryRequest->current_billing_type ?? ''),
+            'statusName' => $deliveryRequest->status_name ?? 'Delivered',
+        ];
+    })->values()->all();
+@endphp
+const editLineItems = @json($editLineItemPayload);
+const initialEditSelectedIds = @json($initialEditSelectedIds);
 
 let editModalItems = [];
 let editModalCurrentPage = 1;
@@ -687,6 +539,37 @@ function formatDateEdit(value) {
     } catch (error) {
         return value;
     }
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getEditStatusBadge(status) {
+    const normalized = String(status || 'Delivered').toLowerCase();
+
+    if (normalized.includes('deliver') || normalized.includes('complet')) {
+        return { cls: 'bg-green-100 text-green-700', text: status || 'Delivered' };
+    }
+
+    if (normalized.includes('transit') || normalized.includes('progress')) {
+        return { cls: 'bg-blue-100 text-blue-700', text: status || 'In Transit' };
+    }
+
+    if (normalized.includes('pending') || normalized.includes('wait')) {
+        return { cls: 'bg-yellow-100 text-yellow-700', text: status || 'Pending' };
+    }
+
+    if (normalized.includes('cancel') || normalized.includes('fail')) {
+        return { cls: 'bg-red-100 text-red-700', text: status || 'Cancelled' };
+    }
+
+    return { cls: 'bg-gray-100 text-gray-500', text: status || 'N/A' };
 }
 
 function getEditItem(itemId) {
@@ -894,21 +777,20 @@ function filterEditDeliveryRequests(resetPage = true) {
     const companyFilter = document.getElementById('editFilterByCompany')?.value || '';
     const customerFilter = document.getElementById('editFilterByCustomer')?.value || '';
     const resultsCount = document.getElementById('editResultsCount');
-    const emptyState = document.getElementById('editDeliveryRequestsEmptyState');
-    const items = Array.from(document.querySelectorAll('.edit-delivery-item'));
+    const container = document.getElementById('editDeliveryRequestsContainer');
     const matchedItems = [];
 
     if (resetPage) {
         editDeliveryCurrentPage = 1;
     }
 
-    items.forEach((item) => {
-        const mtm = item.dataset.mtm || '';
-        const site = item.dataset.site || '';
-        const companyName = item.dataset.companyName || '';
-        const customerName = item.dataset.customerName || '';
-        const itemCompanyId = item.dataset.companyId || '';
-        const itemCustomerId = item.dataset.customerId || '';
+    editLineItems.forEach((item) => {
+        const mtm = String(item.mtm || '').toLowerCase();
+        const site = String(item.siteName || '').toLowerCase();
+        const companyName = String(item.companyName || '').toLowerCase();
+        const customerName = String(item.customerName || '').toLowerCase();
+        const itemCompanyId = String(item.companyId || '');
+        const itemCustomerId = String(item.customerId || '');
 
         const matchesSearch = !searchTerm
             || mtm.includes(searchTerm)
@@ -932,22 +814,144 @@ function filterEditDeliveryRequests(resetPage = true) {
 
     const startIndex = visibleCount === 0 ? 0 : (editDeliveryCurrentPage - 1) * editDeliveryPageSize;
     const endIndex = Math.min(startIndex + editDeliveryPageSize, visibleCount);
+    const visibleItems = matchedItems.slice(startIndex, endIndex);
 
-    items.forEach((item) => {
-        item.classList.add('hidden');
-    });
+    if (container) {
+        if (!visibleItems.length) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-500">
+                    <i class="fas fa-search text-3xl mb-4"></i>
+                    <p>No delivery requests found for the selected criteria.</p>
+                </div>
+            `;
+        } else {
+            container.innerHTML = visibleItems.map((item, index) => {
+                const isSelected = editCheckedItemIds.has(item.id);
+                const selection = getEditSelection(item.id);
+                const badge = getEditStatusBadge(item.statusName);
+                const deliveryLocked = item.alreadyBilled === 'delivery_only';
+                const accessorialLocked = item.alreadyBilled === 'accessorial_only';
+                const deliverySelected = isSelected && item.alreadyBilled !== 'delivery_only' && selection.delivery && Number(item.deliveryRate || 0) > 0;
+                const accessorialSelected = isSelected && item.alreadyBilled !== 'accessorial_only' && selection.accessorial && Number(item.accessorialTotal || 0) > 0;
+                const cardBorder = isSelected
+                    ? 'border-blue-400 bg-blue-50 shadow-sm'
+                    : (item.alreadyBilled ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200');
 
-    matchedItems.forEach((item, index) => {
-        const isOnCurrentPage = index >= startIndex && index < endIndex;
-        item.classList.toggle('hidden', !isOnCurrentPage);
-    });
+                const deliveryBadge = deliveryLocked ? `
+                    <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 border-amber-200 bg-amber-50 text-[11px] font-bold text-amber-600 select-none cursor-not-allowed">
+                        <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200">
+                            <i class="fas fa-check text-[10px] text-amber-700"></i>
+                        </span>
+                        <i class="fas fa-truck text-[10px]"></i>
+                        Delivery Rate
+                        <span class="font-extrabold tracking-tight">${escapeHtml(formatPesoEdit(item.deliveryRate))}</span>
+                        <span class="px-1 py-0.5 rounded bg-amber-200 text-amber-700 text-[10px] font-semibold">Billed</span>
+                    </span>
+                ` : (Number(item.deliveryRate || 0) > 0 ? `
+                    <label class="edit-bill-toggle-label inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 text-[11px] font-bold select-none transition-all duration-150 active:scale-95 ${isSelected ? 'cursor-pointer' : 'pointer-events-none opacity-30 cursor-not-allowed'} ${deliverySelected ? 'border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200' : 'border-gray-300 bg-gray-100 text-gray-400'}"
+                           data-item="${item.id}" data-type="delivery" onclick="event.stopPropagation()">
+                        <input type="checkbox" class="sr-only" ${deliverySelected ? 'checked' : ''} onchange="onEditBillingToggle(${item.id}, 'delivery', this.checked, event)">
+                        <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full ${deliverySelected ? 'bg-white/30' : 'bg-gray-300/50'}">
+                            <i class="fas ${deliverySelected ? 'fa-check' : 'fa-truck'} text-[10px]"></i>
+                        </span>
+                        <i class="edit-bill-type-icon fas fa-truck text-[10px] ${deliverySelected ? '' : 'hidden'}"></i>
+                        Delivery Rate
+                        <span class="font-extrabold tracking-tight">${escapeHtml(formatPesoEdit(item.deliveryRate))}</span>
+                    </label>
+                ` : '');
+
+                const accessorialBadge = accessorialLocked ? `
+                    <span class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 border-amber-200 bg-amber-50 text-[11px] font-bold text-amber-600 select-none cursor-not-allowed">
+                        <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-200">
+                            <i class="fas fa-check text-[10px] text-amber-700"></i>
+                        </span>
+                        <i class="fas fa-tags text-[10px]"></i>
+                        Accessorial
+                        <span class="font-extrabold tracking-tight">${escapeHtml(formatPesoEdit(item.accessorialTotal))}</span>
+                        <span class="px-1 py-0.5 rounded bg-amber-200 text-amber-700 text-[10px] font-semibold">Billed</span>
+                    </span>
+                ` : (Number(item.accessorialTotal || 0) > 0 ? `
+                    <label class="edit-bill-toggle-label inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 border-2 text-[11px] font-bold select-none transition-all duration-150 active:scale-95 ${isSelected ? 'cursor-pointer' : 'pointer-events-none opacity-30 cursor-not-allowed'} ${accessorialSelected ? 'border-emerald-600 bg-emerald-600 text-white shadow-md shadow-emerald-200' : 'border-gray-300 bg-gray-100 text-gray-400'}"
+                           data-item="${item.id}" data-type="accessorial" onclick="event.stopPropagation()">
+                        <input type="checkbox" class="sr-only" ${accessorialSelected ? 'checked' : ''} onchange="onEditBillingToggle(${item.id}, 'accessorial', this.checked, event)">
+                        <span class="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full ${accessorialSelected ? 'bg-white/30' : 'bg-gray-300/50'}">
+                            <i class="fas ${accessorialSelected ? 'fa-check' : 'fa-tags'} text-[10px]"></i>
+                        </span>
+                        <i class="edit-bill-type-icon fas fa-tags text-[10px] ${accessorialSelected ? '' : 'hidden'}"></i>
+                        Accessorial
+                        <span class="font-extrabold tracking-tight">${escapeHtml(formatPesoEdit(item.accessorialTotal))}</span>
+                    </label>
+                ` : '');
+
+                return `
+                    <div class="edit-delivery-item dr-card dr-card-enter border ${cardBorder} rounded-lg px-3 py-2.5 cursor-pointer hover:border-blue-300 hover:bg-blue-50/40 transition-all duration-150 mb-2 last:mb-0"
+                         style="animation-delay:${index * 35}ms; opacity:0;"
+                         data-id="${item.id}"
+                         data-partially-billed="${item.alreadyBilled ? '1' : '0'}"
+                         onclick="toggleEditCard(this)">
+                        <div class="flex items-start gap-2.5">
+                            <div class="flex-shrink-0 pt-0">
+                                <input type="checkbox"
+                                       name="delivery_request_ids[]"
+                                       value="${item.id}"
+                                       class="edit-delivery-checkbox h-5 w-5 rounded border-gray-300 text-blue-600 cursor-pointer accent-blue-600"
+                                       ${isSelected ? 'checked' : ''}
+                                       onclick="event.stopPropagation()"
+                                       onchange="toggleEditCardStyle(this)">
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+                                    <span class="font-semibold text-[13px] text-gray-900">MTM: ${escapeHtml(item.mtm || 'N/A')}</span>
+                                    <span class="text-[11px] text-gray-400">#${item.id}</span>
+                                    <span class="px-1.5 py-0.5 rounded-full text-[11px] font-medium ${badge.cls}">${escapeHtml(badge.text)}</span>
+                                    ${item.alreadyBilled === 'delivery_only' ? `<span class="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 border border-amber-200"><i class="fas fa-truck mr-1 text-[10px]"></i>Delivery billed</span>` : ''}
+                                    ${item.alreadyBilled === 'accessorial_only' ? `<span class="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 border border-amber-200"><i class="fas fa-tags mr-1 text-[10px]"></i>Accessorial billed</span>` : ''}
+                                    ${item.alreadyBilled === 'both' ? `<span class="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-700 border border-red-200"><i class="fas fa-check-circle mr-1 text-[10px]"></i>Fully billed</span>` : ''}
+                                    ${item.alreadyBilled && item.alreadyBilled !== 'both' ? `<span class="px-1.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-700 border border-amber-200"><i class="fas fa-exclamation-circle mr-1"></i>Partially billed</span>` : ''}
+                                </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-3 gap-y-0.5 text-[10px] text-gray-500">
+                                    <div class="flex items-center gap-1.5 min-w-0">
+                                        <i class="fas fa-calendar-alt text-gray-300 w-3 flex-shrink-0"></i>
+                                        <span class="truncate">Booking: ${escapeHtml(formatDateEdit(item.bookingDate))}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 min-w-0">
+                                        <i class="fas fa-truck text-gray-300 w-3 flex-shrink-0"></i>
+                                        <span class="truncate">Delivery: ${escapeHtml(formatDateEdit(item.deliveryDate))}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 min-w-0">
+                                        <i class="fas fa-building text-gray-300 w-3 flex-shrink-0"></i>
+                                        <span class="truncate">${escapeHtml(item.companyName || 'N/A')}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 min-w-0">
+                                        <i class="fas fa-user text-gray-300 w-3 flex-shrink-0"></i>
+                                        <span class="truncate">${escapeHtml(item.customerName || 'N/A')}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 min-w-0 sm:col-span-2 xl:col-span-1">
+                                        <i class="fas fa-map-marker-alt text-gray-300 w-3 flex-shrink-0"></i>
+                                        <span class="truncate">${escapeHtml(item.siteName || 'N/A')}</span>
+                                    </div>
+                                </div>
+                                <div class="mt-2 pt-2 border-t border-gray-100">
+                                    <p class="text-[11px] text-gray-500 font-medium mb-1">Bill for:</p>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        ${deliveryBadge}
+                                        ${accessorialBadge}
+                                        ${Number(item.deliveryRate || 0) <= 0 && Number(item.accessorialTotal || 0) <= 0 ? `<span class="text-xs text-gray-400 italic">No rate data</span>` : ''}
+                                    </div>
+                                    <div class="flex justify-end mt-1">
+                                        <span class="font-bold text-emerald-700 text-sm" id="edit-item-billed-${item.id}">${escapeHtml(formatPesoEdit(getEditBilledAmount(item.id)))}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+    }
 
     if (resultsCount) {
         resultsCount.textContent = visibleCount;
-    }
-
-    if (emptyState) {
-        emptyState.classList.toggle('hidden', visibleCount !== 0);
     }
 
     const paginationText = document.getElementById('editDeliveryPaginationText');
@@ -1220,10 +1224,12 @@ function selectAllRequests() {
 }
 
 function unselectAllRequests() {
-    document.querySelectorAll('.edit-delivery-checkbox').forEach((checkbox) => {
-        checkbox.checked = false;
-        toggleEditCardStyle(checkbox);
+    editCheckedItemIds.clear();
+    editLineItems.forEach((item) => {
+        editBillingSelections.set(item.id, { delivery: false, accessorial: false });
     });
+    filterEditDeliveryRequests(false);
+    updateEditSummary();
 }
 
 function validateAndSubmitEditForm(event) {
@@ -1264,7 +1270,17 @@ function validateAndSubmitEditForm(event) {
     }
 
     const form = document.getElementById('editSoaForm');
+    form.querySelectorAll('input[data-edit-selected-hidden]').forEach((input) => input.remove());
     form.querySelectorAll('input[data-edit-billing-hidden]').forEach((input) => input.remove());
+
+    selectedIds.forEach((itemId) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'delivery_request_ids[]';
+        input.value = itemId;
+        input.dataset.editSelectedHidden = '1';
+        form.appendChild(input);
+    });
 
     selectedIds.forEach((itemId) => {
         const input = document.createElement('input');
@@ -1279,13 +1295,12 @@ function validateAndSubmitEditForm(event) {
 document.addEventListener('DOMContentLoaded', function () {
     populateEditFilterDropdowns();
 
-    document.querySelectorAll('.edit-delivery-checkbox').forEach((checkbox) => {
-        const itemId = parseInt(checkbox.value, 10);
-        getEditSelection(itemId);
-        if (checkbox.checked) {
-            editCheckedItemIds.add(itemId);
-        }
-        toggleEditCardStyle(checkbox);
+    initialEditSelectedIds.forEach((itemId) => {
+        editCheckedItemIds.add(parseInt(itemId, 10));
+    });
+
+    editLineItems.forEach((item) => {
+        getEditSelection(item.id);
     });
 
     editDeliveryPageSize = parseInt(document.getElementById('editDeliveryPageSize')?.value || '5', 10);
