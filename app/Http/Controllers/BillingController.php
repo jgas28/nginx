@@ -87,10 +87,11 @@ class BillingController extends Controller
     {
         $query = $this->buildSoaIndexQuery($request);
 
-        $soas  = $query->orderBy('created_at', 'desc')->get();
-        $stats = $this->soaStats();
+        $soas             = $query->orderBy('created_at', 'desc')->get();
+        $stats            = $this->soaStats();
+        $billedDeliveries = $this->getBilledDeliveries();
 
-        return view('billing.index', compact('soas', 'stats'));
+        return view('billing.index', compact('soas', 'stats', 'billedDeliveries'));
     }
 
     public function exportExcel(Request $request)
@@ -816,6 +817,42 @@ class BillingController extends Controller
             ])
             ->where('soa_delivery_requests.soa_id', $soa->id)
             ->orderBy($deliveryRequestTable . '.delivery_date')
+            ->get();
+    }
+
+    private function getBilledDeliveries(): \Illuminate\Support\Collection
+    {
+        if (!$this->tableExists('soa_delivery_requests') || !$this->tableExists('soas')) {
+            return collect();
+        }
+
+        $drTable = $this->drTable();
+
+        return DB::table('soa_delivery_requests')
+            ->join('soas', 'soas.id', '=', 'soa_delivery_requests.soa_id')
+            ->join($drTable, $drTable . '.id', '=', 'soa_delivery_requests.delivery_request_id')
+            ->leftJoin('companies', 'companies.id', '=', $drTable . '.company_id')
+            ->leftJoin('customers', 'customers.id', '=', $drTable . '.customer_id')
+            ->select([
+                'soa_delivery_requests.delivery_request_id',
+                'soa_delivery_requests.amount',
+                'soa_delivery_requests.delivery_rate_amount',
+                'soa_delivery_requests.accessorial_rate_amount',
+                'soa_delivery_requests.billing_type',
+                'soas.id as soa_id',
+                'soas.soa_number',
+                'soas.status as soa_status',
+                'soas.statement_date',
+                'soas.billing_period_from',
+                'soas.billing_period_to',
+                $drTable . '.mtm',
+                $drTable . '.booking_date',
+                $drTable . '.delivery_date',
+                'companies.company_name',
+                'customers.name as customer_name',
+            ])
+            ->orderBy('soas.statement_date', 'desc')
+            ->orderBy($drTable . '.delivery_date', 'desc')
             ->get();
     }
 

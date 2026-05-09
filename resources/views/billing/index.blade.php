@@ -137,6 +137,14 @@
                         class="tab-btn px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition">
                         <i class="fas fa-chart-bar mr-2"></i>Analytics
                     </button>
+                    <button onclick="switchTab('deliveries')" id="tab-btn-deliveries"
+                        class="tab-btn px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition">
+                        <i class="fas fa-truck mr-2"></i>Billed Deliveries
+                        @php $billedCount = count($billedDeliveries ?? []); @endphp
+                        @if($billedCount > 0)
+                            <span class="ml-1.5 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">{{ $billedCount }}</span>
+                        @endif
+                    </button>
                 </nav>
             </div>
 
@@ -328,6 +336,140 @@
                 </div>
             </div>
 
+            <!-- Tab: Billed Deliveries -->
+            <div id="tab-deliveries" class="hidden">
+                <style>
+                    #billedTable_wrapper .billed-table-toolbar {
+                        display: flex;
+                        flex-wrap: wrap;
+                        align-items: center;
+                        justify-content: space-between;
+                        gap: 1rem;
+                        padding: 1.25rem 1.5rem 0.75rem;
+                    }
+                    #billedTable_wrapper .billed-table-toolbar .dataTables_length,
+                    #billedTable_wrapper .billed-table-toolbar .dataTables_filter {
+                        float: none; margin: 0;
+                    }
+                    #billedTable_wrapper .billed-table-toolbar .dataTables_length {
+                        display: flex; align-items: center; gap: 0.75rem; color: #334155; font-size: 0.95rem;
+                    }
+                    #billedTable_wrapper .billed-table-toolbar .dataTables_length label,
+                    #billedTable_wrapper .billed-table-toolbar .dataTables_filter label {
+                        display: flex; align-items: center; gap: 0.75rem; margin: 0; font-weight: 500; color: #334155;
+                    }
+                    #billedTable_wrapper .billed-table-toolbar .dataTables_filter { margin-left: auto; }
+                    #billedTable_wrapper .billed-table-toolbar .dataTables_filter input,
+                    #billedTable_wrapper .billed-table-toolbar .dataTables_length select {
+                        margin: 0; min-height: 2.8rem; border-radius: 0.75rem; border: 1px solid #cbd5e1;
+                        background: #fff; padding: 0.5rem 1rem; font-size: 0.9rem; color: #0f172a;
+                    }
+                    #billedTable_wrapper .billed-table-toolbar .dataTables_filter input { min-width: 280px; }
+                    #billedTable_wrapper .billed-table-footer {
+                        display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+                        gap: 1rem; padding: 0.75rem 1.5rem 1.25rem;
+                    }
+                    #billedTable_wrapper .billed-table-footer .dataTables_info,
+                    #billedTable_wrapper .billed-table-footer .dataTables_paginate { float: none; margin: 0; }
+                </style>
+
+                {{-- Info banner --}}
+                <div class="mx-6 mt-4 mb-2 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                    <i class="fas fa-info-circle mt-0.5 shrink-0 text-emerald-500"></i>
+                    <span>All delivery requests that have been included in an SOA are listed here. Use the <strong>SOA Status</strong> badge to track whether payment has been received for each delivery.</span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table id="billedTable" class="w-full text-sm text-left text-gray-600 display">
+                        <thead class="bg-gray-100 text-gray-900 font-semibold text-xs uppercase tracking-wide">
+                            <tr>
+                                <th class="px-4 py-3">MTM</th>
+                                <th class="px-4 py-3">Booking Date</th>
+                                <th class="px-4 py-3">Delivery Date</th>
+                                <th class="px-4 py-3">Company</th>
+                                <th class="px-4 py-3">Customer</th>
+                                <th class="px-4 py-3">SOA Reference</th>
+                                <th class="px-4 py-3">Billing Period</th>
+                                <th class="px-4 py-3">Billed For</th>
+                                <th class="px-4 py-3 text-right">Amount Billed</th>
+                                <th class="px-4 py-3">Payment Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @forelse($billedDeliveries ?? [] as $bd)
+                                @php
+                                    $billingType  = $bd->billing_type ?? 'both';
+                                    $drAmt        = (float)($bd->delivery_rate_amount ?? 0);
+                                    $acAmt        = (float)($bd->accessorial_rate_amount ?? 0);
+                                    $totalAmt     = (float)($bd->amount ?? 0);
+                                    $soaStatus    = $bd->soa_status ?? 'draft';
+
+                                    $billingLabel = match($billingType) {
+                                        'delivery_only'    => ['text' => 'Delivery Only',    'cls' => 'bg-blue-100 text-blue-700'],
+                                        'accessorial_only' => ['text' => 'Accessorial Only', 'cls' => 'bg-purple-100 text-purple-700'],
+                                        default            => ['text' => 'Both',              'cls' => 'bg-teal-100 text-teal-700'],
+                                    };
+
+                                    $statusConfig = match($soaStatus) {
+                                        'paid'     => ['text' => 'Paid',     'cls' => 'bg-green-100 text-green-800',  'icon' => 'fa-circle-check',  'dot' => 'bg-green-500'],
+                                        'approved' => ['text' => 'Approved', 'cls' => 'bg-blue-100 text-blue-800',   'icon' => 'fa-thumbs-up',     'dot' => 'bg-blue-500'],
+                                        'pending'  => ['text' => 'Pending',  'cls' => 'bg-yellow-100 text-yellow-800','icon' => 'fa-clock',         'dot' => 'bg-yellow-500'],
+                                        'overdue'  => ['text' => 'Overdue',  'cls' => 'bg-red-100 text-red-800',     'icon' => 'fa-exclamation-circle','dot' => 'bg-red-500'],
+                                        default    => ['text' => 'Draft',    'cls' => 'bg-gray-100 text-gray-700',   'icon' => 'fa-pencil',        'dot' => 'bg-gray-400'],
+                                    };
+                                @endphp
+                                <tr class="hover:bg-gray-50 transition-colors">
+                                    <td class="px-4 py-3 font-semibold text-gray-800">{{ $bd->mtm ?? 'N/A' }}</td>
+                                    <td class="px-4 py-3 text-gray-600" data-order="{{ $bd->booking_date ?? '' }}">
+                                        {{ $bd->booking_date ? \Carbon\Carbon::parse($bd->booking_date)->format('M d, Y') : '—' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-600" data-order="{{ $bd->delivery_date ?? '' }}">
+                                        {{ $bd->delivery_date ? \Carbon\Carbon::parse($bd->delivery_date)->format('M d, Y') : '—' }}
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-700">{{ $bd->company_name ?? 'N/A' }}</td>
+                                    <td class="px-4 py-3 text-gray-700">{{ $bd->customer_name ?? 'N/A' }}</td>
+                                    <td class="px-4 py-3">
+                                        <a href="{{ route('billing.showSoa', $bd->soa_id) }}"
+                                           class="inline-flex items-center gap-1.5 font-semibold text-blue-600 hover:text-blue-800 hover:underline">
+                                            <i class="fas fa-file-invoice text-xs"></i>{{ $bd->soa_number }}
+                                        </a>
+                                    </td>
+                                    <td class="px-4 py-3 text-gray-600 text-xs">
+                                        {{ $bd->billing_period_from ? \Carbon\Carbon::parse($bd->billing_period_from)->format('M d') : '—' }}
+                                        –
+                                        {{ $bd->billing_period_to ? \Carbon\Carbon::parse($bd->billing_period_to)->format('M d, Y') : '—' }}
+                                    </td>
+                                    <td class="px-4 py-3">
+                                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold {{ $billingLabel['cls'] }}">{{ $billingLabel['text'] }}</span>
+                                        @if($billingType !== 'accessorial_only' && $drAmt > 0)
+                                            <div class="text-xs text-gray-400 mt-0.5">DR: ₱{{ number_format($drAmt, 2) }}</div>
+                                        @endif
+                                        @if($billingType !== 'delivery_only' && $acAmt > 0)
+                                            <div class="text-xs text-gray-400">AC: ₱{{ number_format($acAmt, 2) }}</div>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-3 font-bold text-gray-900 text-right">₱{{ number_format($totalAmt, 2) }}</td>
+                                    <td class="px-4 py-3">
+                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold {{ $statusConfig['cls'] }}">
+                                            <span class="inline-block w-1.5 h-1.5 rounded-full {{ $statusConfig['dot'] }}"></span>
+                                            <i class="fas {{ $statusConfig['icon'] }} text-[10px]"></i>
+                                            {{ $statusConfig['text'] }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="10" class="px-4 py-12 text-center text-gray-400">
+                                        <i class="fas fa-truck-loading text-4xl mb-3 block"></i>
+                                        No billed deliveries found. Deliveries will appear here once they are added to an SOA.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Tab: Analytics -->
             <div id="tab-analytics" class="hidden p-6">
 
@@ -402,9 +544,10 @@
 <script>
     // ── Tab switching ─────────────────────────────────────────────
     let analyticsInitialized = false;
+    let billedTableInitialized = false;
 
     function switchTab(name) {
-        ['table', 'analytics'].forEach(t => {
+        ['table', 'analytics', 'deliveries'].forEach(t => {
             document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
             const btn = document.getElementById('tab-btn-' + t);
             if (t === name) {
@@ -418,6 +561,31 @@
         if (name === 'analytics' && !analyticsInitialized) {
             initAnalytics();
             analyticsInitialized = true;
+        }
+        if (name === 'deliveries' && !billedTableInitialized) {
+            $('#billedTable').DataTable({
+                pageLength: 25,
+                order: [[5, 'desc']],
+                autoWidth: false,
+                dom: '<"billed-table-toolbar"lf>t<"billed-table-footer"ip>',
+                columns: [
+                    { width: '10%' },
+                    { width: '10%' },
+                    { width: '10%' },
+                    { width: '13%' },
+                    { width: '13%' },
+                    { width: '12%' },
+                    { width: '12%' },
+                    { width: '10%' },
+                    { width: '8%', className: 'text-right' },
+                    { width: '10%', orderable: false }
+                ],
+                language: {
+                    search: 'Search deliveries:',
+                    emptyTable: 'No billed deliveries found'
+                }
+            });
+            billedTableInitialized = true;
         }
     }
 

@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(php artisan *)",
-      "Bash(Get-Content \"c:\\\\xampp\\\\htdocs\\\\git\\\\nginx\\\\storage\\\\logs\\\\laravel.log\" -Tail 60)"
+      "Bash(Get-Content \"c:\\\\xampp\\\\htdocs\\\\git\\\\nginx\\\\storage\\\\logs\\\\laravel.log\" -Tail 60)",
+      "Bash(xargs grep -l \"soa\\\\|billing\" -i)"
     ]
   }
 }
