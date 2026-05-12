@@ -110,9 +110,30 @@ class DeliveryRequestController extends Controller
         $companies = Company::orderBy('company_name')->get();
         $deliveryStatuses = DeliveryStatus::orderBy('status_name')->get();
 
+        // Build a map of delivery_request_id → SOA billing info for billed badge display
+        $billedDrMap = collect();
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('soa_delivery_requests')) {
+                $billedDrMap = DB::table('soa_delivery_requests')
+                    ->join('soas', 'soas.id', '=', 'soa_delivery_requests.soa_id')
+                    ->select([
+                        'soa_delivery_requests.delivery_request_id',
+                        'soa_delivery_requests.amount',
+                        'soa_delivery_requests.billing_type',
+                        'soas.id as soa_id',
+                        'soas.soa_number',
+                        'soas.status as soa_status',
+                    ])
+                    ->get()
+                    ->keyBy('delivery_request_id');
+            }
+        } catch (\Exception $e) {
+            // soa tables may not exist yet
+        }
+
         if ($request->ajax()) {
             return response()->json([
-                'html' => view('deliveryRequest.partials.index-table', compact('deliveryRequests', 'search', 'perPage', 'overview'))->render(),
+                'html' => view('deliveryRequest.partials.index-table', compact('deliveryRequests', 'search', 'perPage', 'overview', 'billedDrMap'))->render(),
                 'search' => $search,
                 'per_page' => $perPage,
                 'total' => $deliveryRequests->total(),
@@ -127,7 +148,8 @@ class DeliveryRequestController extends Controller
             'deliveryStatuses',
             'companyId',
             'deliveryStatusId',
-            'overview'
+            'overview',
+            'billedDrMap'
         ));
     }
 

@@ -96,6 +96,7 @@
             'search' => $search,
             'perPage' => $perPage,
             'overview' => $overview,
+            'billedDrMap' => $billedDrMap ?? collect(),
         ])
     </div>
 </div>

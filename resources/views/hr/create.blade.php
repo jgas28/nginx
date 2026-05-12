@@ -102,14 +102,54 @@
                     <input type="date" id="cutoff_to" name="cutoff_to" value="{{ request('cutoff_to') }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg" required>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Allowance</label>
-                    <input type="number" step="0.01" min="0" name="total_allowance" value="{{ request('total_allowance', 0) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                {{-- ── Earnings ─────────────────────────────────── --}}
+                <div class="md:col-span-2">
+                    <p class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3 mt-2 flex items-center gap-2">
+                        <i class="fas fa-coins text-green-500"></i> Earnings
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Allowance</label>
+                            <input type="number" step="0.01" min="0" name="total_allowance" value="{{ request('total_allowance', 0) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Incentives</label>
+                            <input type="number" step="0.01" min="0" name="incentive_amount" value="{{ request('incentive_amount', 0) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Deduction</label>
-                    <input type="number" step="0.01" min="0" name="total_deduction" value="{{ request('total_deduction', 0) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                {{-- ── Deductions ───────────────────────────────── --}}
+                <div class="md:col-span-2">
+                    <p class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3 mt-2 flex items-center gap-2">
+                        <i class="fas fa-minus-circle text-red-500"></i> Deductions <span class="text-gray-400 font-normal normal-case tracking-normal">(SSS &amp; PhilHealth are auto-calculated)</span>
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Pag-ibig Contribution/Loan</label>
+                            <input type="number" step="0.01" min="0" name="pagibig_deduction" value="{{ request('pagibig_deduction', 0) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Cellphone Loan</label>
+                            <input type="number" step="0.01" min="0" name="cellphone_loan" value="{{ request('cellphone_loan', 0) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Gasul Fund / Cash Advance</label>
+                            <input type="number" step="0.01" min="0" name="gasul_fund" value="{{ request('gasul_fund', 0) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Unreturn Budget for Delivery</label>
+                            <input type="number" step="0.01" min="0" name="unreturn_budget" value="{{ request('unreturn_budget', 0) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Cash Bond</label>
+                            <input type="number" step="0.01" min="0" name="cash_bond" value="{{ request('cash_bond', 0) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Others</label>
+                            <input type="number" step="0.01" min="0" name="other_deduction" value="{{ request('other_deduction', 0) }}" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                        </div>
+                    </div>
                 </div>
 
                 <div class="md:col-span-2">
@@ -174,7 +214,13 @@
                     <input type="hidden" name="cutoff_from" value="{{ request('cutoff_from') }}">
                     <input type="hidden" name="cutoff_to" value="{{ request('cutoff_to') }}">
                     <input type="hidden" name="total_allowance" value="{{ request('total_allowance', 0) }}">
-                    <input type="hidden" name="total_deduction" value="{{ request('total_deduction', 0) }}">
+                    <input type="hidden" name="incentive_amount" value="{{ request('incentive_amount', 0) }}">
+                    <input type="hidden" name="pagibig_deduction" value="{{ request('pagibig_deduction', 0) }}">
+                    <input type="hidden" name="cellphone_loan" value="{{ request('cellphone_loan', 0) }}">
+                    <input type="hidden" name="gasul_fund" value="{{ request('gasul_fund', 0) }}">
+                    <input type="hidden" name="unreturn_budget" value="{{ request('unreturn_budget', 0) }}">
+                    <input type="hidden" name="cash_bond" value="{{ request('cash_bond', 0) }}">
+                    <input type="hidden" name="other_deduction" value="{{ request('other_deduction', 0) }}">
 
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm text-left text-gray-600">
@@ -247,7 +293,13 @@
                     <input type="hidden" name="cutoff_from" value="{{ request('cutoff_from') }}">
                     <input type="hidden" name="cutoff_to" value="{{ request('cutoff_to') }}">
                     <input type="hidden" name="total_allowance" value="{{ request('total_allowance', 0) }}">
-                    <input type="hidden" name="total_deduction" value="{{ request('total_deduction', 0) }}">
+                    <input type="hidden" name="incentive_amount" value="{{ request('incentive_amount', 0) }}">
+                    <input type="hidden" name="pagibig_deduction" value="{{ request('pagibig_deduction', 0) }}">
+                    <input type="hidden" name="cellphone_loan" value="{{ request('cellphone_loan', 0) }}">
+                    <input type="hidden" name="gasul_fund" value="{{ request('gasul_fund', 0) }}">
+                    <input type="hidden" name="unreturn_budget" value="{{ request('unreturn_budget', 0) }}">
+                    <input type="hidden" name="cash_bond" value="{{ request('cash_bond', 0) }}">
+                    <input type="hidden" name="other_deduction" value="{{ request('other_deduction', 0) }}">
                     @foreach($preview['selected_attendance_dates'] as $selectedAttendanceDate)
                         <input type="hidden" name="selected_attendance_dates[]" value="{{ $selectedAttendanceDate }}">
                     @endforeach

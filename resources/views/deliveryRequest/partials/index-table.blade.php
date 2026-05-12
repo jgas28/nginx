@@ -82,6 +82,15 @@
                         'cancelled' => 'bg-rose-50 text-rose-700 ring-rose-100',
                         default => 'bg-slate-100 text-slate-700 ring-slate-200',
                     };
+                    $billedInfo   = ($billedDrMap ?? collect())->get($deliveryRequest->id);
+                    $soaStatus    = $billedInfo->soa_status ?? null;
+                    $soaBadgeCfg  = $soaStatus ? match($soaStatus) {
+                        'paid'     => ['dot' => 'bg-emerald-500', 'cls' => 'bg-emerald-50 text-emerald-700 ring-emerald-200', 'icon' => 'fa-circle-check',       'label' => 'Paid'],
+                        'approved' => ['dot' => 'bg-blue-500',    'cls' => 'bg-blue-50 text-blue-700 ring-blue-200',         'icon' => 'fa-thumbs-up',          'label' => 'Approved'],
+                        'pending'  => ['dot' => 'bg-amber-500',   'cls' => 'bg-amber-50 text-amber-700 ring-amber-200',      'icon' => 'fa-clock',              'label' => 'Pending'],
+                        'overdue'  => ['dot' => 'bg-rose-500',    'cls' => 'bg-rose-50 text-rose-700 ring-rose-200',         'icon' => 'fa-triangle-exclamation','label' => 'Overdue'],
+                        default    => ['dot' => 'bg-slate-400',   'cls' => 'bg-slate-100 text-slate-600 ring-slate-200',     'icon' => 'fa-file-pen',           'label' => 'Draft'],
+                    } : null;
                 @endphp
                 <tr class="transition hover:bg-slate-50/80">
                     <td class="px-6 py-4">
@@ -104,6 +113,22 @@
                                         {{ $deliveryRequest->customer->name ?? 'N/A' }}
                                     </span>
                                 </div>
+                                {{-- SOA Billing Badge --}}
+                                @if($billedInfo && $soaBadgeCfg)
+                                <div class="mt-2">
+                                    <a href="{{ route('billing.showSoa', $billedInfo->soa_id) }}"
+                                       class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 transition hover:brightness-95 {{ $soaBadgeCfg['cls'] }}"
+                                       title="View SOA: {{ $billedInfo->soa_number }}">
+                                        <span class="h-1.5 w-1.5 rounded-full {{ $soaBadgeCfg['dot'] }}"></span>
+                                        <i class="fas {{ $soaBadgeCfg['icon'] }} text-[9px]"></i>
+                                        <span>Billed</span>
+                                        <span class="font-bold">{{ $billedInfo->soa_number }}</span>
+                                        <span class="opacity-70">·</span>
+                                        <span>{{ $soaBadgeCfg['label'] }}</span>
+                                        <span class="opacity-60">₱{{ number_format($billedInfo->amount ?? 0, 2) }}</span>
+                                    </a>
+                                </div>
+                                @endif
                             </div>
                         </div>
                     </td>
