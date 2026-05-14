@@ -190,8 +190,8 @@
     @endif
     
     {{-- Reimbursement Modal --}}
-    <div id="reimbursementModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative" id="modalPanel">
+    <div id="reimbursementModal" class="fixed inset-0 z-50 hidden flex items-start justify-center overflow-y-auto bg-slate-950/60 p-3 sm:items-center sm:p-4">
+        <div class="relative w-full max-w-xl max-h-[calc(100vh-1.5rem)] overflow-y-auto rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.22)] sm:max-h-[calc(100vh-3rem)] sm:p-6" id="modalPanel">
             <h3 class="text-xl font-semibold mb-4">Create Reimbursement</h3>
             <form action="{{ route('running-balance.reimburse') }}" method="POST" class="space-y-4">
                 @csrf
@@ -202,11 +202,20 @@
                 <div><label class="block mb-1 font-medium">Amount (₱)</label><input type="number" step="0.01" min="0" name="amount" required class="w-full border rounded px-3 py-2" /></div>
                 <div><label class="block mb-1 font-medium">Description</label><input type="text" name="description" value="Refund - {{ $liquidation->cvr_number }}" required class="w-full border rounded px-3 py-2" /></div>
                 <div><label class="block mb-1 font-medium">CVR Number</label><input type="text" name="cvr_number" value="{{ $liquidation->cvr_number }}" readonly class="w-full border rounded px-3 py-2 bg-gray-100" /></div>
-                <div><label class="block mb-1 font-medium">Employee</label><select name="employee_id" required class="w-full border rounded px-3 py-2">@foreach ($staffs as $staff)<option value="{{ $staff->id }}">{{ $staff->fname }} {{ $staff->lname }}</option>@endforeach</select></div>
-                <div><label class="block mb-1 font-medium">Approver</label><select name="approver_id" required class="w-full border rounded px-3 py-2">@foreach ($approvers as $approver)<option value="{{ $approver->id }}">{{ $approver->name }}</option>@endforeach</select></div>
-                <div class="flex justify-end space-x-2 pt-4 border-t border-gray-200">
-                    <button type="button" id="closeModalBtn" class="px-4 py-2 rounded border hover:bg-gray-100">Cancel</button>
-                    <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700">Save</button>
+                @include('partials.party-selector', [
+                    'idPrefix' => 'review-refund-party',
+                    'employees' => $staffs,
+                    'suppliers' => $suppliers,
+                    'partyRequired' => true,
+                    'wrapperClass' => 'space-y-4',
+                    'selectClass' => 'h-[48px] w-full rounded-2xl border border-slate-200 px-4 text-[15px] text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100',
+                    'typeLabel' => 'Recipient Type',
+                    'typePlaceholder' => 'Select employee or supplier',
+                ])
+                <div><label class="block mb-1 font-medium">Approver</label><select name="approver_id" required class="h-[48px] w-full rounded-2xl border border-slate-200 px-4 text-[15px] text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">@foreach ($approvers as $approver)<option value="{{ $approver->id }}">{{ $approver->name }}</option>@endforeach</select></div>
+                <div class="flex flex-col-reverse gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end">
+                    <button type="button" id="closeModalBtn" class="w-full rounded-2xl border border-slate-200 px-4 py-3 font-semibold text-slate-700 transition hover:bg-gray-100 sm:w-auto">Cancel</button>
+                    <button type="submit" class="w-full rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 sm:w-auto">Save</button>
                 </div>
             </form>
         </div>

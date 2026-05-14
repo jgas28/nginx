@@ -263,16 +263,18 @@
                         class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed" />
                 </div>
 
-                <div>
-                    <label class="block mb-1 font-medium" for="employee_id">Employee for Collected Amount</label>
-                    <select name="employee_id" id="employee_id" required
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="" disabled selected>Select employee</option>
-                        @foreach ($staffs as $staff)
-                            <option value="{{ $staff->id }}">{{ $staff->fname }} {{ $staff->lname }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                @include('partials.party-selector', [
+                    'idPrefix' => 'validated-collected-party',
+                    'employees' => $staffs,
+                    'suppliers' => $suppliers,
+                    'partyRequired' => true,
+                    'wrapperClass' => 'space-y-4',
+                    'selectClass' => 'w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500',
+                    'typeLabel' => 'Recipient Type',
+                    'typePlaceholder' => 'Select employee or supplier',
+                    'employeeLabel' => 'Employee for Collected Amount',
+                    'supplierLabel' => 'Supplier for Collected Amount',
+                ])
 
                 <div>
                     <label class="block mb-1 font-medium" for="approver_id_collected">Approver</label>

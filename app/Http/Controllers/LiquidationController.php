@@ -397,6 +397,7 @@ class LiquidationController extends Controller
         $staffs = User::where('status', '!=', 0)->get();
         $approvers = Approver::all();
         $collectors = User::whereIn('id', [15,35,54])->get();
+        $suppliers = Supplier::orderBy('supplier_name')->get();
 
         // Calculate total liquidated cash (cash only)
         $totalCash = 0;
@@ -510,6 +511,7 @@ class LiquidationController extends Controller
             'return',
             'nextStatus',
             'staffs',
+            'suppliers',
             'runningRefunds',
             'runningReturns',
             'runningUncollected',
@@ -723,6 +725,7 @@ class LiquidationController extends Controller
         $employees = User::whereIn('id', [54, 15, 35, 5, 15])->get();
         $staffs = User::where('status', '!=', 0)->get();
         $approvers = Approver::all();
+        $suppliers = Supplier::orderBy('supplier_name')->get();
 
         // Total Liquidated Cash (Only cash items)
         $totalCash = 0;
@@ -804,6 +807,7 @@ class LiquidationController extends Controller
             'return',
             'nextStatus',
             'staffs',
+            'suppliers',
             'runningRefunds',
             'runningReturns',
             'runningUncollected'
@@ -988,6 +992,7 @@ class LiquidationController extends Controller
         $employees = User::whereIn('id', [54])->get();
         $approvers = Approver::all();
         $staffs = User::where('status', '!=', 0)->get();
+        $suppliers = Supplier::orderBy('supplier_name')->get();
 
         // Calculate total liquidated cash
         $totalCash = 0;
@@ -1113,7 +1118,8 @@ class LiquidationController extends Controller
             'gasoline',
             'rfid',
             'others',
-            'staffs'
+            'staffs',
+            'suppliers'
         ));
     }
 

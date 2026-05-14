@@ -77,7 +77,7 @@
                         type="text"
                         name="search"
                         value="{{ request('search') }}"
-                        placeholder="Search description, CVR, employee..."
+                        placeholder="Search description, CVR, employee, or supplier..."
                         form="running-balance-filter-form"
                         class="h-[52px] w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-[15px] text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                     >

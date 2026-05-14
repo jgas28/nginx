@@ -121,9 +121,11 @@
         </div>
     </div>
 
-    <div id="transactionModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/55 px-4 backdrop-blur-sm">
-        <div class="relative w-full max-w-4xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.22)]">
-            <div class="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-4 py-5 sm:px-6">
+    <div id="transactionModal" class="fixed inset-0 z-50 hidden overflow-y-auto bg-slate-950/55 px-3 py-4 backdrop-blur-sm sm:px-4 sm:py-6">
+        <div class="flex min-h-full items-start justify-center sm:items-center">
+        <div class="relative w-full max-w-3xl overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.22)]">
+            <div class="flex max-h-[calc(100vh-2rem)] flex-col sm:max-h-[calc(100vh-3rem)]">
+            <div class="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-4 py-5 pr-14 sm:px-6 sm:py-6 sm:pr-16">
                 <button onclick="closeModal()" class="absolute right-5 top-5 inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-rose-50 hover:text-rose-600">
                     <i class="fas fa-times"></i>
                 </button>
@@ -137,8 +139,9 @@
                 </div>
             </div>
 
-            <form method="POST" action="{{ route('running_balance.store') }}" class="px-4 py-6 sm:px-6">
+            <form method="POST" action="{{ route('running_balance.store') }}" class="flex min-h-0 flex-1 flex-col">
                 @csrf
+                <div class="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 sm:py-6">
                 <div class="grid gap-4 sm:grid-cols-2">
                     <label class="block">
                         <span class="mb-2 block text-[15px] font-semibold text-slate-800">Transaction Type</span>
@@ -162,15 +165,16 @@
                         <input type="text" name="description" class="h-[52px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-[15px] text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
                     </label>
 
-                    <label class="block">
-                        <span class="mb-2 block text-[15px] font-semibold text-slate-800">Employee</span>
-                        <select name="employee_id" class="h-[52px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-[15px] text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
-                            <option value="">Select Employee</option>
-                            @foreach($employees as $emp)
-                                <option value="{{ $emp->id }}">{{ $emp->fname }} {{ $emp->lname }}</option>
-                            @endforeach
-                        </select>
-                    </label>
+                    @include('partials.party-selector', [
+                        'idPrefix' => 'running-balance-party',
+                        'employees' => $employees,
+                        'suppliers' => $suppliers,
+                        'partyRequired' => false,
+                        'wrapperClass' => 'grid gap-4 sm:col-span-2 md:grid-cols-2',
+                        'selectClass' => 'h-[52px] w-full rounded-2xl border border-slate-200 bg-white px-4 text-[15px] text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100',
+                        'typeLabel' => 'Party Type',
+                        'typePlaceholder' => 'None / Select party',
+                    ])
 
                     <label class="block">
                         <span class="mb-2 block text-[15px] font-semibold text-slate-800">To Source</span>
@@ -192,8 +196,10 @@
                         </select>
                     </label>
                 </div>
+                </div>
 
-                <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <div class="border-t border-slate-200 bg-white px-4 py-4 sm:px-6">
+                <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                     <button type="button" onclick="closeModal()" class="inline-flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-[15px] font-semibold text-slate-700 transition hover:bg-slate-50 sm:w-auto">
                         Cancel
                     </button>
@@ -202,7 +208,10 @@
                         Submit
                     </button>
                 </div>
+                </div>
             </form>
+        </div>
+        </div>
         </div>
     </div>
 </div>

@@ -9,6 +9,7 @@ use App\Models\Approver;
 use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class RunningBalanceController extends Controller
 {
@@ -292,8 +293,11 @@ class RunningBalanceController extends Controller
             ],
             'description'      => 'nullable|string',
             'employee_id'      => 'nullable|exists:users,id',
+            'supplier_id'      => 'nullable|exists:suppliers,id',
             'from_approver_id' => 'required_if:type,10|nullable|exists:cvr_approver,id',
         ]);
+
+        $party = $this->resolvePartySelection($request);
 
         $amount = $request->amount;
 
@@ -315,7 +319,8 @@ class RunningBalanceController extends Controller
                 'amount'      => -$request->amount,
                 'description' => 'Transfer to ' . optional(Approver::find($request->approver_id))->name .
                                 ($request->description ? ' - ' . $request->description : ''),
-                'employee_id' => $request->employee_id,
+                'employee_id' => $party['employee_id'],
+                'supplier_id' => $party['supplier_id'],
                 'created_by'  => $user->id,
                 'adjustment_type' => 'Out',
             ]);
@@ -327,7 +332,8 @@ class RunningBalanceController extends Controller
                 'amount'      => $request->amount,
                 'description' => 'Transfer from ' . optional(Approver::find($request->from_approver_id))->name .
                                 ($request->description ? ' - ' . $request->description : ''),
-                'employee_id' => $request->employee_id,
+                'employee_id' => $party['employee_id'],
+                'supplier_id' => $party['supplier_id'],
                 'created_by'  => $user->id,
                 'adjustment_type' => 'In',
             ]);
@@ -348,7 +354,8 @@ class RunningBalanceController extends Controller
                 'type'        => $request->type,
                 'amount'      => $amount,
                 'description' => $description,
-                'employee_id' => $request->employee_id,
+                'employee_id' => $party['employee_id'],
+                'supplier_id' => $party['supplier_id'],
                 'created_by'  => $user->id,
                 'adjustment_type' => $adjustmentType,
             ]);
@@ -362,7 +369,8 @@ class RunningBalanceController extends Controller
     {
         $liquidation_id = $request->liquidation_id;
         $validated = $request->validate([
-            'employee_id' => 'required|exists:users,id',
+            'employee_id' => 'nullable|exists:users,id',
+            'supplier_id' => 'nullable|exists:suppliers,id',
             'amount' => 'required|numeric|min:0.01',
             'description' => 'required|string',
             'approver_id' => 'required|exists:cvr_approver,id',
@@ -370,20 +378,26 @@ class RunningBalanceController extends Controller
             'cvr_number' => 'required|string',
         ]);
 
+        $party = $this->resolvePartySelection($request, true);
+        $validated['employee_id'] = $party['employee_id'];
+        $validated['supplier_id'] = $party['supplier_id'];
         $validated['type'] = 3;
         $validated['amount'] = -abs($validated['amount']);
+        $validated['adjustment_type'] = 'Out';
 
         // Check for duplicate based on a unique combination
         $existing = RunningBalance::where([
-            'employee_id' => $validated['employee_id'],
             'amount' => $validated['amount'],
             'description' => $validated['description'],
             'approver_id' => $validated['approver_id'],
             'created_by' => $validated['created_by'],
             'cvr_number' => $validated['cvr_number'],
-            'adjustment_type' => 'In',
+            'adjustment_type' => $validated['adjustment_type'],
             'type' => 3,
-        ])->first(); 
+        ]);
+
+        $this->applyPartyMatch($existing, $validated['employee_id'], $validated['supplier_id']);
+        $existing = $existing->first();
 
         if ($existing) {     
             return redirect()->route('liquidations.review', $liquidation_id)
@@ -399,7 +413,8 @@ class RunningBalanceController extends Controller
     {
         $liquidation_id = $request->liquidation_id;
         $validated = $request->validate([
-            'employee_id' => 'required|exists:users,id',
+            'employee_id' => 'nullable|exists:users,id',
+            'supplier_id' => 'nullable|exists:suppliers,id',
             'amount' => 'required|numeric|min:0.01',
             'description' => 'required|string',
             'approver_id' => 'required|exists:cvr_approver,id',
@@ -407,20 +422,26 @@ class RunningBalanceController extends Controller
             'cvr_number' => 'required|string',
         ]);
 
+        $party = $this->resolvePartySelection($request, true);
+        $validated['employee_id'] = $party['employee_id'];
+        $validated['supplier_id'] = $party['supplier_id'];
         $validated['type'] = 3;
         $validated['amount'] = -abs($validated['amount']);
+        $validated['adjustment_type'] = 'Out';
 
         // Check for duplicate based on a unique combination
         $existing = RunningBalance::where([
-            'employee_id' => $validated['employee_id'],
             'amount' => $validated['amount'],
             'description' => $validated['description'],
             'approver_id' => $validated['approver_id'],
             'created_by' => $validated['created_by'],
             'cvr_number' => $validated['cvr_number'],
-            'adjustment_type' => 'Out',
+            'adjustment_type' => $validated['adjustment_type'],
             'type' => 3,
-        ])->first(); 
+        ]);
+
+        $this->applyPartyMatch($existing, $validated['employee_id'], $validated['supplier_id']);
+        $existing = $existing->first();
 
         if ($existing) {     
             return redirect()->route('liquidations.approval', $liquidation_id)
@@ -436,21 +457,21 @@ class RunningBalanceController extends Controller
 
     public function print($id)
     {
-        $reimbursement = RunningBalance::with(['employee', 'approver'])->findOrFail($id);
+        $reimbursement = RunningBalance::with(['employee', 'approver', 'suppliers'])->findOrFail($id);
 
         return view('reimbursements.print', compact('reimbursement'));
     }
 
     public function printRefund($id)
     {
-        $reimbursement = RunningBalance::with(['employee', 'approver'])->findOrFail($id);
+        $reimbursement = RunningBalance::with(['employee', 'approver', 'suppliers'])->findOrFail($id);
 
         return view('refunds.print', compact('reimbursement'));
     }
 
     public function printReturn($id)
     {
-        $reimbursement = RunningBalance::with(['employee', 'approver'])->findOrFail($id);
+        $reimbursement = RunningBalance::with(['employee', 'approver', 'suppliers'])->findOrFail($id);
 
         return view('returns.print', compact('reimbursement'));
     }
@@ -503,14 +524,18 @@ class RunningBalanceController extends Controller
         $validated = $request->validate([
             'amount_collected' => 'required|numeric|min:0', // Amount collected
             'description_collected' => 'required|string', // Description for collected
-            'employee_id' => 'required|exists:users,id', // Employee ID for collected amount
+            'employee_id' => 'nullable|exists:users,id', // Employee ID for collected amount
+            'supplier_id' => 'nullable|exists:suppliers,id',
             'approver_id_collected' => 'required|exists:cvr_approver,id', // Approver ID
             'cvr_number_collected' => 'required|string', // CVR Number
         ]);
 
+        $party = $this->resolvePartySelection($request, true);
+
         // Create a new reimbursement entry for the collected amount
         RunningBalance::create([
-            'employee_id' => $validated['employee_id'],
+            'employee_id' => $party['employee_id'],
+            'supplier_id' => $party['supplier_id'],
             'amount' => abs($validated['amount_collected']), // Positive value for collected amount
             'description' => $validated['description_collected'],
             'approver_id' => $validated['approver_id_collected'],
@@ -699,6 +724,46 @@ class RunningBalanceController extends Controller
         ]);
 
         return redirect()->route('running_balance.index')->with('success', 'Uncollected adjustment recorded.');
+    }
+
+    private function resolvePartySelection(Request $request, bool $required = false): array
+    {
+        $employeeId = $request->filled('employee_id') ? (int) $request->input('employee_id') : null;
+        $supplierId = $request->filled('supplier_id') ? (int) $request->input('supplier_id') : null;
+
+        if ($employeeId && $supplierId) {
+            throw ValidationException::withMessages([
+                'party_type' => 'Select only one party: employee or supplier.',
+            ]);
+        }
+
+        if ($required && !$employeeId && !$supplierId) {
+            throw ValidationException::withMessages([
+                'party_type' => 'Select an employee or supplier.',
+            ]);
+        }
+
+        return [
+            'employee_id' => $employeeId,
+            'supplier_id' => $supplierId,
+        ];
+    }
+
+    private function applyPartyMatch($query, ?int $employeeId, ?int $supplierId)
+    {
+        if ($employeeId) {
+            $query->where('employee_id', $employeeId);
+        } else {
+            $query->whereNull('employee_id');
+        }
+
+        if ($supplierId) {
+            $query->where('supplier_id', $supplierId);
+        } else {
+            $query->whereNull('supplier_id');
+        }
+
+        return $query;
     }
 
 }

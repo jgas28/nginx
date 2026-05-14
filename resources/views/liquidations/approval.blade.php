@@ -293,9 +293,9 @@
 
     <!--Return Modal (collected and uncollected)-->
     <!-- Collected Modal Backdrop -->
-    <div id="collectedModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-y-auto p-4">
+    <div id="collectedModal" class="hidden fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-3 sm:items-center sm:p-4">
         <!-- Collected Modal Panel -->
-        <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
+        <div class="relative w-full max-w-xl max-h-[calc(100vh-1.5rem)] overflow-y-auto rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.22)] sm:max-h-[calc(100vh-3rem)] sm:p-6">
             <h3 class="text-xl font-semibold mb-4">Create Reimbursement (Collected)</h3>
 
             <form action="{{ route('running-balance.collected') }}" method="POST" class="space-y-4" id="reimbursementForm">
@@ -326,16 +326,18 @@
                         class="w-full border border-gray-300 rounded px-3 py-2 bg-gray-100 cursor-not-allowed" />
                 </div>
 
-                <div>
-                    <label class="block mb-1 font-medium" for="employee_id">Employee for Collected Amount</label>
-                    <select name="employee_id" id="employee_id" required
-                            class="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                        <option value="" disabled selected>Select employee</option>
-                        @foreach ($staffs as $staff)
-                            <option value="{{ $staff->id }}">{{ $staff->fname }} {{ $staff->lname }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                @include('partials.party-selector', [
+                    'idPrefix' => 'approval-collected-party',
+                    'employees' => $staffs,
+                    'suppliers' => $suppliers,
+                    'partyRequired' => true,
+                    'wrapperClass' => 'space-y-4',
+                    'selectClass' => 'h-[48px] w-full rounded-2xl border border-slate-200 px-4 text-[15px] text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100',
+                    'typeLabel' => 'Recipient Type',
+                    'typePlaceholder' => 'Select employee or supplier',
+                    'employeeLabel' => 'Employee for Collected Amount',
+                    'supplierLabel' => 'Supplier for Collected Amount',
+                ])
 
                 <div>
                     <label class="block mb-1 font-medium" for="approver_id_collected">Approver</label>
@@ -348,11 +350,11 @@
                     </select>
                 </div>
 
-                <div class="flex justify-end space-x-2 pt-4 border-t border-gray-200">
-                    <button type="button" id="closeCollectedModalBtn" class="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition">
+                <div class="flex flex-col-reverse gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end">
+                    <button type="button" id="closeCollectedModalBtn" class="w-full rounded-2xl border border-slate-200 px-4 py-3 font-semibold text-slate-700 transition hover:bg-gray-100 sm:w-auto">
                         Cancel
                     </button>
-                    <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition">
+                    <button type="submit" class="w-full rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 sm:w-auto">
                         Save
                     </button>
                 </div>
@@ -361,9 +363,9 @@
     </div>
 
     <!-- Uncollected Modal Backdrop -->
-    <div id="uncollectedModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-y-auto p-4">
+    <div id="uncollectedModal" class="hidden fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 p-3 sm:items-center sm:p-4">
         <!-- Uncollected Modal Panel -->
-        <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 relative max-h-[90vh] overflow-y-auto">
+        <div class="relative w-full max-w-xl max-h-[calc(100vh-1.5rem)] overflow-y-auto rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.22)] sm:max-h-[calc(100vh-3rem)] sm:p-6">
             <h3 class="text-xl font-semibold mb-4">Create Reimbursement (Uncollected)</h3>
 
             <form action="{{ route('running-balance.uncollected') }}" method="POST" class="space-y-4" id="reimbursementFormUncollected">
@@ -398,10 +400,10 @@
 
                 <div>
                     <label class="block mb-1 font-medium" for="employee_deductions_uncollected">Employee Deductions for Uncollected</label>
-                    <div id="employee-deductions-uncollected-container">
+                    <div id="employee-deductions-uncollected-container" class="space-y-3">
                         <!-- Dynamic Employee and Deduction rows for Uncollected will be added here -->
                     </div>
-                    <button type="button" id="add-employee-uncollected-btn" class="mt-2 px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 transition">
+                    <button type="button" id="add-employee-uncollected-btn" class="mt-3 inline-flex w-full items-center justify-center rounded-2xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-700 sm:w-auto">
                         Add Employee
                     </button>
                 </div>
@@ -417,11 +419,11 @@
                     </select>
                 </div>
 
-                <div class="flex justify-end space-x-2 pt-4 border-t border-gray-200">
-                    <button type="button" id="closeUncollectedModalBtn" class="px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition">
+                <div class="flex flex-col-reverse gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end">
+                    <button type="button" id="closeUncollectedModalBtn" class="w-full rounded-2xl border border-slate-200 px-4 py-3 font-semibold text-slate-700 transition hover:bg-gray-100 sm:w-auto">
                         Cancel
                     </button>
-                    <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700 transition">
+                    <button type="submit" class="w-full rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 sm:w-auto">
                         Save
                     </button>
                 </div>
@@ -430,8 +432,8 @@
     </div>
 
     <!--Return Modal-->
-    <div id="reimbursementModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative" id="modalPanel">
+    <div id="reimbursementModal" class="fixed inset-0 z-50 hidden flex items-start justify-center overflow-y-auto bg-slate-950/60 p-3 sm:items-center sm:p-4">
+        <div class="relative w-full max-w-xl max-h-[calc(100vh-1.5rem)] overflow-y-auto rounded-[26px] border border-slate-200 bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.22)] sm:max-h-[calc(100vh-3rem)] sm:p-6" id="modalPanel">
             <h3 class="text-xl font-semibold mb-4">Create Reimbursement</h3>
             <form action="{{ route('running-balance.reimburse') }}" method="POST" class="space-y-4">
                 @csrf
@@ -442,11 +444,20 @@
                 <div><label class="block mb-1 font-medium">Amount (₱)</label><input type="number" step="0.01" min="0" name="amount" required class="w-full border rounded px-3 py-2" /></div>
                 <div><label class="block mb-1 font-medium">Description</label><input type="text" name="description" value="Refund - {{ $liquidation->cvr_number }}" required class="w-full border rounded px-3 py-2" /></div>
                 <div><label class="block mb-1 font-medium">CVR Number</label><input type="text" name="cvr_number" value="{{ $liquidation->cvr_number }}" readonly class="w-full border rounded px-3 py-2 bg-gray-100" /></div>
-                <div><label class="block mb-1 font-medium">Employee</label><select name="employee_id" required class="w-full border rounded px-3 py-2">@foreach ($staffs as $staff)<option value="{{ $staff->id }}">{{ $staff->fname }} {{ $staff->lname }}</option>@endforeach</select></div>
-                <div><label class="block mb-1 font-medium">Approver</label><select name="approver_id" required class="w-full border rounded px-3 py-2">@foreach ($approvers as $approver)<option value="{{ $approver->id }}">{{ $approver->name }}</option>@endforeach</select></div>
-                <div class="flex justify-end space-x-2 pt-4 border-t border-gray-200">
-                    <button type="button" id="closeModalBtn" class="px-4 py-2 rounded border hover:bg-gray-100">Cancel</button>
-                    <button type="submit" class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700">Save</button>
+                @include('partials.party-selector', [
+                    'idPrefix' => 'approval-refund-party',
+                    'employees' => $staffs,
+                    'suppliers' => $suppliers,
+                    'partyRequired' => true,
+                    'wrapperClass' => 'space-y-4',
+                    'selectClass' => 'h-[48px] w-full rounded-2xl border border-slate-200 px-4 text-[15px] text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100',
+                    'typeLabel' => 'Recipient Type',
+                    'typePlaceholder' => 'Select employee or supplier',
+                ])
+                <div><label class="block mb-1 font-medium">Approver</label><select name="approver_id" required class="h-[48px] w-full rounded-2xl border border-slate-200 px-4 text-[15px] text-slate-700 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">@foreach ($approvers as $approver)<option value="{{ $approver->id }}">{{ $approver->name }}</option>@endforeach</select></div>
+                <div class="flex flex-col-reverse gap-3 border-t border-gray-200 pt-4 sm:flex-row sm:justify-end">
+                    <button type="button" id="closeModalBtn" class="w-full rounded-2xl border border-slate-200 px-4 py-3 font-semibold text-slate-700 transition hover:bg-gray-100 sm:w-auto">Cancel</button>
+                    <button type="submit" class="w-full rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 sm:w-auto">Save</button>
                 </div>
             </form>
         </div>
@@ -570,25 +581,25 @@
 </div>
 
 {{-- Reject Modal --}}
-<div id="rejectModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+<div id="rejectModal" class="fixed inset-0 z-50 hidden flex items-start justify-center overflow-y-auto bg-slate-950/60 p-3 sm:items-center sm:p-4">
+    <div class="w-full max-w-md rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.22)] sm:p-6">
         <form id="rejectForm" action="{{ route('liquidations.reject', $liquidation->id) }}" method="POST">
             @csrf
             <input type="hidden" name="validated_by" value="{{ auth()->user()->id }}">
             <h3 class="text-xl font-semibold mb-4 text-red-600">Reject Liquidation</h3>
             <p class="text-sm text-gray-600 mb-3">Please provide remarks for rejecting this liquidation:</p>
             <textarea name="remarks" id="rejectRemarks" rows="3" required class="w-full border rounded px-3 py-2" placeholder="Enter reason..."></textarea>
-            <div class="flex justify-end space-x-2 mt-4">
-                <button type="button" id="cancelRejectBtn" class="px-4 py-2 rounded border hover:bg-gray-100">Cancel</button>
-                <button type="submit" class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Confirm Reject</button>
+            <div class="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button type="button" id="cancelRejectBtn" class="w-full rounded-2xl border border-slate-200 px-4 py-3 font-semibold text-slate-700 transition hover:bg-gray-100 sm:w-auto">Cancel</button>
+                <button type="submit" class="w-full rounded-2xl bg-red-600 px-4 py-3 font-semibold text-white transition hover:bg-red-700 sm:w-auto">Confirm Reject</button>
             </div>
         </form>
     </div>
 </div>
 
 {{-- Confirm Validation Modal --}}
-<div id="confirmValidationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+<div id="confirmValidationModal" class="fixed inset-0 z-50 hidden flex items-start justify-center overflow-y-auto bg-slate-950/60 p-3 sm:items-center sm:p-4">
+    <div class="w-full max-w-md rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.22)] sm:p-6">
         <h3 class="text-xl font-semibold mb-4 text-indigo-700">Confirm Aprroval</h3>
         <p class="text-sm text-gray-600 mb-3">
             Are you sure you want to confirm the validation?
@@ -596,16 +607,16 @@
                 There is a ₱<span id="differenceAmount">0.00</span> difference between approved and liquidated amounts.
             </span>
         </p>
-        <div class="flex justify-end space-x-2 mt-4">
-            <button type="button" id="cancelConfirmValidationBtn" class="px-4 py-2 rounded border hover:bg-gray-100">Cancel</button>
-            <button type="button" id="confirmValidationBtn" class="px-4 py-2 rounded bg-indigo-600 text-white hover:bg-indigo-700" disabled>Confirm</button>
+        <div class="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button type="button" id="cancelConfirmValidationBtn" class="w-full rounded-2xl border border-slate-200 px-4 py-3 font-semibold text-slate-700 transition hover:bg-gray-100 sm:w-auto">Cancel</button>
+            <button type="button" id="confirmValidationBtn" class="w-full rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 sm:w-auto" disabled>Confirm</button>
         </div>
     </div>
 </div>
 
 <!-- Edit Refund Modal -->
-<div id="editRefundModal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-40 flex items-center justify-center">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
+<div id="editRefundModal" class="fixed inset-0 z-50 hidden flex items-start justify-center overflow-y-auto bg-slate-950/60 p-3 sm:items-center sm:p-4">
+    <div class="relative w-full max-w-md rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.22)] sm:p-6">
         <h3 class="text-lg font-semibold mb-4">Edit Refund</h3>
         <form id="editRefundForm" method="POST">
             @csrf
@@ -620,17 +631,17 @@
                 <label for="edit_refund_amount" class="block text-sm font-medium">Amount (₱)</label>
                 <input type="number" name="amount" id="edit_refund_amount" step="0.01" class="w-full border rounded px-3 py-2 mt-1" required>
             </div>
-            <div class="flex justify-end gap-2 border-t pt-4">
-                <button type="button" class="px-4 py-2 border rounded hover:bg-gray-100" onclick="closeEditRefundModal()">Cancel</button>
-                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Save</button>
+            <div class="flex flex-col-reverse gap-3 border-t pt-4 sm:flex-row sm:justify-end">
+                <button type="button" class="w-full rounded-2xl border border-slate-200 px-4 py-3 font-semibold text-slate-700 transition hover:bg-gray-100 sm:w-auto" onclick="closeEditRefundModal()">Cancel</button>
+                <button type="submit" class="w-full rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 sm:w-auto">Save</button>
             </div>
         </form>
     </div>
 </div>
 
 <!-- Edit Return Modal -->
-<div id="editReturnModal" class="fixed inset-0 z-50 hidden bg-black bg-opacity-40 flex items-center justify-center">
-    <div class="bg-white rounded-lg shadow-lg w-full max-w-md p-6 relative">
+<div id="editReturnModal" class="fixed inset-0 z-50 hidden flex items-start justify-center overflow-y-auto bg-slate-950/60 p-3 sm:items-center sm:p-4">
+    <div class="relative w-full max-w-md rounded-[24px] border border-slate-200 bg-white p-4 shadow-[0_24px_60px_rgba(15,23,42,0.22)] sm:p-6">
         <h3 class="text-lg font-semibold mb-4">Edit Return</h3>
         <form id="editReturnForm" method="POST">
             @csrf
@@ -645,9 +656,9 @@
                 <label for="edit_return_amount" class="block text-sm font-medium">Amount (₱)</label>
                 <input type="number" name="amount" id="edit_return_amount" step="0.01" class="w-full border rounded px-3 py-2 mt-1" required>
             </div>
-            <div class="flex justify-end gap-2 border-t pt-4">
-                <button type="button" class="px-4 py-2 border rounded hover:bg-gray-100" onclick="closeEditReturnModal()">Cancel</button>
-                <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">Save</button>
+            <div class="flex flex-col-reverse gap-3 border-t pt-4 sm:flex-row sm:justify-end">
+                <button type="button" class="w-full rounded-2xl border border-slate-200 px-4 py-3 font-semibold text-slate-700 transition hover:bg-gray-100 sm:w-auto" onclick="closeEditReturnModal()">Cancel</button>
+                <button type="submit" class="w-full rounded-2xl bg-indigo-600 px-4 py-3 font-semibold text-white transition hover:bg-indigo-700 sm:w-auto">Save</button>
             </div>
         </form>
     </div>

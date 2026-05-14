@@ -183,6 +183,10 @@
     </style>
 </head>
 <body>
+    @php
+        $partyName = trim((optional($reimbursement->employee)->fname ?? '') . ' ' . (optional($reimbursement->employee)->lname ?? ''));
+        $partyName = $partyName !== '' ? $partyName : (optional($reimbursement->suppliers)->supplier_name ?? 'N/A');
+    @endphp
     <div class="container">
         <div class="header">
         <div class="date">
@@ -210,7 +214,7 @@
             <tbody>
                     <tr>
                         <td style="text-align: center; font-size: 12px; border-bottom: none; height: 150px; vertical-align: top; overflow: auto;">
-                        {{ $reimbursement->employee->fname }} {{ $reimbursement->employee->lname }} - {{ $reimbursement->description }}
+                        {{ $partyName }} - {{ $reimbursement->description }}
                         </td>
                         <td style="text-align: right; font-size: 16px; color: red; border-bottom: none; height: 150px; vertical-align: top;">₱{{ number_format(abs($reimbursement->amount), 2) }}</td>
                     </tr>
