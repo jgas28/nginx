@@ -10,14 +10,22 @@
         ['label' => 'CVR Approvals', 'value' => $totalCVRapproval ?? 0, 'tone' => 'from-fuchsia-500/18 via-pink-500/10 to-rose-500/10', 'border' => 'border-fuchsia-200/80', 'icon' => 'fa-file-signature', 'iconBg' => 'from-fuchsia-100 to-pink-100', 'iconText' => 'text-fuchsia-700', 'valueText' => 'text-fuchsia-700', 'isMoney' => false],
     ];
     $secondaryMetricCards = [
-        ['label' => 'Admin Expenses', 'value' => $totals->admin_rpm_total ?? 0, 'tone' => 'from-amber-500/18 via-yellow-500/10 to-orange-500/10', 'border' => 'border-amber-200/80', 'icon' => 'fa-wallet', 'iconBg' => 'from-amber-100 to-yellow-100', 'iconText' => 'text-amber-700', 'valueText' => 'text-amber-700', 'isMoney' => true],
+        ['label' => 'Admin Expenses', 'value' => $totals->admin_total ?? 0, 'tone' => 'from-blue-500/18 via-cyan-500/10 to-sky-500/10', 'border' => 'border-blue-200/80', 'icon' => 'fa-user-shield', 'iconBg' => 'from-blue-100 to-cyan-100', 'iconText' => 'text-blue-700', 'valueText' => 'text-blue-700', 'isMoney' => true],
+        ['label' => 'RPM Expenses', 'value' => $totals->rpm_total ?? 0, 'tone' => 'from-amber-500/18 via-yellow-500/10 to-orange-500/10', 'border' => 'border-amber-200/80', 'icon' => 'fa-gas-pump', 'iconBg' => 'from-amber-100 to-yellow-100', 'iconText' => 'text-amber-700', 'valueText' => 'text-amber-700', 'isMoney' => true],
         ['label' => 'Pending Deliveries', 'value' => $totalPendingDeliveries ?? 0, 'tone' => 'from-rose-500/18 via-red-500/10 to-pink-500/10', 'border' => 'border-rose-200/80', 'icon' => 'fa-hourglass-half', 'iconBg' => 'from-rose-100 to-red-100', 'iconText' => 'text-rose-700', 'valueText' => 'text-rose-700', 'isMoney' => false],
         ['label' => 'Truck Allocated', 'value' => $totalTruckAllocated ?? 0, 'tone' => 'from-violet-500/18 via-indigo-500/10 to-fuchsia-500/10', 'border' => 'border-violet-200/80', 'icon' => 'fa-truck', 'iconBg' => 'from-violet-100 to-indigo-100', 'iconText' => 'text-violet-700', 'valueText' => 'text-violet-700', 'isMoney' => false],
         ['label' => 'Liquidations', 'value' => $totalLiquidation ?? 0, 'tone' => 'from-teal-500/18 via-cyan-500/10 to-sky-500/10', 'border' => 'border-teal-200/80', 'icon' => 'fa-file-invoice-dollar', 'iconBg' => 'from-teal-100 to-cyan-100', 'iconText' => 'text-teal-700', 'valueText' => 'text-teal-700', 'isMoney' => false],
     ];
+    $financialSplit = [
+        ['label' => 'Profit', 'value' => $totalDeliveryRates + $totalAccessorialRates, 'bar' => 'from-emerald-500 to-green-500', 'text' => 'text-emerald-600'],
+        ['label' => 'Admin Expenses', 'value' => $totals->admin_total ?? 0, 'bar' => 'from-blue-500 to-cyan-500', 'text' => 'text-blue-600', 'children' => $totals->admin_breakdown ?? []],
+        ['label' => 'RPM Expenses', 'value' => $totals->rpm_total ?? 0, 'bar' => 'from-amber-500 to-yellow-500', 'text' => 'text-amber-600', 'children' => $totals->rpm_breakdown ?? []],
+        ['label' => 'Operational Expenses', 'value' => $totals->operation_total ?? 0, 'bar' => 'from-orange-500 to-red-500', 'text' => 'text-orange-600', 'children' => $totals->operation_breakdown ?? []],
+    ];
     $chartMax = max(
         $totalDeliveryRates + $totalAccessorialRates,
-        $totals->admin_rpm_total ?? 0,
+        $totals->admin_total ?? 0,
+        $totals->rpm_total ?? 0,
         $totals->operation_total ?? 0,
         1
     );
@@ -49,6 +57,7 @@
         return number_format($x, 2, '.', '') . ',' . number_format($y, 2, '.', '');
     })->implode(' ');
     $expenseMixMax = max(1, collect($expenseMix)->max('value') ?? 1);
+    $expenseMixBreakdownMax = max(1, collect($expenseMix)->flatMap(fn ($item) => $item['children'] ?? [])->max('value') ?? 1);
     $activityMixMax = max(1, collect($activityMix)->max('value') ?? 1);
 @endphp
 
@@ -88,7 +97,8 @@
 
         <div class="mb-6 space-y-4">
             @foreach ([$primaryMetricCards, $secondaryMetricCards] as $metricRow)
-                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                @php $metricColumns = count($metricRow) > 4 ? 'xl:grid-cols-5' : 'xl:grid-cols-4'; @endphp
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 {{ $metricColumns }}">
                     @foreach ($metricRow as $metric)
                         <div class="rounded-3xl border {{ $metric['border'] }} bg-gradient-to-br from-white via-white {{ $metric['tone'] }} p-4 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur transition hover:-translate-y-0.5 hover:shadow-[0_20px_45px_rgba(37,99,235,0.10)]">
                             <div class="flex items-start justify-between gap-3">
@@ -161,21 +171,73 @@
 
                 <div class="space-y-3">
                     @foreach ($expenseMix as $item)
-                        @php $width = min(100, (($item['value'] ?? 0) / $expenseMixMax) * 100); @endphp
-                        <div class="rounded-2xl bg-white/70 px-3 py-3 ring-1 ring-white/80">
-                            <div class="mb-1.5 flex items-center justify-between gap-3 text-sm">
-                                <span class="inline-flex items-center gap-2 font-medium text-slate-600">
-                                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-1 ring-slate-200">
-                                        <i class="fas fa-coins text-[11px]"></i>
+                        @php
+                            $width = min(100, (($item['value'] ?? 0) / $expenseMixMax) * 100);
+                            $children = $item['children'] ?? [];
+                            $icon = $item['icon'] ?? 'fa-coins';
+                        @endphp
+
+                        @if (!empty($children))
+                            <details class="group rounded-2xl bg-white/80 px-3 py-3 ring-1 ring-white/80">
+                                <summary class="cursor-pointer list-none">
+                                    <div class="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                                        <span class="inline-flex items-center gap-2 font-medium text-slate-600">
+                                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-1 ring-slate-200">
+                                                <i class="fas {{ $icon }} text-[11px]"></i>
+                                            </span>
+                                            {{ $item['label'] }}
+                                        </span>
+                                        <span class="flex items-center gap-3">
+                                            <span class="font-semibold {{ $item['text'] }}">PHP {{ number_format($item['value'], 2) }}</span>
+                                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-1 ring-slate-200 transition group-open:rotate-180">
+                                                <i class="fas fa-chevron-down text-[10px]"></i>
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <div class="h-3 rounded-full bg-slate-100">
+                                        <div class="h-3 rounded-full {{ $item['color'] }}" style="width: {{ $width }}%"></div>
+                                    </div>
+                                </summary>
+
+                                <div class="mt-3 space-y-2 border-t border-slate-200/70 pt-3">
+                                    @foreach ($children as $child)
+                                        @php
+                                            $childWidth = min(100, (($child['value'] ?? 0) / $expenseMixBreakdownMax) * 100);
+                                            $childIcon = $child['icon'] ?? 'fa-coins';
+                                        @endphp
+                                        <div class="rounded-2xl bg-slate-50/90 px-3 py-3 ring-1 ring-slate-100">
+                                            <div class="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                                                <span class="inline-flex items-center gap-2 font-medium text-slate-600">
+                                                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-200">
+                                                        <i class="fas {{ $childIcon }} text-[11px]"></i>
+                                                    </span>
+                                                    {{ $child['label'] }}
+                                                </span>
+                                                <span class="font-semibold {{ $child['text'] }}">PHP {{ number_format($child['value'], 2) }}</span>
+                                            </div>
+                                            <div class="h-3 rounded-full bg-white">
+                                                <div class="h-3 rounded-full {{ $child['color'] }}" style="width: {{ $childWidth }}%"></div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </details>
+                        @else
+                            <div class="rounded-2xl bg-white/70 px-3 py-3 ring-1 ring-white/80">
+                                <div class="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                                    <span class="inline-flex items-center gap-2 font-medium text-slate-600">
+                                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-1 ring-slate-200">
+                                            <i class="fas {{ $icon }} text-[11px]"></i>
+                                        </span>
+                                        {{ $item['label'] }}
                                     </span>
-                                    {{ $item['label'] }}
-                                </span>
-                                <span class="font-semibold {{ $item['text'] }}">PHP {{ number_format($item['value'], 2) }}</span>
+                                    <span class="font-semibold {{ $item['text'] }}">PHP {{ number_format($item['value'], 2) }}</span>
+                                </div>
+                                <div class="h-3 rounded-full bg-slate-100">
+                                    <div class="h-3 rounded-full {{ $item['color'] }}" style="width: {{ $width }}%"></div>
+                                </div>
                             </div>
-                            <div class="h-3 rounded-full bg-slate-100">
-                                <div class="h-3 rounded-full {{ $item['color'] }}" style="width: {{ $width }}%"></div>
-                            </div>
-                        </div>
+                        @endif
                     @endforeach
                 </div>
             </div>
@@ -194,21 +256,60 @@
                 </div>
 
                 <div class="space-y-4">
-                    @foreach ([
-                        ['label' => 'Profit', 'value' => $totalDeliveryRates + $totalAccessorialRates, 'bar' => 'from-emerald-500 to-green-500', 'text' => 'text-emerald-600'],
-                        ['label' => 'Admin Expenses', 'value' => $totals->admin_rpm_total ?? 0, 'bar' => 'from-amber-500 to-yellow-500', 'text' => 'text-amber-600'],
-                        ['label' => 'Operational Expenses', 'value' => $totals->operation_total ?? 0, 'bar' => 'from-orange-500 to-red-500', 'text' => 'text-orange-600'],
-                    ] as $bar)
-                        @php $width = min(100, ($bar['value'] / $chartMax) * 100); @endphp
-                        <div>
-                            <div class="mb-1.5 flex items-center justify-between text-sm">
-                                <span class="font-medium text-slate-600">{{ $bar['label'] }}</span>
-                                <span class="font-semibold {{ $bar['text'] }}">PHP {{ number_format($bar['value'], 2) }}</span>
+                    @foreach ($financialSplit as $bar)
+                        @php
+                            $width = min(100, ($bar['value'] / $chartMax) * 100);
+                            $children = $bar['children'] ?? [];
+                        @endphp
+
+                        @if (!empty($children))
+                            <details class="group rounded-2xl bg-slate-50/80 px-3 py-3 ring-1 ring-slate-100">
+                                <summary class="cursor-pointer list-none">
+                                    <div class="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                                        <span class="font-medium text-slate-600">{{ $bar['label'] }}</span>
+                                        <span class="flex items-center gap-3">
+                                            <span class="font-semibold {{ $bar['text'] }}">PHP {{ number_format($bar['value'], 2) }}</span>
+                                            <span class="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-500 ring-1 ring-slate-200 transition group-open:rotate-180">
+                                                <i class="fas fa-chevron-down text-[10px]"></i>
+                                            </span>
+                                        </span>
+                                    </div>
+                                    <div class="h-3 rounded-full bg-slate-100">
+                                        <div class="h-3 rounded-full bg-gradient-to-r {{ $bar['bar'] }}" style="width: {{ $width }}%"></div>
+                                    </div>
+                                </summary>
+
+                                <div class="mt-3 space-y-2 border-t border-slate-200/70 pt-3">
+                                    @foreach ($children as $child)
+                                        @php $childWidth = min(100, (($child['value'] ?? 0) / $expenseMixBreakdownMax) * 100); @endphp
+                                        <div class="rounded-2xl bg-white px-3 py-3 ring-1 ring-slate-100">
+                                            <div class="mb-1.5 flex items-center justify-between gap-3 text-sm">
+                                                <span class="inline-flex items-center gap-2 font-medium text-slate-600">
+                                                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-500 ring-1 ring-slate-200">
+                                                        <i class="fas {{ $child['icon'] ?? 'fa-coins' }} text-[11px]"></i>
+                                                    </span>
+                                                    {{ $child['label'] }}
+                                                </span>
+                                                <span class="font-semibold {{ $child['text'] }}">PHP {{ number_format($child['value'], 2) }}</span>
+                                            </div>
+                                            <div class="h-3 rounded-full bg-slate-100">
+                                                <div class="h-3 rounded-full {{ $child['color'] }}" style="width: {{ $childWidth }}%"></div>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </details>
+                        @else
+                            <div>
+                                <div class="mb-1.5 flex items-center justify-between text-sm">
+                                    <span class="font-medium text-slate-600">{{ $bar['label'] }}</span>
+                                    <span class="font-semibold {{ $bar['text'] }}">PHP {{ number_format($bar['value'], 2) }}</span>
+                                </div>
+                                <div class="h-3 rounded-full bg-slate-100">
+                                    <div class="h-3 rounded-full bg-gradient-to-r {{ $bar['bar'] }}" style="width: {{ $width }}%"></div>
+                                </div>
                             </div>
-                            <div class="h-3 rounded-full bg-slate-100">
-                                <div class="h-3 rounded-full bg-gradient-to-r {{ $bar['bar'] }}" style="width: {{ $width }}%"></div>
-                            </div>
-                        </div>
+                        @endif
                     @endforeach
                 </div>
             </div>
