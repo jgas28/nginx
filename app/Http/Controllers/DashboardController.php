@@ -155,32 +155,40 @@ class DashboardController extends Controller
                     'label' => 'Income',
                     'value' => ($totalDeliveryRates + $totalAccessorialRates),
                     'color' => 'bg-emerald-500',
-                    'text' => 'text-emerald-700',
-                    'icon' => 'fa-chart-line',
+                    'text'  => 'text-emerald-700',
+                    'icon'  => 'fa-chart-line',
                 ],
                 [
-                    'label' => 'Admin Expense',
-                    'value' => $totals->admin_total ?? 0,
-                    'color' => 'bg-blue-500',
-                    'text' => 'text-blue-700',
-                    'icon' => 'fa-user-shield',
+                    'label'    => 'Admin Expense',
+                    'value'    => $totals->admin_total ?? 0,
+                    'color'    => 'bg-blue-500',
+                    'text'     => 'text-blue-700',
+                    'icon'     => 'fa-user-shield',
                     'children' => $totals->admin_breakdown ?? [],
                 ],
                 [
-                    'label' => 'RPM Expense',
-                    'value' => $totals->rpm_total ?? 0,
-                    'color' => 'bg-amber-500',
-                    'text' => 'text-amber-700',
-                    'icon' => 'fa-gas-pump',
+                    'label'    => 'RPM Expense',
+                    'value'    => $totals->rpm_total ?? 0,
+                    'color'    => 'bg-amber-500',
+                    'text'     => 'text-amber-700',
+                    'icon'     => 'fa-wrench',
                     'children' => $totals->rpm_breakdown ?? [],
                 ],
                 [
-                    'label' => 'Operational Expense',
-                    'value' => $totals->operation_total ?? 0,
-                    'color' => 'bg-orange-500',
-                    'text' => 'text-orange-700',
-                    'icon' => 'fa-gears',
+                    'label'    => 'Operations Expense',
+                    'value'    => $totals->operation_total ?? 0,
+                    'color'    => 'bg-orange-500',
+                    'text'     => 'text-orange-700',
+                    'icon'     => 'fa-gears',
                     'children' => $totals->operation_breakdown ?? [],
+                ],
+                [
+                    'label'    => 'Accessorial Expense',
+                    'value'    => $totals->accessorial_total ?? 0,
+                    'color'    => 'bg-teal-500',
+                    'text'     => 'text-teal-700',
+                    'icon'     => 'fa-truck-ramp-box',
+                    'children' => $totals->accessorial_breakdown ?? [],
                 ],
             ];
         }
@@ -257,34 +265,41 @@ class DashboardController extends Controller
             })
             ->get();
 
-        $adminBreakdown = $this->makeEmptyLiquidationBreakdown();
-        $rpmBreakdown = $this->makeEmptyLiquidationBreakdown();
-        $operationBreakdown = $this->makeEmptyLiquidationBreakdown();
+        $adminBreakdown       = $this->makeEmptyLiquidationBreakdown();
+        $rpmBreakdown         = $this->makeEmptyLiquidationBreakdown();
+        $operationBreakdown   = $this->makeEmptyLiquidationBreakdown();
+        $accessorialBreakdown = $this->makeEmptyLiquidationBreakdown();
 
         foreach ($liquidations as $liquidation) {
-            $type = optional($liquidation->cashVoucher)->cvr_type;
+            $type = strtolower(trim(optional($liquidation->cashVoucher)->cvr_type ?? ''));
 
             if ($type === 'admin') {
                 $this->accumulateLiquidationBreakdown($adminBreakdown, $liquidation);
             } elseif ($type === 'rpm') {
                 $this->accumulateLiquidationBreakdown($rpmBreakdown, $liquidation);
+            } elseif (in_array($type, ['accesorial', 'accessorial'], true)) {
+                // note: 'accesorial' is the typo stored in the DB
+                $this->accumulateLiquidationBreakdown($accessorialBreakdown, $liquidation);
             } else {
                 $this->accumulateLiquidationBreakdown($operationBreakdown, $liquidation);
             }
         }
 
-        $adminTotal = array_sum($adminBreakdown);
-        $rpmTotal = array_sum($rpmBreakdown);
-        $operationTotal = array_sum($operationBreakdown);
+        $adminTotal       = $this->breakdownNumericTotal($adminBreakdown);
+        $rpmTotal         = $this->breakdownNumericTotal($rpmBreakdown);
+        $operationTotal   = $this->breakdownNumericTotal($operationBreakdown);
+        $accessorialTotal = $this->breakdownNumericTotal($accessorialBreakdown);
 
         return [
-            'admin_total' => $adminTotal,
-            'rpm_total' => $rpmTotal,
-            'admin_rpm_total' => $adminTotal + $rpmTotal,
-            'operation_total' => $operationTotal,
-            'admin_breakdown' => $this->formatLiquidationBreakdownItems($adminBreakdown, 'blue'),
-            'rpm_breakdown' => $this->formatLiquidationBreakdownItems($rpmBreakdown, 'amber'),
-            'operation_breakdown' => $this->formatLiquidationBreakdownItems($operationBreakdown, 'orange'),
+            'admin_total'           => $adminTotal,
+            'rpm_total'             => $rpmTotal,
+            'admin_rpm_total'       => $adminTotal + $rpmTotal,
+            'operation_total'       => $operationTotal,
+            'accessorial_total'     => $accessorialTotal,
+            'admin_breakdown'       => $this->formatLiquidationBreakdownItems($adminBreakdown, 'blue'),
+            'rpm_breakdown'         => $this->formatLiquidationBreakdownItems($rpmBreakdown, 'amber'),
+            'operation_breakdown'   => $this->formatLiquidationBreakdownItems($operationBreakdown, 'orange'),
+            'accessorial_breakdown' => $this->formatLiquidationBreakdownItems($accessorialBreakdown, 'teal'),
         ];
     }
 
@@ -311,7 +326,8 @@ class DashboardController extends Controller
             $expenses =
                 ($liquidationTotals['admin_total'] ?? 0) +
                 ($liquidationTotals['rpm_total'] ?? 0) +
-                ($liquidationTotals['operation_total'] ?? 0);
+                ($liquidationTotals['operation_total'] ?? 0) +
+                ($liquidationTotals['accessorial_total'] ?? 0);
 
             $series[] = [
                 'label' => $period->format('M Y'),
@@ -327,61 +343,90 @@ class DashboardController extends Controller
     private function makeEmptyLiquidationBreakdown(): array
     {
         return [
-            'allowance' => 0,
-            'manpower' => 0,
-            'hauling' => 0,
-            'right_of_way' => 0,
-            'roro_expense' => 0,
-            'cash_charge' => 0,
-            'gasoline' => 0,
-            'rfid' => 0,
-            'others' => 0,
+            'gasoline'      => 0,
+            'rfid'          => 0,
+            'allowance'     => 0,
+            'manpower'      => 0,
+            'hauling'       => 0,
+            'right_of_way'  => 0,
+            'roro_expense'  => 0,
+            'cash_charge'   => 0,
+            'others'        => 0,
+            'others_items'  => [],   // keyed by item-type label → accumulated amount
         ];
     }
 
     private function accumulateLiquidationBreakdown(array &$breakdown, Liquidation $liquidation): void
     {
-        $breakdown['allowance'] += (float) $liquidation->allowance;
-        $breakdown['manpower'] += (float) $liquidation->manpower;
-        $breakdown['hauling'] += (float) $liquidation->hauling;
+        $breakdown['gasoline']     += collect($liquidation->gasoline ?? [])->sum('amount');
+        $breakdown['rfid']         += collect($liquidation->rfid ?? [])->sum('amount');
+        $breakdown['allowance']    += (float) $liquidation->allowance;
+        $breakdown['manpower']     += (float) $liquidation->manpower;
+        $breakdown['hauling']      += (float) $liquidation->hauling;
         $breakdown['right_of_way'] += (float) $liquidation->right_of_way;
         $breakdown['roro_expense'] += (float) $liquidation->roro_expense;
-        $breakdown['cash_charge'] += (float) $liquidation->cash_charge;
-        $breakdown['gasoline'] += collect($liquidation->gasoline ?? [])->sum('amount');
-        $breakdown['rfid'] += collect($liquidation->rfid ?? [])->sum('amount');
-        $breakdown['others'] += collect($liquidation->others ?? [])->sum('amount');
+        $breakdown['cash_charge']  += (float) $liquidation->cash_charge;
+
+        foreach (($liquidation->others ?? []) as $other) {
+            $typeName = trim($other['type'] ?? $other['description'] ?? '');
+            $typeName = $typeName !== '' ? ucfirst($typeName) : 'Miscellaneous';
+            $amount   = (float) ($other['amount'] ?? 0);
+            $breakdown['others'] += $amount;
+            $breakdown['others_items'][$typeName] = ($breakdown['others_items'][$typeName] ?? 0) + $amount;
+        }
+    }
+
+    private function breakdownNumericTotal(array $breakdown): float
+    {
+        return $breakdown['gasoline'] + $breakdown['rfid'] + $breakdown['allowance']
+             + $breakdown['manpower'] + $breakdown['hauling'] + $breakdown['right_of_way']
+             + $breakdown['roro_expense'] + $breakdown['cash_charge'] + $breakdown['others'];
     }
 
     private function formatLiquidationBreakdownItems(array $breakdown, string $tone): array
     {
         $toneMap = [
-            'blue' => ['color' => 'bg-blue-500', 'text' => 'text-blue-700'],
-            'amber' => ['color' => 'bg-amber-500', 'text' => 'text-amber-700'],
+            'blue'   => ['color' => 'bg-blue-500',   'text' => 'text-blue-700'],
+            'amber'  => ['color' => 'bg-amber-500',  'text' => 'text-amber-700'],
             'orange' => ['color' => 'bg-orange-500', 'text' => 'text-orange-700'],
+            'teal'   => ['color' => 'bg-teal-500',   'text' => 'text-teal-700'],
         ];
 
         $fieldMap = [
-            'allowance' => ['label' => 'Allowance', 'icon' => 'fa-hand-holding-dollar'],
-            'manpower' => ['label' => 'Manpower', 'icon' => 'fa-users'],
-            'hauling' => ['label' => 'Hauling', 'icon' => 'fa-truck-ramp-box'],
-            'right_of_way' => ['label' => 'Right of Way', 'icon' => 'fa-road'],
-            'roro_expense' => ['label' => 'RoRo Expense', 'icon' => 'fa-ship'],
-            'cash_charge' => ['label' => 'Cash Charge', 'icon' => 'fa-money-bill-wave'],
-            'gasoline' => ['label' => 'Gasoline', 'icon' => 'fa-gas-pump'],
-            'rfid' => ['label' => 'RFID', 'icon' => 'fa-id-card'],
-            'others' => ['label' => 'Others', 'icon' => 'fa-ellipsis'],
+            'gasoline'     => ['label' => 'Diesel / Fuel',      'icon' => 'fa-gas-pump'],
+            'rfid'         => ['label' => 'Toll Fee',            'icon' => 'fa-road'],
+            'allowance'    => ['label' => 'Allowance / Lodging', 'icon' => 'fa-bed'],
+            'manpower'     => ['label' => 'Manpower',            'icon' => 'fa-users'],
+            'hauling'      => ['label' => 'Hauling / Freight',   'icon' => 'fa-truck-ramp-box'],
+            'right_of_way' => ['label' => 'Right of Way',        'icon' => 'fa-signs-post'],
+            'roro_expense' => ['label' => 'RoRo Expense',        'icon' => 'fa-ship'],
+            'cash_charge'  => ['label' => 'Cash Charge',         'icon' => 'fa-money-bill-wave'],
+            'others'       => ['label' => 'Others',              'icon' => 'fa-ellipsis'],
         ];
 
         $styles = $toneMap[$tone] ?? ['color' => 'bg-slate-500', 'text' => 'text-slate-700'];
+        $othersItems = $breakdown['others_items'] ?? [];
 
-        return collect($fieldMap)->map(function ($meta, $field) use ($breakdown, $styles) {
-            return [
+        return collect($fieldMap)->map(function ($meta, $field) use ($breakdown, $styles, $othersItems) {
+            $item = [
+                'field' => $field,
                 'label' => $meta['label'],
                 'value' => $breakdown[$field] ?? 0,
                 'color' => $styles['color'],
-                'text' => $styles['text'],
-                'icon' => $meta['icon'],
+                'text'  => $styles['text'],
+                'icon'  => $meta['icon'],
             ];
+            if ($field === 'others' && !empty($othersItems)) {
+                $item['children'] = collect($othersItems)->map(fn ($amt, $name) => [
+                    'field' => 'others_sub',
+                    'label' => $name,
+                    'value' => $amt,
+                    'color' => $styles['color'],
+                    'text'  => $styles['text'],
+                    'icon'  => 'fa-arrow-right',
+                ])->values()->all();
+            }
+            return $item;
         })->values()->all();
     }
 }
