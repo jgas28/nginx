@@ -11,11 +11,12 @@
     $highestRunning   = collect($runTotals)->max() ?? 0;
     $maxBalance       = max($totalRunning, $totalUncollected, $highestRunning, 1);
 
+    // Hex palette — avoids Tailwind purge of dynamic class strings
     $summaryCards = [
-        ['label'=>'Approvers',       'value'=>$approverCount, 'fmt'=>false, 'icon'=>'fa-users',           'bg'=>'bg-blue-50',   'iconCls'=>'text-blue-600',   'ring'=>'ring-blue-200',   'valCls'=>'text-slate-800'],
-        ['label'=>'Running Total',   'value'=>$totalRunning,  'fmt'=>true,  'icon'=>'fa-circle-check',    'bg'=>'bg-emerald-50','iconCls'=>'text-emerald-600','ring'=>'ring-emerald-200','valCls'=>'text-emerald-700'],
-        ['label'=>'Uncollected',     'value'=>$totalUncollected,'fmt'=>true,'icon'=>'fa-triangle-exclamation','bg'=>'bg-rose-50','iconCls'=>'text-rose-600', 'ring'=>'ring-rose-200',   'valCls'=>'text-rose-700'],
-        ['label'=>'Highest Balance', 'value'=>$highestRunning,'fmt'=>true,  'icon'=>'fa-trophy',          'bg'=>'bg-amber-50',  'iconCls'=>'text-amber-600',  'ring'=>'ring-amber-200',  'valCls'=>'text-sky-700'],
+        ['label'=>'Approvers',       'value'=>$approverCount,   'fmt'=>false, 'icon'=>'fa-users',                'bgHex'=>'#dbeafe','borderHex'=>'#93c5fd','iconHex'=>'#2563eb','valHex'=>'#1e293b'],
+        ['label'=>'Running Total',   'value'=>$totalRunning,    'fmt'=>true,  'icon'=>'fa-circle-check',         'bgHex'=>'#d1fae5','borderHex'=>'#6ee7b7','iconHex'=>'#059669','valHex'=>'#047857'],
+        ['label'=>'Uncollected',     'value'=>$totalUncollected,'fmt'=>true,  'icon'=>'fa-triangle-exclamation', 'bgHex'=>'#ffe4e6','borderHex'=>'#fda4af','iconHex'=>'#e11d48','valHex'=>'#be123c'],
+        ['label'=>'Highest Balance', 'value'=>$highestRunning,  'fmt'=>true,  'icon'=>'fa-trophy',               'bgHex'=>'#fef3c7','borderHex'=>'#fcd34d','iconHex'=>'#d97706','valHex'=>'#0369a1'],
     ];
 @endphp
 
@@ -41,14 +42,16 @@
         {{-- ── Summary stat cards ────────────────────────── --}}
         <div class="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
             @foreach($summaryCards as $c)
-            <div class="flex flex-col gap-2 rounded-2xl border border-white bg-white p-3.5 shadow-sm ring-1 {{ $c['ring'] }} transition hover:-translate-y-0.5 hover:shadow-md">
+            <div class="flex flex-col gap-2 rounded-2xl border bg-white p-3.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                 style="border-color:{{ $c['borderHex'] }}">
                 <div class="flex items-center justify-between">
-                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl {{ $c['bg'] }} {{ $c['iconCls'] }} ring-1 {{ $c['ring'] }}">
-                        <i class="fas {{ $c['icon'] }} text-xs"></i>
+                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl border text-xs"
+                          style="background-color:{{ $c['bgHex'] }};border-color:{{ $c['borderHex'] }};color:{{ $c['iconHex'] }}">
+                        <i class="fas {{ $c['icon'] }}"></i>
                     </span>
-                    <span class="text-[9px] font-bold uppercase tracking-widest text-slate-400 text-right leading-tight">{{ $c['label'] }}</span>
+                    <span class="text-right text-[9px] font-bold uppercase leading-tight tracking-widest text-slate-400">{{ $c['label'] }}</span>
                 </div>
-                <p class="text-lg font-extrabold leading-none {{ $c['valCls'] }} sm:text-xl">
+                <p class="text-lg font-extrabold leading-none sm:text-xl" style="color:{{ $c['valHex'] }}">
                     @if($c['fmt'])
                         <span class="text-[9px] font-semibold text-slate-500">PHP</span>
                         {{ number_format($c['value'], 0) }}
