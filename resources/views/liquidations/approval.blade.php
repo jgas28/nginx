@@ -887,18 +887,31 @@
     // Add employee row in uncollected modal
     addEmployeeUncollectedBtn?.addEventListener('click', function () {
         const employeeRow = document.createElement('div');
-        employeeRow.classList.add('flex', 'space-x-2', 'mt-2');
+        employeeRow.classList.add('employee-deduction-row', 'rounded-2xl', 'border', 'border-slate-200', 'bg-slate-50', 'p-3', 'space-y-3', 'sm:space-y-0', 'sm:grid', 'sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]', 'sm:items-center', 'sm:gap-3');
+
+        let employeeOptions = '<option value="" disabled selected>Select employee</option>';
+        @foreach ($staffs as $staff)
+            employeeOptions += `<option value="{{ $staff->id }}">{{ $staff->fname }} {{ $staff->lname }}</option>`;
+        @endforeach
+
         employeeRow.innerHTML = `
-            <input type="text" name="employee_name[]" placeholder="Employee Name" class="w-full border border-gray-300 rounded px-3 py-2" />
-            <input type="number" step="0.01" name="deduction_amount[]" placeholder="Deduction Amount" class="w-full border border-gray-300 rounded px-3 py-2" />
-            <button type="button" class="remove-employee-btn px-2 text-red-600" style="cursor: pointer;">Remove</button>
+            <select name="employee_id_uncollected[]" class="employee_id_uncollected w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700" required>
+                ${employeeOptions}
+            </select>
+            <input type="number" step="0.01" min="0" name="deduction_amount_uncollected[]" placeholder="Deduction Amount" class="deduction_amount_uncollected w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700" />
+            <button type="button" class="remove-employee-btn inline-flex h-11 w-full items-center justify-center rounded-2xl bg-rose-50 text-rose-600 transition hover:bg-rose-100 hover:text-rose-700 sm:w-11" style="cursor: pointer;">
+                <i class="fas fa-trash-alt"></i>
+            </button>
         `;
         employeeDeductionsUncollectedContainer?.appendChild(employeeRow);
 
         // Remove employee row
         employeeRow.querySelector('.remove-employee-btn')?.addEventListener('click', function () {
             employeeRow.remove();
+            calculateUncollected();
         });
+
+        employeeRow.querySelector('.deduction_amount_uncollected')?.addEventListener('input', calculateUncollected);
     });
 
     // Handle form submissions and validations

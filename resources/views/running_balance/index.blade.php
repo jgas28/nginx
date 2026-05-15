@@ -221,17 +221,18 @@
 <script>
     function openModal() {
         document.getElementById('transactionModal').classList.remove('hidden');
-        document.getElementById('transactionModal').classList.add('flex');
+        document.body.classList.add('overflow-hidden');
     }
 
     function closeModal() {
         document.getElementById('transactionModal').classList.add('hidden');
-        document.getElementById('transactionModal').classList.remove('flex');
+        document.body.classList.remove('overflow-hidden');
     }
 
     document.addEventListener('DOMContentLoaded', () => {
         const form = document.getElementById('running-balance-filter-form');
         const results = document.getElementById('running-balance-results');
+        const transactionModal = document.getElementById('transactionModal');
         const typeSelect = document.getElementById('modal_type');
         const fromApproverWrapper = document.getElementById('modal_from_approver_wrapper');
         const fromApproverSelect = document.getElementById('modal_from_approver_id');
@@ -323,6 +324,18 @@
             typeSelect.addEventListener('change', toggleSourceField);
             toggleSourceField();
         }
+
+        transactionModal?.addEventListener('click', (event) => {
+            if (event.target === transactionModal) {
+                closeModal();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && transactionModal && !transactionModal.classList.contains('hidden')) {
+                closeModal();
+            }
+        });
     });
 </script>
 @endsection
