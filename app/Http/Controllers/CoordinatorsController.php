@@ -85,6 +85,11 @@ class CoordinatorsController extends Controller
             'accessorial' => [16,17,18]
         ];
 
+        // Only the 'list' tab is scoped to the logged-in coordinator's own requests.
+        // All other tabs (staging, pipeline stages) show records regardless of creator
+        // because pullouts/allocations may be submitted by a different user.
+        $ownRequestsTabs = ['list'];
+
         if ($singleTab) {
             // Only build query for the active tab
             $statuses = $tabs[$tab] ?? [];
@@ -92,7 +97,7 @@ class CoordinatorsController extends Controller
             $query = DeliveryRequest::with(['lineItems', 'truckType', 'area', 'region', 'company'])
                 ->where('status', '!=', 0)
                 ->whereIn('status', $statuses);
-                if (!in_array($user->id, $privilegedUserIds)) {
+                if (!in_array($user->id, $privilegedUserIds) && in_array($tab, $ownRequestsTabs)) {
                     $query->where('created_by', $employee_id);
                 }
 
