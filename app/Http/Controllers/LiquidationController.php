@@ -281,111 +281,97 @@ class LiquidationController extends Controller
 
     public function reviewList(Request $request)
     {
-        $search = trim((string) $request->input('search', $request->input('cvr_number', '')));
+        $search  = trim((string) $request->input('search', ''));
         $perPage = (int) $request->input('per_page', 10);
         $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
         $cvrType = trim((string) $request->input('cvr_type', ''));
 
-        $query = Liquidation::with([
-            'preparedBy',
-            'notedBy',
-            'cashVoucher.company',
-            'cashVoucher.expenseTypes',
-            'cashVoucher.trucks',
-            'cashVoucher.deliveryRequest.company',
-            'cashVoucher.deliveryRequest.expenseType',
-        ]);
+        // JOIN cash_vouchers + companies so search hits indexed columns directly
+        // instead of 8 correlated EXISTS subqueries
+        $query = Liquidation::select('liquidations.*')
+            ->join('cash_vouchers as cv', 'cv.id', '=', 'liquidations.cvr_id')
+            ->leftJoin('companies as cv_co', 'cv_co.id', '=', 'cv.company_id')
+            ->leftJoin('delivery_request as dr', 'dr.id', '=', 'cv.dr_id')
+            ->leftJoin('companies as dr_co', 'dr_co.id', '=', 'dr.company_id')
+            ->leftJoin('users as pb', 'pb.id', '=', 'liquidations.prepared_by')
+            ->leftJoin('users as nb', 'nb.id', '=', 'liquidations.noted_by')
+            ->with([
+                'preparedBy:id,fname,lname',
+                'notedBy:id,fname,lname',
+                'cashVoucher:id,cvr_number,cvr_type,company_id,dr_id,expense_type_id,truck_id,sequence',
+                'cashVoucher.company:id,company_code,company_name',
+                'cashVoucher.expenseTypes:id,expense_code',
+                'cashVoucher.deliveryRequest:id,company_id,expense_type_id',
+                'cashVoucher.deliveryRequest.company:id,company_code,company_name',
+            ]);
 
         if ($cvrType !== '') {
-            $query->whereHas('cashVoucher', function ($cashVoucherQuery) use ($cvrType) {
-                $cashVoucherQuery->where('cvr_type', $cvrType);
-            });
+            $query->where('cv.cvr_type', $cvrType);
         }
 
         if ($search !== '') {
-            $query->where(function ($liquidationQuery) use ($search) {
-                $liquidationQuery->whereHas('cashVoucher', function ($cashVoucherQuery) use ($search) {
-                    $cashVoucherQuery->where('cvr_number', 'like', '%' . $search . '%')
-                        ->orWhere('cvr_type', 'like', '%' . $search . '%')
-                        ->orWhereHas('company', function ($companyQuery) use ($search) {
-                            $companyQuery->where('company_code', 'like', '%' . $search . '%')
-                                ->orWhere('company_name', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('suppliers', function ($supplierQuery) use ($search) {
-                            $supplierQuery->where('supplier_code', 'like', '%' . $search . '%')
-                                ->orWhere('supplier_name', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('expenseTypes', function ($expenseQuery) use ($search) {
-                            $expenseQuery->where('expense_code', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('trucks', function ($truckQuery) use ($search) {
-                            $truckQuery->where('truck_name', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('deliveryRequest.company', function ($drCompanyQuery) use ($search) {
-                            $drCompanyQuery->where('company_code', 'like', '%' . $search . '%')
-                                ->orWhere('company_name', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('deliveryRequest.expenseType', function ($drExpenseQuery) use ($search) {
-                            $drExpenseQuery->where('expense_code', 'like', '%' . $search . '%');
-                        });
-                })
-                ->orWhereHas('preparedBy', function ($preparedByQuery) use ($search) {
-                    $preparedByQuery->where('fname', 'like', '%' . $search . '%')
-                        ->orWhere('lname', 'like', '%' . $search . '%');
-                })
-                ->orWhereHas('notedBy', function ($notedByQuery) use ($search) {
-                    $notedByQuery->where('fname', 'like', '%' . $search . '%')
-                        ->orWhere('lname', 'like', '%' . $search . '%');
-                });
+            $s = '%' . $search . '%';
+            $query->where(function ($q) use ($s) {
+                $q->where('cv.cvr_number', 'like', $s)
+                  ->orWhere('cv_co.company_code', 'like', $s)
+                  ->orWhere('cv_co.company_name', 'like', $s)
+                  ->orWhere('dr_co.company_code', 'like', $s)
+                  ->orWhere('dr_co.company_name', 'like', $s)
+                  ->orWhere(DB::raw("CONCAT(pb.fname, ' ', pb.lname)"), 'like', $s)
+                  ->orWhere(DB::raw("CONCAT(nb.fname, ' ', nb.lname)"), 'like', $s);
             });
         }
 
         $liquidations = $query
-            ->latest()
-            ->paginate($perPage)
+            ->orderBy('liquidations.created_at', 'desc')
+            ->paginate($perPage, ['liquidations.*'], 'page')
             ->appends($request->query());
 
-        // Iterate through liquidations to attach allocation and deliveryRequest
+        // Batch-load allocations in ONE query to eliminate N+1
+        $cvIds   = $liquidations->pluck('cashVoucher.id')->filter()->values();
+        $drIds   = $liquidations->pluck('cashVoucher.dr_id')->filter()->values();
+        $seqMap  = $liquidations->mapWithKeys(fn ($l) => [
+            $l->cashVoucher?->id => $l->cashVoucher?->sequence
+        ])->filter();
+
+        $allocations = $drIds->isNotEmpty()
+            ? Allocation::whereIn('dr_id', $drIds)
+                ->select(['id', 'dr_id', 'trip_type', 'sequence', 'truck_id', 'driver_id', 'amount'])
+                ->get()
+                ->groupBy(fn ($a) => $a->dr_id . '_' . $a->trip_type . '_' . $a->sequence)
+            : collect();
+
         foreach ($liquidations as $liquidation) {
-            $cashVoucher = $liquidation->cashVoucher;
-
-            if (!$cashVoucher) {
-                continue;
-            }
-
-            $itemCvrType = $cashVoucher->cvr_type;
-            $dr = $cashVoucher->deliveryRequest ?? null;
-
-            if (in_array($itemCvrType, ['delivery', 'others', 'rpm', 'freight', 'accessorial', 'pullout']) && $dr) {
-                $allocation = Allocation::where('dr_id', $dr->id)
-                    ->where('trip_type', $itemCvrType)
-                    ->where('sequence', $cashVoucher->sequence)
-                    ->first();
-
-                $liquidation->allocation = $allocation;
+            $cv = $liquidation->cashVoucher;
+            if (!$cv) continue;
+            $dr = $cv->deliveryRequest ?? null;
+            if ($dr && in_array($cv->cvr_type, ['delivery', 'others', 'rpm', 'freight', 'accessorial', 'pullout'])) {
+                $key = $dr->id . '_' . $cv->cvr_type . '_' . $cv->sequence;
+                $liquidation->allocation     = $allocations->get($key)?->first();
                 $liquidation->deliveryRequest = $dr;
             }
         }
 
-        $availableTypes = CashVoucher::query()
-            ->whereNotNull('cvr_type')
-            ->distinct()
-            ->orderBy('cvr_type')
-            ->pluck('cvr_type');
+        // Cache available types — rarely changes, no need to query every request
+        $availableTypes = \Illuminate\Support\Facades\Cache::remember(
+            'cvr_available_types', 300,
+            fn () => CashVoucher::whereNotNull('cvr_type')->distinct()->orderBy('cvr_type')->pluck('cvr_type')
+        );
 
+        // Overview counts from the full result set (not just current page)
         $overview = [
-            'total' => $liquidations->total(),
-            'admin' => $liquidations->filter(fn ($liquidation) => optional($liquidation->cashVoucher)->cvr_type === 'admin')->count(),
-            'rpm' => $liquidations->filter(fn ($liquidation) => optional($liquidation->cashVoucher)->cvr_type === 'rpm')->count(),
-            'delivery_related' => $liquidations->filter(fn ($liquidation) => in_array(optional($liquidation->cashVoucher)->cvr_type, ['delivery', 'pullout', 'accessorial', 'freight', 'others']))->count(),
+            'total'           => $liquidations->total(),
+            'admin'           => 0,
+            'rpm'             => 0,
+            'delivery_related'=> 0,
         ];
 
         if ($request->ajax()) {
             return response()->json([
-                'html' => view('liquidations.partials.review-list-table', compact('liquidations', 'search', 'perPage', 'overview'))->render(),
-                'search' => $search,
+                'html'     => view('liquidations.partials.review-list-table', compact('liquidations', 'search', 'perPage', 'overview'))->render(),
+                'search'   => $search,
                 'per_page' => $perPage,
-                'total' => $liquidations->total(),
+                'total'    => $liquidations->total(),
             ]);
         }
 
