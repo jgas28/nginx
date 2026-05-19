@@ -94,9 +94,16 @@ class CoordinatorsController extends Controller
             // Only build query for the active tab
             $statuses = $tabs[$tab] ?? [];
 
-            $query = DeliveryRequest::with(['lineItems', 'truckType', 'area', 'region', 'company'])
+            $query = DeliveryRequest::with([
+                'lineItems' => fn ($lineItemsQuery) => $lineItemsQuery->where('status', '!=', 0),
+                'truckType',
+                'area',
+                'region',
+                'company',
+                'deliveryStatus',
+            ])
                 ->where('status', '!=', 0)
-                ->whereIn('status', $statuses);
+                ->whereIn('delivery_status', $statuses);
                 if (!in_array($user->id, $privilegedUserIds) && in_array($tab, $ownRequestsTabs)) {
                     $query->where('created_by', $employee_id);
                 }
@@ -141,9 +148,20 @@ class CoordinatorsController extends Controller
         $results = [];
 
         foreach ($tabs as $tabKey => $statuses) {
-            $query = DeliveryRequest::with(['lineItems', 'truckType', 'area', 'region', 'company'])
+            $query = DeliveryRequest::with([
+                'lineItems' => fn ($lineItemsQuery) => $lineItemsQuery->where('status', '!=', 0),
+                'truckType',
+                'area',
+                'region',
+                'company',
+                'deliveryStatus',
+            ])
                 ->where('status', '!=', 0)
-                ->whereIn('status', $statuses);
+                ->whereIn('delivery_status', $statuses);
+
+            if (!in_array($user->id, $privilegedUserIds) && in_array($tabKey, $ownRequestsTabs)) {
+                $query->where('created_by', $employee_id);
+            }
 
             if ($search) {
                 $query->where(function ($q) use ($search) {
