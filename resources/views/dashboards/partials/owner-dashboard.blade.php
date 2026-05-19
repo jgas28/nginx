@@ -219,7 +219,8 @@
                                     $subItems = $item['children'] ?? [];
                                 @endphp
                                 @if(!empty($subItems))
-                                <details class="group/sub overflow-hidden rounded-lg ring-1 ring-slate-200">
+                                @php $subCount = count($subItems); @endphp
+                                <details class="group/sub overflow-hidden rounded-lg ring-1 ring-slate-200 others-details">
                                     <summary class="cursor-pointer list-none select-none px-2.5 py-2"
                                              style="background-color:{{ $cat['lightHex'] }}">
                                         <div class="flex items-center justify-between gap-2 text-xs">
@@ -227,6 +228,7 @@
                                                 <i class="fas {{ $item['icon'] ?? 'fa-coins' }} shrink-0 text-[10px]"
                                                    style="color:{{ $cat['barHex'] }}"></i>
                                                 <span class="truncate">{{ $item['label'] }}</span>
+                                                <span class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-bold text-white" style="background-color:{{ $cat['barHex'] }}">{{ $subCount }}</span>
                                             </span>
                                             <span class="flex shrink-0 items-center gap-1.5">
                                                 <span class="font-bold text-slate-800">PHP {{ number_format($item['value'] ?? 0, 2) }}</span>
@@ -239,16 +241,37 @@
                                             <div class="h-1.5 rounded-full" style="width:{{ $iPct }}%;background-color:{{ $cat['barHex'] }}"></div>
                                         </div>
                                     </summary>
-                                    <div class="space-y-1 border-t border-slate-200/60 px-2.5 pb-2 pt-1">
-                                        @foreach($subItems as $sub)
-                                        <div class="flex items-center justify-between px-1 text-[11px] text-slate-600">
-                                            <span class="flex items-center gap-1 truncate">
-                                                <i class="fas fa-arrow-right shrink-0 text-[8px] text-slate-400"></i>
-                                                {{ $sub['label'] }}
-                                            </span>
-                                            <span class="ml-2 shrink-0 font-semibold">PHP {{ number_format($sub['value'], 2) }}</span>
+                                    <div class="border-t border-slate-200/60">
+                                        {{-- Search filter --}}
+                                        @if($subCount > 6)
+                                        <div class="px-2.5 pt-2 pb-1">
+                                            <div class="relative">
+                                                <i class="fas fa-search absolute left-2 top-1/2 -translate-y-1/2 text-[9px] text-slate-400"></i>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Filter items…"
+                                                    class="others-filter w-full rounded-md border border-slate-200 bg-slate-50 py-1 pl-6 pr-2 text-[11px] text-slate-700 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
+                                                >
+                                            </div>
                                         </div>
-                                        @endforeach
+                                        @endif
+                                        {{-- Scrollable list --}}
+                                        <div class="others-list {{ $subCount > 6 ? 'max-h-[200px]' : '' }} overflow-y-auto px-2.5 pb-2 pt-1"
+                                             style="scrollbar-width:thin;scrollbar-color:{{ $cat['barHex'] }} transparent;">
+                                            @foreach($subItems as $sub)
+                                            <div class="others-item flex items-center justify-between rounded px-1 py-1 text-[11px] text-slate-600 transition hover:bg-slate-50">
+                                                <span class="flex items-center gap-1 truncate">
+                                                    <i class="fas fa-arrow-right shrink-0 text-[8px] text-slate-400"></i>
+                                                    <span class="others-label truncate">{{ $sub['label'] }}</span>
+                                                </span>
+                                                <span class="ml-2 shrink-0 font-semibold text-slate-800">PHP {{ number_format($sub['value'], 2) }}</span>
+                                            </div>
+                                            @endforeach
+                                            <div class="others-empty hidden py-3 text-center text-[11px] text-slate-400">
+                                                <i class="fas fa-search-minus mb-1 block text-base text-slate-300"></i>
+                                                No matching items
+                                            </div>
+                                        </div>
                                     </div>
                                 </details>
                                 @else
@@ -524,4 +547,30 @@
         }
     });
 })();
+
+// Others dropdown live filter
+document.querySelectorAll('.others-details').forEach(details => {
+    const filterInput = details.querySelector('.others-filter');
+    if (!filterInput) return;
+
+    filterInput.addEventListener('input', function (e) {
+        e.stopPropagation();
+        const q = this.value.trim().toLowerCase();
+        const items = details.querySelectorAll('.others-item');
+        const empty = details.querySelector('.others-empty');
+        let visible = 0;
+
+        items.forEach(item => {
+            const label = item.querySelector('.others-label')?.textContent.toLowerCase() ?? '';
+            const show = !q || label.includes(q);
+            item.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+
+        if (empty) empty.classList.toggle('hidden', visible > 0);
+    });
+
+    // Prevent summary toggle when clicking the filter input
+    filterInput.addEventListener('click', e => e.stopPropagation());
+});
 </script>

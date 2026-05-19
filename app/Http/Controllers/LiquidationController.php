@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class LiquidationController extends Controller
 {
@@ -1931,5 +1932,148 @@ class LiquidationController extends Controller
         ));
     }
 
+    private function getOverallData(Request $request): array
+    {
+        $dateFrom    = $request->input('date_from', now()->startOfMonth()->toDateString());
+        $dateTo      = $request->input('date_to', now()->endOfMonth()->toDateString());
+        $companyId   = $request->input('company_id');
+        $requestCode = $request->input('request_code');
+        $cvrNumber   = trim((string) $request->input('cvr_number', ''));
+        $status      = $request->input('status');
 
-} 
+        $conditions = "WHERE DATE(cv.created_at) BETWEEN ? AND ?";
+        $params = [$dateFrom, $dateTo];
+
+        if ($requestCode) {
+            $conditions .= " AND crt.request_type = ?";
+            $params[] = $requestCode;
+        }
+        if ($companyId) {
+            $conditions .= " AND ((cv.cvr_type IN ('admin','rpm') AND cv.company_id = ?) OR (cv.cvr_type NOT IN ('admin','rpm') AND dr.company_id = ?))";
+            $params[] = $companyId;
+            $params[] = $companyId;
+        }
+        if ($cvrNumber !== '') {
+            $conditions .= " AND cv.cvr_number LIKE ?";
+            $params[] = '%' . $cvrNumber . '%';
+        }
+        if ($status) {
+            switch ($status) {
+                case '1': $conditions .= " AND cv.status = 1"; break;
+                case '3': $conditions .= " AND cv.status = 3"; break;
+                case '5': $conditions .= " AND l.status = 5"; break;
+                case '10': $conditions .= " AND l.status = 10"; break;
+                case 'for_validation': $conditions .= " AND l.status = 1"; break;
+                case 'for_collection': $conditions .= " AND l.status = 3"; break;
+                case 'for_approval': $conditions .= " AND l.status = 4"; break;
+                case 'liquidation_in_progress': $conditions .= " AND l.status NOT IN (1, 3, 4, 5, 10)"; break;
+                case 'for_liquidation': $conditions .= " AND ca.status = 1 AND l.status IS NULL"; break;
+            }
+        }
+
+        $baseSql = "
+            SELECT
+                cv.cvr_number, cv.cvr_type, t.truck_name, c.company_code, et.expense_code,
+                crt.request_type AS request_code,
+                CASE WHEN cv.cvr_type IN ('admin','rpm') THEN (
+                    SELECT SUM(CAST(JSON_UNQUOTE(amt.value) AS DECIMAL(10,2)))
+                    FROM JSON_TABLE(cv.amount_details, '\$[*]' COLUMNS (value JSON PATH '\$')) AS amt
+                ) ELSE cv.amount END AS requested_amount,
+                COALESCE((SELECT SUM(amount) FROM fczcnyx.cvr_approvals ca2 WHERE ca2.cvr_id = cv.id), 0) AS approved_amount,
+                COALESCE(l.allowance,0)+COALESCE(l.lodging,0)+COALESCE(l.manpower,0)+COALESCE(l.hauling,0)+
+                COALESCE(l.freight,0)+COALESCE(l.right_of_way,0)+COALESCE(l.roro_expense,0)+
+                COALESCE((SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2))) FROM JSON_TABLE(l.gasoline,'\$[*]' COLUMNS(value JSON PATH '\$')) j WHERE j.value->>'$.type'='cash'),0)+
+                COALESCE((SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2))) FROM JSON_TABLE(l.rfid,'\$[*]' COLUMNS(value JSON PATH '\$')) j WHERE j.value->>'$.type'='cash'),0)+
+                COALESCE((SELECT SUM(CAST(j.value->>'$.amount' AS DECIMAL(10,2))) FROM JSON_TABLE(l.others,'\$[*]' COLUMNS(value JSON PATH '\$')) j),0) AS liquidated_cash,
+                CASE
+                    WHEN l.id IS NULL AND ca.status IS NOT NULL AND cv.status=3 THEN 'Rejected CVR'
+                    WHEN l.id IS NOT NULL THEN CASE l.status WHEN '1' THEN 'For Validation' WHEN '3' THEN 'For Collection' WHEN '4' THEN 'For Approval' WHEN '5' THEN 'Completed' WHEN '10' THEN 'Rejected Liquidation' ELSE 'In Progress' END
+                    WHEN ca.id IS NOT NULL THEN CASE ca.status WHEN '1' THEN 'For Liquidation' WHEN '3' THEN 'Rejected CVR' ELSE 'Pending Cash Approval' END
+                    ELSE 'Pending Cash Approval'
+                END AS overall_status,
+                DATE(cv.created_at) AS date_created
+            FROM fczcnyx.cash_vouchers cv
+            LEFT JOIN fczcnyx.delivery_request dr ON dr.id = cv.dr_id
+            LEFT JOIN (SELECT * FROM (SELECT *, ROW_NUMBER() OVER (PARTITION BY dr_id, trip_type, sequence ORDER BY id) AS row_num FROM fczcnyx.allocations) AS r WHERE row_num = 1) a ON a.dr_id = cv.dr_id AND a.trip_type = cv.cvr_type AND a.sequence = cv.sequence
+            LEFT JOIN fczcnyx.cvr_approvals ca ON ca.cvr_id = cv.id
+            LEFT JOIN fczcnyx.liquidations l ON l.cvr_approval_id = ca.id
+            LEFT JOIN fczcnyx.trucks t ON t.id = CASE WHEN cv.cvr_type IN ('admin','rpm') THEN cv.truck_id ELSE a.truck_id END
+            LEFT JOIN fczcnyx.companies c ON c.id = CASE WHEN cv.cvr_type IN ('admin','rpm') THEN cv.company_id ELSE dr.company_id END
+            LEFT JOIN fczcnyx.expense_types et ON et.id = CASE WHEN cv.cvr_type IN ('admin','rpm') THEN cv.expense_type_id ELSE dr.expense_type_id END
+            LEFT JOIN fczcnyx.cvr_request_type crt ON crt.id = cv.request_type
+            $conditions
+        ";
+
+        $rows = DB::select("SELECT * FROM ($baseSql) AS d ORDER BY d.company_code ASC, d.cvr_number ASC", $params);
+
+        return [
+            'rows'     => $rows,
+            'dateFrom' => $dateFrom,
+            'dateTo'   => $dateTo,
+        ];
+    }
+
+    public function exportExcel(Request $request)
+    {
+        ['rows' => $rows, 'dateFrom' => $dateFrom, 'dateTo' => $dateTo] = $this->getOverallData($request);
+
+        $filename = 'cash-vouchers-status-' . $dateFrom . '-to-' . $dateTo . '.xlsx';
+
+        $headers = [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $callback = function () use ($rows, $dateFrom, $dateTo) {
+            $file = fopen('php://output', 'w');
+
+            // BOM for Excel UTF-8
+            fputs($file, "\xEF\xBB\xBF");
+
+            // Title row
+            fputcsv($file, ['Cash Voucher Status Report']);
+            fputcsv($file, ['Period: ' . $dateFrom . ' to ' . $dateTo]);
+            fputcsv($file, []);
+
+            // Header
+            fputcsv($file, ['CVR Number', 'Type', 'Company', 'Truck', 'Expense Code', 'Request Type', 'Requested', 'Approved', 'Liquidated (Cash)', 'Status', 'Date']);
+
+            foreach ($rows as $row) {
+                fputcsv($file, [
+                    $row->cvr_number,
+                    $row->cvr_type,
+                    $row->company_code,
+                    $row->truck_name,
+                    $row->expense_code,
+                    $row->request_code,
+                    number_format((float) $row->requested_amount, 2),
+                    number_format((float) $row->approved_amount, 2),
+                    number_format((float) $row->liquidated_cash, 2),
+                    $row->overall_status,
+                    $row->date_created,
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        // Return as CSV (Excel opens CSV natively)
+        $headers['Content-Type'] = 'text/csv; charset=UTF-8';
+        $filename = str_replace('.xlsx', '.csv', $filename);
+        $headers['Content-Disposition'] = 'attachment; filename="' . $filename . '"';
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function exportPdf(Request $request)
+    {
+        ['rows' => $rows, 'dateFrom' => $dateFrom, 'dateTo' => $dateTo] = $this->getOverallData($request);
+
+        $pdf = Pdf::loadView('liquidations.overall-pdf', compact('rows', 'dateFrom', 'dateTo'))
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->download('cash-vouchers-status-' . $dateFrom . '-to-' . $dateTo . '.pdf');
+    }
+
+
+}

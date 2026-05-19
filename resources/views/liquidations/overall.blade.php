@@ -139,18 +139,31 @@
                         </select>
                     </div>
 
-                    <div class="flex flex-col gap-3 sm:ml-auto sm:flex-row">
+                    <div class="flex flex-col gap-3 sm:ml-auto sm:flex-row sm:flex-wrap sm:items-center">
                         <a
                             href="{{ route('liquidations.overall') }}"
-                            class="inline-flex items-center justify-center rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
+                            class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900"
                         >
                             Reset Filters
                         </a>
                         <button
                             type="submit"
-                            class="inline-flex items-center justify-center rounded-2xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                            class="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
                         >
+                            <i class="fas fa-filter text-xs"></i>
                             Apply Filters
+                        </button>
+
+                        {{-- Export buttons — pass current filters via JS --}}
+                        <button type="button" id="export-excel-btn"
+                            class="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 hover:border-emerald-400">
+                            <i class="fas fa-file-excel text-sm"></i>
+                            Export Excel
+                        </button>
+                        <button type="button" id="export-pdf-btn"
+                            class="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-300 bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 hover:border-rose-400">
+                            <i class="fas fa-file-pdf text-sm"></i>
+                            Export PDF
                         </button>
                     </div>
                 </div>
@@ -223,4 +236,27 @@
         </section>
     </div>
 </div>
+
+@section('scripts')
+<script>
+function buildExportUrl(base) {
+    const form = document.querySelector('form[action="{{ route('liquidations.overall') }}"]');
+    if (!form) return base;
+    const params = new URLSearchParams();
+    ['company_id','request_code','status','cvr_number','date_from','date_to'].forEach(name => {
+        const el = form.elements[name];
+        if (el && el.value) params.set(name, el.value);
+    });
+    return base + (params.toString() ? '?' + params.toString() : '');
+}
+
+document.getElementById('export-excel-btn')?.addEventListener('click', function () {
+    window.location.href = buildExportUrl('{{ route('liquidations.overall.exportExcel') }}');
+});
+
+document.getElementById('export-pdf-btn')?.addEventListener('click', function () {
+    window.open(buildExportUrl('{{ route('liquidations.overall.exportPdf') }}'), '_blank');
+});
+</script>
+@endsection
 @endsection

@@ -238,6 +238,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/liquidations/{id}/approvedEdit', [LiquidationController::class, 'approvedLiqUpdate'])->name('liquidations.approvedEdit');
 
     Route::get('/cash-vouchers-status', [LiquidationController::class, 'Overall'])->name('liquidations.overall');
+    Route::get('/cash-vouchers-status/export/excel', [LiquidationController::class, 'exportExcel'])->name('liquidations.overall.exportExcel');
+    Route::get('/cash-vouchers-status/export/pdf', [LiquidationController::class, 'exportPdf'])->name('liquidations.overall.exportPdf');
     
     Route::prefix('running-balance')->group(function () {
         Route::get('refunds/{id}/edit', [RunningBalanceController::class, 'editRefund'])->name('refunds.edit');
