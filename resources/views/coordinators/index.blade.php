@@ -145,11 +145,21 @@
 
             <!-- Tab navigation — horizontally scrollable, works on all screen sizes -->
             <div class="relative mt-6">
-                <!-- Fade edges hint at scrollability -->
-                <div class="pointer-events-none absolute inset-y-0 left-0 z-10 w-5 bg-gradient-to-r from-slate-100/80 to-transparent"></div>
-                <div class="pointer-events-none absolute inset-y-0 right-0 z-10 w-5 bg-gradient-to-l from-slate-100/80 to-transparent"></div>
+                <!-- Left arrow (mobile only) -->
+                <button id="tab-scroll-left" class="lg:hidden absolute left-0 top-1/2 -translate-y-1/2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md border border-slate-200 text-slate-500 transition opacity-0 pointer-events-none" aria-label="Scroll left">
+                    <i class="fas fa-chevron-left text-xs"></i>
+                </button>
 
-                <div class="overflow-x-auto pb-2 scrollbar-hide" id="tabs-scroll">
+                <!-- Right arrow (mobile only) -->
+                <button id="tab-scroll-right" class="lg:hidden absolute right-0 top-1/2 -translate-y-1/2 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md border border-slate-200 text-slate-500 transition" aria-label="Scroll right">
+                    <i class="fas fa-chevron-right text-xs"></i>
+                </button>
+
+                <!-- Fade edges -->
+                <div id="tab-fade-left" class="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 bg-gradient-to-r from-white to-transparent transition-opacity opacity-0"></div>
+                <div id="tab-fade-right" class="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-white to-transparent"></div>
+
+                <div class="overflow-x-auto pb-2 scrollbar-hide px-5 lg:px-0" id="tabs-scroll">
                     <div class="flex gap-2.5 px-1" id="tabs" style="width: max-content;">
                         @foreach ($tabs as $tabKey => $tab)
                             <button
@@ -164,6 +174,13 @@
                             </button>
                         @endforeach
                     </div>
+                </div>
+
+                <!-- Mobile swipe hint — hidden after first scroll -->
+                <div id="swipe-hint" class="lg:hidden mt-2 flex items-center justify-center gap-1.5 text-xs text-slate-400">
+                    <i class="fas fa-hand-point-left text-[10px] animate-bounce"></i>
+                    <span>Swipe to see more tabs</span>
+                    <i class="fas fa-hand-point-right text-[10px] animate-bounce"></i>
                 </div>
             </div>
 
@@ -354,6 +371,48 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialUrl = new URL(window.location.href);
     syncPageInput(initialUrl, initialTab);
     fetchTabData(initialTab, false);
+
+    // --- Mobile scroll arrows & hints ---
+    const tabsScroll   = document.getElementById('tabs-scroll');
+    const btnLeft      = document.getElementById('tab-scroll-left');
+    const btnRight     = document.getElementById('tab-scroll-right');
+    const fadeLeft     = document.getElementById('tab-fade-left');
+    const fadeRight    = document.getElementById('tab-fade-right');
+    const swipeHint    = document.getElementById('swipe-hint');
+
+    function updateScrollUI() {
+        if (!tabsScroll) return;
+        const atStart = tabsScroll.scrollLeft <= 4;
+        const atEnd   = tabsScroll.scrollLeft + tabsScroll.clientWidth >= tabsScroll.scrollWidth - 4;
+
+        if (btnLeft)  { btnLeft.style.opacity  = atStart ? '0' : '1'; btnLeft.style.pointerEvents  = atStart ? 'none' : 'auto'; }
+        if (btnRight) { btnRight.style.opacity = atEnd   ? '0' : '1'; btnRight.style.pointerEvents = atEnd   ? 'none' : 'auto'; }
+        if (fadeLeft)  fadeLeft.style.opacity  = atStart ? '0' : '1';
+        if (fadeRight) fadeRight.style.opacity = atEnd   ? '0' : '1';
+    }
+
+    if (tabsScroll) {
+        tabsScroll.addEventListener('scroll', () => {
+            updateScrollUI();
+            // Hide the swipe hint once user has scrolled
+            if (swipeHint) swipeHint.style.display = 'none';
+        }, { passive: true });
+
+        btnLeft?.addEventListener('click',  () => tabsScroll.scrollBy({ left: -160, behavior: 'smooth' }));
+        btnRight?.addEventListener('click', () => tabsScroll.scrollBy({ left:  160, behavior: 'smooth' }));
+
+        // Run once on load to set initial state
+        updateScrollUI();
+
+        // Auto-nudge on mobile to hint scrollability (plays once)
+        const isMobile = window.innerWidth < 1024;
+        if (isMobile && tabsScroll.scrollWidth > tabsScroll.clientWidth) {
+            setTimeout(() => {
+                tabsScroll.scrollBy({ left: 60, behavior: 'smooth' });
+                setTimeout(() => tabsScroll.scrollBy({ left: -60, behavior: 'smooth' }), 600);
+            }, 800);
+        }
+    }
 });
 </script>
 @endsection

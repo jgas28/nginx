@@ -72,7 +72,9 @@
                         ->values();
                     $statusLabel = $lineStatuses->isNotEmpty() ? $lineStatuses->implode(', ') : 'N/A';
                 @endphp
-                <tr class="hover:bg-slate-50/80">
+                <tr class="hover:bg-slate-50/80"
+                    data-mtm="{{ $deliveryRequest->mtm }}"
+                    data-company="{{ $deliveryRequest->company->company_code ?? '' }}">
                     <td class="px-4 py-3.5 sm:px-6">
                         <input type="checkbox" class="allocation-select-item h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" value="{{ $deliveryRequest->id }}">
                     </td>
