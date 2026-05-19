@@ -42,11 +42,17 @@
             </div>
             {{-- Search button --}}
             <button type="button" id="liq-review-search-btn"
-                class="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-300">
-                <i class="fas fa-magnifying-glass text-xs"></i>
-                <span class="hidden sm:inline">Search</span>
+                class="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-300 disabled:opacity-60 disabled:cursor-not-allowed">
+                <span id="liq-search-icon"><i class="fas fa-magnifying-glass text-xs"></i></span>
+                <span id="liq-search-spinner" class="hidden">
+                    <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                </span>
+                <span id="liq-search-label" class="hidden sm:inline">Search</span>
             </button>
-            {{-- Clear button (shown when search is active) --}}
+            {{-- Clear button --}}
             @if($search)
             <button type="button" id="liq-review-clear-btn"
                 class="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 focus:outline-none">
@@ -64,6 +70,38 @@
                 @endforeach
             </select>
             <span class="text-sm text-slate-500">entries</span>
+        </div>
+    </div>
+
+    {{-- Loading overlay (hidden by default) --}}
+    <div id="liq-review-loading" class="hidden">
+        <div class="flex flex-col items-center justify-center gap-4 py-16">
+            <div class="relative flex h-16 w-16 items-center justify-center">
+                <svg class="h-16 w-16 animate-spin text-cyan-200" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <i class="fas fa-magnifying-glass text-lg text-cyan-500"></i>
+                </div>
+            </div>
+            <div class="text-center">
+                <p class="text-sm font-semibold text-slate-700">Searching…</p>
+                <p class="mt-1 text-xs text-slate-400">Fetching matching records</p>
+            </div>
+            {{-- Skeleton rows --}}
+            <div class="w-full max-w-2xl space-y-3 px-6">
+                @for($i = 0; $i < 4; $i++)
+                <div class="flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                    <div class="h-9 w-9 animate-pulse rounded-xl bg-slate-200"></div>
+                    <div class="flex-1 space-y-2">
+                        <div class="h-3 w-3/4 animate-pulse rounded bg-slate-200"></div>
+                        <div class="h-2.5 w-1/2 animate-pulse rounded bg-slate-100"></div>
+                    </div>
+                    <div class="h-6 w-20 animate-pulse rounded-full bg-slate-200"></div>
+                </div>
+                @endfor
+            </div>
         </div>
     </div>
 
@@ -266,29 +304,50 @@
 
 <script>
 (function () {
-    const input   = document.getElementById('liquidations-review-search');
-    const btn     = document.getElementById('liq-review-search-btn');
+    const input    = document.getElementById('liquidations-review-search');
+    const btn      = document.getElementById('liq-review-search-btn');
     const clearBtn = document.getElementById('liq-review-clear-btn');
-    const table   = input?.closest('[data-fast-table]');
+    const table    = input?.closest('[data-fast-table]');
     if (!input || !table) return;
+
+    const iconEl     = document.getElementById('liq-search-icon');
+    const spinnerEl  = document.getElementById('liq-search-spinner');
+    const labelEl    = document.getElementById('liq-search-label');
+    const loadingEl  = document.getElementById('liq-review-loading');
 
     // Block the global fast-table auto-search on every keystroke
     input.addEventListener('input', function (e) {
         e.stopImmediatePropagation();
     }, true);
 
+    function setLoading(loading) {
+        if (loading) {
+            // Button: show spinner
+            iconEl?.classList.add('hidden');
+            spinnerEl?.classList.remove('hidden');
+            if (labelEl) labelEl.textContent = 'Searching…';
+            btn.disabled = true;
+
+            // Hide table content, show skeleton loader
+            const tableContent = table.querySelectorAll(':scope > *:not(#liq-review-loading)');
+            tableContent.forEach(el => el.style.display = 'none');
+            loadingEl?.classList.remove('hidden');
+        } else {
+            // Button: restore
+            iconEl?.classList.remove('hidden');
+            spinnerEl?.classList.add('hidden');
+            if (labelEl) labelEl.textContent = 'Search';
+            if (btn) btn.disabled = false;
+        }
+    }
+
     function doSearch() {
         const url = new URL(table.dataset.endpoint || window.location.href, window.location.origin);
         const val = input.value.trim();
-        if (val) {
-            url.searchParams.set('search', val);
-        } else {
-            url.searchParams.delete('search');
-        }
-        // Reset to page 1 on new search
+        val ? url.searchParams.set('search', val) : url.searchParams.delete('search');
         url.searchParams.delete('page');
 
-        table.classList.add('opacity-60', 'pointer-events-none');
+        setLoading(true);
 
         fetch(url.toString(), {
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
@@ -298,16 +357,17 @@
             table.innerHTML = payload.html || '';
             window.history.replaceState({}, '', url.toString());
         })
-        .catch(() => {})
-        .finally(() => table.classList.remove('opacity-60', 'pointer-events-none'));
+        .catch(() => {
+            setLoading(false);
+        });
     }
 
-    // Enter key triggers search
+    // Enter key
     input.addEventListener('keydown', function (e) {
         if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
     });
 
-    // Search icon button click
+    // Search button
     btn?.addEventListener('click', doSearch);
 
     // Clear button
