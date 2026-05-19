@@ -116,15 +116,15 @@
                 <div class="mt-4 flex flex-col gap-4 border-t border-slate-200 pt-4 lg:flex-row lg:items-center lg:justify-between">
                     <div class="min-w-0 w-full flex-1 max-w-[720px]">
                         <div class="relative">
-                            <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
+                            <div class="pointer-events-none absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-blue-50 text-blue-600 shadow-sm">
                                 <i class="fas fa-search text-sm"></i>
-                            </span>
+                            </div>
                             <input
                                 type="text"
                                 name="search"
                                 value="{{ request('search') }}"
                                 placeholder="Search MTM, area, province, company..."
-                                class="h-[52px] w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-4 text-[15px] text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                class="h-[52px] w-full rounded-2xl border border-slate-200 bg-slate-50 pl-14 pr-4 text-[15px] text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
                             >
                         </div>
                     </div>
