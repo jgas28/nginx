@@ -63,8 +63,8 @@ class EmployeeController extends Controller
             'first_name' => 'required',
             'last_name' => 'required',
             'position' => 'required',
-            'roles' => 'required|array',
-            'roles.*' => 'exists:roles,id',
+            'roles' => 'nullable|array',
+            'roles.*' => 'nullable|exists:roles,id',
             'password' => 'required|min:6|confirmed',
             'employment_status' => 'required',
             'daily_rate' => 'nullable|numeric|min:0',
@@ -92,7 +92,7 @@ class EmployeeController extends Controller
         ]);
 
         // Attach selected roles
-        $employee->roles()->attach($request->roles);
+        $employee->roles()->sync($request->input('roles', []));
 
         return redirect()->route('employees.index')->with('success', 'Employee created successfully.');
     }
@@ -126,8 +126,8 @@ class EmployeeController extends Controller
             'last_name' => 'required',
             'position' => 'required',
             'employment_status' => 'required',
-            'roles' => 'required|array',
-            'roles.*' => 'exists:roles,id',
+            'roles' => 'nullable|array',
+            'roles.*' => 'nullable|exists:roles,id',
             'password' => 'nullable|min:6|confirmed',
             'status' => 'required',
             'daily_rate' => 'nullable|numeric|min:0',
@@ -157,7 +157,7 @@ class EmployeeController extends Controller
         $employee->save();
 
         // Sync roles (replaces old ones with the new selection) 
-        $employee->roles()->sync($request->roles);
+        $employee->roles()->sync($request->input('roles', []));
 
         return redirect()->route('employees.index')->with('success', 'Employee updated successfully.');
     }
