@@ -4,7 +4,9 @@
       "Bash(php artisan *)",
       "Bash(Get-Content \"c:\\\\xampp\\\\htdocs\\\\git\\\\nginx\\\\storage\\\\logs\\\\laravel.log\" -Tail 60)",
       "Bash(xargs grep -l \"soa\\\\|billing\" -i)",
-      "Bash(xargs grep -l \"running.balance\\\\|RunningBalance\\\\|running_balance\")"
+      "Bash(xargs grep -l \"running.balance\\\\|RunningBalance\\\\|running_balance\")",
+      "Bash(xargs grep -l \"running_balance\")",
+      "Bash(xargs grep -l \"employee_id\\\\|cvr_number\\\\|adjustment_type\\\\|supplier_id\")"
     ]
   }
 }
