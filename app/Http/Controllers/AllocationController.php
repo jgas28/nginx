@@ -30,6 +30,8 @@ class AllocationController extends Controller
         $perPage = (int) $request->input('per_page', 10);
         $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
+        $user = Auth::user();
+
         $deliveryRequests = DeliveryRequest::with([
             'company',
             'region',
@@ -42,7 +44,8 @@ class AllocationController extends Controller
             'lineItems.addOnRate',
         ])
         ->where('status', '!=', 0)
-        ->where('status', 8) // Filter by delivery request status code
+        ->where('delivery_status', 8) // For Truck Allocation
+        ->when(!$user->isAdmin() && $user->company_id, fn($q) => $q->where('company_id', $user->company_id))
         ->when($search, function ($query, $search) {
             $query->where(function ($q) use ($search) {
                 $q->where('mtm', 'like', '%' . $search . '%')

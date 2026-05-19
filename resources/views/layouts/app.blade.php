@@ -832,9 +832,15 @@
                     </svg>
                 </button>
                 <div x-show="openBilling && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
+                    @if($user->hasAnyRoleId([1, 2, 3, 49]))
                     <a href="{{ route('billing.dashboard') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-line w-4 text-center text-blue-300"></i><span>Dashboard</span></a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 50]))
                     <a href="{{ route('billing.createSOA.form') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-file-circle-plus w-4 text-center text-cyan-300"></i><span>Create SOA</span></a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 51]))
                     <a href="{{ route('billing.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-violet-300"></i><span>SOA List</span></a>
+                    @endif
                 </div>
             </div>
             @endif
@@ -854,9 +860,15 @@
                     </svg>
                 </button>
                 <div x-show="openAttendance && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
+                    @if($user->hasAnyRoleId([1, 2, 3, 55]))
                     <a href="{{ route('attendance.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-emerald-300"></i><span>Attendance List</span></a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 56]))
                     <a href="{{ route('attendance.create') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-calendar-plus w-4 text-center text-lime-300"></i><span>Add Attendance</span></a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 57]))
                     <a href="{{ route('attendance.summary') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-table-columns w-4 text-center text-cyan-300"></i><span>Summary</span></a>
+                    @endif
                 </div>
             </div>
             @endif
@@ -876,9 +888,15 @@
                     </svg>
                 </button>
                 <div x-show="openHr && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
+                    @if($user->hasAnyRoleId([1, 2, 3, 52]))
                     <a href="{{ route('hr.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-line w-4 text-center text-pink-300"></i><span>Payroll Dashboard</span></a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 53]))
                     <a href="{{ route('hr.create') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-file-circle-plus w-4 text-center text-fuchsia-300"></i><span>Create Payroll</span></a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 3, 54]))
                     <a href="{{ route('hr.payslips.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-file-lines w-4 text-center text-rose-300"></i><span>Payslips</span></a>
+                    @endif
                 </div>
             </div>
             @endif

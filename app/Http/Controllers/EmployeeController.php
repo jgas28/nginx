@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Company;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -47,8 +48,9 @@ class EmployeeController extends Controller
      */
     public function create()
     {
-        $roles=Role::all();
-        return view('employees.create', compact('roles'));
+        $roles = Role::all();
+        $companies = Company::orderBy('company_name')->get();
+        return view('employees.create', compact('roles', 'companies'));
     }
 
     /**
@@ -77,7 +79,7 @@ class EmployeeController extends Controller
             'fname' => $request->first_name,
             'lname' => $request->last_name,
             'position' => $request->position,
-            'email' => $request->email, // if you use email
+            'email' => $request->email,
             'password' => Hash::make($request->password),
             'status' => 1,
             'employment_status' => $request->employment_status,
@@ -86,6 +88,7 @@ class EmployeeController extends Controller
             'sss_no' => $request->sss_no,
             'philhealth_no' => $request->philhealth_no,
             'tin_no' => $request->tin_no,
+            'company_id' => $request->company_id ?? null,
         ]);
 
         // Attach selected roles
@@ -107,8 +110,9 @@ class EmployeeController extends Controller
      */
     public function edit(User $employee)
     {
-        $roles=Role::all();
-        return view('employees.edit', compact('employee','roles'));
+        $roles = Role::all();
+        $companies = Company::orderBy('company_name')->get();
+        return view('employees.edit', compact('employee', 'roles', 'companies'));
     }
 
     /**
@@ -144,6 +148,7 @@ class EmployeeController extends Controller
         $employee->sss_no = $request->sss_no;
         $employee->philhealth_no = $request->philhealth_no;
         $employee->tin_no = $request->tin_no;
+        $employee->company_id = $request->company_id ?? null;
 
         if ($request->filled('password')) {
             $employee->password = Hash::make($request->password);

@@ -32,6 +32,7 @@ class User extends Authenticatable
         'sss_no',
         'philhealth_no',
         'tin_no',
+        'company_id',
     ];
 
     /**
@@ -62,6 +63,16 @@ class User extends Authenticatable
     public function roles()
     {
         return $this->belongsToMany(Role::class);
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(\App\Models\Company::class);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->hasAnyRoleId([1, 2, 3]);
     }
 
     public function hasRole($roleName)

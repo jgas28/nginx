@@ -82,6 +82,15 @@
                                 <option value="suspended" {{ old('employment_status') == 'suspended' ? 'selected' : '' }}>Suspended</option>
                             </select>
                         </div>
+                        <div class="rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
+                            <label for="company_id" class="mb-2 block text-sm font-semibold text-slate-700">Assigned Company <span class="font-normal text-slate-400">(optional)</span></label>
+                            <select name="company_id" id="company_id" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+                                <option value="">— All Companies —</option>
+                                @foreach($companies as $company)
+                                    <option value="{{ $company->id }}" {{ old('company_id') == $company->id ? 'selected' : '' }}>{{ $company->company_name }} ({{ $company->company_code }})</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -147,9 +156,9 @@
                                 ['Settings', [3, 4, 5, 33, 34, 35, 28]],
                                 ['Dashboard', [37, 38, 39, 40, 41, 42]],
                                 ['Running Balance', [35, 43, 44, 45]],
-                                ['Billing', [46]],
-                                ['Human Resource', [47]],
-                                ['Attendance', [48]],
+                                ['Billing', [46, 49, 50, 51]],
+                                ['Human Resource', [47, 52, 53, 54]],
+                                ['Attendance', [48, 55, 56, 57]],
                             ] as [$groupLabel, $groupIds])
                                 <div class="rounded-3xl border border-slate-200 bg-white p-5">
                                     <p class="mb-3 text-sm font-semibold text-slate-800">{{ $groupLabel }}</p>
