@@ -43,13 +43,17 @@ use Maatwebsite\Excel\Facades\Excel;
 
 // 🏠 Root route — redirect based on auth status
 Route::get('/', function () {
-    return Auth::check()
-        ? redirect()->action([DashboardController::class, 'index']) // Role-based redirection
-        : redirect()->route('login'); // If not logged in, go to login
+    if (!Auth::check()) {
+        return redirect()->route('login');
+    }
+
+    return Auth::user()?->hasDashboardAccess()
+        ? redirect()->route('dashboard')
+        : redirect()->route('no.dashboard');
 });
 
 // 🧭 This route handles role-based dashboard rendering
-Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+Route::middleware(['auth', 'route.access'])->get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
 
 // Public Auth Routes
@@ -57,12 +61,12 @@ Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-Route::get('/no-dashboard', function () {
+Route::middleware('auth')->get('/no-dashboard', function () {
     return view('no_dashboard');
 })->name('no.dashboard');
 
 // Authenticated Routes
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'route.access'])->group(function () {
     Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
     Route::post('/register', [AuthController::class, 'register']);
     Route::get('/password/change', [PasswordController::class, 'showChangeForm'])->name('password.change');

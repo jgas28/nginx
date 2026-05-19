@@ -26,8 +26,13 @@ class DashboardController extends Controller
         $user->load('roles');
 
         $roleIds = $user->roles->pluck('id')->toArray();
+        $dashboardView = $user->getAssignedDashboardView();
 
-        $needsBalanceData = count(array_intersect($roleIds, [37, 38, 39, 40, 41])) > 0;
+        if (!$dashboardView) {
+            return redirect()->route('no.dashboard');
+        }
+
+        $needsBalanceData = $user->hasDashboardAccess();
         $PnLData = in_array(40, $roleIds) || in_array(41, $roleIds);
 
         $profits = [];
@@ -193,68 +198,24 @@ class DashboardController extends Controller
             ];
         }
 
-        // Role-based dashboard view rendering
-        if (in_array(37, $roleIds)) {
-            return view('dashboards.coordinator', compact(
-                'approvers', 'runningTotalsByApprover', 'uncollectedByApprover'
-            ));
-        }
-
-        if (in_array(38, $roleIds)) {
-            return view('dashboards.admin', compact(
-                'approvers', 'runningTotalsByApprover', 'uncollectedByApprover'
-            ));
-        }
-
-        if (in_array(39, $roleIds)) {
-            return view('dashboards.allocation', compact(
-                'approvers', 'runningTotalsByApprover', 'uncollectedByApprover'
-            ));
-        }
-
-        if (in_array(40, $roleIds)) {
-            return view('dashboards.owner1', compact(
-                'approvers',
-                'runningTotalsByApprover',
-                'uncollectedByApprover',
-                'profits',
-                'totalDeliveryRates',
-                'totalAccessorialRates',
-                'totals',
-                'totalPendingDeliveries',
-                'totalDelivered',
-                'totalTruckAllocated',
-                'totalLiquidation',
-                'totalCVRapproval',
-                'analyticsSeries',
-                'analyticsMax',
-                'activityMix',
-                'expenseMix'
-            ));
-        }
-
-        if (in_array(41, $roleIds)) {
-            return view('dashboards.owner2', compact(
-                'approvers',
-                'runningTotalsByApprover',
-                'uncollectedByApprover',
-                'profits',
-                'totalDeliveryRates',
-                'totalAccessorialRates',
-                'totals',
-                'totalPendingDeliveries',
-                'totalDelivered',
-                'totalTruckAllocated',
-                'totalLiquidation',
-                'totalCVRapproval',
-                'analyticsSeries',
-                'analyticsMax',
-                'activityMix',
-                'expenseMix'
-            ));
-        }
-
-        abort(403, 'Unauthorized dashboard access.');
+        return view($dashboardView, compact(
+            'approvers',
+            'runningTotalsByApprover',
+            'uncollectedByApprover',
+            'profits',
+            'totalDeliveryRates',
+            'totalAccessorialRates',
+            'totals',
+            'totalPendingDeliveries',
+            'totalDelivered',
+            'totalTruckAllocated',
+            'totalLiquidation',
+            'totalCVRapproval',
+            'analyticsSeries',
+            'analyticsMax',
+            'activityMix',
+            'expenseMix'
+        ));
     }
 
     private function calculateLiquidationTotals(string $startDate, string $endDate): array

@@ -42,8 +42,8 @@ class AuthController extends Controller
             // Log user role IDs for debugging (optional)
             Log::info('User Role IDs on login: ', $roleIds);
 
-            // If user has dashboard access
-            if (array_intersect($roleIds, [37, 38, 39, 40, 41, 42])) {
+            // If user has a real dashboard assignment
+            if ($user->hasDashboardAccess()) {
                 return redirect()->route('dashboard');
             }
 

@@ -9,6 +9,14 @@ use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
+    private const DASHBOARD_ROLE_VIEW_MAP = [
+        37 => 'dashboards.coordinator',
+        38 => 'dashboards.admin',
+        39 => 'dashboards.allocation',
+        40 => 'dashboards.owner1',
+        41 => 'dashboards.owner2',
+    ];
+
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
@@ -72,7 +80,7 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->hasAnyRoleId([1, 2, 3]);
+        return $this->hasAnyRoleId([1, 2]);
     }
 
     public function hasRole($roleName)
@@ -90,6 +98,22 @@ class User extends Authenticatable
     public function hasAnyRoleId(array $roleIds): bool
     {
         return $this->roles->whereIn('id', $roleIds)->isNotEmpty();
+    }
+
+    public function hasDashboardAccess(): bool
+    {
+        return $this->hasAnyRoleId(array_keys(self::DASHBOARD_ROLE_VIEW_MAP));
+    }
+
+    public function getAssignedDashboardView(): ?string
+    {
+        foreach (self::DASHBOARD_ROLE_VIEW_MAP as $roleId => $view) {
+            if ($this->hasRoleId($roleId)) {
+                return $view;
+            }
+        }
+
+        return null;
     }
 
     public function attendances()

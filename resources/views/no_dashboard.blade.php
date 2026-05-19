@@ -15,7 +15,8 @@
 
                 <p class="text-sm mt-1">
                     <span class="font-medium text-gray-700">User ID:</span> {{ auth()->user()->id }}<br>
-                    <span class="font-medium text-gray-700">Role ID:</span> {{ auth()->user()->role_id }}
+                    <span class="font-medium text-gray-700">Access Roles:</span>
+                    {{ auth()->user()->roles->pluck('name')->join(', ') ?: 'None assigned' }}
                 </p>
             </div>
 

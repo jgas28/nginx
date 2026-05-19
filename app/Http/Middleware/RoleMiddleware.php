@@ -9,9 +9,21 @@ use Symfony\Component\HttpFoundation\Response;
 
 class RoleMiddleware
 {
-    public function handle(Request $request, Closure $next, $role)
+    public function handle(Request $request, Closure $next, ...$roles): Response
     {
-        if (Auth::check() && Auth::user()->role->name !== $role) {
+        $user = Auth::user();
+
+        if (!$user) {
+            abort(403, 'Unauthorized');
+        }
+
+        $normalizedRoles = collect($roles)
+            ->flatMap(fn ($role) => explode(',', (string) $role))
+            ->map(fn ($role) => trim($role))
+            ->filter()
+            ->values();
+
+        if ($normalizedRoles->isNotEmpty() && !$normalizedRoles->contains(fn ($role) => $user->hasRole($role))) {
             abort(403, 'Unauthorized');
         }
 

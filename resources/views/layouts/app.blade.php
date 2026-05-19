@@ -497,7 +497,7 @@
             @endif
 
 
-            @if(in_array($user->id, [1, 97]))
+            @if($user->hasAnyRoleId([1, 2, 40, 41]))
                 <a href="{{ route('delivery.details') }}" class="flex items-center gap-3 rounded-xl px-3 py-2 text-gray-100 transition hover:bg-gray-700/80 hover:text-white">
                     <span class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-500/15 text-violet-300">
                         <i class="fas fa-boxes-stacked text-xs"></i>
@@ -647,7 +647,7 @@
             @endif
 
             {{-- Delivery Request nav (role_id = 6 or 7) --}}
-            @if($user->hasAnyRoleId([1, 2, 3, 35]))
+            @if($user->hasAnyRoleId([1, 2, 35]))
             <div x-data="{ openBalance: false }">
                 <button @click="openBalance = !openBalance" class="w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-gray-100 transition hover:bg-gray-700/80 hover:text-white">
                     <div class="flex items-center gap-3">
@@ -661,15 +661,15 @@
                     </svg>
                 </button>
                 <div x-show="openBalance && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
-                      @if($user->hasAnyRoleId([1, 2, 3, 43]))<a href="{{ route('running_balance.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-wallet w-4 text-center text-cyan-300"></i><span>Running Balance</span></a>@endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 44]))<a href="{{ route('running_balance.adminFunds') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-location-dot w-4 text-center text-emerald-300"></i><span>Running Balance - Laguna</span></a>@endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 45]))<a href="{{ route('running_balance.davaoFunds') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-location-dot w-4 text-center text-orange-300"></i><span>Running Balance - Davao</span></a>@endif
+                      @if($user->hasAnyRoleId([1, 2, 43]))<a href="{{ route('running_balance.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-wallet w-4 text-center text-cyan-300"></i><span>Running Balance</span></a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 44]))<a href="{{ route('running_balance.adminFunds') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-location-dot w-4 text-center text-emerald-300"></i><span>Running Balance - Laguna</span></a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 45]))<a href="{{ route('running_balance.davaoFunds') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-location-dot w-4 text-center text-orange-300"></i><span>Running Balance - Davao</span></a>@endif
                 </div>
             </div>
             @endif
 
             {{-- Allocation List nav (role_id = 9) --}}
-            @if($user->hasAnyRoleId([1, 2, 3, 30]))
+            @if($user->hasAnyRoleId([1, 2, 30]))
             <div x-data="{ openAllocate: false }">
                 <button @click="openAllocate = !openAllocate" class="w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-gray-100 transition hover:bg-gray-700/80 hover:text-white">
                     <div class="flex items-center gap-3">
@@ -690,7 +690,7 @@
             @endif
 
             {{-- Delivery Request nav (role_id = 6 or 7) --}}
-            @if($user->hasAnyRoleId([1, 2, 3,29]))
+            @if($user->hasAnyRoleId([1, 2, 29]))
             <div x-data="{ openDR: false }">
                 <button @click="openDR = !openDR" class="w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-gray-100 transition hover:bg-gray-700/80 hover:text-white">
                     <div class="flex items-center gap-3">
@@ -704,14 +704,14 @@
                     </svg>
                 </button>
                 <div x-show="openDR && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
-                    @if($user->hasAnyRoleId([1, 2, 3, 6]))<a href="{{ route('deliveryRequest.create') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-plus w-4 text-center text-blue-300"></i><span>Create</span></a>@endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 7]))<a href="{{ route('deliveryRequest.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-cyan-300"></i><span>List</span></a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 6]))<a href="{{ route('deliveryRequest.create') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-plus w-4 text-center text-blue-300"></i><span>Create</span></a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 7]))<a href="{{ route('deliveryRequest.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-cyan-300"></i><span>List</span></a>@endif
                 </div>
             </div>
             @endif
 
             {{-- Coordinator nav (role_id = 10 or 11) --}}
-            @if($user->hasAnyRoleId([1, 2, 3, 31]))
+            @if($user->hasAnyRoleId([1, 2, 31]))
             <div x-data="{ openCoordinator: false }">
                 <button @click="openCoordinator = !openCoordinator" class="w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-gray-100 transition hover:bg-gray-700/80 hover:text-white">
                     <div class="flex items-center gap-3">
@@ -725,15 +725,15 @@
                     </svg>
                 </button>
                 <div x-show="openCoordinator && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
-                    @if($user->hasAnyRoleId([1, 2, 3, 10]))<a href="{{ route('coordinators.create') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-plus w-4 text-center text-violet-300"></i><span>Create Request</span></a>@endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 11]))<a href="{{ route('coordinators.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-fuchsia-300"></i><span>List</span></a>@endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 11]))<a href="{{ route('reports.dr') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-column w-4 text-center text-indigo-300"></i><span>Report</span></a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 10]))<a href="{{ route('coordinators.create') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-plus w-4 text-center text-violet-300"></i><span>Create Request</span></a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 11]))<a href="{{ route('coordinators.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-fuchsia-300"></i><span>List</span></a>@endif
+                    @if($user->hasAnyRoleId([1, 2, 11]))<a href="{{ route('reports.dr') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-column w-4 text-center text-indigo-300"></i><span>Report</span></a>@endif
                 </div>
             </div>
             @endif
 
             {{-- Cash Voucher List Admin (role_id = 14) --}}
-            @if($user->hasAnyRoleId([1, 2, 3, 32]))
+            @if($user->hasAnyRoleId([1, 2, 32]))
             <div x-data="{ openCVR: false }">
                 <button @click="openCVR = !openCVR" class="w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-gray-100 transition hover:bg-gray-700/80 hover:text-white">
                     <div class="flex items-center gap-3">
@@ -748,31 +748,31 @@
                 </button>
                 <div x-show="openCVR && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
                     {{-- Add CV List Admin links here --}}
-                    @if($user->hasAnyRoleId([1, 2, 3, 13]))
+                    @if($user->hasAnyRoleId([1, 2, 13]))
                         <a href="{{ route('cashVoucherRequests.approval') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-circle-check w-4 text-center text-emerald-300"></i><span>DR Approval</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 12]))
+                    @if($user->hasAnyRoleId([1, 2, 12]))
                         <a href="{{ route('adminCV.approval') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-user-check w-4 text-center text-sky-300"></i><span>Admin/RPM Approval</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 14]))
+                    @if($user->hasAnyRoleId([1, 2, 14]))
                         <a href="{{ route('adminCV.cvrList') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-violet-300"></i><span>List - Admin</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 15]))
+                    @if($user->hasAnyRoleId([1, 2, 15]))
                         <a href="{{ route('cashVoucherRequests.cvrList') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-fuchsia-300"></i><span>List - DR</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 16]))
+                    @if($user->hasAnyRoleId([1, 2, 16]))
                         <a href="{{ route('cashVoucherRequests.rejectView') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-circle-xmark w-4 text-center text-rose-300"></i><span>Reject - DR</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 17]))
+                    @if($user->hasAnyRoleId([1, 2, 17]))
                         <a href="{{ route('adminCV.rejectView') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-ban w-4 text-center text-red-300"></i><span>Reject - Admin</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 18]))
+                    @if($user->hasAnyRoleId([1, 2, 18]))
                         <a href="{{ route('admin.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-file-circle-plus w-4 text-center text-amber-300"></i><span>Admin/RPM Request</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 18]))
+                    @if($user->hasAnyRoleId([1, 2, 18]))
                         <a href="{{ route('reports.cv') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-column w-4 text-center text-indigo-300"></i><span>Admin Report</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 18]))
+                    @if($user->hasAnyRoleId([1, 2, 18]))
                         <a href="{{ route('reports.rpm') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-line w-4 text-center text-cyan-300"></i><span>RPM Report</span></a>
                     @endif
                 </div>
@@ -780,7 +780,7 @@
             @endif
 
             {{-- Liquidation nav (roles 20 to 27) --}}
-            @if($user->hasAnyRoleId([1, 2, 3, 33]))
+            @if($user->hasAnyRoleId([1, 2, 33]))
             <div x-data="{ openLiquidation: false }">
                 <button @click="openLiquidation = !openLiquidation" class="w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-gray-100 transition hover:bg-gray-700/80 hover:text-white">
                     <div class="flex items-center gap-3">
@@ -794,28 +794,28 @@
                     </svg>
                 </button>
                 <div x-show="openLiquidation && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
-                    @if($user->hasAnyRoleId([1, 2, 3, 20]))
+                    @if($user->hasAnyRoleId([1, 2, 20]))
                         <a href="{{ route('liquidations.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-file-circle-plus w-4 text-center text-teal-300"></i><span>Liquidate - DR</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 21]))
+                    @if($user->hasAnyRoleId([1, 2, 21]))
                         <a href="{{ route('liquidations.indexAdmin') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-user-shield w-4 text-center text-cyan-300"></i><span>Liquidate - Admin</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 22]))
+                    @if($user->hasAnyRoleId([1, 2, 22]))
                         <a href="{{ route('liquidations.reviewList') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-check-double w-4 text-center text-emerald-300"></i><span>Validate Liquidation</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 23]))
+                    @if($user->hasAnyRoleId([1, 2, 23]))
                         <a href="{{ route('liquidations.validatedList') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-hand-holding-dollar w-4 text-center text-lime-300"></i><span>Collect Liquidation</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 24]))
+                    @if($user->hasAnyRoleId([1, 2, 24]))
                         <a href="{{ route('liquidations.approvalList') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-badge-check w-4 text-center text-sky-300"></i><span>Approved Liquidation</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 25]))
+                    @if($user->hasAnyRoleId([1, 2, 25]))
                         <a href="{{ route('liquidations.liquidationList') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-violet-300"></i><span>List -DR</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 26]))
+                    @if($user->hasAnyRoleId([1, 2, 26]))
                         <a href="{{ route('liquidations.overall') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-pie w-4 text-center text-orange-300"></i><span>Overall</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 27]))
+                    @if($user->hasAnyRoleId([1, 2, 27]))
                         <a href="{{ route('liquidations.rejectedList') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-circle-xmark w-4 text-center text-rose-300"></i><span>Rejected List</span></a>
                     @endif
                 </div>
