@@ -73,7 +73,7 @@ class CoordinatorsController extends Controller
         $perPage = (int) $request->input('per_page', 10);
         $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
         $tab = $request->input('tab', 'list');
-        $privilegedUserIds = [53, 54];
+        $canViewAllCoordinatorRequests = $user->hasAnyRoleId([1, 2]);
         $tabs = [
             'list' => [2, 5, 6],
             'status4' => [4, 7],
@@ -84,11 +84,6 @@ class CoordinatorsController extends Controller
             'staging' => [3],
             'accessorial' => [16,17,18]
         ];
-
-        // Only the 'list' tab is scoped to the logged-in coordinator's own requests.
-        // All other tabs (staging, pipeline stages) show records regardless of creator
-        // because pullouts/allocations may be submitted by a different user.
-        $ownRequestsTabs = ['list'];
 
         if ($singleTab) {
             // Only build query for the active tab
@@ -104,9 +99,10 @@ class CoordinatorsController extends Controller
             ])
                 ->where('status', '!=', 0)
                 ->whereIn('delivery_status', $statuses);
-                if (!in_array($user->id, $privilegedUserIds) && in_array($tab, $ownRequestsTabs)) {
-                    $query->where('created_by', $employee_id);
-                }
+
+            if (!$canViewAllCoordinatorRequests) {
+                $query->where('created_by', $employee_id);
+            }
 
             if ($search) {
                 $query->where(function ($q) use ($search) {
@@ -159,7 +155,7 @@ class CoordinatorsController extends Controller
                 ->where('status', '!=', 0)
                 ->whereIn('delivery_status', $statuses);
 
-            if (!in_array($user->id, $privilegedUserIds) && in_array($tabKey, $ownRequestsTabs)) {
+            if (!$canViewAllCoordinatorRequests) {
                 $query->where('created_by', $employee_id);
             }
 
