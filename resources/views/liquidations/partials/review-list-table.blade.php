@@ -25,17 +25,29 @@
     </div>
 
     <div class="grid grid-cols-1 items-center gap-4 rounded-[24px] border border-slate-200 bg-white p-4 xl:grid-cols-[minmax(0,720px)_auto] xl:justify-between">
-        <div class="relative min-w-0 max-w-[720px]">
-            <div class="pointer-events-none absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-cyan-50 text-cyan-600 shadow-sm">
-                <i class="fas fa-magnifying-glass text-sm"></i>
+        <div class="flex min-w-0 items-center gap-2 max-w-[720px]">
+            <div class="relative flex-1">
+                {{-- Clickable search button icon --}}
+                <button type="button" id="liq-review-search-btn"
+                    class="absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-cyan-500 text-white shadow-sm transition hover:bg-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+                    <i class="fas fa-magnifying-glass text-sm"></i>
+                </button>
+                <input
+                    type="text"
+                    id="liquidations-review-search"
+                    value="{{ $search }}"
+                    placeholder="Press Enter or click 🔍 to search…"
+                    autocomplete="off"
+                    class="w-full rounded-2xl border border-slate-300 bg-slate-50 py-3 pl-14 pr-10 text-sm text-slate-700 shadow-sm outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-2 focus:ring-cyan-100"
+                >
+                {{-- Clear button --}}
+                @if($search)
+                <button type="button" id="liq-review-clear-btn"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-slate-500 transition hover:bg-rose-100 hover:text-rose-600">
+                    <i class="fas fa-times text-[10px]"></i>
+                </button>
+                @endif
             </div>
-            <input
-                type="text"
-                id="liquidations-review-search"
-                value="{{ $search }}"
-                placeholder="Search CVR, company, supplier, requestor, expense..."
-                class="w-full rounded-2xl border border-slate-300 bg-slate-50 py-3 pl-14 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-2 focus:ring-cyan-100"
-            >
         </div>
 
         <div class="flex flex-wrap items-center justify-start gap-3 xl:justify-end">
@@ -245,3 +257,57 @@
         </div>
     </div>
 </div>
+
+<script>
+(function () {
+    const input   = document.getElementById('liquidations-review-search');
+    const btn     = document.getElementById('liq-review-search-btn');
+    const clearBtn = document.getElementById('liq-review-clear-btn');
+    const table   = input?.closest('[data-fast-table]');
+    if (!input || !table) return;
+
+    // Block the global fast-table auto-search on every keystroke
+    input.addEventListener('input', function (e) {
+        e.stopImmediatePropagation();
+    }, true);
+
+    function doSearch() {
+        const url = new URL(table.dataset.endpoint || window.location.href, window.location.origin);
+        const val = input.value.trim();
+        if (val) {
+            url.searchParams.set('search', val);
+        } else {
+            url.searchParams.delete('search');
+        }
+        // Reset to page 1 on new search
+        url.searchParams.delete('page');
+
+        table.classList.add('opacity-60', 'pointer-events-none');
+
+        fetch(url.toString(), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        })
+        .then(r => r.json())
+        .then(payload => {
+            table.innerHTML = payload.html || '';
+            window.history.replaceState({}, '', url.toString());
+        })
+        .catch(() => {})
+        .finally(() => table.classList.remove('opacity-60', 'pointer-events-none'));
+    }
+
+    // Enter key triggers search
+    input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+    });
+
+    // Search icon button click
+    btn?.addEventListener('click', doSearch);
+
+    // Clear button
+    clearBtn?.addEventListener('click', function () {
+        input.value = '';
+        doSearch();
+    });
+})();
+</script>
