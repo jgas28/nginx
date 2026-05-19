@@ -93,6 +93,29 @@
 </style>
 @endsection
 
+{{-- Fixed full-page loading overlay --}}
+<div id="liq-review-loading"
+    class="pointer-events-none fixed inset-0 z-50 flex hidden flex-col items-center justify-center gap-5 bg-white/80 backdrop-blur-sm">
+    <div class="relative flex h-20 w-20 items-center justify-center">
+        <svg class="h-20 w-20 animate-spin text-cyan-200" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+            <path class="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+        </svg>
+        <div class="absolute inset-0 flex items-center justify-center">
+            <i class="fas fa-magnifying-glass text-xl text-cyan-600"></i>
+        </div>
+    </div>
+    <div class="text-center">
+        <p class="text-base font-semibold text-slate-800">Searching…</p>
+        <p class="mt-1 text-sm text-slate-500">Please wait while we fetch matching records</p>
+    </div>
+    <div class="flex items-center gap-1.5">
+        <span class="inline-block h-2 w-2 animate-bounce rounded-full bg-cyan-500" style="animation-delay:0ms"></span>
+        <span class="inline-block h-2 w-2 animate-bounce rounded-full bg-cyan-400" style="animation-delay:150ms"></span>
+        <span class="inline-block h-2 w-2 animate-bounce rounded-full bg-cyan-300" style="animation-delay:300ms"></span>
+    </div>
+</div>
+
 @section('scripts')
 <script>
     (() => {
@@ -257,6 +280,89 @@
 
         updateLabel();
         renderOptions();
+    })();
+
+    // ── Search logic (lives outside the partial so it survives innerHTML reloads) ──
+    (function () {
+        const table      = document.getElementById('liquidations-review-table');
+        const loadingEl  = document.getElementById('liq-review-loading');
+        if (!table) return;
+
+        function getInput()    { return document.getElementById('liquidations-review-search'); }
+        function getSearchBtn(){ return document.getElementById('liq-review-search-btn'); }
+        function getClearBtn() { return document.getElementById('liq-review-clear-btn'); }
+
+        function setLoading(on) {
+            loadingEl?.classList.toggle('hidden', !on);
+            loadingEl?.classList.toggle('pointer-events-none', !on);
+
+            const btn = getSearchBtn();
+            if (!btn) return;
+            const icon    = btn.querySelector('#liq-search-icon');
+            const spinner = btn.querySelector('#liq-search-spinner');
+            const label   = btn.querySelector('#liq-search-label');
+            if (on) {
+                icon?.classList.add('hidden');
+                spinner?.classList.remove('hidden');
+                if (label) label.textContent = 'Searching…';
+                btn.disabled = true;
+            } else {
+                icon?.classList.remove('hidden');
+                spinner?.classList.add('hidden');
+                if (label) label.textContent = 'Search';
+                btn.disabled = false;
+            }
+        }
+
+        function doSearch() {
+            const input = getInput();
+            if (!input) return;
+
+            const url = new URL(table.dataset.endpoint || window.location.href, window.location.origin);
+            const val = input.value.trim();
+            val ? url.searchParams.set('search', val) : url.searchParams.delete('search');
+            url.searchParams.delete('page');
+
+            setLoading(true);
+
+            fetch(url.toString(), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+            })
+            .then(r => r.json())
+            .then(payload => {
+                table.innerHTML = payload.html || '';
+                window.history.replaceState({}, '', url.toString());
+            })
+            .catch(err => console.error('Search error:', err))
+            .finally(() => setLoading(false));
+        }
+
+        // Block fast-table auto-search — use capture so it fires before the global listener
+        document.addEventListener('input', function (e) {
+            if (e.target?.id === 'liquidations-review-search') {
+                e.stopImmediatePropagation();
+            }
+        }, true);
+
+        // Enter key on search input — event delegation survives table reloads
+        document.addEventListener('keydown', function (e) {
+            if (e.target?.id === 'liquidations-review-search' && e.key === 'Enter') {
+                e.preventDefault();
+                doSearch();
+            }
+        });
+
+        // Search button click — event delegation
+        document.addEventListener('click', function (e) {
+            if (e.target?.closest('#liq-review-search-btn')) {
+                doSearch();
+            }
+            if (e.target?.closest('#liq-review-clear-btn')) {
+                const input = getInput();
+                if (input) input.value = '';
+                doSearch();
+            }
+        });
     })();
 </script>
 @endsection
