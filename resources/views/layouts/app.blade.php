@@ -823,7 +823,7 @@
             @endif
 
             {{-- Billing nav --}}
-            @if($user->hasAnyRoleId([1, 2, 3, 46]))
+            @if($user->hasAnyRoleId([46]))
             <div x-data="{ openBilling: false }">
                 <button @click="openBilling = !openBilling" class="w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-gray-100 transition hover:bg-gray-700/80 hover:text-white">
                     <div class="flex items-center gap-3">
@@ -837,13 +837,13 @@
                     </svg>
                 </button>
                 <div x-show="openBilling && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
-                    @if($user->hasAnyRoleId([1, 2, 3, 49]))
+                    @if($user->hasAnyRoleId([49]))
                     <a href="{{ route('billing.dashboard') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-line w-4 text-center text-blue-300"></i><span>Dashboard</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 50]))
+                    @if($user->hasAnyRoleId([50]))
                     <a href="{{ route('billing.createSOA.form') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-file-circle-plus w-4 text-center text-cyan-300"></i><span>Create SOA</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 51]))
+                    @if($user->hasAnyRoleId([51]))
                     <a href="{{ route('billing.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-violet-300"></i><span>SOA List</span></a>
                     @endif
                 </div>
@@ -851,7 +851,7 @@
             @endif
 
             {{-- Attendance nav --}}
-            @if($user->hasAnyRoleId([1, 2, 3, 48]))
+            @if($user->hasAnyRoleId([48]))
             <div x-data="{ openAttendance: false }">
                 <button @click="openAttendance = !openAttendance" class="w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-gray-100 transition hover:bg-gray-700/80 hover:text-white">
                     <div class="flex items-center gap-3">
@@ -865,13 +865,13 @@
                     </svg>
                 </button>
                 <div x-show="openAttendance && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
-                    @if($user->hasAnyRoleId([1, 2, 3, 55]))
+                    @if($user->hasAnyRoleId([55]))
                     <a href="{{ route('attendance.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-list-ul w-4 text-center text-emerald-300"></i><span>Attendance List</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 56]))
+                    @if($user->hasAnyRoleId([56]))
                     <a href="{{ route('attendance.create') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-calendar-plus w-4 text-center text-lime-300"></i><span>Add Attendance</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 57]))
+                    @if($user->hasAnyRoleId([57]))
                     <a href="{{ route('attendance.summary') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-table-columns w-4 text-center text-cyan-300"></i><span>Summary</span></a>
                     @endif
                 </div>
@@ -879,7 +879,7 @@
             @endif
 
             {{-- Human Resource nav --}}
-            @if($user->hasAnyRoleId([1, 2, 3, 47]))
+            @if($user->hasAnyRoleId([47]))
             <div x-data="{ openHr: false }">
                 <button @click="openHr = !openHr" class="w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-gray-100 transition hover:bg-gray-700/80 hover:text-white">
                     <div class="flex items-center gap-3">
@@ -893,13 +893,13 @@
                     </svg>
                 </button>
                 <div x-show="openHr && (isMobile || sidebarExpanded)" x-transition class="ml-5 mt-2 space-y-1.5 border-l border-gray-700 pl-3">
-                    @if($user->hasAnyRoleId([1, 2, 3, 52]))
+                    @if($user->hasAnyRoleId([52]))
                     <a href="{{ route('hr.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-line w-4 text-center text-pink-300"></i><span>Payroll Dashboard</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 53]))
+                    @if($user->hasAnyRoleId([53]))
                     <a href="{{ route('hr.create') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-file-circle-plus w-4 text-center text-fuchsia-300"></i><span>Create Payroll</span></a>
                     @endif
-                    @if($user->hasAnyRoleId([1, 2, 3, 54]))
+                    @if($user->hasAnyRoleId([54]))
                     <a href="{{ route('hr.payslips.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-file-lines w-4 text-center text-rose-300"></i><span>Payslips</span></a>
                     @endif
                 </div>
