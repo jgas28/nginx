@@ -294,7 +294,7 @@ class LiquidationController extends Controller
             'cashVoucher.trucks',
             'cashVoucher.deliveryRequest.company',
             'cashVoucher.deliveryRequest.expenseType',
-        ])->where('status', 1);
+        ]);
 
         if ($cvrType !== '') {
             $query->whereHas('cashVoucher', function ($cashVoucherQuery) use ($cvrType) {

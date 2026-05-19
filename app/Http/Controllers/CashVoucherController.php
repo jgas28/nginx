@@ -396,10 +396,11 @@ class CashVoucherController extends Controller
             $cashVoucher->save();
 
             // Update DeliveryRequest status
-            $deliveryRequest = DeliveryRequest::where('id', $request->dr_id)->first();
+                        $deliveryRequest = DeliveryRequest::where('id', $request->dr_id)->first();
             if ($deliveryRequest && $deliveryRequest->status != 0) {
-                Log::info("Updating DeliveryRequest status: dr_id = {$request->dr_id}, old_status = {$deliveryRequest->status}, new_status = 2");
-                $deliveryRequest->status = 2;
+                Log::info("Updating DeliveryRequest status: dr_id = {$request->dr_id}, old_status = {$deliveryRequest->status}, new_status = 1");
+                $deliveryRequest->status = '1';
+                $deliveryRequest->delivery_status = 2;
                 $deliveryRequest->save();
             }
 

@@ -65,6 +65,7 @@ class CoordinatorsController extends Controller
     private function getFilteredQuery(Request $request, bool $singleTab = false)
     {
         $user = Auth::user();
+        $employee_id = $user->id;
         $search = $request->input('search');
         $mtm = $request->input('mtm');
         $dateFrom = $request->input('date_from');
@@ -72,6 +73,7 @@ class CoordinatorsController extends Controller
         $perPage = (int) $request->input('per_page', 10);
         $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
         $tab = $request->input('tab', 'list');
+        $privilegedUserIds = [53, 54];
         $tabs = [
             'list' => [2, 5, 6],
             'status4' => [4, 7],
@@ -83,20 +85,21 @@ class CoordinatorsController extends Controller
             'accessorial' => [16,17,18]
         ];
 
+        // Only the 'list' tab is scoped to the logged-in coordinator's own requests.
+        // All other tabs (staging, pipeline stages) show records regardless of creator
+        // because pullouts/allocations may be submitted by a different user.
+        $ownRequestsTabs = ['list'];
+
         if ($singleTab) {
             // Only build query for the active tab
             $statuses = $tabs[$tab] ?? [];
 
             $query = DeliveryRequest::with(['lineItems', 'truckType', 'area', 'region', 'company'])
                 ->where('status', '!=', 0)
-                ->whereIn('delivery_status', $statuses);
-
-            if (!$user->isAdmin()) {
-                $query->where('created_by', $user->id);
-                if ($user->company_id) {
-                    $query->where('company_id', $user->company_id);
+                ->whereIn('status', $statuses);
+                if (!in_array($user->id, $privilegedUserIds) && in_array($tab, $ownRequestsTabs)) {
+                    $query->where('created_by', $employee_id);
                 }
-            }
 
             if ($search) {
                 $query->where(function ($q) use ($search) {
@@ -140,14 +143,7 @@ class CoordinatorsController extends Controller
         foreach ($tabs as $tabKey => $statuses) {
             $query = DeliveryRequest::with(['lineItems', 'truckType', 'area', 'region', 'company'])
                 ->where('status', '!=', 0)
-                ->whereIn('delivery_status', $statuses);
-
-            if (!$user->isAdmin()) {
-                $query->where('created_by', $user->id);
-                if ($user->company_id) {
-                    $query->where('company_id', $user->company_id);
-                }
-            }
+                ->whereIn('status', $statuses);
 
             if ($search) {
                 $query->where(function ($q) use ($search) {
@@ -1520,12 +1516,13 @@ class CoordinatorsController extends Controller
             ]);
             $allocation->save();
 
-            // Update DeliveryRequest status
+// Update DeliveryRequest status
             $deliveryRequest = DeliveryRequest::where('id', $request->dr_id)->first();
             if ($deliveryRequest && $deliveryRequest->status != 0) {
-                $deliveryRequest->status = '2';
+                $deliveryRequest->status = '1';
+                $deliveryRequest->delivery_status = '2'; // Updated to status 2
                 $deliveryRequest->save();
-                Log::info('Updated DeliveryRequest status to 2.');
+                Log::info('Updated DeliveryRequest status to 1.');
             }
 
             // Update Line Items

@@ -26,15 +26,15 @@
 
     <div class="grid grid-cols-1 items-center gap-4 rounded-[24px] border border-slate-200 bg-white p-4 xl:grid-cols-[minmax(0,720px)_auto] xl:justify-between">
         <div class="relative min-w-0 max-w-[720px]">
-            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+            <div class="pointer-events-none absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-cyan-50 text-cyan-600 shadow-sm">
                 <i class="fas fa-magnifying-glass text-sm"></i>
-            </span>
+            </div>
             <input
                 type="text"
                 id="liquidations-review-search"
                 value="{{ $search }}"
                 placeholder="Search CVR, company, supplier, requestor, expense..."
-                class="w-full rounded-2xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-100"
+                class="w-full rounded-2xl border border-slate-300 bg-slate-50 py-3 pl-14 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-2 focus:ring-cyan-100"
             >
         </div>
 
