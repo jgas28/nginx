@@ -167,6 +167,11 @@
             transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease !important;
         }
 
+        /* Restore left padding for search inputs that have an icon circle */
+        main [data-fast-table] .relative > input[id$="-search"] {
+            padding-left: 3.5rem !important;
+        }
+
         main .dataTables_wrapper .dataTables_filter input:focus,
         main .dataTables_wrapper .dataTables_length select:focus,
         main [data-fast-table] input[id$="-search"]:focus,

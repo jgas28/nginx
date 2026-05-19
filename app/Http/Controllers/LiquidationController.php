@@ -350,16 +350,15 @@ class LiquidationController extends Controller
             $cashVoucher = $liquidation->cashVoucher;
 
             if (!$cashVoucher) {
-                continue; // Skip if no associated CashVoucher
+                continue;
             }
 
-            $cvrType = $cashVoucher->cvr_type;
+            $itemCvrType = $cashVoucher->cvr_type;
             $dr = $cashVoucher->deliveryRequest ?? null;
 
-            // Only get allocation for these CVR types
-            if (in_array($cvrType, ['delivery', 'others', 'rpm', 'freight', 'accessorial', 'pullout']) && $dr) {
+            if (in_array($itemCvrType, ['delivery', 'others', 'rpm', 'freight', 'accessorial', 'pullout']) && $dr) {
                 $allocation = Allocation::where('dr_id', $dr->id)
-                    ->where('trip_type', $cvrType)
+                    ->where('trip_type', $itemCvrType)
                     ->where('sequence', $cashVoucher->sequence)
                     ->first();
 
