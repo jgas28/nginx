@@ -91,8 +91,11 @@ class CoordinatorsController extends Controller
                 ->where('status', '!=', 0)
                 ->whereIn('delivery_status', $statuses);
 
-            if (!$user->isAdmin() && $user->company_id) {
-                $query->where('company_id', $user->company_id);
+            if (!$user->isAdmin()) {
+                $query->where('created_by', $user->id);
+                if ($user->company_id) {
+                    $query->where('company_id', $user->company_id);
+                }
             }
 
             if ($search) {
@@ -139,8 +142,11 @@ class CoordinatorsController extends Controller
                 ->where('status', '!=', 0)
                 ->whereIn('delivery_status', $statuses);
 
-            if (!$user->isAdmin() && $user->company_id) {
-                $query->where('company_id', $user->company_id);
+            if (!$user->isAdmin()) {
+                $query->where('created_by', $user->id);
+                if ($user->company_id) {
+                    $query->where('company_id', $user->company_id);
+                }
             }
 
             if ($search) {
