@@ -148,6 +148,9 @@
                                 ['Settings', [3, 4, 5, 28, 33, 34]],
                                 ['Dashboard', [37, 38, 39, 40, 41, 42]],
                                 ['Running Balance', [35, 43, 44, 45]],
+                                ['Billing', [46]],
+                                ['Human Resource', [47]],
+                                ['Attendance', [48]],
                             ] as [$groupLabel, $groupIds])
                                 <div class="rounded-3xl border border-slate-200 bg-white p-5">
                                     <p class="mb-3 text-sm font-semibold text-slate-800">{{ $groupLabel }}</p>

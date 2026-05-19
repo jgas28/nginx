@@ -818,7 +818,7 @@
             @endif
 
             {{-- Billing nav --}}
-            @if($user->hasAnyRoleId([1, 2, 3]))
+            @if($user->hasAnyRoleId([1, 2, 3, 46]))
             <div x-data="{ openBilling: false }">
                 <button @click="openBilling = !openBilling" class="w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-gray-100 transition hover:bg-gray-700/80 hover:text-white">
                     <div class="flex items-center gap-3">
@@ -840,7 +840,7 @@
             @endif
 
             {{-- Attendance nav --}}
-            @if($user->hasAnyRoleId([1, 2, 3]))
+            @if($user->hasAnyRoleId([1, 2, 3, 48]))
             <div x-data="{ openAttendance: false }">
                 <button @click="openAttendance = !openAttendance" class="w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-gray-100 transition hover:bg-gray-700/80 hover:text-white">
                     <div class="flex items-center gap-3">

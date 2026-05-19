@@ -73,7 +73,7 @@ class CoordinatorsController extends Controller
         $perPage = (int) $request->input('per_page', 10);
         $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
         $tab = $request->input('tab', 'list');
-        $privilegedUserIds = [53, 54];
+        $isPrivileged = $user->hasAnyRoleId([1, 2, 3]);
         $tabs = [
             'list' => [2, 5, 6],
             'status4' => [4, 7],
@@ -97,7 +97,7 @@ class CoordinatorsController extends Controller
             $query = DeliveryRequest::with(['lineItems', 'truckType', 'area', 'region', 'company'])
                 ->where('status', '!=', 0)
                 ->whereIn('status', $statuses);
-                if (!in_array($user->id, $privilegedUserIds) && in_array($tab, $ownRequestsTabs)) {
+                if (!$isPrivileged && in_array($tab, $ownRequestsTabs)) {
                     $query->where('created_by', $employee_id);
                 }
 
