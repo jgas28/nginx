@@ -24,33 +24,39 @@
         @endforeach
     </div>
 
-    <div class="grid grid-cols-1 items-center gap-4 rounded-[24px] border border-slate-200 bg-white p-4 xl:grid-cols-[minmax(0,720px)_auto] xl:justify-between">
-        <div class="flex min-w-0 items-center gap-2 max-w-[720px]">
+    <div class="flex flex-col gap-3 rounded-[24px] border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+        {{-- Search row --}}
+        <div class="flex flex-1 items-center gap-2 min-w-0">
             <div class="relative flex-1">
-                {{-- Clickable search button icon --}}
-                <button type="button" id="liq-review-search-btn"
-                    class="absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-cyan-500 text-white shadow-sm transition hover:bg-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+                <div class="pointer-events-none absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-cyan-50 text-cyan-600 shadow-sm">
                     <i class="fas fa-magnifying-glass text-sm"></i>
-                </button>
+                </div>
                 <input
                     type="text"
                     id="liquidations-review-search"
                     value="{{ $search }}"
-                    placeholder="Press Enter or click 🔍 to search…"
+                    placeholder="Search CVR, company, supplier, expense…"
                     autocomplete="off"
-                    class="w-full rounded-2xl border border-slate-300 bg-slate-50 py-3 pl-14 pr-10 text-sm text-slate-700 shadow-sm outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-2 focus:ring-cyan-100"
+                    class="w-full rounded-2xl border border-slate-300 bg-slate-50 py-3 pl-14 pr-4 text-sm text-slate-700 shadow-sm outline-none transition focus:border-cyan-500 focus:bg-white focus:ring-2 focus:ring-cyan-100"
                 >
-                {{-- Clear button --}}
-                @if($search)
-                <button type="button" id="liq-review-clear-btn"
-                    class="absolute right-3 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-slate-200 text-slate-500 transition hover:bg-rose-100 hover:text-rose-600">
-                    <i class="fas fa-times text-[10px]"></i>
-                </button>
-                @endif
             </div>
+            {{-- Search button --}}
+            <button type="button" id="liq-review-search-btn"
+                class="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-300">
+                <i class="fas fa-magnifying-glass text-xs"></i>
+                <span class="hidden sm:inline">Search</span>
+            </button>
+            {{-- Clear button (shown when search is active) --}}
+            @if($search)
+            <button type="button" id="liq-review-clear-btn"
+                class="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 focus:outline-none">
+                <i class="fas fa-times text-xs"></i>
+                <span class="hidden sm:inline">Clear</span>
+            </button>
+            @endif
         </div>
 
-        <div class="flex flex-wrap items-center justify-start gap-3 xl:justify-end">
+        <div class="flex flex-wrap items-center justify-start gap-3 sm:justify-end">
             <label for="liquidations-review-per-page" class="text-sm font-medium text-slate-600">Show</label>
             <select id="liquidations-review-per-page" class="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-100">
                 @foreach ([5, 10, 25, 50] as $size)
