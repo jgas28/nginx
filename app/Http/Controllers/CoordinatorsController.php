@@ -65,7 +65,6 @@ class CoordinatorsController extends Controller
     private function getFilteredQuery(Request $request, bool $singleTab = false)
     {
         $user = Auth::user();
-        $employee_id = $user->id;
         $search = $request->input('search');
         $mtm = $request->input('mtm');
         $dateFrom = $request->input('date_from');
@@ -73,7 +72,6 @@ class CoordinatorsController extends Controller
         $perPage = (int) $request->input('per_page', 10);
         $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
         $tab = $request->input('tab', 'list');
-        $isPrivileged = $user->hasAnyRoleId([1, 2, 3]);
         $tabs = [
             'list' => [2, 5, 6],
             'status4' => [4, 7],
@@ -85,11 +83,6 @@ class CoordinatorsController extends Controller
             'accessorial' => [16,17,18]
         ];
 
-        // Only the 'list' tab is scoped to the logged-in coordinator's own requests.
-        // All other tabs (staging, pipeline stages) show records regardless of creator
-        // because pullouts/allocations may be submitted by a different user.
-        $ownRequestsTabs = ['list'];
-
         if ($singleTab) {
             // Only build query for the active tab
             $statuses = $tabs[$tab] ?? [];
@@ -97,9 +90,6 @@ class CoordinatorsController extends Controller
             $query = DeliveryRequest::with(['lineItems', 'truckType', 'area', 'region', 'company'])
                 ->where('status', '!=', 0)
                 ->whereIn('status', $statuses);
-                if (!$isPrivileged && in_array($tab, $ownRequestsTabs)) {
-                    $query->where('created_by', $employee_id);
-                }
 
             if ($search) {
                 $query->where(function ($q) use ($search) {
