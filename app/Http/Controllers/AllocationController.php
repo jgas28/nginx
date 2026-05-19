@@ -134,7 +134,7 @@ class AllocationController extends Controller
                 'sequence' => $sequence,
             ]);
 
-            DeliveryRequest::where('id', $drId)->update(['status' => 14]);
+            DeliveryRequest::where('id', $drId)->update(['delivery_status' => 14]);
         }
         Log::info('Cash voucher allocations processed successfully.', [
             'user_id' => $employeeCode,
