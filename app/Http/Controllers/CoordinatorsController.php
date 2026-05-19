@@ -73,11 +73,11 @@ class CoordinatorsController extends Controller
         $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
         $tab = $request->input('tab', 'list');
         $tabs = [
-            'list' => [2, 5, 6],
+            'list' => [1, 2, 5, 6],
             'status4' => [4, 7],
             'status8' => [8],
             'status9' => [14],
-            'status10' => [1, 15],
+            'status10' => [15],
             'status11' => [11, 12],
             'staging' => [3],
             'accessorial' => [16,17,18]
