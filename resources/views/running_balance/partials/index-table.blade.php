@@ -158,6 +158,10 @@
                             <dd>{{ optional($balance->approver)->name ?? 'N/A' }}</dd>
                         </div>
                         <div>
+                            <dt class="font-semibold text-slate-700">CVR Number</dt>
+                            <dd>{{ $balance->cvr_number ?: 'N/A' }}</dd>
+                        </div>
+                        <div>
                             <dt class="font-semibold text-slate-700">Description</dt>
                             <dd>{{ $balance->description ?: 'N/A' }}</dd>
                         </div>
@@ -187,6 +191,7 @@
                         <th class="px-5 py-4">Type</th>
                         <th class="px-5 py-4">Movement</th>
                         <th class="px-5 py-4">Amount</th>
+                        <th class="px-5 py-4">CVR Number</th>
                         <th class="px-5 py-4">Description</th>
                         <th class="px-5 py-4">Employee / Supplier</th>
                         <th class="px-5 py-4">Created By</th>
@@ -231,6 +236,7 @@
                             <td class="px-5 py-4 font-bold {{ $balance->amount < 0 ? 'text-rose-600' : 'text-emerald-600' }}">
                                 PHP {{ number_format($balance->amount, 2) }}
                             </td>
+                            <td class="px-5 py-4 text-slate-600">{{ $balance->cvr_number ?: 'N/A' }}</td>
                             <td class="px-5 py-4 text-slate-600">{{ $balance->description ?: 'N/A' }}</td>
                             <td class="px-5 py-4">
                                 {{ $employeeName !== '' ? $employeeName : (optional($balance->suppliers)->supplier_name ?? 'N/A') }}
@@ -239,7 +245,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-5 py-12 text-center text-[15px] text-slate-500">
+                            <td colspan="9" class="px-5 py-12 text-center text-[15px] text-slate-500">
                                 No transactions found for the current filters.
                             </td>
                         </tr>
