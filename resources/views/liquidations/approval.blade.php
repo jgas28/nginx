@@ -32,12 +32,12 @@
     <div class="bg-white p-6 rounded-xl shadow border">
         <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Expenses</h2>
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
+            @foreach (['allowance' => 'Allowance', 'lodging' => 'Lodging', 'manpower' => 'Manpower', 'hauling' => 'Hauling', 'freight' => 'Freight', 'right_of_way' => 'Right of Way', 'roro_expense' => 'RoRo Expense'] as $field => $label)
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1 capitalize">
-                        {{ $field === 'roro_expense' ? 'Freight' : str_replace('_', ' ', $field) }}
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        {{ $label }}
                     </label>
-                    <input 
+                    <input
                         type="number" step="0.01" name="{{ $field }}"
                         value="{{ old($field, $liquidation->$field ?? 0) }}"
                         class="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"

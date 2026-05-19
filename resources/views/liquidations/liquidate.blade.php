@@ -12,10 +12,10 @@
         <div class="rounded-md border border-gray-200 bg-gray-50 p-4">
             <h2 class="mb-4 text-lg font-semibold text-gray-700">Expenses</h2>
             <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
+                @foreach (['allowance' => 'Allowance', 'lodging' => 'Lodging', 'manpower' => 'Manpower', 'hauling' => 'Hauling', 'freight' => 'Freight', 'right_of_way' => 'Right of Way', 'roro_expense' => 'RoRo Expense'] as $field => $label)
                     <div>
                         <label class="mb-1 block text-sm font-medium capitalize text-gray-700">
-                            {{ $field === 'roro_expense' ? 'Freight' : str_replace('_', ' ', $field) }}
+                            {{ $label }}
                         </label>
                         <input
                             type="number"

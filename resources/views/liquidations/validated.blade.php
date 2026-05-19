@@ -29,11 +29,9 @@
         <div class="p-4 rounded-lg bg-gray-50 shadow-sm">
             <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2">Expenses</h3>
             <ul class="space-y-2">
-                @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
+                @foreach (['allowance' => 'Allowance', 'lodging' => 'Lodging', 'manpower' => 'Manpower', 'hauling' => 'Hauling', 'freight' => 'Freight', 'right_of_way' => 'Right of Way', 'roro_expense' => 'RoRo Expense'] as $field => $label)
                     <li class="flex justify-between">
-                        <span class="capitalize">
-                            {{ $field === 'roro_expense' ? 'Freight' : str_replace('_', ' ', $field) }}
-                        </span>
+                        <span>{{ $label }}</span>
                         <span class="font-semibold">₱{{ number_format($liquidation->$field ?? 0, 2) }}</span>
                     </li>
                 @endforeach

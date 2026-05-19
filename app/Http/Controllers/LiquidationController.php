@@ -201,8 +201,10 @@ class LiquidationController extends Controller
         // Calculate total liquidated amount (CASH ONLY for gasoline & RFID)
         $totalLiquidated = 0;
         $totalLiquidated += floatval($expenses['allowance'] ?? 0);
+        $totalLiquidated += floatval($expenses['lodging'] ?? 0);
         $totalLiquidated += floatval($expenses['manpower'] ?? 0);
         $totalLiquidated += floatval($expenses['hauling'] ?? 0);
+        $totalLiquidated += floatval($expenses['freight'] ?? 0);
         $totalLiquidated += floatval($expenses['right_of_way'] ?? 0);
         $totalLiquidated += floatval($expenses['roro_expense'] ?? 0);
         $totalLiquidated += floatval($expenses['cash_charge'] ?? 0);
@@ -236,12 +238,14 @@ class LiquidationController extends Controller
             'cvr_number' => $request->input('cvr_number'),
             'cvr_approval_id' => $request->input('cvr_approval_id'),
 
-            'allowance' => $expenses['allowance'] ?? null,
-            'manpower' => $expenses['manpower'] ?? null,
-            'hauling' => $expenses['hauling'] ?? null,
+            'allowance'    => $expenses['allowance'] ?? null,
+            'lodging'      => $expenses['lodging'] ?? null,
+            'manpower'     => $expenses['manpower'] ?? null,
+            'hauling'      => $expenses['hauling'] ?? null,
+            'freight'      => $expenses['freight'] ?? null,
             'right_of_way' => $expenses['right_of_way'] ?? null,
             'roro_expense' => $expenses['roro_expense'] ?? null,
-            'cash_charge' => $expenses['cash_charge'] ?? null,
+            'cash_charge'  => $expenses['cash_charge'] ?? null,
 
             'gasoline' => array_values($gasoline),
             'rfid' => array_values($rfid),
@@ -402,7 +406,7 @@ class LiquidationController extends Controller
         // Calculate total liquidated cash (cash only)
         $totalCash = 0;
 
-        foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field) {
+        foreach (['allowance', 'lodging', 'manpower', 'hauling', 'freight', 'right_of_way', 'roro_expense'] as $field) {
             $totalCash += floatval($liquidation->$field ?? 0);
         }
 
@@ -527,7 +531,7 @@ class LiquidationController extends Controller
 
         // Recalculate the total like in your `validated` method
         $totalCash = 0;
-        foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field) {
+        foreach (['allowance', 'lodging', 'manpower', 'hauling', 'freight', 'right_of_way', 'roro_expense'] as $field) {
             $totalCash += floatval($liquidation->$field ?? 0);
         }
         $totalCash += floatval($liquidation->cash_charge ?? 0);
@@ -730,7 +734,7 @@ class LiquidationController extends Controller
         // Total Liquidated Cash (Only cash items)
         $totalCash = 0;
 
-        foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field) {
+        foreach (['allowance', 'lodging', 'manpower', 'hauling', 'freight', 'right_of_way', 'roro_expense'] as $field) {
             $totalCash += floatval($liquidation->$field ?? 0);
         }
 
@@ -996,7 +1000,7 @@ class LiquidationController extends Controller
 
         // Calculate total liquidated cash
         $totalCash = 0;
-        foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field) {
+        foreach (['allowance', 'lodging', 'manpower', 'hauling', 'freight', 'right_of_way', 'roro_expense'] as $field) {
             $totalCash += floatval($liquidation->$field ?? 0);
         }
         $totalCash += floatval($liquidation->cash_charge ?? 0);
@@ -1150,7 +1154,7 @@ class LiquidationController extends Controller
         // Recalculate the total like in your `validated` method
         $totalCash = 0;
 
-        foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field) {
+        foreach (['allowance', 'lodging', 'manpower', 'hauling', 'freight', 'right_of_way', 'roro_expense'] as $field) {
             $totalCash += floatval($liquidation->$field ?? 0);
         }
 
@@ -1246,8 +1250,10 @@ class LiquidationController extends Controller
 
                 // Add direct expense fields
                 $totalExpenses += (float) $liquidation->allowance;
+                $totalExpenses += (float) $liquidation->lodging;
                 $totalExpenses += (float) $liquidation->manpower;
                 $totalExpenses += (float) $liquidation->hauling;
+                $totalExpenses += (float) $liquidation->freight;
                 $totalExpenses += (float) $liquidation->right_of_way;
                 $totalExpenses += (float) $liquidation->roro_expense;
                 $totalExpenses += (float) $liquidation->cash_charge;
@@ -1368,12 +1374,14 @@ class LiquidationController extends Controller
 
         // Validate the request data (e.g., approved_by and expenses)
         $request->validate([
-            'allowance' => 'nullable|numeric',
-            'manpower' => 'nullable|numeric',
-            'hauling' => 'nullable|numeric',
+            'allowance'    => 'nullable|numeric',
+            'lodging'      => 'nullable|numeric',
+            'manpower'     => 'nullable|numeric',
+            'hauling'      => 'nullable|numeric',
+            'freight'      => 'nullable|numeric',
             'right_of_way' => 'nullable|numeric',
             'roro_expense' => 'nullable|numeric',
-            'cash_charge' => 'nullable|numeric',
+            'cash_charge'  => 'nullable|numeric',
             'gasoline' => 'nullable|array',
             'gasoline.*.type' => 'nullable|string',
             'gasoline.*.amount' => 'nullable|numeric',
@@ -1389,12 +1397,14 @@ class LiquidationController extends Controller
         // Update fields with the form data
         $liquidation->update([
             'approved_by' => $request->approved_by,
-            'allowance' => $request->allowance ?? 0,
-            'manpower' => $request->manpower ?? 0,
-            'hauling' => $request->hauling ?? 0,
+            'allowance'    => $request->allowance ?? 0,
+            'lodging'      => $request->lodging ?? 0,
+            'manpower'     => $request->manpower ?? 0,
+            'hauling'      => $request->hauling ?? 0,
+            'freight'      => $request->freight ?? 0,
             'right_of_way' => $request->right_of_way ?? 0,
             'roro_expense' => $request->roro_expense ?? 0,
-            'cash_charge' => $request->cash_charge ?? 0,
+            'cash_charge'  => $request->cash_charge ?? 0,
             'gasoline' => array_values($request->gasoline ?? []),
             'rfid' => array_values($request->rfid ?? []),
             'others' => array_values($request->others ?? []),
@@ -1412,12 +1422,14 @@ class LiquidationController extends Controller
 
         // Validate the request data (e.g., approved_by and expenses)
         $request->validate([
-            'allowance' => 'nullable|numeric',
-            'manpower' => 'nullable|numeric',
-            'hauling' => 'nullable|numeric',
+            'allowance'    => 'nullable|numeric',
+            'lodging'      => 'nullable|numeric',
+            'manpower'     => 'nullable|numeric',
+            'hauling'      => 'nullable|numeric',
+            'freight'      => 'nullable|numeric',
             'right_of_way' => 'nullable|numeric',
             'roro_expense' => 'nullable|numeric',
-            'cash_charge' => 'nullable|numeric',
+            'cash_charge'  => 'nullable|numeric',
             'gasoline' => 'nullable|array',
             'gasoline.*.type' => 'nullable|string',
             'gasoline.*.amount' => 'nullable|numeric',
@@ -1433,12 +1445,14 @@ class LiquidationController extends Controller
         // Update fields with the form data
         $liquidation->update([
             'approved_by' => $request->approved_by,
-            'allowance' => $request->allowance ?? 0,
-            'manpower' => $request->manpower ?? 0,
-            'hauling' => $request->hauling ?? 0,
+            'allowance'    => $request->allowance ?? 0,
+            'lodging'      => $request->lodging ?? 0,
+            'manpower'     => $request->manpower ?? 0,
+            'hauling'      => $request->hauling ?? 0,
+            'freight'      => $request->freight ?? 0,
             'right_of_way' => $request->right_of_way ?? 0,
             'roro_expense' => $request->roro_expense ?? 0,
-            'cash_charge' => $request->cash_charge ?? 0,
+            'cash_charge'  => $request->cash_charge ?? 0,
             'gasoline' => array_values($request->gasoline ?? []),
             'rfid' => array_values($request->rfid ?? []),
             'others' => array_values($request->others ?? []),
@@ -1456,12 +1470,14 @@ class LiquidationController extends Controller
 
         // Validate the request data (e.g., approved_by and expenses)
         $request->validate([
-            'allowance' => 'nullable|numeric',
-            'manpower' => 'nullable|numeric',
-            'hauling' => 'nullable|numeric',
+            'allowance'    => 'nullable|numeric',
+            'lodging'      => 'nullable|numeric',
+            'manpower'     => 'nullable|numeric',
+            'hauling'      => 'nullable|numeric',
+            'freight'      => 'nullable|numeric',
             'right_of_way' => 'nullable|numeric',
             'roro_expense' => 'nullable|numeric',
-            'cash_charge' => 'nullable|numeric',
+            'cash_charge'  => 'nullable|numeric',
             'gasoline' => 'nullable|array',
             'gasoline.*.type' => 'nullable|string',
             'gasoline.*.amount' => 'nullable|numeric',
@@ -1477,12 +1493,14 @@ class LiquidationController extends Controller
         // Update fields with the form data
         $liquidation->update([
             'approved_by' => $request->approved_by,
-            'allowance' => $request->allowance ?? 0,
-            'manpower' => $request->manpower ?? 0,
-            'hauling' => $request->hauling ?? 0,
+            'allowance'    => $request->allowance ?? 0,
+            'lodging'      => $request->lodging ?? 0,
+            'manpower'     => $request->manpower ?? 0,
+            'hauling'      => $request->hauling ?? 0,
+            'freight'      => $request->freight ?? 0,
             'right_of_way' => $request->right_of_way ?? 0,
             'roro_expense' => $request->roro_expense ?? 0,
-            'cash_charge' => $request->cash_charge ?? 0,
+            'cash_charge'  => $request->cash_charge ?? 0,
             'gasoline' => array_values($request->gasoline ?? []),
             'rfid' => array_values($request->rfid ?? []),
             'others' => array_values($request->others ?? []),
@@ -1605,12 +1623,14 @@ class LiquidationController extends Controller
         $liquidation = Liquidation::findOrFail($id);
 
         $data = $request->validate([
-            'allowance' => 'nullable|numeric',
-            'manpower' => 'nullable|numeric',
-            'hauling' => 'nullable|numeric',
+            'allowance'    => 'nullable|numeric',
+            'lodging'      => 'nullable|numeric',
+            'manpower'     => 'nullable|numeric',
+            'hauling'      => 'nullable|numeric',
+            'freight'      => 'nullable|numeric',
             'right_of_way' => 'nullable|numeric',
             'roro_expense' => 'nullable|numeric',
-            'cash_charge' => 'nullable|numeric',
+            'cash_charge'  => 'nullable|numeric',
             'gasoline' => 'nullable|array',
             'rfid' => 'nullable|array',
             'others' => 'nullable|array',
@@ -1627,12 +1647,14 @@ class LiquidationController extends Controller
 
         $liquidation->update([
             'approved_by' => $request->approved_by ?? null,
-            'allowance' => $request->allowance ?? 0,
-            'manpower' => $request->manpower ?? 0,
-            'hauling' => $request->hauling ?? 0,
+            'allowance'    => $request->allowance ?? 0,
+            'lodging'      => $request->lodging ?? 0,
+            'manpower'     => $request->manpower ?? 0,
+            'hauling'      => $request->hauling ?? 0,
+            'freight'      => $request->freight ?? 0,
             'right_of_way' => $request->right_of_way ?? 0,
             'roro_expense' => $request->roro_expense ?? 0,
-            'cash_charge' => $request->cash_charge ?? 0,
+            'cash_charge'  => $request->cash_charge ?? 0,
             'gasoline' => array_values($request->gasoline ?? []),
             'rfid' => array_values($request->rfid ?? []),
             'others' => array_values($request->others ?? []),

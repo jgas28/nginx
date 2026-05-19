@@ -346,13 +346,15 @@ class DashboardController extends Controller
             'gasoline'      => 0,
             'rfid'          => 0,
             'allowance'     => 0,
+            'lodging'       => 0,
             'manpower'      => 0,
             'hauling'       => 0,
+            'freight'       => 0,
             'right_of_way'  => 0,
             'roro_expense'  => 0,
             'cash_charge'   => 0,
             'others'        => 0,
-            'others_items'  => [],   // keyed by item-type label → accumulated amount
+            'others_items'  => [],
         ];
     }
 
@@ -361,8 +363,10 @@ class DashboardController extends Controller
         $breakdown['gasoline']     += collect($liquidation->gasoline ?? [])->sum('amount');
         $breakdown['rfid']         += collect($liquidation->rfid ?? [])->sum('amount');
         $breakdown['allowance']    += (float) $liquidation->allowance;
+        $breakdown['lodging']      += (float) $liquidation->lodging;
         $breakdown['manpower']     += (float) $liquidation->manpower;
         $breakdown['hauling']      += (float) $liquidation->hauling;
+        $breakdown['freight']      += (float) $liquidation->freight;
         $breakdown['right_of_way'] += (float) $liquidation->right_of_way;
         $breakdown['roro_expense'] += (float) $liquidation->roro_expense;
         $breakdown['cash_charge']  += (float) $liquidation->cash_charge;
@@ -378,9 +382,12 @@ class DashboardController extends Controller
 
     private function breakdownNumericTotal(array $breakdown): float
     {
-        return $breakdown['gasoline'] + $breakdown['rfid'] + $breakdown['allowance']
-             + $breakdown['manpower'] + $breakdown['hauling'] + $breakdown['right_of_way']
-             + $breakdown['roro_expense'] + $breakdown['cash_charge'] + $breakdown['others'];
+        return $breakdown['gasoline'] + $breakdown['rfid']
+             + $breakdown['allowance'] + $breakdown['lodging']
+             + $breakdown['manpower']
+             + $breakdown['hauling'] + $breakdown['freight']
+             + $breakdown['right_of_way'] + $breakdown['roro_expense']
+             + $breakdown['cash_charge'] + $breakdown['others'];
     }
 
     private function formatLiquidationBreakdownItems(array $breakdown, string $tone): array
@@ -393,15 +400,17 @@ class DashboardController extends Controller
         ];
 
         $fieldMap = [
-            'gasoline'     => ['label' => 'Diesel / Fuel',      'icon' => 'fa-gas-pump'],
-            'rfid'         => ['label' => 'Toll Fee',            'icon' => 'fa-road'],
-            'allowance'    => ['label' => 'Allowance / Lodging', 'icon' => 'fa-bed'],
-            'manpower'     => ['label' => 'Manpower',            'icon' => 'fa-users'],
-            'hauling'      => ['label' => 'Hauling / Freight',   'icon' => 'fa-truck-ramp-box'],
-            'right_of_way' => ['label' => 'Right of Way',        'icon' => 'fa-signs-post'],
-            'roro_expense' => ['label' => 'RoRo Expense',        'icon' => 'fa-ship'],
-            'cash_charge'  => ['label' => 'Cash Charge',         'icon' => 'fa-money-bill-wave'],
-            'others'       => ['label' => 'Others',              'icon' => 'fa-ellipsis'],
+            'gasoline'     => ['label' => 'Diesel / Fuel',  'icon' => 'fa-gas-pump'],
+            'rfid'         => ['label' => 'Toll Fee',        'icon' => 'fa-road'],
+            'allowance'    => ['label' => 'Allowance',       'icon' => 'fa-wallet'],
+            'lodging'      => ['label' => 'Lodging',         'icon' => 'fa-bed'],
+            'manpower'     => ['label' => 'Manpower',        'icon' => 'fa-users'],
+            'hauling'      => ['label' => 'Hauling',         'icon' => 'fa-dolly'],
+            'freight'      => ['label' => 'Freight',         'icon' => 'fa-truck-ramp-box'],
+            'right_of_way' => ['label' => 'Right of Way',   'icon' => 'fa-signs-post'],
+            'roro_expense' => ['label' => 'RoRo Expense',   'icon' => 'fa-ship'],
+            'cash_charge'  => ['label' => 'Cash Charge',    'icon' => 'fa-money-bill-wave'],
+            'others'       => ['label' => 'Others',         'icon' => 'fa-ellipsis'],
         ];
 
         $styles = $toneMap[$tone] ?? ['color' => 'bg-slate-500', 'text' => 'text-slate-700'];

@@ -12,8 +12,10 @@ class Liquidation extends Model
     protected $fillable = [
         // Expense Fields
         'allowance',
+        'lodging',
         'manpower',
         'hauling',
+        'freight',
         'right_of_way',
         'roro_expense',
         'cash_charge',

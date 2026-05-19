@@ -14,11 +14,13 @@
             <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2">Expenses</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 @foreach ([
-                    'allowance' => 'Allowance',
-                    'manpower' => 'Manpower',
-                    'hauling' => 'Hauling',
+                    'allowance'    => 'Allowance',
+                    'lodging'      => 'Lodging',
+                    'manpower'     => 'Manpower',
+                    'hauling'      => 'Hauling',
+                    'freight'      => 'Freight',
                     'right_of_way' => 'Right of Way',
-                    'roro_expense' => 'Freight'
+                    'roro_expense' => 'RoRo Expense',
                 ] as $field => $label)
                     <div>
                         <label class="block text-sm font-medium text-gray-700">{{ $label }}</label>

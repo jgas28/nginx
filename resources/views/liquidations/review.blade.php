@@ -19,12 +19,10 @@
             <h3 class="font-semibold text-lg mb-3 border-b border-gray-300 pb-2">Expenses</h3>
 
             {{-- Loop for all fields except 'cash_charge' --}}
-            @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
+            @foreach (['allowance' => 'Allowance', 'lodging' => 'Lodging', 'manpower' => 'Manpower', 'hauling' => 'Hauling', 'freight' => 'Freight', 'right_of_way' => 'Right of Way', 'roro_expense' => 'RoRo Expense'] as $field => $label)
                 <div class="mb-3">
-                    <label class="block font-medium">
-                        {{ $field === 'roro_expense' ? 'Freight' : ucwords(str_replace('_', ' ', $field)) }}
-                    </label>
-                    <input type="number" step="0.01" name="{{ $field }}" value="{{ old($field, $liquidation->$field) }}" class="w-full px-3 py-2 border rounded" />
+                    <label class="block font-medium">{{ $label }}</label>
+                    <input type="number" step="0.01" name="{{ $field }}" value="{{ old($field, $liquidation->$field ?? 0) }}" class="w-full px-3 py-2 border rounded" />
                 </div>
             @endforeach 
 

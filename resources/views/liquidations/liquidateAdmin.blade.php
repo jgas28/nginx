@@ -11,9 +11,9 @@
         <!-- Expenses -->
         <div class="space-y-4">
             <label class="font-semibold">Expenses</label>
-            @foreach (['allowance', 'manpower', 'hauling', 'right_of_way', 'roro_expense'] as $field)
+            @foreach (['allowance' => 'Allowance', 'lodging' => 'Lodging', 'manpower' => 'Manpower', 'hauling' => 'Hauling', 'freight' => 'Freight', 'right_of_way' => 'Right of Way', 'roro_expense' => 'RoRo Expense'] as $field => $label)
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1 capitalize">{{ str_replace('_', ' ', $field) }}</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">{{ $label }}</label>
                     <input type="number" step="0.01" name="expenses[{{ $field }}]" class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500" />
                 </div>
             @endforeach
