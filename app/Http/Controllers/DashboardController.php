@@ -78,17 +78,15 @@ class DashboardController extends Controller
         if ($needsBalanceData) {
             $approvers = Approver::all();
 
-            // Monthly running balance for the selected range
+            // Match the running-balance module totals exactly.
             $runningTotalsByApprover = RunningBalance::selectRaw('approver_id, SUM(amount) as total')
                 ->groupBy('approver_id')
                 ->pluck('total', 'approver_id');
 
-            // Monthly uncollected balance for the selected range
-            $uncollectedByApprover = RunningBalance::whereIn('type', [4, 5])
+            $uncollectedByApprover = RunningBalance::whereIn('type', [4, 5, 12])
                 ->selectRaw('approver_id, SUM(amount) as total')
                 ->groupBy('approver_id')
-                ->pluck('total', 'approver_id')
-                ->map(fn($amount) => abs($amount));
+                ->pluck('total', 'approver_id');
         }
 
         $totalPendingDeliveries = DeliveryRequest::where('status', '!=', 0)
