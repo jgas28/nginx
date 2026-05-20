@@ -28,72 +28,15 @@ class LiquidationController extends Controller
     public function index(Request $request)
     {
         $search = trim((string) $request->input('search', ''));
-        $perPage = (int) $request->input('per_page', 10);
-        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
+        $perPage = $this->resolvePerPage($request);
 
-        $query = cvr_approval::with([
-            'cashVoucher.deliveryRequest.company',
-            'cashVoucher.deliveryRequest.expenseType',
-            'cashVoucher.employee',
-        ])
-            ->where('status', '1')
-            ->whereHas('cashVoucher', function ($query) {
-                $query->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial', 'freight', 'others'])
-                    ->where('status', '2');
-            });
-
-        if ($request->filled('requestor')) {
-            $query->whereHas('cashVoucher', function ($cashVoucherQuery) use ($request) {
-                $cashVoucherQuery->where('requestor', $request->requestor);
-            });
-        }
-
-        if ($search !== '') {
-            $query->where(function ($approvalQuery) use ($search) {
-                $approvalQuery->whereHas('cashVoucher', function ($cashVoucherQuery) use ($search) {
-                    $cashVoucherQuery->where('cvr_number', 'like', '%' . $search . '%')
-                        ->orWhereHas('employee', function ($employeeQuery) use ($search) {
-                            $employeeQuery->where('fname', 'like', '%' . $search . '%')
-                                ->orWhere('lname', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('deliveryRequest.company', function ($companyQuery) use ($search) {
-                            $companyQuery->where('company_code', 'like', '%' . $search . '%')
-                                ->orWhere('company_name', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('deliveryRequest.expenseType', function ($expenseTypeQuery) use ($search) {
-                            $expenseTypeQuery->where('expense_code', 'like', '%' . $search . '%');
-                        });
-                });
-            });
-        }
-
-        $data = $query
+        $data = $this->buildDeliveryLiquidationQuery($request, $search)
             ->latest()
             ->paginate($perPage)
             ->appends($request->query());
 
-        foreach ($data as $item) {
-            $cashVoucher = $item->cashVoucher;
-            $drId = $cashVoucher->deliveryRequest->id ?? null;
-            $cvrType = $cashVoucher->cvr_type ?? null;
-
-            $allocation = null;
-
-            if ($drId && $cvrType) {
-                $allocation = Allocation::where('dr_id', $drId)
-                    ->where('trip_type', $cvrType)
-                    ->where('sequence', $cashVoucher->sequence)
-                    ->first();
-            }
-
-            // Attach allocation to item
-            $item->allocation = $allocation;
-        }
-
-        $employees = User::where('status', '!=', 0)
-            ->orderBy('fname')
-            ->orderBy('lname')
-            ->get();
+        $this->attachAllocationsToApprovals($data);
+        $employees = $this->getActiveEmployees();
 
         if ($request->ajax()) {
             return response()->json([
@@ -111,57 +54,14 @@ class LiquidationController extends Controller
     public function indexAdmin(Request $request)
     {
         $search = trim((string) $request->input('search', ''));
-        $perPage = (int) $request->input('per_page', 10);
-        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
+        $perPage = $this->resolvePerPage($request);
 
-        // Initialize the query builder for cvr_approval
-        $query = cvr_approval::with([
-            'cashVoucher.company',
-            'cashVoucher.suppliers',
-            'cashVoucher.expenseTypes',
-            'cashVoucher.trucks',
-        ])
-            ->where('status', '1')
-            ->whereHas('cashVoucher', function ($query) {
-                $query->whereIn('cvr_type', ['admin', 'rpm'])
-                    ->where('status', '2');
-            });
-
-        // Apply Supplier filter if exists
-        if ($request->has('supplier_id') && $request->supplier_id != '') {
-            $query->whereHas('cashVoucher.suppliers', function ($query) use ($request) {
-                $query->where('suppliers.id', $request->supplier_id);
-            });
-        }
-
-        if ($search !== '') {
-            $query->where(function ($approvalQuery) use ($search) {
-                $approvalQuery->whereHas('cashVoucher', function ($cashVoucherQuery) use ($search) {
-                    $cashVoucherQuery->where('cvr_number', 'like', '%' . $search . '%')
-                        ->orWhereHas('company', function ($companyQuery) use ($search) {
-                            $companyQuery->where('company_code', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('suppliers', function ($supplierQuery) use ($search) {
-                            $supplierQuery->where('supplier_code', 'like', '%' . $search . '%')
-                                ->orWhere('supplier_name', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('expenseTypes', function ($expenseQuery) use ($search) {
-                            $expenseQuery->where('expense_code', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('trucks', function ($truckQuery) use ($search) {
-                            $truckQuery->where('truck_name', 'like', '%' . $search . '%');
-                        });
-                });
-            });
-        }
-
-        $data = $query
+        $data = $this->buildAdminLiquidationQuery($request, $search)
             ->latest()
             ->paginate($perPage)
             ->appends($request->query());
 
-        // Fetch all suppliers for the select filter
-        $suppliers = Supplier::orderBy('supplier_name')->get();
+        $suppliers = $this->getSuppliers();
 
         if ($request->ajax()) {
             return response()->json([
@@ -174,6 +74,185 @@ class LiquidationController extends Controller
 
         // Return view with filtered data and suppliers
         return view('liquidations.indexAdmin', compact('data', 'suppliers', 'search', 'perPage'));
+    }
+
+    public function liquidationReportDR(Request $request)
+    {
+        $search = trim((string) $request->input('search', ''));
+        $perPage = $this->resolvePerPage($request);
+
+        $data = $this->buildDeliveryLiquidationQuery($request, $search)
+            ->latest()
+            ->paginate($perPage)
+            ->appends($request->query());
+
+        $this->attachAllocationsToApprovals($data);
+        $employees = $this->getActiveEmployees();
+
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('liquidations.partials.liquidationReportDR-table', compact('data', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $data->total(),
+            ]);
+        }
+
+        return view('liquidations.liquidationReportDR', compact('data', 'employees', 'search', 'perPage'));
+    }
+
+    public function liquidationReportAdmin(Request $request)
+    {
+        $search = trim((string) $request->input('search', ''));
+        $perPage = $this->resolvePerPage($request);
+
+        $data = $this->buildAdminLiquidationQuery($request, $search)
+            ->latest()
+            ->paginate($perPage)
+            ->appends($request->query());
+
+        $suppliers = $this->getSuppliers();
+
+        if ($request->ajax()) {
+            return response()->json([
+                'html' => view('liquidations.partials.liquidationReportAdmin-table', compact('data', 'search', 'perPage'))->render(),
+                'search' => $search,
+                'per_page' => $perPage,
+                'total' => $data->total(),
+            ]);
+        }
+
+        return view('liquidations.liquidationReportAdmin', compact('data', 'suppliers', 'search', 'perPage'));
+    }
+
+    private function resolvePerPage(Request $request): int
+    {
+        $perPage = (int) $request->input('per_page', 10);
+
+        return in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
+    }
+
+    private function buildDeliveryLiquidationQuery(Request $request, string $search)
+    {
+        $query = cvr_approval::with([
+            'cashVoucher.deliveryRequest.company',
+            'cashVoucher.deliveryRequest.expenseType',
+            'cashVoucher.employee',
+        ])
+            ->where('status', '1')
+            ->whereHas('cashVoucher', function ($cashVoucherQuery) {
+                $cashVoucherQuery->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial', 'freight', 'others'])
+                    ->where('status', '2');
+            });
+
+        if ($request->filled('requestor')) {
+            $query->whereHas('cashVoucher', function ($cashVoucherQuery) use ($request) {
+                $cashVoucherQuery->where('requestor', $request->requestor);
+            });
+        }
+
+        if ($search !== '') {
+            $query->where(function ($approvalQuery) use ($search) {
+                $approvalQuery->where('payment_name', 'like', '%' . $search . '%')
+                    ->orWhere('reference_number', 'like', '%' . $search . '%')
+                    ->orWhereHas('cashVoucher', function ($cashVoucherQuery) use ($search) {
+                        $cashVoucherQuery->where('cvr_number', 'like', '%' . $search . '%')
+                            ->orWhereHas('employee', function ($employeeQuery) use ($search) {
+                                $employeeQuery->where('fname', 'like', '%' . $search . '%')
+                                    ->orWhere('lname', 'like', '%' . $search . '%');
+                            })
+                            ->orWhereHas('deliveryRequest.company', function ($companyQuery) use ($search) {
+                                $companyQuery->where('company_code', 'like', '%' . $search . '%')
+                                    ->orWhere('company_name', 'like', '%' . $search . '%');
+                            })
+                            ->orWhereHas('deliveryRequest.expenseType', function ($expenseTypeQuery) use ($search) {
+                                $expenseTypeQuery->where('expense_code', 'like', '%' . $search . '%');
+                            });
+                    });
+            });
+        }
+
+        return $query;
+    }
+
+    private function buildAdminLiquidationQuery(Request $request, string $search)
+    {
+        $query = cvr_approval::with([
+            'cashVoucher.company',
+            'cashVoucher.suppliers',
+            'cashVoucher.expenseTypes',
+            'cashVoucher.trucks',
+        ])
+            ->where('status', '1')
+            ->whereHas('cashVoucher', function ($cashVoucherQuery) {
+                $cashVoucherQuery->whereIn('cvr_type', ['admin', 'rpm'])
+                    ->where('status', '2');
+            });
+
+        if ($request->filled('supplier_id')) {
+            $query->whereHas('cashVoucher.suppliers', function ($supplierQuery) use ($request) {
+                $supplierQuery->where('suppliers.id', $request->supplier_id);
+            });
+        }
+
+        if ($search !== '') {
+            $query->where(function ($approvalQuery) use ($search) {
+                $approvalQuery->where('payment_name', 'like', '%' . $search . '%')
+                    ->orWhere('reference_number', 'like', '%' . $search . '%')
+                    ->orWhereHas('cashVoucher', function ($cashVoucherQuery) use ($search) {
+                        $cashVoucherQuery->where('cvr_number', 'like', '%' . $search . '%')
+                            ->orWhereHas('company', function ($companyQuery) use ($search) {
+                                $companyQuery->where('company_code', 'like', '%' . $search . '%')
+                                    ->orWhere('company_name', 'like', '%' . $search . '%');
+                            })
+                            ->orWhereHas('suppliers', function ($supplierQuery) use ($search) {
+                                $supplierQuery->where('supplier_code', 'like', '%' . $search . '%')
+                                    ->orWhere('supplier_name', 'like', '%' . $search . '%');
+                            })
+                            ->orWhereHas('expenseTypes', function ($expenseQuery) use ($search) {
+                                $expenseQuery->where('expense_code', 'like', '%' . $search . '%');
+                            })
+                            ->orWhereHas('trucks', function ($truckQuery) use ($search) {
+                                $truckQuery->where('truck_name', 'like', '%' . $search . '%');
+                            });
+                    });
+            });
+        }
+
+        return $query;
+    }
+
+    private function attachAllocationsToApprovals($data): void
+    {
+        foreach ($data as $item) {
+            $cashVoucher = $item->cashVoucher;
+            $drId = $cashVoucher?->deliveryRequest?->id;
+            $cvrType = $cashVoucher?->cvr_type;
+
+            $allocation = null;
+
+            if ($drId && $cvrType) {
+                $allocation = Allocation::where('dr_id', $drId)
+                    ->where('trip_type', $cvrType)
+                    ->where('sequence', $cashVoucher->sequence)
+                    ->first();
+            }
+
+            $item->allocation = $allocation;
+        }
+    }
+
+    private function getActiveEmployees()
+    {
+        return User::where('status', '!=', 0)
+            ->orderBy('fname')
+            ->orderBy('lname')
+            ->get();
+    }
+
+    private function getSuppliers()
+    {
+        return Supplier::orderBy('supplier_name')->get();
     }
 
 

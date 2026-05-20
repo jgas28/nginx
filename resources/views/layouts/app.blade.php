@@ -800,6 +800,12 @@
                     @if($user->hasAnyRoleId([1, 2, 21]))
                         <a href="{{ route('liquidations.indexAdmin') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-user-shield w-4 text-center text-cyan-300"></i><span>Liquidate - Admin</span></a>
                     @endif
+                    @if($user->hasAnyRoleId([1, 2, 20]))
+                        <a href="{{ route('liquidations.liquidationReportDR') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-column w-4 text-center text-indigo-300"></i><span>Summary DR</span></a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2, 21]))
+                        <a href="{{ route('liquidations.liquidationReportAdmin') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-chart-line w-4 text-center text-blue-300"></i><span>Summary ADM</span></a>
+                    @endif
                     @if($user->hasAnyRoleId([1, 2, 22]))
                         <a href="{{ route('liquidations.reviewList') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white"><i class="fas fa-check-double w-4 text-center text-emerald-300"></i><span>Validate Liquidation</span></a>
                     @endif

@@ -5,25 +5,25 @@
     <div class="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
         <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
-                <div class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-100">
-                    <i class="fas fa-file-invoice-dollar text-sm"></i>
-                    Liquidation Requests1
+                <div class="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 ring-1 ring-indigo-100">
+                    <i class="fas fa-chart-column text-sm"></i>
+                    Liquidation Report - DR
                 </div>
-                <h1 class="mt-4 text-3xl font-bold tracking-tight text-slate-900">Delivery Liquidations</h1>
+                <h1 class="mt-4 text-3xl font-bold tracking-tight text-slate-900">Delivery Liquidation Report</h1>
                 <p class="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-                    Review delivery-related liquidation requests in a faster server-side table with requestor filtering and quick search.
+                    Review delivery-related liquidation records with requestor filtering, fast search, and payment reference visibility.
                 </p>
             </div>
         </div>
     </div>
 
     <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
-        <form action="{{ route('liquidations.index') }}" method="GET" id="liquidations-filter-form" class="flex flex-col items-stretch justify-start gap-4 md:flex-row md:items-end md:justify-between">
+        <form action="{{ route('liquidations.liquidationReportDR') }}" method="GET" id="liquidation-report-dr-filter-form" class="flex flex-col items-stretch justify-start gap-4 md:flex-row md:items-end md:justify-between">
             <div class="min-w-0 w-full flex-1 md:max-w-[420px]">
-                <label for="requestor" class="mb-1.5 block text-sm font-semibold text-slate-700">Requestor</label>
+                <label for="report_dr_requestor" class="mb-1.5 block text-sm font-semibold text-slate-700">Requestor</label>
                 <select
                     name="requestor"
-                    id="requestor"
+                    id="report_dr_requestor"
                     data-placeholder="All Requestors"
                     class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
                 >
@@ -37,13 +37,13 @@
             </div>
 
             <div class="flex w-full shrink-0 flex-col items-stretch justify-start gap-3 sm:flex-row sm:items-end sm:justify-end md:w-auto">
-                <button type="submit" id="liquidations-filter-submit" class="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 text-sm font-semibold text-white transition hover:bg-blue-700 sm:min-w-[220px] sm:w-auto">
-                        <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
-                            <i class="fas fa-magnifying-glass text-xs"></i>
-                        </span>
-                        Filter Results
+                <button type="submit" class="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-5 text-sm font-semibold text-white transition hover:bg-indigo-700 sm:min-w-[220px] sm:w-auto">
+                    <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/15">
+                        <i class="fas fa-magnifying-glass text-xs"></i>
+                    </span>
+                    Filter Results
                 </button>
-                <a href="{{ route('liquidations.index') }}" id="liquidations-filter-reset" class="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900 sm:min-w-[150px] sm:w-auto">
+                <a href="{{ route('liquidations.liquidationReportDR') }}" id="liquidation-report-dr-filter-reset" class="inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900 sm:min-w-[150px] sm:w-auto">
                     <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500">
                         <i class="fas fa-rotate-left text-xs"></i>
                     </span>
@@ -54,14 +54,14 @@
     </div>
 
     <div class="overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-sm">
-        <div id="liquidations-table"
+        <div id="liquidation-report-dr-table"
              data-fast-table
-             data-endpoint="{{ route('liquidations.index', ['requestor' => request('requestor')]) }}"
-             data-base-endpoint="{{ route('liquidations.index') }}"
-             data-search-selector="#liquidations-search"
-             data-per-page-selector="#liquidations-per-page"
-             data-pagination-selector=".liquidations-pagination a">
-            @include('liquidations.partials.index-table', ['data' => $data, 'search' => $search, 'perPage' => $perPage])
+             data-endpoint="{{ route('liquidations.liquidationReportDR', ['requestor' => request('requestor')]) }}"
+             data-base-endpoint="{{ route('liquidations.liquidationReportDR') }}"
+             data-search-selector="#liquidation-report-dr-search"
+             data-per-page-selector="#liquidation-report-dr-per-page"
+             data-pagination-selector=".liquidation-report-dr-pagination a">
+            @include('liquidations.partials.liquidationReportDR-table', ['data' => $data, 'search' => $search, 'perPage' => $perPage])
         </div>
     </div>
 </div>
@@ -86,10 +86,10 @@
 
 <script>
     (() => {
-        const form = document.getElementById('liquidations-filter-form');
-        const select = document.getElementById('requestor');
-        const table = document.getElementById('liquidations-table');
-        const resetLink = document.getElementById('liquidations-filter-reset');
+        const form = document.getElementById('liquidation-report-dr-filter-form');
+        const select = document.getElementById('report_dr_requestor');
+        const table = document.getElementById('liquidation-report-dr-table');
+        const resetLink = document.getElementById('liquidation-report-dr-filter-reset');
 
         if (!form || !select || !table) {
             return;
@@ -163,7 +163,7 @@
                 table.innerHTML = payload.html || '';
                 window.history.replaceState({}, '', url.toString());
             } catch (error) {
-                console.error('Error loading liquidations:', error);
+                console.error('Error loading liquidation DR report:', error);
             } finally {
                 table.classList.remove('opacity-60', 'pointer-events-none');
             }

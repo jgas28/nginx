@@ -109,6 +109,10 @@ Route::middleware(['auth', 'route.access'])->group(function () {
     
     Route::get('/liquidations/admin', [LiquidationController::class, 'indexAdmin'])
     ->name('liquidations.indexAdmin');
+    Route::get('/liquidations/report/dr', [LiquidationController::class, 'liquidationReportDR'])
+        ->name('liquidations.liquidationReportDR');
+    Route::get('/liquidations/report/admin', [LiquidationController::class, 'liquidationReportAdmin'])
+        ->name('liquidations.liquidationReportAdmin');
     // 🟢 Put this first
     Route::get('/liquidations/{id}/liquidate', [LiquidationController::class, 'liquidate'])
         ->name('liquidations.liquidate');

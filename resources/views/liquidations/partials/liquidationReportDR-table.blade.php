@@ -1,0 +1,182 @@
+<div class="border-b border-slate-200 px-6 py-4">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div class="flex items-center gap-2 text-sm text-slate-600">
+                <span>Show</span>
+                <select id="liquidation-report-dr-per-page" class="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
+                    @foreach([5, 10, 25, 50] as $size)
+                        <option value="{{ $size }}" {{ (int) ($perPage ?? 10) === $size ? 'selected' : '' }}>{{ $size }}</option>
+                    @endforeach
+                </select>
+                <span>entries</span>
+            </div>
+            <div class="text-sm text-slate-500">
+                {{ $data->total() }} liquidation report records found
+            </div>
+        </div>
+
+        <div class="relative w-full lg:max-w-sm">
+            <div class="pointer-events-none absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-blue-50 text-blue-600 shadow-sm">
+                <i class="fas fa-search text-sm"></i>
+            </div>
+            <input
+                type="text"
+                id="liquidation-report-dr-search"
+                value="{{ $search ?? '' }}"
+                placeholder="Search CVR, company, requestor, payment, reference..."
+                class="w-full rounded-xl border border-slate-300 bg-slate-50 py-2.5 pl-14 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+            >
+        </div>
+    </div>
+</div>
+
+<div class="space-y-3 p-4 md:hidden">
+    @forelse ($data as $item)
+        @php
+            $voucher = $item->cashVoucher;
+            $companyCode = $voucher?->deliveryRequest?->company?->company_code ?? 'N/A';
+            $expenseCode = $voucher?->deliveryRequest?->expenseType?->expense_code ?? '';
+            $truckName = $item->allocation?->truck?->truck_name ?? 'N/A';
+            $displayNumber = preg_replace('/\/\d+$/', '', $voucher?->cvr_number ?? 'N/A') . '-' . $truckName . '-' . $companyCode . $expenseCode;
+            $requestorName = trim(($voucher?->employee?->fname ?? '') . ' ' . ($voucher?->employee?->lname ?? ''));
+            $paymentName = trim((string) ($item->payment_name ?? ''));
+            $referenceNumber = trim((string) ($item->reference_number ?? ''));
+        @endphp
+        <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div class="space-y-3">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">CVR Number</p>
+                    <p class="mt-1 break-words text-sm font-semibold text-slate-900">{{ $displayNumber }}</p>
+                </div>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Amount</p>
+                        <p class="mt-1 text-sm font-semibold text-emerald-600">PHP {{ number_format((float) ($item->amount ?? 0), 2) }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Company</p>
+                        <span class="mt-1 inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                            <i class="fas fa-building text-[10px] text-blue-500"></i>
+                            {{ $companyCode }}
+                        </span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Requestor</p>
+                        <p class="mt-1 text-sm text-slate-700">{{ $requestorName !== '' ? $requestorName : 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Payment Name</p>
+                        <p class="mt-1 text-sm text-slate-700">{{ $paymentName !== '' ? $paymentName : 'N/A' }}</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Reference Number</p>
+                        <p class="mt-1 break-words text-sm text-slate-700">{{ $referenceNumber !== '' ? $referenceNumber : 'N/A' }}</p>
+                    </div>
+                    <div>
+                        <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">Date Created</p>
+                        <p class="mt-1 text-sm text-slate-500">{{ $voucher?->created_at?->format('Y-m-d') ?? 'N/A' }}</p>
+                    </div>
+                </div>
+            </div>
+        </article>
+    @empty
+        <div class="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+            No delivery liquidation report records found.
+        </div>
+    @endforelse
+</div>
+
+<div class="hidden overflow-x-auto md:block">
+    <table class="min-w-full divide-y divide-slate-200 text-sm text-slate-700">
+        <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <tr>
+                <th class="px-6 py-4">CVR Number</th>
+                <th class="px-6 py-4">Amount</th>
+                <th class="px-6 py-4">Company</th>
+                <th class="px-6 py-4">Requestor</th>
+                <th class="px-6 py-4">Payment Name</th>
+                <th class="px-6 py-4">Reference Number</th>
+                <th class="px-6 py-4">Date Created</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 bg-white">
+            @forelse ($data as $item)
+                @php
+                    $voucher = $item->cashVoucher;
+                    $companyCode = $voucher?->deliveryRequest?->company?->company_code ?? 'N/A';
+                    $expenseCode = $voucher?->deliveryRequest?->expenseType?->expense_code ?? '';
+                    $truckName = $item->allocation?->truck?->truck_name ?? 'N/A';
+                    $displayNumber = preg_replace('/\/\d+$/', '', $voucher?->cvr_number ?? 'N/A') . '-' . $truckName . '-' . $companyCode . $expenseCode;
+                    $requestorName = trim(($voucher?->employee?->fname ?? '') . ' ' . ($voucher?->employee?->lname ?? ''));
+                    $paymentName = trim((string) ($item->payment_name ?? ''));
+                    $referenceNumber = trim((string) ($item->reference_number ?? ''));
+                @endphp
+                <tr class="transition hover:bg-slate-50/80">
+                    <td class="px-6 py-4 font-semibold text-slate-900">
+                        <div class="inline-flex items-center gap-3">
+                            <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                                <i class="fas fa-file-invoice text-sm"></i>
+                            </span>
+                            <span>{{ $displayNumber }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 font-semibold text-emerald-600">
+                        PHP {{ number_format((float) ($item->amount ?? 0), 2) }}
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                            <i class="fas fa-building text-[10px] text-blue-500"></i>
+                            {{ $companyCode }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-slate-700">
+                        <div class="inline-flex items-center gap-2">
+                            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-50 text-indigo-600">
+                                <i class="fas fa-user text-xs"></i>
+                            </span>
+                            <span>{{ $requestorName !== '' ? $requestorName : 'N/A' }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-slate-700">
+                        {{ $paymentName !== '' ? $paymentName : 'N/A' }}
+                    </td>
+                    <td class="px-6 py-4 text-slate-700">
+                        {{ $referenceNumber !== '' ? $referenceNumber : 'N/A' }}
+                    </td>
+                    <td class="px-6 py-4 text-slate-500">
+                        {{ $voucher?->created_at?->format('Y-m-d') ?? 'N/A' }}
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="7" class="px-6 py-12 text-center text-slate-500">
+                        <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                            <i class="fas fa-folder-open text-lg"></i>
+                        </div>
+                        <p class="mt-3 font-medium text-slate-700">No delivery liquidation report records found</p>
+                        <p class="mt-1 text-sm">Try a different requestor filter or search term.</p>
+                    </td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+</div>
+
+<div class="flex flex-col gap-3 border-t border-slate-200 px-6 py-4 text-sm text-slate-500 lg:flex-row lg:items-center lg:justify-between">
+    <p>
+        Showing
+        <span class="font-semibold text-slate-700">{{ $data->firstItem() ?? 0 }}</span>
+        to
+        <span class="font-semibold text-slate-700">{{ $data->lastItem() ?? 0 }}</span>
+        of
+        <span class="font-semibold text-slate-700">{{ $data->total() }}</span>
+        entries
+    </p>
+    <div class="liquidation-report-dr-pagination">
+        {{ $data->links('pagination::tailwind') }}
+    </div>
+</div>
