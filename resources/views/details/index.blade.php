@@ -76,7 +76,7 @@
             this.open = true;
         }
     }"
-    @show-delivery-details.window="showDetails($event.detail)"
+    x-on:show-delivery-details.window="showDetails($event.detail)"
 >
     <div class="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm sm:px-8">
         <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
