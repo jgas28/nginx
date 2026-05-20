@@ -295,6 +295,7 @@ class LiquidationController extends Controller
             ->leftJoin('companies as dr_co', 'dr_co.id', '=', 'dr.company_id')
             ->leftJoin('users as pb', 'pb.id', '=', 'liquidations.prepared_by')
             ->leftJoin('users as nb', 'nb.id', '=', 'liquidations.noted_by')
+            ->where('liquidations.status', 1)
             ->with([
                 'preparedBy:id,fname,lname',
                 'notedBy:id,fname,lname',
@@ -538,33 +539,46 @@ class LiquidationController extends Controller
             $totalCash += floatval($item['amount'] ?? 0);
         }
 
-        $difference = round($totalCash - $approvedAmount, 2);
+        $returnedTotal = RunningBalance::where('cvr_number', $liquidation->cvr_number)
+            ->whereIn('type', ['2', '4'])
+            ->get()
+            ->sum(function ($item) {
+                return isset($item->amount) ? abs($item->amount) : 0;
+            });
+
+        $remainingForCollection = round(($approvedAmount - $totalCash) - $returnedTotal, 2);
+        $needsCollection = $remainingForCollection > 0.009;
 
         // Base validation (always needed)
         $rules = [
             'validated_by' => 'required|exists:users,id',
         ];
 
-        // If under-liquidated (needs return), require collector
-        if ($difference < 0) {
+        // If there is still an unresolved shortage, require collection
+        if ($needsCollection) {
             $rules['collector_id'] = 'required|exists:users,id';
         }
 
         $validated = $request->validate($rules);
 
         // Assign next status
-        $liquidation->status = $difference < 0 ? 3 : 4;
+        $liquidation->status = $needsCollection ? 3 : 4;
         $liquidation->validated_by = $validated['validated_by'];
         $liquidation->validated_at = now();
 
-        // Optional: store collector
-        if ($difference < 0 && isset($validated['collector_id'])) {
-            $liquidation->collector_id = $validated['collector_id']; // only if this field exists in the table
+        if ($needsCollection && isset($validated['collector_id'])) {
+            $liquidation->collector_id = $validated['collector_id'];
+        } elseif (!$needsCollection) {
+            $liquidation->collector_id = null;
         }
 
         $liquidation->save();
 
-        return redirect()->route('liquidations.reviewList')->with('success', 'Liquidation validated successfully.');
+        $nextRoute = (int) $liquidation->status === 3
+            ? 'liquidations.validatedList'
+            : 'liquidations.approvalList';
+
+        return redirect()->route($nextRoute)->with('success', 'Liquidation validated successfully.');
     }
 
 
@@ -829,12 +843,12 @@ class LiquidationController extends Controller
 
         $liquidation = Liquidation::findOrFail($id);
 
-        $liquidation->collected_by = $request->validated_by;
+        $liquidation->collected_by = $request->collected_by;
         $liquidation->collected_at = now();
         $liquidation->status = 4;
         $liquidation->save();
 
-        return redirect()->route('liquidations.reviewList')->with('success', 'Liquidation validated successfully.');
+        return redirect()->route('liquidations.approvalList')->with('success', 'Liquidation collected successfully.');
     }
 
     public function approvalList(Request $request)
@@ -1116,15 +1130,18 @@ class LiquidationController extends Controller
 
     public function approvedLiquidation(Request $request, $id)
     {
+        $validated = $request->validate([
+            'approved_by' => 'required|exists:users,id',
+        ]);
 
         $liquidation = Liquidation::findOrFail($id);
 
-        $liquidation->approved_by = 54;
+        $liquidation->approved_by = $validated['approved_by'];
         $liquidation->approved_at = now();
         $liquidation->status = 5;
         $liquidation->save();
 
-        return redirect()->route('liquidations.approvalList')->with('success', 'Liquidation validated successfully.');
+        return redirect()->route('liquidations.approvalList')->with('success', 'Liquidation approved successfully.');
     }
 
     public function approvalLiquidation(Request $request, $id)
