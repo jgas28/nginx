@@ -295,6 +295,7 @@ class LiquidationController extends Controller
             ->leftJoin('companies as dr_co', 'dr_co.id', '=', 'dr.company_id')
             ->leftJoin('users as pb', 'pb.id', '=', 'liquidations.prepared_by')
             ->leftJoin('users as nb', 'nb.id', '=', 'liquidations.noted_by')
+            ->where('liquidations.status', 2)
             ->with([
                 'preparedBy:id,fname,lname',
                 'notedBy:id,fname,lname',
