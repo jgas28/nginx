@@ -396,7 +396,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
-                            @forelse($billedDeliveries ?? [] as $bd)
+                            @foreach($billedDeliveries ?? [] as $bd)
                                 @php
                                     $billingType  = $bd->billing_type ?? 'both';
                                     $drAmt        = (float)($bd->delivery_rate_amount ?? 0);
@@ -457,14 +457,7 @@
                                         </span>
                                     </td>
                                 </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="10" class="px-4 py-12 text-center text-gray-400">
-                                        <i class="fas fa-truck-loading text-4xl mb-3 block"></i>
-                                        No billed deliveries found. Deliveries will appear here once they are added to an SOA.
-                                    </td>
-                                </tr>
-                            @endforelse
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
@@ -582,7 +575,7 @@
                 ],
                 language: {
                     search: 'Search deliveries:',
-                    emptyTable: 'No billed deliveries found'
+                    emptyTable: 'No billed deliveries found. Deliveries will appear here once they are added to an SOA.'
                 }
             });
             billedTableInitialized = true;
