@@ -9,7 +9,13 @@
     $totalUncollected = collect($uncTotals)->sum();
     $approverCount    = collect($approvers)->count();
     $highestRunning   = collect($runTotals)->max() ?? 0;
-    $maxBalance       = max($totalRunning, $totalUncollected, $highestRunning, 1);
+    $maxBalance       = max(
+        abs((float) $totalRunning),
+        abs((float) $totalUncollected),
+        abs((float) $highestRunning),
+        abs((float) (collect($runTotals)->min() ?? 0)),
+        1
+    );
 
     // Hex palette — avoids Tailwind purge of dynamic class strings
     $summaryCards = [
@@ -64,7 +70,7 @@
         </div>
 
         {{-- ── Collection Health Bar ──────────────────────── --}}
-        @if($totalRunning > 0 || $totalUncollected > 0)
+        @if($totalRunning != 0 || $totalUncollected != 0)
         <div class="mb-5 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
             <div class="mb-3 flex items-center justify-between">
                 <div class="flex items-center gap-2">
@@ -77,7 +83,10 @@
                     </div>
                 </div>
                 @php
-                    $collectionRate = $totalRunning > 0 ? round((($totalRunning - $totalUncollected) / $totalRunning) * 100) : 0;
+                    $runningBase = abs((float) $totalRunning);
+                    $collectionRate = $runningBase > 0
+                        ? max(0, min(100, round((($runningBase - abs((float) $totalUncollected)) / $runningBase) * 100)))
+                        : 0;
                 @endphp
                 <span class="rounded-full px-3 py-1 text-xs font-bold
                     {{ $collectionRate >= 75 ? 'bg-emerald-100 text-emerald-700' : ($collectionRate >= 50 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700') }}">
@@ -88,11 +97,11 @@
                 <div>
                     <div class="mb-1 flex justify-between text-xs text-slate-500">
                         <span class="flex items-center gap-1.5"><i class="fas fa-circle-check text-emerald-500 text-[9px]"></i> Running Total</span>
-                        <span class="font-bold text-emerald-600">PHP {{ number_format($totalRunning, 2) }}</span>
+                        <span class="font-bold {{ $totalRunning < 0 ? 'text-rose-600' : 'text-emerald-600' }}">PHP {{ number_format($totalRunning, 2) }}</span>
                     </div>
                     <div class="h-2.5 rounded-full bg-slate-100">
                         <div class="h-2.5 rounded-full bg-gradient-to-r from-emerald-500 to-green-400 transition-all duration-700"
-                             style="width: {{ min(100, ($totalRunning / $maxBalance) * 100) }}%"></div>
+                             style="width: {{ min(100, (abs((float) $totalRunning) / $maxBalance) * 100) }}%"></div>
                     </div>
                 </div>
                 <div>
@@ -102,7 +111,7 @@
                     </div>
                     <div class="h-2.5 rounded-full bg-slate-100">
                         <div class="h-2.5 rounded-full bg-gradient-to-r from-rose-500 to-red-400 transition-all duration-700"
-                             style="width: {{ min(100, ($totalUncollected / $maxBalance) * 100) }}%"></div>
+                             style="width: {{ min(100, (abs((float) $totalUncollected) / $maxBalance) * 100) }}%"></div>
                     </div>
                 </div>
             </div>
@@ -131,8 +140,8 @@
                     @php
                         $run = (float)($runTotals[$approver->id] ?? 0);
                         $unc = (float)($uncTotals[$approver->id] ?? 0);
-                        $rw  = min(100, ($run / $maxBalance) * 100);
-                        $uw  = min(100, ($unc / $maxBalance) * 100);
+                        $rw  = min(100, (abs($run) / $maxBalance) * 100);
+                        $uw  = min(100, (abs($unc) / $maxBalance) * 100);
                         $net = $run - $unc;
                     @endphp
                     <div class="group rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/60 p-4 transition hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5">
@@ -154,7 +163,7 @@
                             <div>
                                 <div class="mb-1 flex items-center justify-between text-xs">
                                     <span class="text-slate-500 font-medium">Running</span>
-                                    <span class="font-bold text-emerald-600">PHP {{ number_format($run, 2) }}</span>
+                                    <span class="font-bold {{ $run < 0 ? 'text-rose-600' : 'text-emerald-600' }}">PHP {{ number_format($run, 2) }}</span>
                                 </div>
                                 <div class="h-2 rounded-full bg-emerald-100">
                                     <div class="h-2 rounded-full bg-gradient-to-r from-emerald-500 to-green-400 transition-all duration-700" style="width:{{ $rw }}%"></div>

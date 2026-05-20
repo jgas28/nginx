@@ -472,6 +472,7 @@
                         @php
                             $run = (float)($runningTotalsByApprover[$approver->id] ?? 0);
                             $unc = (float)($uncollectedByApprover[$approver->id] ?? 0);
+                            $net = $run - $unc;
                         @endphp
                         <div class="rounded-xl border border-slate-100 bg-slate-50/80 p-3 transition hover:border-blue-200 hover:bg-white hover:shadow-sm">
                             <div class="mb-2 flex items-center justify-between gap-2">
@@ -489,12 +490,16 @@
                             <div class="grid grid-cols-2 gap-2 text-xs">
                                 <div class="rounded-lg px-2.5 py-2" style="background:#d1fae5">
                                     <p class="text-[9px] font-bold uppercase tracking-widest" style="color:#059669">Running</p>
-                                    <p class="mt-0.5 font-bold" style="color:#047857">PHP {{ number_format($run, 2) }}</p>
+                                    <p class="mt-0.5 font-bold" style="color:{{ $run < 0 ? '#be123c' : '#047857' }}">PHP {{ number_format($run, 2) }}</p>
                                 </div>
                                 <div class="rounded-lg px-2.5 py-2" style="background:#ffe4e6">
                                     <p class="text-[9px] font-bold uppercase tracking-widest" style="color:#e11d48">Uncollected</p>
                                     <p class="mt-0.5 font-bold" style="color:#be123c">PHP {{ number_format($unc, 2) }}</p>
                                 </div>
+                            </div>
+                            <div class="mt-2 flex items-center justify-between rounded-lg {{ $net >= 0 ? 'bg-emerald-50' : 'bg-rose-50' }} px-2.5 py-2 text-xs">
+                                <span class="font-bold uppercase tracking-widest {{ $net >= 0 ? 'text-emerald-600' : 'text-rose-600' }}">Net Balance</span>
+                                <span class="font-extrabold {{ $net >= 0 ? 'text-emerald-700' : 'text-rose-700' }}">{{ $net >= 0 ? '+' : '' }}PHP {{ number_format($net, 2) }}</span>
                             </div>
                         </div>
                     @empty
