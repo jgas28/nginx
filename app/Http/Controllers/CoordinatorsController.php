@@ -1327,7 +1327,8 @@ class CoordinatorsController extends Controller
             // Update DeliveryRequest status
             $deliveryRequest = DeliveryRequest::where('id', $request->dr_id)->first();
             if ($deliveryRequest && $deliveryRequest->status != 0) {
-                $deliveryRequest->status = '3';
+                 $deliveryRequest->status = '1';
+                $deliveryRequest->delivery_status = '3';
                 $deliveryRequest->save();
                 Log::info('Updated DeliveryRequest status to 3.');
             }
