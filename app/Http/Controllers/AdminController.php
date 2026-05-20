@@ -32,7 +32,7 @@ class AdminController extends Controller
         $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
         $cashVouchers = CashVoucher::with(['company', 'suppliers', 'expenseTypes', 'employee', 'trucks', 'cvrTypes'])
-            ->whereNotIn('cvr_type', ['delivery', 'pullout', 'accessorial'])
+            ->whereIn('cvr_type', ['admin', 'rpm'])
             ->where('status', 1)
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($inner) use ($search) {
