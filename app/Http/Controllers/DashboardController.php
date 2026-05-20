@@ -57,6 +57,7 @@ class DashboardController extends Controller
 
             // Filter Delivery Requests by selected month or date range
             $deliveryRequests = DeliveryRequest::with('lineItems')
+                ->where('status', '!=', 0)
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->get();
 
@@ -90,14 +91,15 @@ class DashboardController extends Controller
                 ->map(fn($amount) => abs($amount));
         }
 
-        $totalPendingDeliveries = DeliveryRequest::where('status', '!=', 1)
+        $totalPendingDeliveries = DeliveryRequest::where('status', '!=', 0)
+            ->where('delivery_status', 1)
             ->count();
 
-        $totalDelivered = DeliveryRequest::where('status', 1)
-            ->whereDate('created_at', Carbon::today())
+        $totalDelivered = DeliveryRequest::where('status', '!=', 0)
+            ->whereDate('delivery_date', Carbon::today())
             ->count();
 
-        $totalTruckAllocated = DeliveryRequest::where('status', 8)
+        $totalTruckAllocated = DeliveryRequest::where('delivery_status', 8)
             ->count();
 
         $totalCVRapproval = CashVoucher::where('status', 1)
@@ -274,6 +276,7 @@ class DashboardController extends Controller
             $endDate = $period->copy()->endOfMonth()->toDateString();
 
             $deliveryRequests = DeliveryRequest::with('lineItems')
+                ->where('status', '!=', 0)
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->get();
 
