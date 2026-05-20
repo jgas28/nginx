@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('content')
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+
 @php
     $summary = $deliveryRequests->reduce(function ($carry, $dr) {
         $accessorialRate = $dr->lineItems->sum(fn($item) => (float) $item->accessorial_rate);
@@ -34,7 +36,61 @@
     ];
 @endphp
 
+<style>
+    #delivery-details-page .dataTables_wrapper .dataTables_length,
+    #delivery-details-page .dataTables_wrapper .dataTables_filter {
+        display: none;
+    }
+
+    #delivery-details-page .dataTables_wrapper .dataTables_info,
+    #delivery-details-page .dataTables_wrapper .dataTables_paginate {
+        font-size: 0.875rem;
+        color: #64748b;
+        margin-top: 1rem;
+    }
+
+    #delivery-details-page .dataTables_wrapper .dataTables_paginate .paginate_button {
+        border-radius: 0.9rem !important;
+        border: 1px solid #cbd5e1 !important;
+        background: #fff !important;
+        color: #334155 !important;
+        padding: 0.45rem 0.85rem !important;
+        margin-left: 0.35rem !important;
+    }
+
+    #delivery-details-page .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+    #delivery-details-page .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+        border-color: #2563eb !important;
+        background: #2563eb !important;
+        color: #fff !important;
+    }
+
+    #delivery-details-page .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+        border-color: #93c5fd !important;
+        background: #eff6ff !important;
+        color: #1d4ed8 !important;
+    }
+
+    #delivery-details-page .dataTables_wrapper .dataTables_processing {
+        border-radius: 1rem;
+        border: 1px solid #dbeafe;
+        background: rgba(255, 255, 255, 0.96);
+        color: #1e3a8a;
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+    }
+
+    #delivery-details-page table.dataTable thead th,
+    #delivery-details-page table.dataTable thead td {
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    #delivery-details-page table.dataTable.no-footer {
+        border-bottom: 0;
+    }
+</style>
+
 <div
+    id="delivery-details-page"
     class="mx-auto max-w-7xl space-y-6 py-8"
     x-data="{
         open: false,
@@ -106,8 +162,8 @@
                 <div class="flex items-center gap-2 text-sm text-slate-600">
                     <span>Show</span>
                     <select id="delivery-details-per-page" class="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100">
-                        @foreach ([5, 10, 15, 20] as $size)
-                            <option value="{{ $size }}" {{ $size === 5 ? 'selected' : '' }}>{{ $size }}</option>
+                        @foreach ([10, 25, 50, 100] as $size)
+                            <option value="{{ $size }}" {{ $size === 10 ? 'selected' : '' }}>{{ $size }}</option>
                         @endforeach
                     </select>
                     <span>rows</span>
@@ -116,7 +172,7 @@
         </div>
 
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200 text-sm text-slate-700">
+            <table id="delivery-details-table" class="min-w-full divide-y divide-slate-200 text-sm text-slate-700">
                 <thead class="bg-slate-50 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                     <tr>
                         <th class="px-6 py-4">MTM / Project</th>
@@ -157,7 +213,6 @@
                         @endphp
                         <tr
                             class="delivery-details-row transition hover:bg-slate-50/80"
-                            data-search="{{ strtolower(trim(($dr->mtm ?? '') . ' ' . ($dr->project_name ?? '') . ' ' . ($dr->company->company_code ?? '') . ' ' . ($dr->company->company_name ?? '') . ' ' . ($dr->customer->name ?? ''))) }}"
                         >
                             <td class="px-6 py-4">
                                 <div class="flex items-start gap-3">
@@ -236,28 +291,7 @@
             </table>
         </div>
 
-        <div class="flex flex-col gap-3 border-t border-slate-200 px-6 py-4 text-sm text-slate-500 lg:flex-row lg:items-center lg:justify-between">
-            <p>
-                Showing
-                <span id="delivery-details-from" class="font-semibold text-slate-700">0</span>
-                to
-                <span id="delivery-details-to" class="font-semibold text-slate-700">0</span>
-                of
-                <span id="delivery-details-filtered-count" class="font-semibold text-slate-700">{{ $deliveryRequests->count() }}</span>
-                entries
-            </p>
-            <div class="flex items-center gap-2">
-                <button type="button" id="delivery-details-prev" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900">
-                    <i class="fas fa-chevron-left text-xs"></i>
-                    Previous
-                </button>
-                <span id="delivery-details-page" class="rounded-xl bg-slate-50 px-3 py-2 font-semibold text-slate-700 ring-1 ring-slate-200">Page 1</span>
-                <button type="button" id="delivery-details-next" class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-600 transition hover:border-slate-400 hover:text-slate-900">
-                    Next
-                    <i class="fas fa-chevron-right text-xs"></i>
-                </button>
-            </div>
-        </div>
+        <div class="border-t border-slate-200 px-6 py-4"></div>
     </div>
 
     <div
@@ -395,101 +429,60 @@
     </div>
 </div>
 
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script>
     (() => {
+        const tableElement = document.getElementById('delivery-details-table');
         const searchInput = document.getElementById('delivery-details-search');
         const perPageSelect = document.getElementById('delivery-details-per-page');
-        const rows = Array.from(document.querySelectorAll('.delivery-details-row'));
-        const prevButton = document.getElementById('delivery-details-prev');
-        const nextButton = document.getElementById('delivery-details-next');
-        const pageLabel = document.getElementById('delivery-details-page');
-        const fromLabel = document.getElementById('delivery-details-from');
-        const toLabel = document.getElementById('delivery-details-to');
-        const filteredCountLabel = document.getElementById('delivery-details-filtered-count');
         const totalCountLabel = document.getElementById('delivery-details-total-count');
 
-        if (!searchInput || !perPageSelect || rows.length === 0) {
+        if (!tableElement || typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) {
             return;
         }
 
-        let currentPage = 1;
+        const $table = window.jQuery(tableElement);
+        const table = $table.DataTable({
+            pageLength: parseInt(perPageSelect?.value || '10', 10),
+            lengthChange: false,
+            searching: true,
+            ordering: false,
+            info: true,
+            paging: true,
+            autoWidth: false,
+            language: {
+                info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+                infoEmpty: 'Showing 0 to 0 of 0 entries',
+                emptyTable: 'No delivery detail records found',
+                zeroRecords: 'No matching delivery detail records found',
+                paginate: {
+                    previous: 'Previous',
+                    next: 'Next',
+                },
+            },
+            drawCallback: function () {
+                const info = table.page.info();
+                if (totalCountLabel) {
+                    totalCountLabel.textContent = String(info.recordsDisplay);
+                }
+            },
+        });
 
-        function getFilteredRows() {
-            const searchTerm = searchInput.value.trim().toLowerCase();
-
-            return rows.filter((row) => {
-                const haystack = row.dataset.search || '';
-                return haystack.includes(searchTerm);
+        if (searchInput) {
+            searchInput.addEventListener('input', () => {
+                table.search(searchInput.value).draw();
             });
         }
 
-        function renderTable() {
-            const filteredRows = getFilteredRows();
-            const perPage = parseInt(perPageSelect.value, 10) || 5;
-            const totalPages = Math.max(1, Math.ceil(filteredRows.length / perPage));
-
-            if (currentPage > totalPages) {
-                currentPage = totalPages;
-            }
-
-            const startIndex = (currentPage - 1) * perPage;
-            const endIndex = startIndex + perPage;
-
-            rows.forEach((row) => {
-                row.style.display = 'none';
+        if (perPageSelect) {
+            perPageSelect.addEventListener('change', () => {
+                table.page.len(parseInt(perPageSelect.value || '10', 10)).draw();
             });
-
-            filteredRows.slice(startIndex, endIndex).forEach((row) => {
-                row.style.display = '';
-            });
-
-            const from = filteredRows.length === 0 ? 0 : startIndex + 1;
-            const to = filteredRows.length === 0 ? 0 : Math.min(endIndex, filteredRows.length);
-
-            fromLabel.textContent = from;
-            toLabel.textContent = to;
-            filteredCountLabel.textContent = filteredRows.length;
-            totalCountLabel.textContent = rows.length;
-            pageLabel.textContent = `Page ${currentPage} of ${totalPages}`;
-
-            prevButton.disabled = currentPage === 1;
-            nextButton.disabled = currentPage === totalPages;
-
-            prevButton.classList.toggle('opacity-50', currentPage === 1);
-            prevButton.classList.toggle('cursor-not-allowed', currentPage === 1);
-            nextButton.classList.toggle('opacity-50', currentPage === totalPages);
-            nextButton.classList.toggle('cursor-not-allowed', currentPage === totalPages);
         }
 
-        searchInput.addEventListener('input', () => {
-            currentPage = 1;
-            renderTable();
-        });
-
-        perPageSelect.addEventListener('change', () => {
-            currentPage = 1;
-            renderTable();
-        });
-
-        prevButton.addEventListener('click', () => {
-            if (currentPage > 1) {
-                currentPage -= 1;
-                renderTable();
-            }
-        });
-
-        nextButton.addEventListener('click', () => {
-            const filteredRows = getFilteredRows();
-            const perPage = parseInt(perPageSelect.value, 10) || 5;
-            const totalPages = Math.max(1, Math.ceil(filteredRows.length / perPage));
-
-            if (currentPage < totalPages) {
-                currentPage += 1;
-                renderTable();
-            }
-        });
-
-        renderTable();
+        if (totalCountLabel) {
+            totalCountLabel.textContent = String(table.page.info().recordsDisplay);
+        }
     })();
 </script>
 @endsection
