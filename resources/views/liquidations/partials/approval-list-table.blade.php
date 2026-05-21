@@ -24,31 +24,6 @@
         @endforeach
     </div>
 
-    <div class="grid grid-cols-1 items-center gap-4 rounded-[24px] border border-slate-200 bg-white p-4 xl:grid-cols-[minmax(0,720px)_auto] xl:justify-between">
-        <div class="relative min-w-0 max-w-[720px]">
-            <span class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                <i class="fas fa-magnifying-glass text-sm"></i>
-            </span>
-            <input
-                type="text"
-                id="liquidations-approval-search"
-                value="{{ $search }}"
-                placeholder="Search CVR, company, supplier, requestor, expense..."
-                class="w-full rounded-2xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-700 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-100"
-            >
-        </div>
-
-        <div class="flex flex-wrap items-center justify-start gap-3 xl:justify-end">
-            <label for="liquidations-approval-per-page" class="text-sm font-medium text-slate-600">Show</label>
-            <select id="liquidations-approval-per-page" class="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm focus:border-violet-500 focus:outline-none focus:ring-2 focus:ring-violet-100">
-                @foreach ([5, 10, 25, 50] as $size)
-                    <option value="{{ $size }}" {{ (int) $perPage === $size ? 'selected' : '' }}>{{ $size }}</option>
-                @endforeach
-            </select>
-            <span class="text-sm text-slate-500">entries</span>
-        </div>
-    </div>
-
     <div class="overflow-hidden rounded-[24px] border border-slate-200">
         <div class="space-y-3 p-4 md:hidden">
             @forelse ($liquidations as $liquidation)

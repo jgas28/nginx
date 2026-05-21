@@ -1,35 +1,3 @@
-<div class="border-b border-slate-200 px-6 py-4">
-    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div class="flex items-center gap-2 text-sm text-slate-600">
-                <span>Show</span>
-                <select id="liquidations-admin-per-page" class="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100">
-                    @foreach([5, 10, 25, 50] as $size)
-                        <option value="{{ $size }}" {{ (int) ($perPage ?? 10) === $size ? 'selected' : '' }}>{{ $size }}</option>
-                    @endforeach
-                </select>
-                <span>entries</span>
-            </div>
-            <div class="text-sm text-slate-500">
-                {{ $data->total() }} liquidation requests found
-            </div>
-        </div>
-
-        <div class="relative w-full lg:max-w-sm">
-            <div class="pointer-events-none absolute left-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-blue-50 text-blue-600 shadow-sm">
-                <i class="fas fa-search text-sm"></i>
-            </div>
-            <input
-                type="text"
-                id="liquidations-admin-search"
-                value="{{ $search ?? '' }}"
-                placeholder="Search CVR, company, supplier, request type..."
-                class="w-full rounded-xl border border-slate-300 bg-slate-50 py-2.5 pl-14 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
-            >
-        </div>
-    </div>
-</div>
-
 <div class="space-y-3 p-4 md:hidden">
     @forelse ($data as $approval)
         @php

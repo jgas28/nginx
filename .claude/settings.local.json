@@ -8,7 +8,10 @@
       "Bash(xargs grep -l \"running_balance\")",
       "Bash(xargs grep -l \"employee_id\\\\|cvr_number\\\\|adjustment_type\\\\|supplier_id\")",
       "Bash(xargs grep -l \"staging\")",
-      "Bash(xargs cat)"
+      "Bash(xargs cat)",
+      "Bash(findstr /n \"liquidation\" routes\\\\web.php)",
+      "Bash(validated)",
+      "Bash(approval\" | head -20)"
     ]
   }
 }

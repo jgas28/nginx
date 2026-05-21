@@ -95,7 +95,7 @@ class LiquidationController extends Controller
             ->orderBy('lname')
             ->get();
 
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'html' => view('liquidations.partials.index-table', compact('data', 'search', 'perPage'))->render(),
                 'search' => $search,
@@ -160,10 +160,9 @@ class LiquidationController extends Controller
             ->paginate($perPage)
             ->appends($request->query());
 
-        // Fetch all suppliers for the select filter
         $suppliers = Supplier::orderBy('supplier_name')->get();
 
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'html' => view('liquidations.partials.indexAdmin-table', compact('data', 'search', 'perPage'))->render(),
                 'search' => $search,
@@ -172,7 +171,6 @@ class LiquidationController extends Controller
             ]);
         }
 
-        // Return view with filtered data and suppliers
         return view('liquidations.indexAdmin', compact('data', 'suppliers', 'search', 'perPage'));
     }
 
@@ -367,7 +365,7 @@ class LiquidationController extends Controller
             'delivery_related'=> 0,
         ];
 
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'html'     => view('liquidations.partials.review-list-table', compact('liquidations', 'search', 'perPage', 'overview'))->render(),
                 'search'   => $search,
@@ -686,7 +684,7 @@ class LiquidationController extends Controller
             'delivery_related' => (clone $query)->whereHas('cashVoucher', fn ($cashVoucherQuery) => $cashVoucherQuery->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial', 'freight', 'others']))->count(),
         ];
 
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'html' => view('liquidations.partials.validated-list-table', [
                     'liquidations' => $liquidations,
@@ -951,7 +949,7 @@ class LiquidationController extends Controller
             'delivery_related' => (clone $query)->whereHas('cashVoucher', fn ($cashVoucherQuery) => $cashVoucherQuery->whereIn('cvr_type', ['delivery', 'pullout', 'accessorial', 'freight', 'others']))->count(),
         ];
 
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
                 'html' => view('liquidations.partials.approval-list-table', [
                     'liquidations' => $liquidations,
@@ -1498,37 +1496,53 @@ class LiquidationController extends Controller
             ->with('success', 'Liquidation updated and approved successfully!');
     }
 
-    public function rejectedList()
+    public function rejectedList(Request $request)
     {
-        // Fetch ALL liquidations with their immediate cashVoucher
-        $liquidations = Liquidation::with('cashVoucher')
-        ->where('status', 10)
-        ->get();
+        $search  = trim((string) $request->input('search', ''));
+        $perPage = (int) $request->input('per_page', 10);
+        $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
+
+        $query = Liquidation::with([
+            'cashVoucher.company',
+            'cashVoucher.expenseTypes',
+            'cashVoucher.trucks',
+            'cashVoucher.deliveryRequest.company',
+            'cashVoucher.deliveryRequest.expenseType',
+            'cashVoucher.withholdingTax',
+        ])->where('status', 10);
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('cashVoucher', function ($cvq) use ($search) {
+                    $cvq->where('cvr_number', 'like', '%' . $search . '%')
+                        ->orWhere('cvr_type', 'like', '%' . $search . '%')
+                        ->orWhereHas('company', function ($cq) use ($search) {
+                            $cq->where('company_code', 'like', '%' . $search . '%')
+                               ->orWhere('company_name', 'like', '%' . $search . '%');
+                        })
+                        ->orWhereHas('deliveryRequest.company', function ($cq) use ($search) {
+                            $cq->where('company_code', 'like', '%' . $search . '%');
+                        });
+                });
+            });
+        }
+
+        $liquidations = $query->latest()->paginate($perPage)->appends($request->query());
 
         $liquidations->each(function ($liquidation) {
             $cashVoucher = $liquidation->cashVoucher;
-
-            // Initialize total expenses
             $totalExpenses = 0;
 
             if ($cashVoucher) {
-                // Load nested relationships
-                $cashVoucher->load([
-                    'deliveryRequest.company',
-                    'deliveryRequest.expenseType',
-                    'withholdingTax',
-                ]);
-
                 $deliveryRequest = $cashVoucher->deliveryRequest;
 
-                // Load allocation relation dynamically
                 $allocationRelation = match ($cashVoucher->cvr_type) {
-                    'delivery'     => 'deliveryAllocations',
-                    'pullout'      => 'pulloutAllocations',
-                    'accessorial'  => 'accessorialAllocations',
-                    'freight'      => 'freightAllocations',
-                    'others', 'admin', 'rpm' => 'othersAllocations',
-                    default        => null,
+                    'delivery'                    => 'deliveryAllocations',
+                    'pullout'                     => 'pulloutAllocations',
+                    'accessorial'                 => 'accessorialAllocations',
+                    'freight'                     => 'freightAllocations',
+                    'others', 'admin', 'rpm'      => 'othersAllocations',
+                    default                       => null,
                 };
 
                 if ($deliveryRequest && $allocationRelation && method_exists($deliveryRequest, $allocationRelation)) {
@@ -1537,7 +1551,6 @@ class LiquidationController extends Controller
                     $liquidation->allocations = collect();
                 }
 
-                // Direct expense fields (numeric)
                 $totalExpenses += (float) $liquidation->allowance;
                 $totalExpenses += (float) $liquidation->manpower;
                 $totalExpenses += (float) $liquidation->hauling;
@@ -1582,14 +1595,20 @@ class LiquidationController extends Controller
                     }
                 }
             } else {
-                $liquidation->allocations = collect(); // fallback
+                $liquidation->allocations = collect();
             }
 
-            // Attach total expense to the liquidation instance
             $liquidation->total_expense = $totalExpenses;
         });
 
-          return view('liquidations.rejectList', compact('liquidations'));
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'html'  => view('liquidations.partials.rejected-list-table', compact('liquidations', 'search', 'perPage'))->render(),
+                'total' => $liquidations->total(),
+            ]);
+        }
+
+        return view('liquidations.rejectList', compact('liquidations', 'search', 'perPage'));
     }
 
     public function rejectEdit($id)
@@ -1907,6 +1926,14 @@ class LiquidationController extends Controller
             'for_approval' => 'For Approval',
             'for_liquidation' => 'For Liquidation',
         ];
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'html'    => view('liquidations.partials.overall-table', compact('cashVouchers', 'summary'))->render(),
+                'summary' => $summary,
+                'total'   => $cashVouchers->total(),
+            ]);
+        }
 
         return view('liquidations.overall', compact(
             'cashVouchers',
