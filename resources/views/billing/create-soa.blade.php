@@ -992,6 +992,7 @@ function filterDeliveryRequests(resetPage = true) {
 
         setTimeout(() => {
             const matchedCards = [];
+            const seenMtms = new Set();
 
             // Get current filters
             const searchTerm = document.getElementById('searchDeliveryRequests').value.toLowerCase();
@@ -1059,6 +1060,15 @@ function filterDeliveryRequests(resetPage = true) {
                         const customerDropdownMatch = !customerFilter || (lineItem.deliveryRequest && lineItem.deliveryRequest.customerId == customerFilter);
 
                         shouldShow = shouldShow && searchMatch && companyDropdownMatch && customerDropdownMatch;
+                    }
+
+                    if (shouldShow) {
+                        // Deduplicate by MTM — only show the first record for each unique MTM
+                        if (seenMtms.has(lineItem.mtm)) {
+                            shouldShow = false;
+                        } else {
+                            seenMtms.add(lineItem.mtm);
+                        }
                     }
 
                     if (shouldShow) {
