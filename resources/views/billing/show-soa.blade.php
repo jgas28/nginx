@@ -47,13 +47,23 @@
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Company</label>
+                    <label class="block text-sm font-medium text-gray-700">Company Name</label>
                     <p class="mt-1">{{ $soa->company->company_name ?? 'N/A' }}</p>
                 </div>
 
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Customer</label>
+                    <label class="block text-sm font-medium text-gray-700">Customer Name</label>
                     <p class="mt-1">{{ $soa->customer->name ?? 'N/A' }}</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Customer TIN</label>
+                    <p class="mt-1">{{ $soa->customer->tin_no ?? 'N/A' }}</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Customer Address</label>
+                    <p class="mt-1">{{ $soa->customer->customer_address ?? 'N/A' }}</p>
                 </div>
 
                 <div>
@@ -191,7 +201,7 @@
                     </span>
                     <div>
                         <h2 class="text-base font-bold text-white">Billed Delivery Statement</h2>
-                        <p class="text-xs text-gray-400">SOA {{ $soa->soa_number }} · {{ $attachedDeliveryRequests->count() }} delivery request{{ $attachedDeliveryRequests->count() !== 1 ? 's' : '' }}</p>
+                        <p class="text-xs text-gray-400">SOA {{ $soa->soa_number }} • {{ $attachedDeliveryRequests->count() }} delivery request{{ $attachedDeliveryRequests->count() !== 1 ? 's' : '' }}</p>
                     </div>
                 </div>
                 <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold ring-1
@@ -239,7 +249,7 @@
                                     </span>
                                     <div>
                                         <p class="text-base font-bold text-gray-900 tracking-wide">{{ $dr->mtm ?? 'N/A' }}</p>
-                                        <p class="text-xs text-gray-500 mt-0.5">{{ $dr->company_name ?? 'N/A' }} · {{ $dr->customer_name ?? 'N/A' }}</p>
+                                        <p class="text-xs text-gray-500 mt-0.5">{{ $dr->company_name ?? 'N/A' }} • {{ $dr->customer_name ?? 'N/A' }}</p>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-2 flex-wrap">

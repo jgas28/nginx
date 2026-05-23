@@ -15,81 +15,92 @@
             padding: 32px;
         }
 
-        /* Header */
         .header {
             text-align: center;
-            margin-bottom: 24px;
+            margin-bottom: 18px;
         }
+
         .header h1 {
-            font-size: 22px;
-            font-weight: 700;
+            font-size: 30px;
+            font-weight: 800;
             color: #111827;
             letter-spacing: 1px;
         }
-        .header p {
-            font-size: 13px;
-            color: #4B5563;
-            margin-top: 4px;
-        }
 
-        /* Company + Dates row */
         .info-row {
             border-bottom: 2px solid #D1D5DB;
-            padding-bottom: 16px;
+            padding-bottom: 20px;
             margin-bottom: 16px;
             width: 100%;
         }
-        .info-table {
-            width: 100%;
-        }
-        .info-table td {
-            vertical-align: top;
-            padding: 0;
-        }
-        .info-table .right-col {
-            text-align: right;
-        }
+
         .company-name {
-            font-size: 15px;
-            font-weight: 700;
+            font-size: 22px;
+            font-weight: 800;
             color: #111827;
-            margin-bottom: 4px;
-        }
-        .info-line {
-            color: #4B5563;
-            margin-bottom: 2px;
+            margin-bottom: 6px;
+            text-align: center;
+            text-transform: uppercase;
         }
 
-        /* Bill To */
+        .info-line {
+            color: #4B5563;
+            font-size: 12px;
+        }
+
+        .company-col {
+            text-align: center;
+            width: 100%;
+        }
+
+        .si-wrap {
+            font-size: 12px;
+            font-weight: 700;
+            color: #374151;
+            line-height: 1;
+        }
+
+        .info-meta {
+            text-align: right;
+            font-size: 12px;
+            color: #4B5563;
+            line-height: 1;
+            margin-top: 6px;
+        }
+
         .section-title {
             font-size: 13px;
             font-weight: 700;
             color: #111827;
             margin-bottom: 6px;
         }
+
         .bill-to-box {
             border: 1px solid #D1D5DB;
             border-radius: 4px;
             padding: 10px 14px;
             margin-bottom: 16px;
         }
+
         .bill-to-box p {
             color: #111827;
             margin-bottom: 2px;
         }
+
         .bill-to-box .bold {
             font-weight: 700;
         }
 
-        /* Services table */
         .services-section {
             margin-bottom: 16px;
         }
+
         .services-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 11.5px;
         }
+
         .services-table th {
             background-color: #F3F4F6;
             border: 1px solid #D1D5DB;
@@ -98,35 +109,44 @@
             font-weight: 700;
             color: #111827;
         }
+
         .services-table th.right { text-align: right; }
+
         .services-table td {
             border: 1px solid #D1D5DB;
             padding: 6px 10px;
             color: #111827;
             vertical-align: top;
         }
+
         .services-table td.right { text-align: right; }
 
-        /* Totals rows */
         .totals-row td {
             background-color: #F9FAFB;
             font-weight: 600;
             padding: 8px 10px;
         }
+
         .subtotal-row td { background-color: #F9FAFB; color: #4B5563; }
         .discount-row td { background-color: #FEF2F2; color: #B91C1C; font-weight: 600; }
         .adjustment-row td { background-color: #EFF6FF; color: #1D4ED8; font-weight: 600; }
         .vat-row td { background-color: #FFF7ED; color: #C2410C; font-weight: 600; }
         .wtax-row td { background-color: #EEF2FF; color: #4338CA; font-weight: 600; }
         .total-amount td { font-weight: 700; font-size: 13px; color: #065F46; background-color: #ECFDF5; }
+
         .outstanding-row td {
             background-color: #FEF2F2;
             font-weight: 700;
             color: #DC2626;
         }
-        .remarks-note { font-size: 10px; font-style: italic; font-weight: 400; margin-left: 4px; }
 
-        /* Notes */
+        .remarks-note {
+            font-size: 10px;
+            font-style: italic;
+            font-weight: 400;
+            margin-left: 4px;
+        }
+
         .notes-box {
             border: 1px solid #D1D5DB;
             border-radius: 4px;
@@ -134,70 +154,45 @@
             background-color: #F9FAFB;
             margin-bottom: 16px;
         }
-        .notes-box p { color: #374151; }
 
-        /* Footer */
-        .footer {
-            border-top: 2px solid #D1D5DB;
-            padding-top: 16px;
-            margin-top: 24px;
-        }
-        .footer-table { width: 100%; }
-        .footer-table td { vertical-align: top; }
-        .footer-table .right-col { text-align: right; }
-        .footer-brand {
-            font-size: 14px;
-            font-weight: 700;
-            color: #111827;
-        }
-        .footer-sub { color: #4B5563; margin-top: 2px; }
-        .footer-meta { color: #4B5563; margin-bottom: 2px; }
+        .notes-box p { color: #374151; }
     </style>
 </head>
 <body>
 
-    {{-- Header --}}
     <div class="header">
         <h1>STATEMENT OF ACCOUNT</h1>
-        <p>{{ $soa->soa_number ?? 'N/A' }}</p>
     </div>
 
-    {{-- Company info + SOA dates --}}
     <div class="info-row">
-        <table class="info-table">
-            <tr>
-                <td style="width:50%;">
-                    <div class="company-name">FCZCNYX</div>
-                    <div class="info-line">123 Business Address</div>
-                    <div class="info-line">City, State, ZIP Code</div>
-                    <div class="info-line">Phone: (123) 456-7890</div>
-                    <div class="info-line">Email: info@fczcnyx.com</div>
-                </td>
-                <td class="right-col" style="width:50%;">
-                    <div class="info-line"><strong>Statement Date:</strong> {{ $soa->statement_date->format('M d, Y') }}</div>
-                    <div class="info-line"><strong>Billing Period:</strong> {{ $soa->billing_period_from->format('M d, Y') }} - {{ $soa->billing_period_to->format('M d, Y') }}</div>
-                    @if($soa->due_date)
-                        <div class="info-line"><strong>Due Date:</strong> {{ $soa->due_date->format('M d, Y') }}</div>
-                    @endif
-                    <div class="info-line"><strong>Status:</strong> {{ ucfirst($soa->status) }}</div>
-                </td>
-            </tr>
-        </table>
+        <div class="company-col">
+            <div class="company-name">{{ $soa->company->company_name ?? 'N/A' }}</div>
+            <div class="info-line">{{ $soa->company->company_location ?? 'N/A' }}</div>
+        </div>
+        <div class="info-meta">
+            <div class="si-wrap"><strong>SI No.:</strong> {{ $soa->soa_number ?? 'N/A' }}</div>
+            <div class="info-line" style="margin-top: 6px;"><strong>Statement Date:</strong> {{ $soa->statement_date->format('M d, Y') }}</div>
+            <div class="info-line" style="margin-top: 6px;"><strong>Billing Period:</strong> {{ $soa->billing_period_from->format('M d, Y') }} - {{ $soa->billing_period_to->format('M d, Y') }}</div>
+            @if($soa->due_date)
+                <div class="info-line" style="margin-top: 6px;"><strong>Due Date:</strong> {{ $soa->due_date->format('M d, Y') }}</div>
+            @endif
+            <div class="info-line" style="margin-top: 6px;"><strong>Status:</strong> {{ ucfirst($soa->status) }}</div>
+        </div>
     </div>
 
-    {{-- Bill To --}}
     <div class="section-title">Bill To:</div>
     <div class="bill-to-box">
-        @if($soa->company)
-            <p class="bold">{{ $soa->company->company_name }}</p>
-            <p>{{ $soa->company->company_location ?? 'N/A' }}</p>
-        @endif
         @if($soa->customer)
-            <p class="bold">{{ $soa->customer->name }}</p>
+            <p><span class="bold">Customer Name:</span> {{ $soa->customer->name }}</p>
+            <p><span class="bold">TIN:</span> {{ $soa->customer->tin_no ?: 'N/A' }}</p>
+            <p><span class="bold">Registered Address:</span> {{ $soa->customer->customer_address ?: 'N/A' }}</p>
+        @else
+            <p><span class="bold">Customer Name:</span> N/A</p>
+            <p><span class="bold">TIN:</span> N/A</p>
+            <p><span class="bold">Registered Address:</span> N/A</p>
         @endif
     </div>
 
-    {{-- Services Provided --}}
     <div class="services-section">
         <div class="section-title" style="margin-bottom:8px;">Services Provided</div>
         <table class="services-table">
@@ -233,12 +228,12 @@
                         </td>
                         <td style="text-align:center; font-size:10px; font-weight:600;">{{ $billingLabel }}</td>
                         <td class="right" style="{{ $billingType === 'accessorial_only' ? 'color:#9CA3AF;' : '' }}">
-                            {{ $billingType !== 'accessorial_only' ? '&#8369;'.number_format($drAmt, 2) : '—' }}
+                            {{ $billingType !== 'accessorial_only' ? '₱'.number_format($drAmt, 2) : '—' }}
                         </td>
                         <td class="right" style="{{ $billingType === 'delivery_only' ? 'color:#9CA3AF;' : '' }}">
-                            {{ $billingType !== 'delivery_only' ? '&#8369;'.number_format($acAmt, 2) : '—' }}
+                            {{ $billingType !== 'delivery_only' ? '₱'.number_format($acAmt, 2) : '—' }}
                         </td>
-                        <td class="right">&#8369;{{ number_format($dr->amount ?? 0, 2) }}</td>
+                        <td class="right">₱{{ number_format($dr->amount ?? 0, 2) }}</td>
                     </tr>
                 @empty
                     <tr>
@@ -259,7 +254,7 @@
                 @if($hasAdj)
                 <tr class="totals-row subtotal-row">
                     <td colspan="6" class="right">Subtotal:</td>
-                    <td class="right">&#8369;{{ number_format($subtotal, 2) }}</td>
+                    <td class="right">₱{{ number_format($subtotal, 2) }}</td>
                 </tr>
                 @if($discountAmt > 0)
                 <tr class="discount-row">
@@ -269,7 +264,7 @@
                             <span class="remarks-note">({{ $soa->discount_remarks }})</span>
                         @endif
                     </td>
-                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">-&#8369;{{ number_format($discountAmt, 2) }}</td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">-₱{{ number_format($discountAmt, 2) }}</td>
                 </tr>
                 @endif
                 @if($adjustmentAmt != 0)
@@ -280,61 +275,44 @@
                             <span class="remarks-note">({{ $soa->adjustment_remarks }})</span>
                         @endif
                     </td>
-                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">{{ $adjustmentAmt >= 0 ? '+' : '' }}&#8369;{{ number_format($adjustmentAmt, 2) }}</td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">{{ $adjustmentAmt >= 0 ? '+' : '' }}₱{{ number_format($adjustmentAmt, 2) }}</td>
                 </tr>
                 @endif
                 @endif
                 @if($vatAmount > 0)
                 <tr class="vat-row">
                     <td colspan="6" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">VAT (12%):</td>
-                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">+&#8369;{{ number_format($vatAmount, 2) }}</td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">+₱{{ number_format($vatAmount, 2) }}</td>
                 </tr>
                 @endif
                 @if($withholdingTaxAmount > 0)
                 <tr class="wtax-row">
                     <td colspan="6" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">WHT ({{ $withholdingTaxRate }}%):</td>
-                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">-&#8369;{{ number_format($withholdingTaxAmount, 2) }}</td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">-₱{{ number_format($withholdingTaxAmount, 2) }}</td>
                 </tr>
                 @endif
                 <tr class="totals-row total-amount">
                     <td colspan="6" class="right">Final Total:</td>
-                    <td class="right">&#8369;{{ number_format($soa->total_amount, 2) }}</td>
+                    <td class="right">₱{{ number_format($soa->total_amount, 2) }}</td>
                 </tr>
                 <tr class="totals-row">
                     <td colspan="6" class="right">Paid Amount:</td>
-                    <td class="right">&#8369;{{ number_format($soa->paid_amount, 2) }}</td>
+                    <td class="right">₱{{ number_format($soa->paid_amount, 2) }}</td>
                 </tr>
                 <tr class="outstanding-row">
                     <td colspan="6" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">Outstanding Amount:</td>
-                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">&#8369;{{ number_format($soa->outstanding_amount, 2) }}</td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">₱{{ number_format($soa->outstanding_amount, 2) }}</td>
                 </tr>
             </tfoot>
         </table>
     </div>
 
-    {{-- Notes --}}
     @if($soa->notes)
     <div class="section-title">Notes:</div>
     <div class="notes-box">
         <p>{{ $soa->notes }}</p>
     </div>
     @endif
-
-    {{-- Footer --}}
-    <div class="footer">
-        <table class="footer-table">
-            <tr>
-                <td style="width:50%;">
-                    <div class="footer-meta"><strong>Generated by:</strong> {{ $soa->creator->name ?? 'System' }}</div>
-                    <div class="footer-meta"><strong>Generated on:</strong> {{ now()->format('M d, Y H:i') }}</div>
-                </td>
-                <td class="right-col" style="width:50%;">
-                    <div class="footer-brand">FCZCNYX</div>
-                    <div class="footer-sub">Thank you for your business!</div>
-                </td>
-            </tr>
-        </table>
-    </div>
 
 </body>
 </html>

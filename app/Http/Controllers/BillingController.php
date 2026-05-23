@@ -110,6 +110,8 @@ class BillingController extends Controller
         $customers = Customer::orderBy('name')->get(['id', 'name']);
         $attachedDeliveryRequests = $this->getAttachedDeliveryRequests($soa);
         $editableDeliveryRequests = $this->getEditableDeliveryRequests($soa, $attachedDeliveryRequests, $companies, $customers);
+        $companyItemCounts = $editableDeliveryRequests->groupBy('company_id')->map->count();
+        $customerItemCounts = $editableDeliveryRequests->groupBy('customer_id')->map->count();
         $selectedDeliveryRequestIds = collect($soa->delivery_request_ids ?? [])
             ->merge(
                 $attachedDeliveryRequests
@@ -125,7 +127,7 @@ class BillingController extends Controller
             ->mapWithKeys(fn ($request) => [(int) $request->delivery_request_id => $request->billing_type ?? 'both'])
             ->all();
 
-        return view('billing.edit-soa', compact('soa', 'companies', 'customers', 'editableDeliveryRequests', 'selectedDeliveryRequestIds', 'currentBillingSelections'));
+        return view('billing.edit-soa', compact('soa', 'companies', 'customers', 'editableDeliveryRequests', 'selectedDeliveryRequestIds', 'currentBillingSelections', 'companyItemCounts', 'customerItemCounts'));
     }
 
     public function updateSOA(Request $request, Soa $soa)

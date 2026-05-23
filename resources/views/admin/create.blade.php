@@ -228,7 +228,7 @@
             </div>
         </div>
 
-        <div class="grid gap-6 lg:grid-cols-2">
+        <div class="space-y-6">
             <div class="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="mb-5 flex items-center justify-between gap-4">
                     <div class="flex items-center gap-3">

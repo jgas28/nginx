@@ -28,7 +28,7 @@
                     <!-- Company Selection -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Company <span class="text-red-500">*</span>
+                            Company Name <span class="text-red-500">*</span>
                         </label>
                         <!-- Hidden native select for form submission -->
                         <select id="company_id" name="company_id" class="hidden" onchange="onCompanyChange()">
@@ -82,7 +82,7 @@
                     <!-- Customer Selection -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Customer <span class="text-red-500">*</span>
+                            Customer Name <span class="text-red-500">*</span>
                         </label>
                         <!-- Hidden native select for form submission -->
                         <select id="customer_id" name="customer_id" class="hidden" onchange="onCustomerChange()">

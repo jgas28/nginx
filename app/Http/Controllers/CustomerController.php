@@ -18,7 +18,11 @@ class CustomerController extends Controller
         $perPage = in_array($perPage, [5, 10, 25, 50], true) ? $perPage : 10;
 
         $customers = Customer::when($search, function ($query, $search) {
-            return $query->where('name', 'like', '%' . $search . '%');
+            return $query->where(function ($customerQuery) use ($search) {
+                $customerQuery->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('tin_no', 'like', '%' . $search . '%')
+                    ->orWhere('customer_address', 'like', '%' . $search . '%');
+            });
         })
         ->orderBy('name')
         ->paginate($perPage)
@@ -52,13 +56,16 @@ class CustomerController extends Controller
     {
         // Validate the request data
         $request->validate([
-            'name' => 'required',
+            'name' => 'required|string|max:255',
+            'tin_no' => 'nullable|string|max:50',
+            'customer_address' => 'nullable|string|max:1000',
         ]);
 
         // Create new customer
         $customer = new Customer([
             'name' => $request->name,
-
+            'tin_no' => $request->tin_no,
+            'customer_address' => $request->customer_address,
         ]);
 
         $customer->save();
@@ -89,11 +96,15 @@ class CustomerController extends Controller
     {
         // Validate the request data
         $request->validate([
-            'name' => 'required',
+            'name' => 'required|string|max:255',
+            'tin_no' => 'nullable|string|max:50',
+            'customer_address' => 'nullable|string|max:1000',
         ]);
 
         // Update the customer details
         $customer->name = $request->name;
+        $customer->tin_no = $request->tin_no;
+        $customer->customer_address = $request->customer_address;
 
         $customer->save();
 

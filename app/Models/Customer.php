@@ -12,6 +12,8 @@ class Customer extends Model
 
     protected $fillable = [
         'name',
+        'tin_no',
+        'customer_address',
     ];
 
     public function deliveryRequests()

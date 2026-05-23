@@ -23,7 +23,7 @@
                 type="text"
                 id="customers-search"
                 value="{{ $search ?? '' }}"
-                placeholder="Search customer name..."
+                placeholder="Search customer name, TIN, or address..."
                 class="w-full rounded-xl border border-slate-300 bg-slate-50 py-2.5 pl-14 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
             >
         </div>
@@ -36,6 +36,8 @@
             <tr>
                 <th class="px-4 py-3 font-semibold sm:px-6">#</th>
                 <th class="px-4 py-3 font-semibold sm:px-6">Customer Name</th>
+                <th class="px-4 py-3 font-semibold sm:px-6">TIN</th>
+                <th class="px-4 py-3 font-semibold sm:px-6">Customer Address</th>
                 <th class="px-4 py-3 font-semibold sm:px-6 text-right">Actions</th>
             </tr>
         </thead>
@@ -51,6 +53,14 @@
                                 <i class="fas fa-user-group text-[11px]"></i>
                             </span>
                             <span>{{ $customer->name }}</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3.5 text-sm text-slate-700 sm:px-6">
+                        {{ $customer->tin_no ?: 'N/A' }}
+                    </td>
+                    <td class="px-4 py-3.5 text-sm text-slate-700 sm:px-6">
+                        <div class="max-w-md whitespace-normal break-words">
+                            {{ $customer->customer_address ?: 'N/A' }}
                         </div>
                     </td>
                     <td class="px-4 py-3.5 sm:px-6">
@@ -76,7 +86,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="3" class="px-4 py-12 text-center text-slate-500 sm:px-6">
+                    <td colspan="5" class="px-4 py-12 text-center text-slate-500 sm:px-6">
                         <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                             <i class="fas fa-user-group text-lg"></i>
                         </div>

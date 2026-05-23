@@ -49,10 +49,20 @@
                         <label for="name" class="mb-2 block text-sm font-semibold text-slate-700">Customer Name</label>
                         <input type="text" name="name" id="name" value="{{ old('name') }}" required maxlength="255" autocomplete="off" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100">
                     </div>
+
+                    <div class="rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
+                        <label for="tin_no" class="mb-2 block text-sm font-semibold text-slate-700">TIN</label>
+                        <input type="text" name="tin_no" id="tin_no" value="{{ old('tin_no') }}" maxlength="50" autocomplete="off" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100">
+                    </div>
+
+                    <div class="rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
+                        <label for="customer_address" class="mb-2 block text-sm font-semibold text-slate-700">Customer Address</label>
+                        <textarea name="customer_address" id="customer_address" rows="4" maxlength="1000" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100">{{ old('customer_address') }}</textarea>
+                    </div>
                 </div>
 
                 <div class="flex flex-col-reverse gap-3 border-t border-slate-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                    <p class="text-sm text-slate-500">Use the customer name that should appear consistently in delivery and billing records.</p>
+                    <p class="text-sm text-slate-500">Keep the customer name, TIN, and address complete so billing and SOA records stay consistent.</p>
                     <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
                         <a href="{{ route('customers.index') }}" class="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:bg-slate-50">
                             <i class="fas fa-times"></i>

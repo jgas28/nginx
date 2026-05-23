@@ -26,38 +26,98 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label for="company_id" class="block text-sm font-medium text-gray-700 mb-2">
-                            Company <span class="text-red-500">*</span>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Company Name <span class="text-red-500">*</span>
                         </label>
-                        <select id="company_id" name="company_id"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                onchange="filterEditDeliveryRequests()">
-                            <option value="">Select Company</option>
+                        <select id="company_id" name="company_id" class="hidden" onchange="filterEditDeliveryRequests()">
+                            <option value="">Select Company Name</option>
                             @foreach($companies as $company)
                                 <option value="{{ $company->id }}" {{ (string) old('company_id', $soa->company_id) === (string) $company->id ? 'selected' : '' }}>
                                     {{ $company->company_name }}
                                 </option>
                             @endforeach
                         </select>
+                        <div class="relative" id="edit-company-select-wrapper">
+                            <button type="button" id="edit-company-trigger"
+                                    class="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-left focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                                    onclick="toggleEditCustomSelect('company')">
+                                <span id="edit-company-display" class="truncate text-sm text-gray-400">Select Company Name</span>
+                                <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-200" id="edit-company-chevron"></i>
+                            </button>
+                            <div id="edit-company-dropdown" class="absolute z-20 mt-1 hidden max-h-64 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl">
+                                <div class="p-1.5">
+                                    <div class="cursor-pointer rounded-lg px-3 py-2 text-sm text-gray-400 hover:bg-gray-50"
+                                         onclick="selectEditCompanyOption('', 'Select Company Name', 0)">
+                                        Select Company Name
+                                    </div>
+                                    @foreach($companies as $company)
+                                        @php $pendingCount = $companyItemCounts[$company->id] ?? 0; @endphp
+                                        <div class="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-blue-50"
+                                             onclick="selectEditCompanyOption('{{ $company->id }}', {{ json_encode($company->company_name) }}, {{ $pendingCount }})">
+                                            <span class="truncate text-sm text-gray-900">{{ $company->company_name }}</span>
+                                            @if($pendingCount > 0)
+                                                <span class="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                                                    <i class="fas fa-clock"></i>{{ $pendingCount }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                        <div id="edit-company-pending-hint" class="mt-2 hidden items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
+                            <i class="fas fa-clock"></i>
+                            <span id="edit-company-pending-hint-text"></span>
+                        </div>
                         @error('company_id')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
 
                     <div>
-                        <label for="customer_id" class="block text-sm font-medium text-gray-700 mb-2">
-                            Customer <span class="text-red-500">*</span>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Customer Name <span class="text-red-500">*</span>
                         </label>
-                        <select id="customer_id" name="customer_id"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                onchange="filterEditDeliveryRequests()">
-                            <option value="">Select Customer</option>
+                        <select id="customer_id" name="customer_id" class="hidden" onchange="filterEditDeliveryRequests()">
+                            <option value="">Select Customer Name</option>
                             @foreach($customers as $customer)
                                 <option value="{{ $customer->id }}" {{ (string) old('customer_id', $soa->customer_id) === (string) $customer->id ? 'selected' : '' }}>
                                     {{ $customer->name }}
                                 </option>
                             @endforeach
                         </select>
+                        <div class="relative" id="edit-customer-select-wrapper">
+                            <button type="button" id="edit-customer-trigger"
+                                    class="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-left focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                                    onclick="toggleEditCustomSelect('customer')">
+                                <span id="edit-customer-display" class="truncate text-sm text-gray-400">Select Customer Name</span>
+                                <i class="fas fa-chevron-down text-xs text-gray-400 transition-transform duration-200" id="edit-customer-chevron"></i>
+                            </button>
+                            <div id="edit-customer-dropdown" class="absolute z-20 mt-1 hidden max-h-64 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl">
+                                <div class="p-1.5">
+                                    <div class="cursor-pointer rounded-lg px-3 py-2 text-sm text-gray-400 hover:bg-gray-50"
+                                         onclick="selectEditCustomerOption('', 'Select Customer Name', 0)">
+                                        Select Customer Name
+                                    </div>
+                                    @foreach($customers as $customer)
+                                        @php $pendingCount = $customerItemCounts[$customer->id] ?? 0; @endphp
+                                        <div class="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-3 py-2 transition-colors hover:bg-blue-50"
+                                             onclick="selectEditCustomerOption('{{ $customer->id }}', {{ json_encode($customer->name) }}, {{ $pendingCount }})">
+                                            <span class="truncate text-sm text-gray-900">{{ $customer->name }}</span>
+                                            @if($pendingCount > 0)
+                                                <span class="inline-flex flex-shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-amber-200 bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                                                    <i class="fas fa-clock"></i>{{ $pendingCount }}
+                                                </span>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                        <div id="edit-customer-pending-hint" class="mt-2 hidden items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
+                            <i class="fas fa-clock"></i>
+                            <span id="edit-customer-pending-hint-text"></span>
+                        </div>
                         @error('customer_id')
                             <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                         @enderror
@@ -1227,6 +1287,83 @@ function closeEditValidationModal() {
     document.body.classList.remove('overflow-hidden');
 }
 
+const editCustomSelectOpen = { company: false, customer: false };
+const editCompanyPendingCounts = {
+    @foreach($companies as $company)
+    {{ $company->id }}: {{ $companyItemCounts[$company->id] ?? 0 }},
+    @endforeach
+};
+const editCustomerPendingCounts = {
+    @foreach($customers as $customer)
+    {{ $customer->id }}: {{ $customerItemCounts[$customer->id] ?? 0 }},
+    @endforeach
+};
+
+function closeAllEditCustomSelects() {
+    ['company', 'customer'].forEach((type) => {
+        editCustomSelectOpen[type] = false;
+        document.getElementById(`edit-${type}-dropdown`)?.classList.add('hidden');
+        document.getElementById(`edit-${type}-chevron`)?.classList.remove('rotate-180');
+    });
+}
+
+function toggleEditCustomSelect(type) {
+    const wasOpen = editCustomSelectOpen[type];
+    closeAllEditCustomSelects();
+
+    if (!wasOpen) {
+        editCustomSelectOpen[type] = true;
+        document.getElementById(`edit-${type}-dropdown`)?.classList.remove('hidden');
+        document.getElementById(`edit-${type}-chevron`)?.classList.add('rotate-180');
+    }
+}
+
+function applyEditCustomSelect(type, value, label, pendingCount) {
+    const select = document.getElementById(`${type}_id`);
+    if (!select) {
+        return;
+    }
+
+    select.value = value;
+
+    const display = document.getElementById(`edit-${type}-display`);
+    if (display) {
+        if (value) {
+            display.textContent = label;
+            display.classList.remove('text-gray-400');
+            display.classList.add('text-gray-900');
+        } else {
+            display.textContent = type === 'company' ? 'Select Company Name' : 'Select Customer Name';
+            display.classList.remove('text-gray-900');
+            display.classList.add('text-gray-400');
+        }
+    }
+
+    const hint = document.getElementById(`edit-${type}-pending-hint`);
+    const hintText = document.getElementById(`edit-${type}-pending-hint-text`);
+    if (hint && hintText) {
+        if (value && pendingCount > 0) {
+            hintText.textContent = `${pendingCount} pending delivery request${pendingCount !== 1 ? 's' : ''} available`;
+            hint.classList.remove('hidden');
+            hint.classList.add('flex');
+        } else {
+            hint.classList.add('hidden');
+            hint.classList.remove('flex');
+        }
+    }
+
+    closeAllEditCustomSelects();
+    select.dispatchEvent(new Event('change'));
+}
+
+function selectEditCompanyOption(value, label, pendingCount) {
+    applyEditCustomSelect('company', value, label, pendingCount);
+}
+
+function selectEditCustomerOption(value, label, pendingCount) {
+    applyEditCustomSelect('customer', value, label, pendingCount);
+}
+
 function selectAllRequests() {
     document.querySelectorAll('.edit-delivery-item:not(.hidden) .edit-delivery-checkbox').forEach((checkbox) => {
         checkbox.checked = true;
@@ -1306,6 +1443,17 @@ function validateAndSubmitEditForm(event) {
 document.addEventListener('DOMContentLoaded', function () {
     populateEditFilterDropdowns();
 
+    ['company', 'customer'].forEach((type) => {
+        const select = document.getElementById(`${type}_id`);
+        if (select && select.value) {
+            const option = select.querySelector(`option[value="${select.value}"]`);
+            const counts = type === 'company' ? editCompanyPendingCounts : editCustomerPendingCounts;
+            if (option) {
+                applyEditCustomSelect(type, select.value, option.textContent.trim(), counts[select.value] || 0);
+            }
+        }
+    });
+
     initialEditSelectedIds.forEach((itemId) => {
         editCheckedItemIds.add(parseInt(itemId, 10));
     });
@@ -1366,8 +1514,15 @@ document.addEventListener('DOMContentLoaded', function () {
         if (event.key === 'Escape') {
             closeEditSummaryModal();
             closeEditValidationModal();
+            closeAllEditCustomSelects();
         }
     });
+});
+
+document.addEventListener('click', function (event) {
+    if (!event.target.closest('#edit-company-select-wrapper') && !event.target.closest('#edit-customer-select-wrapper')) {
+        closeAllEditCustomSelects();
+    }
 });
 </script>
 @endsection
