@@ -26,6 +26,12 @@
         min-width: 100% !important;
         max-width: 100% !important;
     }
+    #requestor + [data-searchable-select-wrapper] [data-searchable-select-panel] .relative > span {
+        left: 0.95rem;
+    }
+    #requestor + [data-searchable-select-wrapper] [data-searchable-select-input] {
+        padding-left: 3rem !important;
+    }
     #requestor + [data-searchable-select-wrapper] [data-searchable-select-list] {
         max-height: 18rem;
         overflow-y: auto;
