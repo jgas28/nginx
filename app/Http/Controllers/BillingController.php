@@ -85,13 +85,15 @@ class BillingController extends Controller
 
     public function index(Request $request)
     {
-        $query = $this->buildSoaIndexQuery($request);
+        $allSoasQuery = $this->buildSoaIndexQuery($request, false);
 
-        $soas             = $query->orderBy('created_at', 'desc')->get();
+        $soas             = $allSoasQuery->orderBy('created_at', 'desc')->get();
+        $waitingSoas      = $soas->filter(fn ($soa) => strtolower((string) $soa->status) !== 'paid')->values();
+        $paidSoas         = $soas->filter(fn ($soa) => strtolower((string) $soa->status) === 'paid')->values();
         $stats            = $this->soaStats();
         $billedDeliveries = $this->getBilledDeliveries();
 
-        return view('billing.index', compact('soas', 'stats', 'billedDeliveries'));
+        return view('billing.index', compact('soas', 'waitingSoas', 'paidSoas', 'stats', 'billedDeliveries'));
     }
 
     public function exportExcel(Request $request)
@@ -1153,7 +1155,7 @@ class BillingController extends Controller
         return [];
     }
 
-    private function buildSoaIndexQuery(Request $request)
+    private function buildSoaIndexQuery(Request $request, bool $applyStatusFilter = true)
     {
         $query = Soa::with(['company', 'customer', 'creator']);
 
@@ -1171,7 +1173,7 @@ class BillingController extends Controller
             $query->where('billing_period_to', '<=', $request->date_to);
         }
 
-        if ($request->filled('status')) {
+        if ($applyStatusFilter && $request->filled('status')) {
             $query->where('status', $request->status);
         }
 

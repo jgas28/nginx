@@ -159,7 +159,6 @@
     </style>
 </head>
 <body>
-
     <div class="header">
         <h1>STATEMENT OF ACCOUNT</h1>
     </div>
@@ -229,12 +228,12 @@
                         </td>
                         <td style="text-align:center; font-size:10px; font-weight:600;">{{ $billingLabel }}</td>
                         <td class="right" style="{{ $billingType === 'accessorial_only' ? 'color:#9CA3AF;' : '' }}">
-                            {{ $billingType !== 'accessorial_only' ? '₱'.number_format($drAmt, 2) : '—' }}
+                            {!! $billingType !== 'accessorial_only' ? '&#8369;'.number_format($drAmt, 2) : '&mdash;' !!}
                         </td>
                         <td class="right" style="{{ $billingType === 'delivery_only' ? 'color:#9CA3AF;' : '' }}">
-                            {{ $billingType !== 'delivery_only' ? '₱'.number_format($acAmt, 2) : '—' }}
+                            {!! $billingType !== 'delivery_only' ? '&#8369;'.number_format($acAmt, 2) : '&mdash;' !!}
                         </td>
-                        <td class="right">₱{{ number_format($dr->amount ?? 0, 2) }}</td>
+                        <td class="right">{!! '&#8369;'.number_format($dr->amount ?? 0, 2) !!}</td>
                     </tr>
                 @empty
                     <tr>
@@ -255,7 +254,7 @@
                 @if($hasAdj)
                 <tr class="totals-row subtotal-row">
                     <td colspan="6" class="right">Subtotal:</td>
-                    <td class="right">₱{{ number_format($subtotal, 2) }}</td>
+                    <td class="right">{!! '&#8369;'.number_format($subtotal, 2) !!}</td>
                 </tr>
                 @if($discountAmt > 0)
                 <tr class="discount-row">
@@ -265,7 +264,7 @@
                             <span class="remarks-note">({{ $soa->discount_remarks }})</span>
                         @endif
                     </td>
-                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">-₱{{ number_format($discountAmt, 2) }}</td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">-{!! '&#8369;'.number_format($discountAmt, 2) !!}</td>
                 </tr>
                 @endif
                 @if($adjustmentAmt != 0)
@@ -276,33 +275,33 @@
                             <span class="remarks-note">({{ $soa->adjustment_remarks }})</span>
                         @endif
                     </td>
-                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">{{ $adjustmentAmt >= 0 ? '+' : '' }}₱{{ number_format($adjustmentAmt, 2) }}</td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">{{ $adjustmentAmt >= 0 ? '+' : '' }}{!! '&#8369;'.number_format($adjustmentAmt, 2) !!}</td>
                 </tr>
                 @endif
                 @endif
                 @if($vatAmount > 0)
                 <tr class="vat-row">
                     <td colspan="6" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">VAT (12%):</td>
-                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">+₱{{ number_format($vatAmount, 2) }}</td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">+{!! '&#8369;'.number_format($vatAmount, 2) !!}</td>
                 </tr>
                 @endif
                 @if($withholdingTaxAmount > 0)
                 <tr class="wtax-row">
                     <td colspan="6" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">WHT ({{ $withholdingTaxRate }}%):</td>
-                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">-₱{{ number_format($withholdingTaxAmount, 2) }}</td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">-{!! '&#8369;'.number_format($withholdingTaxAmount, 2) !!}</td>
                 </tr>
                 @endif
                 <tr class="totals-row total-amount">
                     <td colspan="6" class="right">Final Total:</td>
-                    <td class="right">₱{{ number_format($soa->total_amount, 2) }}</td>
+                    <td class="right">{!! '&#8369;'.number_format($soa->total_amount, 2) !!}</td>
                 </tr>
                 <tr class="totals-row">
                     <td colspan="6" class="right">Paid Amount:</td>
-                    <td class="right">₱{{ number_format($soa->paid_amount, 2) }}</td>
+                    <td class="right">{!! '&#8369;'.number_format($soa->paid_amount, 2) !!}</td>
                 </tr>
                 <tr class="outstanding-row">
                     <td colspan="6" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">Outstanding Amount:</td>
-                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">₱{{ number_format($soa->outstanding_amount, 2) }}</td>
+                    <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">{!! '&#8369;'.number_format($soa->outstanding_amount, 2) !!}</td>
                 </tr>
             </tfoot>
         </table>
@@ -314,6 +313,5 @@
         <p>{{ $soa->notes }}</p>
     </div>
     @endif
-
 </body>
 </html>

@@ -129,9 +129,17 @@
             <!-- Tab Headers -->
             <div class="border-b border-gray-200 px-6 pt-4">
                 <nav class="flex gap-1" id="billingTabNav">
-                    <button onclick="switchTab('table')" id="tab-btn-table"
+                    <button onclick="switchTab('waiting')" id="tab-btn-waiting"
                         class="tab-btn px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 border-blue-600 text-blue-600 bg-blue-50 transition">
-                        <i class="fas fa-table mr-2"></i>SOA Records
+                        <i class="fas fa-clock mr-2"></i>Waiting to be Paid
+                    </button>
+                    <button onclick="switchTab('paid')" id="tab-btn-paid"
+                        class="tab-btn px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition">
+                        <i class="fas fa-circle-check mr-2"></i>Paid SOA
+                    </button>
+                    <button onclick="switchTab('table')" id="tab-btn-table"
+                        class="tab-btn px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition">
+                        <i class="fas fa-table mr-2"></i>All SOA List
                     </button>
                     <button onclick="switchTab('analytics')" id="tab-btn-analytics"
                         class="tab-btn px-5 py-2.5 text-sm font-medium rounded-t-lg border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition">
@@ -148,9 +156,151 @@
                 </nav>
             </div>
 
-            <!-- Tab: SOA Records (default) -->
-            <div id="tab-table">
+            <!-- Tab: Waiting to be Paid (default) -->
+            <div id="tab-waiting">
+                <div class="overflow-x-auto">
+                    <table id="waitingSoaTable" class="w-full text-sm text-left text-gray-600 display">
+                        <thead class="bg-gray-100 text-gray-900 font-semibold">
+                            <tr>
+                                <th class="px-6 py-3">SOA Number</th>
+                                <th class="px-6 py-3">Statement Date</th>
+                                <th class="px-6 py-3">Company</th>
+                                <th class="px-6 py-3">Customer</th>
+                                <th class="px-6 py-3">Billing Period</th>
+                                <th class="px-6 py-3">Total Amount</th>
+                                <th class="px-6 py-3">Status</th>
+                                <th class="px-6 py-3">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @foreach($waitingSoas ?? [] as $soa)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 font-medium" data-order="{{ optional($soa->created_at)->timestamp ?? 0 }}">{{ $soa->soa_number }}</td>
+                                    <td class="px-6 py-4" data-order="{{ optional($soa->statement_date)->format('Ymd') ?? '' }}">{{ optional($soa->statement_date)->format('M d, Y') }}</td>
+                                    <td class="px-6 py-4">{{ $soa->company->company_name ?? 'N/A' }}</td>
+                                    <td class="px-6 py-4">{{ $soa->customer->name ?? 'N/A' }}</td>
+                                    <td class="px-6 py-4">
+                                        {{ optional($soa->billing_period_from)->format('M d') ?? 'N/A' }} - {{ optional($soa->billing_period_to)->format('M d, Y') ?? 'N/A' }}
+                                    </td>
+                                    <td class="px-6 py-4 font-semibold">â‚±{{ number_format($soa->total_amount, 2) }}</td>
+                                    <td class="px-6 py-4">
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full
+                                            @if($soa->status == 'paid') bg-green-100 text-green-800
+                                            @elseif($soa->status == 'pending') bg-yellow-100 text-yellow-800
+                                            @elseif($soa->status == 'approved') bg-blue-100 text-blue-800
+                                            @elseif($soa->status == 'overdue') bg-red-100 text-red-800
+                                            @else bg-gray-100 text-gray-800 @endif">
+                                            {{ ucfirst($soa->status) }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex gap-2 items-center">
+                                            <a href="{{ route('billing.showSoa', $soa->id) }}" class="text-blue-600 hover:text-blue-800" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ route('billing.editSoa', $soa->id) }}" class="text-indigo-600 hover:text-indigo-800" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form method="POST" action="{{ route('billing.markPaid', $soa->id) }}" class="inline js-mark-paid-form" data-soa-number="{{ $soa->soa_number }}">
+                                                @csrf
+                                                <button type="submit" class="text-emerald-600 hover:text-emerald-800" title="Mark as Paid">
+                                                    <i class="fas fa-circle-check"></i>
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="{{ route('billing.destroySoa', $soa->id) }}" onsubmit="return confirm('Delete this SOA?');" class="inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-600 hover:text-red-800" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                            <a href="{{ route('soa.print', $soa->id) }}" class="text-green-600 hover:text-green-800" target="_blank" title="Print">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                            <a href="{{ route('soa.downloadPdf', $soa->id) }}" class="text-red-600 hover:text-red-800" title="Download PDF">
+                                                <i class="fas fa-file-pdf"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab: Paid SOA -->
+            <div id="tab-paid" class="hidden">
+                <div class="overflow-x-auto">
+                    <table id="paidSoaTable" class="w-full text-sm text-left text-gray-600 display">
+                        <thead class="bg-gray-100 text-gray-900 font-semibold">
+                            <tr>
+                                <th class="px-6 py-3">SOA Number</th>
+                                <th class="px-6 py-3">Statement Date</th>
+                                <th class="px-6 py-3">Company</th>
+                                <th class="px-6 py-3">Customer</th>
+                                <th class="px-6 py-3">Billing Period</th>
+                                <th class="px-6 py-3">Total Amount</th>
+                                <th class="px-6 py-3">Status</th>
+                                <th class="px-6 py-3">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            @foreach($paidSoas ?? [] as $soa)
+                                <tr class="hover:bg-gray-50">
+                                    <td class="px-6 py-4 font-medium" data-order="{{ optional($soa->created_at)->timestamp ?? 0 }}">{{ $soa->soa_number }}</td>
+                                    <td class="px-6 py-4" data-order="{{ optional($soa->statement_date)->format('Ymd') ?? '' }}">{{ optional($soa->statement_date)->format('M d, Y') }}</td>
+                                    <td class="px-6 py-4">{{ $soa->company->company_name ?? 'N/A' }}</td>
+                                    <td class="px-6 py-4">{{ $soa->customer->name ?? 'N/A' }}</td>
+                                    <td class="px-6 py-4">
+                                        {{ optional($soa->billing_period_from)->format('M d') ?? 'N/A' }} - {{ optional($soa->billing_period_to)->format('M d, Y') ?? 'N/A' }}
+                                    </td>
+                                    <td class="px-6 py-4 font-semibold">Ã¢â€šÂ±{{ number_format($soa->total_amount, 2) }}</td>
+                                    <td class="px-6 py-4">
+                                        <span class="px-2 py-1 text-xs font-medium rounded-full
+                                            @if($soa->status == 'paid') bg-green-100 text-green-800
+                                            @elseif($soa->status == 'pending') bg-yellow-100 text-yellow-800
+                                            @elseif($soa->status == 'approved') bg-blue-100 text-blue-800
+                                            @elseif($soa->status == 'overdue') bg-red-100 text-red-800
+                                            @else bg-gray-100 text-gray-800 @endif">
+                                            {{ ucfirst($soa->status) }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4">
+                                        <div class="flex gap-2 items-center">
+                                            <a href="{{ route('billing.showSoa', $soa->id) }}" class="text-blue-600 hover:text-blue-800" title="View">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{{ route('billing.editSoa', $soa->id) }}" class="text-indigo-600 hover:text-indigo-800" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form method="POST" action="{{ route('billing.destroySoa', $soa->id) }}" onsubmit="return confirm('Delete this SOA?');" class="inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="text-red-600 hover:text-red-800" title="Delete">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                            <a href="{{ route('soa.print', $soa->id) }}" class="text-green-600 hover:text-green-800" target="_blank" title="Print">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                            <a href="{{ route('soa.downloadPdf', $soa->id) }}" class="text-red-600 hover:text-red-800" title="Download PDF">
+                                                <i class="fas fa-file-pdf"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Tab: All SOA List -->
+            <div id="tab-table" class="hidden">
                 <style>
+                    #paidSoaTable_wrapper .billing-table-toolbar,
+                    #waitingSoaTable_wrapper .billing-table-toolbar,
                     #soaTable_wrapper .billing-table-toolbar {
                         display: flex;
                         flex-wrap: wrap;
@@ -160,12 +310,18 @@
                         padding: 1.25rem 1.5rem 0.75rem;
                     }
 
+                    #paidSoaTable_wrapper .billing-table-toolbar .dataTables_length,
+                    #paidSoaTable_wrapper .billing-table-toolbar .dataTables_filter,
+                    #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_length,
+                    #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_filter,
                     #soaTable_wrapper .billing-table-toolbar .dataTables_length,
                     #soaTable_wrapper .billing-table-toolbar .dataTables_filter {
                         float: none;
                         margin: 0;
                     }
 
+                    #paidSoaTable_wrapper .billing-table-toolbar .dataTables_length,
+                    #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_length,
                     #soaTable_wrapper .billing-table-toolbar .dataTables_length {
                         display: flex;
                         align-items: center;
@@ -174,6 +330,10 @@
                         font-size: 0.95rem;
                     }
 
+                    #paidSoaTable_wrapper .billing-table-toolbar .dataTables_length label,
+                    #paidSoaTable_wrapper .billing-table-toolbar .dataTables_filter label,
+                    #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_length label,
+                    #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_filter label,
                     #soaTable_wrapper .billing-table-toolbar .dataTables_length label,
                     #soaTable_wrapper .billing-table-toolbar .dataTables_filter label {
                         display: flex;
@@ -184,10 +344,16 @@
                         color: #334155;
                     }
 
+                    #paidSoaTable_wrapper .billing-table-toolbar .dataTables_filter,
+                    #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_filter,
                     #soaTable_wrapper .billing-table-toolbar .dataTables_filter {
                         margin-left: auto;
                     }
 
+                    #paidSoaTable_wrapper .billing-table-toolbar .dataTables_filter input,
+                    #paidSoaTable_wrapper .billing-table-toolbar .dataTables_length select,
+                    #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_filter input,
+                    #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_length select,
                     #soaTable_wrapper .billing-table-toolbar .dataTables_filter input,
                     #soaTable_wrapper .billing-table-toolbar .dataTables_length select {
                         margin: 0;
@@ -201,15 +367,23 @@
                         box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
                     }
 
+                    #paidSoaTable_wrapper .billing-table-toolbar .dataTables_filter input,
+                    #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_filter input,
                     #soaTable_wrapper .billing-table-toolbar .dataTables_filter input {
                         min-width: 320px;
                     }
 
+                    #paidSoaTable_wrapper .billing-table-toolbar .dataTables_length select,
+                    #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_length select,
                     #soaTable_wrapper .billing-table-toolbar .dataTables_length select {
                         min-width: 88px;
                         padding-right: 2.5rem;
                     }
 
+                    #paidSoaTable_wrapper .billing-table-toolbar .dataTables_filter input:focus,
+                    #paidSoaTable_wrapper .billing-table-toolbar .dataTables_length select:focus,
+                    #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_filter input:focus,
+                    #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_length select:focus,
                     #soaTable_wrapper .billing-table-toolbar .dataTables_filter input:focus,
                     #soaTable_wrapper .billing-table-toolbar .dataTables_length select:focus {
                         border-color: #3b82f6;
@@ -217,6 +391,8 @@
                         box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.14);
                     }
 
+                    #paidSoaTable_wrapper .billing-table-footer,
+                    #waitingSoaTable_wrapper .billing-table-footer,
                     #soaTable_wrapper .billing-table-footer {
                         display: flex;
                         flex-wrap: wrap;
@@ -226,6 +402,10 @@
                         padding: 0.75rem 1.5rem 1.25rem;
                     }
 
+                    #paidSoaTable_wrapper .billing-table-footer .dataTables_info,
+                    #paidSoaTable_wrapper .billing-table-footer .dataTables_paginate,
+                    #waitingSoaTable_wrapper .billing-table-footer .dataTables_info,
+                    #waitingSoaTable_wrapper .billing-table-footer .dataTables_paginate,
                     #soaTable_wrapper .billing-table-footer .dataTables_info,
                     #soaTable_wrapper .billing-table-footer .dataTables_paginate {
                         float: none;
@@ -233,14 +413,30 @@
                     }
 
                     @media (max-width: 767px) {
+                        #paidSoaTable_wrapper .billing-table-toolbar,
+                        #paidSoaTable_wrapper .billing-table-footer,
+                        #waitingSoaTable_wrapper .billing-table-toolbar,
+                        #waitingSoaTable_wrapper .billing-table-footer,
                         #soaTable_wrapper .billing-table-toolbar,
                         #soaTable_wrapper .billing-table-footer {
                             padding-left: 1rem;
                             padding-right: 1rem;
                         }
 
+                        #paidSoaTable_wrapper .billing-table-toolbar,
+                        #waitingSoaTable_wrapper .billing-table-toolbar,
                         #soaTable_wrapper .billing-table-toolbar { align-items: stretch; }
 
+                        #paidSoaTable_wrapper .billing-table-toolbar .dataTables_filter,
+                        #paidSoaTable_wrapper .billing-table-toolbar .dataTables_filter label,
+                        #paidSoaTable_wrapper .billing-table-toolbar .dataTables_filter input,
+                        #paidSoaTable_wrapper .billing-table-toolbar .dataTables_length,
+                        #paidSoaTable_wrapper .billing-table-toolbar .dataTables_length label,
+                        #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_filter,
+                        #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_filter label,
+                        #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_filter input,
+                        #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_length,
+                        #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_length label,
                         #soaTable_wrapper .billing-table-toolbar .dataTables_filter,
                         #soaTable_wrapper .billing-table-toolbar .dataTables_filter label,
                         #soaTable_wrapper .billing-table-toolbar .dataTables_filter input,
@@ -249,13 +445,21 @@
                             width: 100%;
                         }
 
+                        #paidSoaTable_wrapper .billing-table-toolbar .dataTables_filter,
+                        #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_filter,
                         #soaTable_wrapper .billing-table-toolbar .dataTables_filter { margin-left: 0; }
 
+                        #paidSoaTable_wrapper .billing-table-toolbar .dataTables_filter label,
+                        #paidSoaTable_wrapper .billing-table-toolbar .dataTables_length label,
+                        #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_filter label,
+                        #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_length label,
                         #soaTable_wrapper .billing-table-toolbar .dataTables_filter label,
                         #soaTable_wrapper .billing-table-toolbar .dataTables_length label {
                             justify-content: space-between;
                         }
 
+                        #paidSoaTable_wrapper .billing-table-toolbar .dataTables_filter input,
+                        #waitingSoaTable_wrapper .billing-table-toolbar .dataTables_filter input,
                         #soaTable_wrapper .billing-table-toolbar .dataTables_filter input {
                             min-width: 0;
                             width: 100%;
@@ -540,7 +744,7 @@
     let billedTableInitialized = false;
 
     function switchTab(name) {
-        ['table', 'analytics', 'deliveries'].forEach(t => {
+        ['waiting', 'paid', 'table', 'analytics', 'deliveries'].forEach(t => {
             document.getElementById('tab-' + t).classList.toggle('hidden', t !== name);
             const btn = document.getElementById('tab-btn-' + t);
             if (t === name) {
@@ -584,6 +788,50 @@
 
     // ── DataTable ────────────────────────────────────────────────
     $(document).ready(function () {
+        $('#waitingSoaTable').DataTable({
+            pageLength: 10,
+            order: [[0, 'desc']],
+            autoWidth: false,
+            dom: '<"billing-table-toolbar"lf>t<"billing-table-footer"ip>',
+            columns: [
+                { width: '18%' },
+                { width: '12%' },
+                { width: '18%' },
+                { width: '18%' },
+                { width: '18%' },
+                { width: '10%', className: 'text-right' },
+                { width: '8%' },
+                { orderable: false, searchable: false, width: '8%' }
+            ],
+            columnDefs: [{ orderable: false, targets: 7 }],
+            language: {
+                search: "Search waiting SOA:",
+                emptyTable: "No SOA records waiting to be paid"
+            }
+        });
+
+        $('#paidSoaTable').DataTable({
+            pageLength: 10,
+            order: [[0, 'desc']],
+            autoWidth: false,
+            dom: '<"billing-table-toolbar"lf>t<"billing-table-footer"ip>',
+            columns: [
+                { width: '18%' },
+                { width: '12%' },
+                { width: '18%' },
+                { width: '18%' },
+                { width: '18%' },
+                { width: '10%', className: 'text-right' },
+                { width: '8%' },
+                { orderable: false, searchable: false, width: '8%' }
+            ],
+            columnDefs: [{ orderable: false, targets: 7 }],
+            language: {
+                search: "Search paid SOA:",
+                emptyTable: "No paid SOA records available"
+            }
+        });
+
         $('#soaTable').DataTable({
             pageLength: 10,
             order: [[0, 'desc']],
@@ -601,7 +849,7 @@
             ],
             columnDefs: [{ orderable: false, targets: 7 }],
             language: {
-                search: "Search SOA:",
+                search: "Search all SOA:",
                 emptyTable: "No SOA records available"
             }
         });
