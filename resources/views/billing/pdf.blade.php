@@ -167,6 +167,7 @@
     <div class="info-row">
         <div class="company-col">
             <div class="company-name">{{ $soa->company->company_name ?? 'N/A' }}</div>
+            <div class="info-line">TIN: {{ $soa->company->tin_no ?: 'N/A' }}</div>
             <div class="info-line">{{ $soa->company->company_location ?? 'N/A' }}</div>
         </div>
         <div class="info-meta">

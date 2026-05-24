@@ -55,6 +55,11 @@
                         <input type="text" name="company_name" id="company_name" value="{{ old('company_name') }}" required maxlength="255" autocomplete="off" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100">
                     </div>
 
+                    <div class="rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
+                        <label for="tin_no" class="mb-2 block text-sm font-semibold text-slate-700">TIN No.</label>
+                        <input type="text" name="tin_no" id="tin_no" value="{{ old('tin_no') }}" maxlength="50" autocomplete="off" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100">
+                    </div>
+
                     <div class="md:col-span-2 rounded-3xl border border-slate-200 bg-slate-50/70 p-5">
                         <label for="company_location" class="mb-2 block text-sm font-semibold text-slate-700">Company Location</label>
                         <input type="text" name="company_location" id="company_location" value="{{ old('company_location') }}" required maxlength="255" autocomplete="off" class="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100">

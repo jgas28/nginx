@@ -10,7 +10,7 @@ class Company extends Model
     use HasFactory;
 
     protected $fillable = [
-        'company_code', 'company_name', 'company_location'
+        'company_code', 'company_name', 'company_location', 'tin_no'
     ];
 
     public function deliveryRequests()

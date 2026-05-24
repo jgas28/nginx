@@ -21,7 +21,8 @@ class CompanyController extends Controller
         $companies = Company::when($search, function ($query, $search) {
             return $query->where('company_code', 'like', '%' . $search . '%')
                         ->orWhere('company_name', 'like', '%' . $search . '%')
-                        ->orWhere('company_location', 'like', '%' . $search . '%');
+                        ->orWhere('company_location', 'like', '%' . $search . '%')
+                        ->orWhere('tin_no', 'like', '%' . $search . '%');
         })
         ->orderBy('company_name')
         ->paginate($perPage)
@@ -57,6 +58,7 @@ class CompanyController extends Controller
             'company_code' => 'required|unique:companies,company_code',
             'company_name' => 'required',
             'company_location' => 'required',
+            'tin_no' => 'nullable|string|max:50',
         ]);
 
         // Create new company
@@ -64,6 +66,7 @@ class CompanyController extends Controller
             'company_code' => $request->company_code,
             'company_name' => $request->company_name,
             'company_location' => $request->company_location,
+            'tin_no' => $request->tin_no,
         ]);
 
         $company->save();
@@ -103,12 +106,14 @@ class CompanyController extends Controller
             'company_code' => 'required|unique:companies,company_code,' . $company->id,
             'company_name' => 'required',
             'company_location' => 'required',
+            'tin_no' => 'nullable|string|max:50',
         ]);
 
         // Update the company details
         $company->company_code = $request->company_code;
         $company->company_name = $request->company_name;
         $company->company_location = $request->company_location;
+        $company->tin_no = $request->tin_no;
 
         $company->save();
 

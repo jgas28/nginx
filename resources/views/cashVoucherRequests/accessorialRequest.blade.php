@@ -70,9 +70,9 @@
             <div class="col-md-3 form-group">
                 <label for="requestor">Requestor</label>
                 <select name="requestor" id="requestor" class="form-control" required>
-                    <option value="">Select Employee</option>
+                    <option value="">Select Requestor</option>
                     @foreach($employees as $employee)
-                        <option value="{{ $employee->id }}" data-type="{{ $employee->employee_code }}">{{ $employee->fname }} {{ $employee->lname }}</option>
+                        <option value="{{ $employee->id }}" data-type="{{ $employee->employee_code }}">{{ trim(($employee->fname ?? '') . ' ' . ($employee->lname ?? '')) }}{{ !empty($employee->employee_code) ? ' - ' . $employee->employee_code : '' }}</option>
                     @endforeach
                 </select>
                     @error('requestor')

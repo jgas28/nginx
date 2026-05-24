@@ -13,6 +13,7 @@
             <div>
                 <div class="mx-auto max-w-3xl text-center">
                     <h2 class="text-3xl font-extrabold uppercase tracking-wide text-gray-900">{{ $soa->company->company_name ?? 'N/A' }}</h2>
+                    <p class="mt-2 text-xl text-gray-500">TIN: {{ $soa->company->tin_no ?: 'N/A' }}</p>
                     <p class="mt-2 text-2xl text-gray-500">{{ $soa->company->company_location ?? 'N/A' }}</p>
                 </div>
                 <div class="mt-2 text-right">

@@ -1562,7 +1562,10 @@ class CashVoucherController extends Controller
                 ->where('status', '!=', 0)
                 ->get();
 
-            $employees = User::where('status', '!=', 0)->get();
+            $employees = User::where('status', '!=', 0)
+                ->orderBy('fname')
+                ->orderBy('lname')
+                ->get(['id', 'fname', 'lname', 'employee_code']);
             $taxes = WithholdingTax::all();
             $requestType = cvr_request_type::all();
 

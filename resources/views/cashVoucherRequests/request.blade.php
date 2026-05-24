@@ -138,11 +138,11 @@
                     <!-- Requestor -->
                     <div>
                         <select name="requestor" class="input w-full" required>
-                            <option value="">Select Employee</option>
+                            <option value="">Select Requestor</option>
                             @foreach($employees as $emp)
                                 <option value="{{ $emp->id }}"
                                     @if(!empty($allocation) && $allocation->requestor_id == $emp->id) selected @endif>
-                                    {{ $emp->fname }} {{ $emp->lname }}
+                                    {{ trim(($emp->fname ?? '') . ' ' . ($emp->lname ?? '')) }}{{ !empty($emp->employee_code) ? ' - ' . $emp->employee_code : '' }}
                                 </option>
                             @endforeach
                         </select>

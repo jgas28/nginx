@@ -52,6 +52,16 @@
                 </div>
 
                 <div>
+                    <label class="block text-sm font-medium text-gray-700">Company TIN</label>
+                    <p class="mt-1">{{ $soa->company->tin_no ?? 'N/A' }}</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Company Address</label>
+                    <p class="mt-1">{{ $soa->company->company_location ?? 'N/A' }}</p>
+                </div>
+
+                <div>
                     <label class="block text-sm font-medium text-gray-700">Customer Name</label>
                     <p class="mt-1">{{ $soa->customer->name ?? 'N/A' }}</p>
                 </div>

@@ -23,7 +23,7 @@
                 type="text"
                 data-fast-table-search
                 value="{{ $search ?? '' }}"
-                placeholder="Search code, name, or location..."
+                placeholder="Search code, name, TIN, or location..."
                 class="w-full rounded-xl border border-slate-300 bg-slate-50 py-2.5 pl-14 pr-4 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
             >
         </div>
@@ -37,6 +37,7 @@
                 <th class="px-4 py-3 font-semibold sm:px-6">#</th>
                 <th class="px-4 py-3 font-semibold sm:px-6">Code</th>
                 <th class="px-4 py-3 font-semibold sm:px-6">Company Name</th>
+                <th class="px-4 py-3 font-semibold sm:px-6">TIN No.</th>
                 <th class="px-4 py-3 font-semibold sm:px-6">Location</th>
                 <th class="px-4 py-3 font-semibold sm:px-6 text-right">Actions</th>
             </tr>
@@ -53,6 +54,7 @@
                         </span>
                     </td>
                     <td class="px-4 py-3.5 font-semibold text-slate-900 sm:px-6">{{ $company->company_name }}</td>
+                    <td class="px-4 py-3.5 text-slate-600 sm:px-6">{{ $company->tin_no ?: 'N/A' }}</td>
                     <td class="px-4 py-3.5 text-slate-600 sm:px-6">{{ $company->company_location }}</td>
                     <td class="px-4 py-3.5 sm:px-6">
                         <div class="flex flex-wrap items-center justify-end gap-2">
@@ -77,7 +79,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="px-4 py-12 text-center text-slate-500 sm:px-6">
+                    <td colspan="6" class="px-4 py-12 text-center text-slate-500 sm:px-6">
                         <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                             <i class="fas fa-building text-lg"></i>
                         </div>
