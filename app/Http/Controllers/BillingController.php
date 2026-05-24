@@ -341,14 +341,12 @@ class BillingController extends Controller
         DB::beginTransaction();
 
         try {
-            if ($this->tableExists('soa_delivery_requests')) {
-                DB::table('soa_delivery_requests')->where('soa_id', $soa->id)->delete();
-            }
+            $this->clearSoaBillingLinks($soa);
 
             $soa->delete();
             DB::commit();
 
-            return redirect()->route('billing.index')->with('success', 'SOA deleted successfully.');
+            return redirect()->route('billing.index')->with('success', 'SOA deleted successfully. Connected deliveries were reset and are billable again.');
         } catch (\Exception $e) {
             DB::rollback();
             return back()->withErrors(['error' => 'Unable to delete SOA: ' . $e->getMessage()]);
@@ -822,6 +820,21 @@ class BillingController extends Controller
             ->where('soa_delivery_requests.soa_id', $soa->id)
             ->orderBy($deliveryRequestTable . '.delivery_date')
             ->get();
+    }
+
+    private function clearSoaBillingLinks(Soa $soa): void
+    {
+        if ($this->tableExists('soa_delivery_line_items')) {
+            DB::table('soa_delivery_line_items')
+                ->where('soa_id', $soa->id)
+                ->delete();
+        }
+
+        if ($this->tableExists('soa_delivery_requests')) {
+            DB::table('soa_delivery_requests')
+                ->where('soa_id', $soa->id)
+                ->delete();
+        }
     }
 
     private function getBilledDeliveries(): \Illuminate\Support\Collection
