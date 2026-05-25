@@ -182,7 +182,7 @@
                                     <td class="px-6 py-4">
                                         {{ optional($soa->billing_period_from)->format('M d') ?? 'N/A' }} - {{ optional($soa->billing_period_to)->format('M d, Y') ?? 'N/A' }}
                                     </td>
-                                    <td class="px-6 py-4 font-semibold">â‚±{{ number_format($soa->total_amount, 2) }}</td>
+                                    <td class="px-6 py-4 font-semibold">{!! '&#8369;'.number_format($soa->total_amount, 2) !!}</td>
                                     <td class="px-6 py-4">
                                         <span class="px-2 py-1 text-xs font-medium rounded-full
                                             @if($soa->status == 'paid') bg-green-100 text-green-800
@@ -255,7 +255,7 @@
                                     <td class="px-6 py-4">
                                         {{ optional($soa->billing_period_from)->format('M d') ?? 'N/A' }} - {{ optional($soa->billing_period_to)->format('M d, Y') ?? 'N/A' }}
                                     </td>
-                                    <td class="px-6 py-4 font-semibold">Ã¢â€šÂ±{{ number_format($soa->total_amount, 2) }}</td>
+                                    <td class="px-6 py-4 font-semibold">{!! '&#8369;'.number_format($soa->total_amount, 2) !!}</td>
                                     <td class="px-6 py-4">
                                         <span class="px-2 py-1 text-xs font-medium rounded-full
                                             @if($soa->status == 'paid') bg-green-100 text-green-800
@@ -491,7 +491,7 @@
                                     <td class="px-6 py-4">
                                         {{ optional($soa->billing_period_from)->format('M d') ?? 'N/A' }} - {{ optional($soa->billing_period_to)->format('M d, Y') ?? 'N/A' }}
                                     </td>
-                                    <td class="px-6 py-4 font-semibold">₱{{ number_format($soa->total_amount, 2) }}</td>
+                                    <td class="px-6 py-4 font-semibold">{!! '&#8369;'.number_format($soa->total_amount, 2) !!}</td>
                                     <td class="px-6 py-4">
                                         <span class="px-2 py-1 text-xs font-medium rounded-full
                                             @if($soa->status == 'paid') bg-green-100 text-green-800
