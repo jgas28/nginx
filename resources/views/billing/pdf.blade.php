@@ -250,6 +250,7 @@
                     $discountAmt          = (float)($soa->discount_amount ?? 0);
                     $adjustmentAmt        = (float)($soa->adjustment_amount ?? 0);
                     $vatAmount            = (float)($soa->vat_amount ?? 0);
+                    $grossAmount          = max(0, ($subtotal - $discountAmt + $adjustmentAmt) + $vatAmount);
                     $withholdingTaxRate   = (float)($soa->withholding_tax_rate ?? 0);
                     $withholdingTaxAmount = (float)($soa->withholding_tax_amount ?? 0);
                     $hasAdj               = $discountAmt != 0 || $adjustmentAmt != 0 || $vatAmount != 0 || $withholdingTaxAmount != 0;
@@ -286,6 +287,12 @@
                 <tr class="vat-row">
                     <td colspan="6" class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">VAT (12%):</td>
                     <td class="right" style="border:1px solid #D1D5DB; padding:8px 10px;">+{!! $pdfCurrency.number_format($vatAmount, 2) !!}</td>
+                </tr>
+                @endif
+                @if($vatAmount > 0 || $withholdingTaxAmount > 0)
+                <tr class="totals-row">
+                    <td colspan="6" class="right">Total:</td>
+                    <td class="right">{!! $pdfCurrency.number_format($grossAmount, 2) !!}</td>
                 </tr>
                 @endif
                 @if($withholdingTaxAmount > 0)

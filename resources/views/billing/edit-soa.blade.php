@@ -26,6 +26,21 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
+                        <label for="soa_number" class="block text-sm font-medium text-gray-700 mb-2">
+                            SOA No. <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="soa_number" name="soa_number"
+                               value="{{ old('soa_number', $soa->soa_number) }}"
+                               placeholder="Enter SOA number"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        @error('soa_number')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div></div>
+
+                    <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             Company Name <span class="text-red-500">*</span>
                         </label>
@@ -373,15 +388,19 @@
                                 <p id="editAdjustmentRemarks" class="text-xs text-gray-400 italic pl-5 hidden"></p>
                             </div>
                             <div id="editVatRow" class="hidden justify-between text-orange-600">
-                                <span class="flex items-center gap-1.5"><i class="fas fa-percentage text-xs"></i> VAT (12%)</span>
+                                <span class="flex items-center gap-1.5"><i class="fas fa-percentage text-xs"></i> Add: VAT</span>
                                 <span id="editVatAmt" class="font-semibold">+P0.00</span>
+                            </div>
+                            <div id="editGrossRow" class="hidden justify-between text-teal-700">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-plus-circle text-xs"></i> Total</span>
+                                <span id="editGrossAmt" class="font-semibold">P0.00</span>
                             </div>
                             <div id="editWtaxRow" class="hidden justify-between text-indigo-600">
                                 <span class="flex items-center gap-1.5"><i class="fas fa-minus-circle text-xs"></i> <span id="editWtaxLabel">WHT (2%)</span></span>
                                 <span id="editWtaxAmt" class="font-semibold">-P0.00</span>
                             </div>
                             <div class="flex justify-between font-bold text-gray-900 border-t border-gray-300 pt-2">
-                                <span class="flex items-center gap-1.5"><i class="fas fa-check-circle text-emerald-500 text-xs"></i> Final Total</span>
+                                <span class="flex items-center gap-1.5"><i class="fas fa-check-circle text-emerald-500 text-xs"></i> Total Amount Due</span>
                                 <span id="editTotalAmount" class="text-emerald-700 text-base">P0.00</span>
                             </div>
                         </div>
@@ -1086,8 +1105,9 @@ function updateEditSummary() {
 
     const netAmount = subtotal - discountAmt + adjustmentAmt;
     const vatAmount = vatApplied ? netAmount * 0.12 : 0;
-    const withholdingTaxAmount = withholdingTaxRate > 0 ? (netAmount * withholdingTaxRate / 100) : 0;
-    const finalTotal = Math.max(0, netAmount + vatAmount - withholdingTaxAmount);
+    const grossAmount = Math.max(0, netAmount + vatAmount);
+    const withholdingTaxAmount = withholdingTaxRate > 0 ? (grossAmount * withholdingTaxRate / 100) : 0;
+    const finalTotal = Math.max(0, grossAmount - withholdingTaxAmount);
 
     document.getElementById('edit_hidden_vat_amount').value = vatAmount.toFixed(2);
     document.getElementById('edit_hidden_withholding_tax_amount').value = withholdingTaxAmount.toFixed(2);
@@ -1134,13 +1154,23 @@ function updateEditSummary() {
     }
 
     const vatRow = document.getElementById('editVatRow');
-    if (vatApplied && vatAmount > 0) {
+    if (vatAmount > 0) {
         document.getElementById('editVatAmt').textContent = `+${formatPesoEdit(vatAmount)}`;
         vatRow.classList.remove('hidden');
         vatRow.classList.add('flex');
     } else {
         vatRow.classList.add('hidden');
         vatRow.classList.remove('flex');
+    }
+
+    const grossRow = document.getElementById('editGrossRow');
+    if (vatAmount > 0 || (withholdingTaxRate > 0 && withholdingTaxAmount > 0)) {
+        document.getElementById('editGrossAmt').textContent = formatPesoEdit(grossAmount);
+        grossRow.classList.remove('hidden');
+        grossRow.classList.add('flex');
+    } else {
+        grossRow.classList.add('hidden');
+        grossRow.classList.remove('flex');
     }
 
     const wtaxRow = document.getElementById('editWtaxRow');
@@ -1525,4 +1555,24 @@ document.addEventListener('click', function (event) {
     }
 });
 </script>
+
+@if($errors->has('soa_number'))
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const message = @json($errors->first('soa_number'));
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'SOA No. Already Created',
+                text: message,
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+
+        alert(message);
+    });
+</script>
+@endif
 @endsection

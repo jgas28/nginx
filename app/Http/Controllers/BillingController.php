@@ -135,6 +135,7 @@ class BillingController extends Controller
     public function updateSOA(Request $request, Soa $soa)
     {
         $validator = Validator::make($request->all(), [
+            'soa_number' => 'required|string|max:255|unique:soas,soa_number,' . $soa->id,
             'company_id' => 'required|exists:companies,id',
             'customer_id' => 'required|exists:customers,id',
             'billing_period_from' => 'required|date',
@@ -153,6 +154,8 @@ class BillingController extends Controller
             'vat_amount' => 'nullable|numeric|min:0',
             'withholding_tax_rate' => 'nullable|numeric|in:0,2,5,10',
             'withholding_tax_amount' => 'nullable|numeric|min:0',
+        ], [
+            'soa_number.unique' => 'This SOA No. is already created.',
         ]);
 
         if ($validator->fails()) {
@@ -275,16 +278,20 @@ class BillingController extends Controller
         DB::beginTransaction();
 
         try {
-            $discountType         = $request->discount_type ?: null;
-            $discountAmount       = (float) ($request->discount_amount ?? 0);
-            $adjustmentAmount     = (float) ($request->adjustment_amount ?? 0);
-            $vatAmount            = (float) ($request->vat_amount ?? 0);
-            $withholdingTaxRate   = (float) ($request->withholding_tax_rate ?? 0);
-            $withholdingTaxAmount = (float) ($request->withholding_tax_amount ?? 0);
-            $netAmount            = $totalAmount - $discountAmount + $adjustmentAmount;
-            $finalAmount          = max(0, $netAmount + $vatAmount - $withholdingTaxAmount);
+            $discountType       = $request->discount_type ?: null;
+            $discountAmount     = (float) ($request->discount_amount ?? 0);
+            $adjustmentAmount   = (float) ($request->adjustment_amount ?? 0);
+            $vatAmount          = max(0, (float) ($request->vat_amount ?? 0));
+            $withholdingTaxRate = (float) ($request->withholding_tax_rate ?? 0);
+            $netAmount          = $totalAmount - $discountAmount + $adjustmentAmount;
+            $grossAmount        = max(0, $netAmount + $vatAmount);
+            $withholdingTaxAmount = $withholdingTaxRate > 0
+                ? round($grossAmount * ($withholdingTaxRate / 100), 2)
+                : 0.0;
+            $finalAmount = max(0, $grossAmount - $withholdingTaxAmount);
 
             $soa->update([
+                'soa_number' => $request->soa_number,
                 'company_id' => $request->company_id,
                 'customer_id' => $request->customer_id,
                 'billing_period_from' => $request->billing_period_from,
@@ -608,6 +615,7 @@ class BillingController extends Controller
     public function createSOA(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'soa_number' => 'required|string|max:255|unique:soas,soa_number',
             'company_id' => 'required_without:customer_id|exists:companies,id',
             'customer_id' => 'required_without:company_id|exists:customers,id',
             'billing_period_from' => 'required|date',
@@ -624,6 +632,8 @@ class BillingController extends Controller
             'vat_amount' => 'nullable|numeric|min:0',
             'withholding_tax_rate' => 'nullable|numeric|in:0,2,5,10',
             'withholding_tax_amount' => 'nullable|numeric|min:0',
+        ], [
+            'soa_number.unique' => 'This SOA No. is already created.',
         ]);
 
         if ($validator->fails()) {
@@ -632,9 +642,6 @@ class BillingController extends Controller
 
         try {
             DB::beginTransaction();
-
-            // Generate SOA number
-            $soaNumber = $this->generateSoaNumber();
 
             // Calculate total amount from selected delivery request line items
             $deliveryLineItemIds = $request->delivery_line_item_ids;
@@ -702,18 +709,21 @@ class BillingController extends Controller
             $subtotalAmount = $requestSummaries->sum('amount');
             $deliveryRequestIds = $requestSummaries->pluck('delivery_request_id')->map(fn ($id) => (int) $id)->all();
 
-            $discountType         = $request->discount_type ?: null;
-            $discountAmount       = (float) ($request->discount_amount ?? 0);
-            $adjustmentAmount     = (float) ($request->adjustment_amount ?? 0);
-            $vatAmount            = (float) ($request->vat_amount ?? 0);
-            $withholdingTaxRate   = (float) ($request->withholding_tax_rate ?? 0);
-            $withholdingTaxAmount = (float) ($request->withholding_tax_amount ?? 0);
-            $netAmount            = $subtotalAmount - $discountAmount + $adjustmentAmount;
-            $totalAmount          = max(0, $netAmount + $vatAmount - $withholdingTaxAmount);
+            $discountType       = $request->discount_type ?: null;
+            $discountAmount     = (float) ($request->discount_amount ?? 0);
+            $adjustmentAmount   = (float) ($request->adjustment_amount ?? 0);
+            $vatAmount          = max(0, (float) ($request->vat_amount ?? 0));
+            $withholdingTaxRate = (float) ($request->withholding_tax_rate ?? 0);
+            $netAmount          = $subtotalAmount - $discountAmount + $adjustmentAmount;
+            $grossAmount        = max(0, $netAmount + $vatAmount);
+            $withholdingTaxAmount = $withholdingTaxRate > 0
+                ? round($grossAmount * ($withholdingTaxRate / 100), 2)
+                : 0.0;
+            $totalAmount = max(0, $grossAmount - $withholdingTaxAmount);
 
             // Create SOA
             $soa = Soa::create([
-                'soa_number' => $soaNumber,
+                'soa_number' => $request->soa_number,
                 'company_id' => $request->company_id,
                 'customer_id' => $request->customer_id,
                 'billing_period_from' => $request->billing_period_from,

@@ -25,6 +25,21 @@
                 <h2 class="text-xl font-semibold text-gray-900 mb-6">SOA Information</h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="soa_number" class="block text-sm font-medium text-gray-700 mb-2">
+                            SOA No. <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="soa_number" name="soa_number"
+                               value="{{ old('soa_number') }}"
+                               placeholder="Enter SOA number"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        @error('soa_number')
+                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div></div>
+
                     <!-- Company Selection -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -330,7 +345,9 @@
                                 <div>
                                     <label class="block text-xs font-medium text-gray-600 mb-1">VAT</label>
                                     <label class="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 cursor-pointer hover:bg-gray-50 transition">
-                                        <input type="checkbox" id="card_vat_applied" name="vat_applied" value="1" onchange="syncAdjustments()" class="h-4 w-4 rounded text-orange-500 accent-orange-500">
+                                        <input type="checkbox" id="card_vat_applied" name="vat_applied" value="1"
+                                               {{ (float) old('vat_amount', 0) > 0 ? 'checked' : '' }}
+                                               onchange="syncAdjustments()" class="h-4 w-4 rounded text-orange-500 accent-orange-500">
                                         <span class="text-sm text-gray-700">Apply 12% VAT</span>
                                     </label>
                                 </div>
@@ -375,15 +392,19 @@
                                 <p id="summaryAdjustmentRemarks" class="text-xs text-gray-400 italic pl-5 hidden"></p>
                             </div>
                             <div id="summaryVatRow" class="hidden justify-between text-orange-600">
-                                <span class="flex items-center gap-1.5"><i class="fas fa-percentage text-xs"></i> VAT (12%)</span>
+                                <span class="flex items-center gap-1.5"><i class="fas fa-percentage text-xs"></i> Add: VAT</span>
                                 <span id="summaryVatAmt" class="font-semibold">+₱0.00</span>
+                            </div>
+                            <div id="summaryGrossRow" class="hidden justify-between text-teal-700">
+                                <span class="flex items-center gap-1.5"><i class="fas fa-plus-circle text-xs"></i> Total</span>
+                                <span id="summaryGrossAmt" class="font-semibold">₱0.00</span>
                             </div>
                             <div id="summaryWtaxRow" class="hidden justify-between text-indigo-600">
                                 <span class="flex items-center gap-1.5"><i class="fas fa-minus-circle text-xs"></i> <span id="summaryWtaxLabel">WHT (2%)</span></span>
                                 <span id="summaryWtaxAmt" class="font-semibold">-₱0.00</span>
                             </div>
                             <div class="flex justify-between font-bold text-gray-900 border-t border-gray-300 pt-2">
-                                <span class="flex items-center gap-1.5"><i class="fas fa-check-circle text-emerald-500 text-xs"></i> Final Total</span>
+                                <span class="flex items-center gap-1.5"><i class="fas fa-check-circle text-emerald-500 text-xs"></i> Total Amount Due</span>
                                 <span id="totalAmount" class="text-emerald-700 text-base">₱0.00</span>
                             </div>
 
@@ -1615,8 +1636,9 @@ function syncAdjustments() {
 
     const netAmount          = subtotal - discountAmt + adjustmentAmt;
     const vatAmount          = vatApplied ? netAmount * 0.12 : 0;
-    const withholdingTaxAmt  = withholdingTaxRate > 0 ? netAmount * withholdingTaxRate / 100 : 0;
-    const finalTotal         = Math.max(0, netAmount + vatAmount - withholdingTaxAmt);
+    const grossAmount        = Math.max(0, netAmount + vatAmount);
+    const withholdingTaxAmt  = withholdingTaxRate > 0 ? grossAmount * withholdingTaxRate / 100 : 0;
+    const finalTotal         = Math.max(0, grossAmount - withholdingTaxAmt);
 
     // Sync hidden form inputs
     document.getElementById('hidden_discount_type').value           = discountType;
@@ -1662,13 +1684,23 @@ function syncAdjustments() {
 
     // VAT row
     const vatRow = document.getElementById('summaryVatRow');
-    if (vatApplied && vatAmount > 0) {
+    if (vatAmount > 0) {
         document.getElementById('summaryVatAmt').textContent = `+${formatPeso(vatAmount)}`;
         vatRow.classList.remove('hidden');
         vatRow.classList.add('flex');
     } else {
         vatRow.classList.add('hidden');
         vatRow.classList.remove('flex');
+    }
+
+    const grossRow = document.getElementById('summaryGrossRow');
+    if (vatAmount > 0 || (withholdingTaxRate > 0 && withholdingTaxAmt > 0)) {
+        document.getElementById('summaryGrossAmt').textContent = formatPeso(grossAmount);
+        grossRow.classList.remove('hidden');
+        grossRow.classList.add('flex');
+    } else {
+        grossRow.classList.add('hidden');
+        grossRow.classList.remove('flex');
     }
 
     // Withholding Tax row
@@ -1813,4 +1845,24 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+@if($errors->has('soa_number'))
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const message = @json($errors->first('soa_number'));
+
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'SOA No. Already Created',
+                text: message,
+                confirmButtonText: 'OK'
+            });
+            return;
+        }
+
+        alert(message);
+    });
+</script>
+@endif
 @endsection
