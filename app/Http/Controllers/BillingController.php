@@ -111,7 +111,7 @@ class BillingController extends Controller
 
         return Excel::download(
             new BillingHuaweiExport($rows),
-            'billing_huawei_export_' . now()->format('Ymd_His') . '.xlsx'
+            'billing_FCZCNYX_export_' . now()->format('Ymd_His') . '.xlsx'
         );
     }
 

@@ -117,7 +117,7 @@
                         <i class="fas fa-file-excel mr-2"></i>Export Excel
                     </a>
                     <a href="{{ route('billing.exportHuawei', request()->only(['company', 'date_from', 'date_to', 'status'])) }}" class="bg-cyan-600 hover:bg-cyan-700 text-white px-6 py-2 rounded-lg font-medium">
-                        <i class="fas fa-download mr-2"></i>Export Huawei
+                        <i class="fas fa-download mr-2"></i>Export FCZCNYX
                     </a>
                     <a href="{{ route('billing.createSOA.form') }}" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium ml-auto">
                         <i class="fas fa-plus mr-2"></i>Create SOA
