@@ -69,7 +69,11 @@
         @if($voucherStatuses->isEmpty())
             <p class="text-gray-500">No cash vouchers available for this period.</p>
         @else
-            <table class="min-w-full table-auto border-collapse border border-gray-200">
+            <!-- Search Bar -->
+            <div class="mb-3">
+                <input type="text" id="cvrSearch" placeholder="Search by Voucher ID, CVR Type, Supplier, or Status..." class="w-full px-4 py-2 border rounded-md text-sm" oninput="filterCVRTable(this.value)">
+            </div>
+            <table id="cvrTable" class="min-w-full table-auto border-collapse border border-gray-200">
                 <thead>
                     <tr class="bg-gray-100">
                         <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Voucher ID</th>
@@ -113,13 +117,20 @@
         @endif
     </div>
 
-    <!-- JavaScript to Reset Filters -->
+    <!-- JavaScript to Reset Filters and Search -->
     <script>
         document.getElementById('resetFilters').addEventListener('click', function() {
-            // Reset form fields
             document.getElementById('filterForm').reset();
-            // Clear query parameters by redirecting to the same route
             window.location.href = '{{ route('reports.cv') }}';
         });
+
+        function filterCVRTable(query) {
+            const lowerQuery = query.toLowerCase();
+            const rows = document.querySelectorAll('#cvrTable tbody tr');
+            rows.forEach(function(row) {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(lowerQuery) ? '' : 'none';
+            });
+        }
     </script>
 @endsection
