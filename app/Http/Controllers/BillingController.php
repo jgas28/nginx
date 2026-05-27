@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\BillingHuaweiExport;
 use App\Exports\SoaListExport;
 use App\Models\Soa;
 use App\Models\Company;
@@ -101,6 +102,16 @@ class BillingController extends Controller
         return Excel::download(
             new SoaListExport($request->only(['company', 'date_from', 'date_to', 'status'])),
             'soa_list.xlsx'
+        );
+    }
+
+    public function exportHuawei(Request $request)
+    {
+        $rows = $this->buildHuaweiBillingExportRows($request);
+
+        return Excel::download(
+            new BillingHuaweiExport($rows),
+            'billing_huawei_export_' . now()->format('Ymd_His') . '.xlsx'
         );
     }
 
@@ -1154,7 +1165,7 @@ class BillingController extends Controller
     {
         if (is_array($value)) {
             return collect($value)
-                ->map(fn ($item) => trim((string) $item))
+                ->map(fn ($item) => $this->cleanExportText((string) $item))
                 ->filter()
                 ->values()
                 ->all();
@@ -1166,13 +1177,13 @@ class BillingController extends Controller
 
             if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
                 return collect($decoded)
-                    ->map(fn ($item) => trim((string) $item))
+                    ->map(fn ($item) => $this->cleanExportText((string) $item))
                     ->filter()
                     ->values()
                     ->all();
             }
 
-            return $trimmedValue !== '' ? [$trimmedValue] : [];
+            return $trimmedValue !== '' ? [$this->cleanExportText($trimmedValue)] : [];
         }
 
         return [];
@@ -1201,6 +1212,364 @@ class BillingController extends Controller
         }
 
         return $query;
+    }
+
+    private function buildHuaweiBillingExportRows(Request $request): \Illuminate\Support\Collection
+    {
+        if (!$this->tableExists('soa_delivery_requests') || !$this->tableExists('soas')) {
+            return collect();
+        }
+
+        $soaIds = $this->buildSoaIndexQuery($request, true)->pluck('id');
+
+        if ($soaIds->isEmpty()) {
+            return collect();
+        }
+
+        $drTable = $this->drTable();
+
+        $billedRequests = DB::table('soa_delivery_requests')
+            ->join('soas', 'soas.id', '=', 'soa_delivery_requests.soa_id')
+            ->join($drTable, $drTable . '.id', '=', 'soa_delivery_requests.delivery_request_id')
+            ->leftJoin('companies', 'companies.id', '=', $drTable . '.company_id')
+            ->leftJoin('regions', 'regions.id', '=', $drTable . '.region_id')
+            ->select([
+                'soa_delivery_requests.delivery_request_id',
+                'soa_delivery_requests.delivery_rate_amount',
+                'soa_delivery_requests.accessorial_rate_amount',
+                'soa_delivery_requests.billing_type',
+                'soas.id as soa_id',
+                'soas.soa_number',
+                $drTable . '.id as dr_id',
+                $drTable . '.mtm',
+                $drTable . '.project_name',
+                $drTable . '.delivery_type',
+                $drTable . '.delivery_rate as source_delivery_rate',
+                $drTable . '.truck_type_id',
+                $drTable . '.updated_at as delivery_request_updated_at',
+                'companies.company_name',
+                'regions.province as region_province',
+                'regions.region_name',
+                'regions.region_code',
+            ])
+            ->whereIn('soa_delivery_requests.soa_id', $soaIds)
+            ->orderBy('soas.statement_date', 'desc')
+            ->orderBy($drTable . '.updated_at', 'desc')
+            ->get();
+
+        if ($billedRequests->isEmpty()) {
+            return collect();
+        }
+
+        $requestIds = $billedRequests->pluck('dr_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $mtmToRequestId = $billedRequests
+            ->filter(fn ($request) => filled($request->mtm))
+            ->mapWithKeys(fn ($request) => [(string) $request->mtm => (int) $request->dr_id])
+            ->all();
+
+        $lineItems = $this->getHuaweiExportLineItems($requestIds, array_keys($mtmToRequestId));
+        $lineItemsByRequest = $lineItems->groupBy(function ($lineItem) use ($mtmToRequestId) {
+            if (!empty($lineItem->dr_id)) {
+                return (int) $lineItem->dr_id;
+            }
+
+            return $mtmToRequestId[(string) $lineItem->mtm] ?? 0;
+        })->filter(fn ($items, $requestId) => (int) $requestId > 0);
+
+        $warehouseLookup = $this->tableExists('warehouses')
+            ? DB::table('warehouses')->pluck('warehouse_name', 'id')
+            : collect();
+
+        $addOnLookup = $this->tableExists('add_on_rates')
+            ? DB::table('add_on_rates')
+                ->select('id', 'rate', 'percent_rate', 'add_on_rate_type_code', 'add_on_rate_type_name')
+                ->get()
+                ->mapWithKeys(fn ($item) => [(int) $item->id => $item])
+            : collect();
+
+        $truckLookup = $this->tableExists('trucks')
+            ? DB::table('trucks')->select('id', 'plate_no', 'truck_type')->get()->keyBy('id')
+            : collect();
+
+        $truckTypeLookup = $this->tableExists('truck_types')
+            ? DB::table('truck_types')->select('id', 'truck_type', 'truck_code')->get()->keyBy('id')
+            : collect();
+
+        $latestAllocations = $this->tableExists('allocations')
+            ? DB::table('allocations')
+                ->select('id', 'dr_id', 'truck_id', 'sequence')
+                ->whereIn('dr_id', $requestIds)
+                ->where('trip_type', 'delivery')
+                ->orderBy('sequence')
+                ->orderBy('id')
+                ->get()
+                ->groupBy('dr_id')
+                ->map(fn ($items) => $items->last())
+            : collect();
+
+        $latestAnyAllocations = $this->tableExists('allocations')
+            ? DB::table('allocations')
+                ->select('id', 'dr_id', 'truck_id', 'sequence')
+                ->whereIn('dr_id', $requestIds)
+                ->whereNotNull('truck_id')
+                ->orderBy('sequence')
+                ->orderBy('id')
+                ->get()
+                ->groupBy('dr_id')
+                ->map(fn ($items) => $items->last())
+            : collect();
+
+        return $billedRequests->flatMap(function ($request) use ($lineItemsByRequest, $warehouseLookup, $addOnLookup, $truckLookup, $truckTypeLookup, $latestAllocations, $latestAnyAllocations) {
+            $lineItems = collect($lineItemsByRequest->get((int) $request->dr_id, collect()));
+
+            $allocation = $latestAllocations->get((int) $request->dr_id) ?: $latestAnyAllocations->get((int) $request->dr_id);
+            $truck = $allocation && $truckLookup->has((int) $allocation->truck_id)
+                ? $truckLookup->get((int) $allocation->truck_id)
+                : null;
+
+            $deliveryRate = (float) ($request->source_delivery_rate ?? 0);
+            if ($deliveryRate <= 0) {
+                $deliveryRate = (float) ($request->delivery_rate_amount ?? 0);
+            }
+            $updatedAt = filled($request->delivery_request_updated_at)
+                ? Carbon::parse($request->delivery_request_updated_at)->format('Y-m-d H:i:s')
+                : '';
+            $truckType = trim((string) ($truckTypeLookup->get((int) $request->truck_type_id)?->truck_type
+                ?? $truckTypeLookup->get((int) $request->truck_type_id)?->truck_code
+                ?? ''));
+            $isMultiDrop = str_contains(strtolower((string) $request->delivery_type), 'multi');
+
+            if ($lineItems->isEmpty()) {
+                return [[
+                    'Project' => $request->project_name ?? '',
+                    'SiteID / Site Name' => '',
+                    'Origin / Warehouse' => '',
+                    'Destination / Delivery Address' => '',
+                    'Region' => $request->region_province ?: ($request->region_name ?: ($request->region_code ?: '')),
+                    'Delivery Number' => '',
+                    'ID / MTM Number' => $request->mtm ?? '',
+                    'ReceivedDate / Updated_At' => $updatedAt,
+                    'PlateNo' => $truck->plate_no ?? '',
+                    'TruckType' => $truckType,
+                    'TruckRate / Delivery_Rate' => round($deliveryRate, 2),
+                    'MultiDrop' => 0,
+                    'AddOns' => 0,
+                    'TotalTruckRate' => round($deliveryRate, 2),
+                ]];
+            }
+
+            return $lineItems->flatMap(function ($lineItem) use ($request, $warehouseLookup, $addOnLookup, $truckLookup, $truck, $truckType, $deliveryRate, $updatedAt, $isMultiDrop) {
+                $sites = $this->normalizeStringListField($lineItem->site_name ?? null);
+                $warehouseIds = $this->normalizeScalarListField($lineItem->warehouse_id ?? null);
+                $destinations = $this->normalizeStringListField($lineItem->delivery_address ?? null);
+                $deliveryNumbers = $this->normalizeStringListField($lineItem->delivery_number ?? null);
+                $lineTruckIds = $this->normalizeScalarListField($lineItem->truck_id ?? null);
+                $usePercentForMultiDrop = $isMultiDrop && str_contains(strtolower((string) ($request->company_name ?? '')), 'fcbois');
+                $multiDropValues = $this->resolveIndexedAmountField(
+                    $lineItem->add_on_rate ?? null,
+                    $addOnLookup,
+                    $deliveryRate,
+                    $usePercentForMultiDrop
+                );
+                $addOnValues = $this->resolveIndexedAmountField($lineItem->accessorial_rate ?? null, collect());
+
+                $rowCount = max(
+                    count($sites),
+                    count($warehouseIds),
+                    count($destinations),
+                    count($deliveryNumbers),
+                    count($lineTruckIds),
+                    count($multiDropValues),
+                    count($addOnValues),
+                    1
+                );
+
+                $lineUpdatedAt = filled($lineItem->updated_at ?? null)
+                    ? Carbon::parse($lineItem->updated_at)->format('Y-m-d H:i:s')
+                    : $updatedAt;
+
+                $rows = [];
+                $defaultLineTruckId = $lineTruckIds[0] ?? null;
+
+                for ($index = 0; $index < $rowCount; $index++) {
+                    $warehouseId = $warehouseIds[$index] ?? null;
+                    $lineTruck = null;
+                    $resolvedLineTruckId = $lineTruckIds[$index] ?? $defaultLineTruckId;
+
+                    if (!empty($resolvedLineTruckId) && $truckLookup->has((int) $resolvedLineTruckId)) {
+                        $lineTruck = $truckLookup->get((int) $resolvedLineTruckId);
+                    }
+
+                    $plateNo = $lineTruck?->plate_no ?? $truck?->plate_no ?? '';
+                    $multiDropAmount = $isMultiDrop ? (float) ($multiDropValues[$index] ?? 0) : 0.0;
+                    $addOnAmount = (float) ($addOnValues[$index] ?? 0);
+
+                    $rows[] = [
+                        'Project' => $request->project_name ?? '',
+                        'SiteID / Site Name' => $sites[$index] ?? '',
+                        'Origin / Warehouse' => $warehouseId ? trim((string) ($warehouseLookup->get((int) $warehouseId) ?? '')) : '',
+                        'Destination / Delivery Address' => $destinations[$index] ?? '',
+                        'Region' => $request->region_province ?: ($request->region_name ?: ($request->region_code ?: '')),
+                        'Delivery Number' => $deliveryNumbers[$index] ?? '',
+                        'ID / MTM Number' => $request->mtm ?? '',
+                        'ReceivedDate / Updated_At' => $lineUpdatedAt,
+                        'PlateNo' => $plateNo,
+                        'TruckType' => $truckType,
+                        'TruckRate / Delivery_Rate' => round($deliveryRate, 2),
+                        'MultiDrop' => round($multiDropAmount, 2),
+                        'AddOns' => round($addOnAmount, 2),
+                        'TotalTruckRate' => round($deliveryRate + $multiDropAmount + $addOnAmount, 2),
+                    ];
+                }
+
+                return $rows;
+            });
+        })->values();
+    }
+
+    private function getHuaweiExportLineItems(array $requestIds, array $mtms): \Illuminate\Support\Collection
+    {
+        if (!$this->tableExists('delivery_request_line_items')) {
+            return collect();
+        }
+
+        $query = DB::table('delivery_request_line_items')
+            ->select([
+                'dr_id',
+                'mtm',
+                'warehouse_id',
+                'site_name',
+                'delivery_number',
+                'truck_id',
+                'delivery_address',
+                'add_on_rate',
+                'accessorial_rate',
+                'updated_at',
+            ]);
+
+        $query->where(function ($lineItemQuery) use ($requestIds, $mtms) {
+            if (!empty($requestIds)) {
+                $lineItemQuery->whereIn('dr_id', $requestIds);
+            }
+
+            if (!empty($mtms)) {
+                $lineItemQuery->orWhere(function ($fallbackQuery) use ($mtms) {
+                    $fallbackQuery->whereNull('dr_id')
+                        ->whereIn('mtm', $mtms);
+                });
+            }
+        });
+
+        return $query->get();
+    }
+
+    private function normalizeScalarListField($value): array
+    {
+        if (is_array($value)) {
+            return collect($value)
+                ->map(fn ($item) => is_scalar($item) ? $this->cleanExportText((string) $item) : '')
+                ->filter(fn ($item) => $item !== '')
+                ->values()
+                ->all();
+        }
+
+        if (is_string($value)) {
+            $trimmedValue = trim($value);
+            $decoded = json_decode($trimmedValue, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return collect($decoded)
+                    ->map(fn ($item) => is_scalar($item) ? $this->cleanExportText((string) $item) : '')
+                    ->filter(fn ($item) => $item !== '')
+                    ->values()
+                    ->all();
+            }
+
+            return $trimmedValue !== '' ? [$this->cleanExportText($trimmedValue)] : [];
+        }
+
+        if (is_numeric($value)) {
+            return [$this->cleanExportText((string) $value)];
+        }
+
+        return [];
+    }
+
+    private function cleanExportText(string $value): string
+    {
+        $cleaned = trim($value);
+
+        if ($cleaned === '') {
+            return '';
+        }
+
+        $cleaned = str_replace(["\r", "\n"], ' ', $cleaned);
+        $cleaned = preg_replace('/\s+/', ' ', $cleaned) ?? $cleaned;
+
+        while (strlen($cleaned) >= 2 && $cleaned[0] === '"' && substr($cleaned, -1) === '"') {
+            $cleaned = trim(substr($cleaned, 1, -1));
+        }
+
+        return trim($cleaned, "\" \t\n\r\0\x0B");
+    }
+
+    private function resolveAddOnAmount($value, $addOnLookup): float
+    {
+        $entries = $this->normalizeScalarListField($value);
+
+        if (empty($entries)) {
+            return $this->normalizeNumericField($value);
+        }
+
+        $total = 0.0;
+
+        foreach ($entries as $entry) {
+            if (is_numeric($entry) && $addOnLookup->has((int) $entry)) {
+                $total += (float) $addOnLookup->get((int) $entry);
+                continue;
+            }
+
+            if (is_numeric($entry)) {
+                $total += (float) $entry;
+            }
+        }
+
+        return $total;
+    }
+
+    private function resolveIndexedAmountField($value, $lookup, float $deliveryRate = 0.0, bool $preferPercent = false): array
+    {
+        $entries = $this->normalizeScalarListField($value);
+
+        if (empty($entries)) {
+            $numericValue = $this->normalizeNumericField($value);
+            return $numericValue > 0 ? [$numericValue] : [];
+        }
+
+        return collect($entries)
+            ->map(function ($entry) use ($lookup, $deliveryRate, $preferPercent) {
+                if (is_numeric($entry) && $lookup->isNotEmpty() && $lookup->has((int) $entry)) {
+                    $rateRecord = $lookup->get((int) $entry);
+                    $rate = (float) ($rateRecord->rate ?? 0);
+                    $percentRate = (float) ($rateRecord->percent_rate ?? 0);
+
+                    if ($preferPercent && $percentRate > 0 && $deliveryRate > 0) {
+                        return round($deliveryRate * ($percentRate / 100), 2);
+                    }
+
+                    return $rate;
+                }
+
+                return is_numeric($entry) ? (float) $entry : 0.0;
+            })
+            ->values()
+            ->all();
     }
 
     private function generateSoaNumber()

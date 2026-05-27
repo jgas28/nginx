@@ -185,7 +185,7 @@ class RouteAccessMiddleware
             BillingController::class => [
                 ['methods' => ['dashboard'], 'roles' => [49]],
                 ['methods' => ['createSOAForm', 'createSOAFormAccessorial', 'createSOA', 'createAccessorialSOA'], 'roles' => [50]],
-                ['methods' => ['index', 'indexAccessorial', 'exportExcel', 'showSoa', 'editSOAForm', 'updateSOA', 'markAsPaid', 'destroySOA', 'print', 'downloadPdf'], 'roles' => [51]],
+                ['methods' => ['index', 'indexAccessorial', 'exportExcel', 'exportHuawei', 'showSoa', 'editSOAForm', 'updateSOA', 'markAsPaid', 'destroySOA', 'print', 'downloadPdf'], 'roles' => [51]],
             ],
             AttendanceController::class => [
                 ['methods' => ['index'], 'roles' => [55]],

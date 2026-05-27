@@ -259,6 +259,7 @@ Route::middleware(['auth', 'route.access'])->group(function () {
     // Show delivery requests (index view) with company filter
     Route::get('billing', [BillingController::class, 'index'])->name('billing.index');
     Route::get('billing/export/excel', [BillingController::class, 'exportExcel'])->name('billing.exportExcel');
+    Route::get('billing/export/huawei', [BillingController::class, 'exportHuawei'])->name('billing.exportHuawei');
     Route::get('billing/dashboard', [BillingController::class, 'dashboard'])->name('billing.dashboard');
     Route::get('billing/accessorial', [BillingController::class, 'indexAccessorial'])->name('billing.indexAccessorial');
 
