@@ -180,7 +180,7 @@ class RouteAccessMiddleware
             RunningBalanceController::class => [
                 ['methods' => ['index', 'store', 'storeReimbursement', 'storeCollected', 'storeUncollected', 'print', 'editRefund', 'updateRefund', 'editReturn', 'updateReturn', 'printRefund', 'printReturn', 'collectedFunds'], 'roles' => [43]],
                 ['methods' => ['adminFunds', 'storeReimbursementAdmin', 'storeCollectedAdmin'], 'roles' => [44]],
-                ['methods' => ['davaoFunds'], 'roles' => [45]],
+                ['methods' => ['davaoFunds', 'collectedFunds'], 'roles' => [45]],
             ],
             BillingController::class => [
                 ['methods' => ['dashboard'], 'roles' => [49]],
