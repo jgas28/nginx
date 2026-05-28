@@ -139,6 +139,7 @@ Route::middleware(['auth', 'route.access'])->group(function () {
     Route::post('/running-balance/uncollected', [RunningBalanceController::class, 'storeUncollected'])->name('running-balance.uncollected');
     Route::post('/running-balance/reimburse-admin', [RunningBalanceController::class, 'storeReimbursementAdmin'])->name('running-balance.reimburseAdmin');
     Route::post('/running-balance/collected-admin', [RunningBalanceController::class, 'storeCollectedAdmin'])->name('running-balance.collectedAdmin');
+    Route::get('/running-balance/{any}', fn() => redirect()->back()->withErrors(['error' => 'Invalid request.']))->where('any', '.*');
     // ⚠️ Put this after
     Route::resource('liquidations', LiquidationController::class);
 
