@@ -178,7 +178,7 @@ class RouteAccessMiddleware
                 ['methods' => ['cashVoucherReport', 'AdminExport', 'rpmCashVoucherReport', 'RPMexport'], 'roles' => [12, 13, 14, 15, 16, 17, 18]],
             ],
             RunningBalanceController::class => [
-                ['methods' => ['index', 'store', 'storeReimbursement', 'storeCollected', 'storeUncollected', 'print', 'editRefund', 'updateRefund', 'editReturn', 'updateReturn', 'printRefund', 'printReturn'], 'roles' => [43]],
+                ['methods' => ['index', 'store', 'storeReimbursement', 'storeCollected', 'storeUncollected', 'print', 'editRefund', 'updateRefund', 'editReturn', 'updateReturn', 'printRefund', 'printReturn', 'collectedFunds'], 'roles' => [43]],
                 ['methods' => ['adminFunds', 'storeReimbursementAdmin', 'storeCollectedAdmin'], 'roles' => [44]],
                 ['methods' => ['davaoFunds'], 'roles' => [45]],
             ],

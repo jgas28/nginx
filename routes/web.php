@@ -139,7 +139,6 @@ Route::middleware(['auth', 'route.access'])->group(function () {
     Route::post('/running-balance/uncollected', [RunningBalanceController::class, 'storeUncollected'])->name('running-balance.uncollected');
     Route::post('/running-balance/reimburse-admin', [RunningBalanceController::class, 'storeReimbursementAdmin'])->name('running-balance.reimburseAdmin');
     Route::post('/running-balance/collected-admin', [RunningBalanceController::class, 'storeCollectedAdmin'])->name('running-balance.collectedAdmin');
-    Route::get('/running-balance/{any}', fn() => redirect()->back()->withErrors(['error' => 'Invalid request.']))->where('any', '.*');
     // ⚠️ Put this after
     Route::resource('liquidations', LiquidationController::class);
 
@@ -239,6 +238,7 @@ Route::middleware(['auth', 'route.access'])->group(function () {
     Route::get('/return/print/{id}', [RunningBalanceController::class, 'printReturn'])->name('returns.print');
     Route::get('/running-balance/laguna', [RunningBalanceController::class, 'adminFunds'])->name('running_balance.adminFunds');
     Route::get('/running-balance/davao', [RunningBalanceController::class, 'davaoFunds'])->name('running_balance.davaoFunds');
+    Route::get('/running-balance/collected', [RunningBalanceController::class, 'collectedFunds'])->name('running_balance.collectedFunds');
     
     Route::post('/liquidations/{id}/approvedEdit', [LiquidationController::class, 'approvedLiqUpdate'])->name('liquidations.approvedEdit');
 
