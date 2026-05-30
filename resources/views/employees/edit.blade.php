@@ -156,7 +156,7 @@
                                 ['Liquidation', [20, 21, 22, 23, 24, 25, 26, 27, 33]],
                                 ['Settings', [3, 4, 5, 28, 33, 34]],
                                 ['Dashboard', [37, 38, 39, 40, 41, 42]],
-                                ['Running Balance', [35, 43, 44, 45]],
+                                ['Running Balance', [35, 43, 44, 45, 58]],
                                 ['Billing', [46, 49, 50, 51]],
                                 ['Human Resource', [47, 52, 53, 54]],
                                 ['Attendance', [48, 55, 56, 57]],
