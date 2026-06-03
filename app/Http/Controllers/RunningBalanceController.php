@@ -10,6 +10,7 @@ use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class RunningBalanceController extends Controller
 {
@@ -347,6 +348,121 @@ class RunningBalanceController extends Controller
         ));
     }
     
+    private function getExportRecords(Request $request): array
+    {
+        $query = RunningBalance::with(['approver', 'employee', 'creator', 'suppliers']);
+
+        if ($request->filled('start_date') && $request->filled('end_date')) {
+            $query->whereBetween('created_at', [
+                $request->start_date . ' 00:00:00',
+                $request->end_date . ' 23:59:59',
+            ]);
+        }
+
+        if ($request->filled('approver_id')) {
+            $query->where('approver_id', $request->approver_id);
+        }
+
+        if ($request->filled('adjustment_type')) {
+            $query->where('adjustment_type', $request->adjustment_type);
+        }
+
+        $allowedSorts = ['created_at', 'amount', 'type', 'adjustment_type'];
+        $sort      = in_array($request->get('sort'), $allowedSorts) ? $request->get('sort') : 'created_at';
+        $direction = $request->get('direction') === 'asc' ? 'asc' : 'desc';
+
+        $records = $query->orderBy($sort, $direction)->get();
+
+        $locationLabel = 'All Source Funds';
+        if ($request->filled('approver_id')) {
+            $approver = Approver::find($request->approver_id);
+            $locationLabel = $approver ? $approver->name : 'Filtered';
+        }
+
+        $dateFrom = $request->get('start_date') ?: 'All Dates';
+        $dateTo   = $request->get('end_date')   ?: now()->format('Y-m-d');
+
+        return compact('records', 'locationLabel', 'dateFrom', 'dateTo');
+    }
+
+    private function getTypeLabel(int $type): string
+    {
+        return match ($type) {
+            1  => 'Top-up',
+            2  => 'Collected',
+            3  => 'Refund',
+            4  => 'Uncollected Funds',
+            5  => 'Salary Deduction',
+            6  => 'Liquidated Amount',
+            7  => 'Transfer',
+            8  => 'Release Approved Amount',
+            10 => 'Transfer',
+            11 => 'Adjustment',
+            12 => 'Adjustment for Uncollected',
+            default => 'Reimbursement',
+        };
+    }
+
+    public function exportExcel(Request $request)
+    {
+        ['records' => $records, 'locationLabel' => $locationLabel, 'dateFrom' => $dateFrom, 'dateTo' => $dateTo] = $this->getExportRecords($request);
+
+        $slug     = preg_replace('/[^a-z0-9]+/', '-', strtolower($locationLabel));
+        $filename = 'running-balance-' . $slug . '-' . now()->format('Y-m-d') . '.csv';
+
+        $callback = function () use ($records, $locationLabel, $dateFrom, $dateTo) {
+            $out = fopen('php://output', 'w');
+            fputs($out, "\xEF\xBB\xBF");
+
+            fputcsv($out, ['Running Balance Report - ' . $locationLabel]);
+            fputcsv($out, ['Period: ' . $dateFrom . ' to ' . $dateTo]);
+            fputcsv($out, ['Generated: ' . now()->format('M d, Y h:i A')]);
+            fputcsv($out, []);
+            fputcsv($out, ['Date', 'CVR Number', 'Type', 'Movement', 'Description', 'Employee / Supplier', 'Source', 'Created By', 'Amount']);
+
+            foreach ($records as $record) {
+                $party = '';
+                if ($record->employee) {
+                    $party = trim(($record->employee->fname ?? '') . ' ' . ($record->employee->lname ?? ''));
+                } elseif ($record->suppliers) {
+                    $party = $record->suppliers->supplier_name ?? '';
+                }
+
+                fputcsv($out, [
+                    optional($record->created_at)->format('M d, Y'),
+                    $record->cvr_number ?? '',
+                    $this->getTypeLabel((int) $record->type),
+                    $record->adjustment_type ?? '',
+                    $record->description ?? '',
+                    $party,
+                    optional($record->approver)->name ?? '',
+                    trim((optional($record->creator)->fname ?? '') . ' ' . (optional($record->creator)->lname ?? '')),
+                    number_format((float) $record->amount, 2),
+                ]);
+            }
+
+            fclose($out);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    public function exportPdf(Request $request)
+    {
+        ['records' => $records, 'locationLabel' => $locationLabel, 'dateFrom' => $dateFrom, 'dateTo' => $dateTo] = $this->getExportRecords($request);
+
+        $slug     = preg_replace('/[^a-z0-9]+/', '-', strtolower($locationLabel));
+        $filename = 'running-balance-' . $slug . '-' . now()->format('Y-m-d') . '.pdf';
+
+        $pdf = Pdf::loadView('running_balance.export-pdf', compact('records', 'locationLabel', 'dateFrom', 'dateTo'))
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->download($filename);
+    }
+
     public function store(Request $request)
     {
         $user = Auth::user();

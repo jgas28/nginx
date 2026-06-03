@@ -183,6 +183,7 @@ class RouteAccessMiddleware
                 ['methods' => ['storeCollected', 'collectedFunds'], 'roles' => [43, 45]],
                 ['methods' => ['adminFunds', 'storeReimbursementAdmin', 'storeCollectedAdmin'], 'roles' => [44]],
                 ['methods' => ['davaoFunds'], 'roles' => [45]],
+                ['methods' => ['exportExcel', 'exportPdf'], 'roles' => [43, 44, 45, 58]],
             ],
             BillingController::class => [
                 ['methods' => ['dashboard'], 'roles' => [49]],

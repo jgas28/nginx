@@ -19,6 +19,25 @@
                         </p>
                     </div>
                 </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <a
+                        id="btn-export-excel"
+                        href="{{ route('running_balance.exportExcel') }}?approver_id=3"
+                        class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-[15px] font-semibold text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-100 sm:w-auto"
+                    >
+                        <i class="fas fa-file-excel"></i>
+                        Excel
+                    </a>
+                    <a
+                        id="btn-export-pdf"
+                        href="{{ route('running_balance.exportPdf') }}?approver_id=3"
+                        class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 text-[15px] font-semibold text-rose-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-rose-100 sm:w-auto"
+                    >
+                        <i class="fas fa-file-pdf"></i>
+                        PDF
+                    </a>
+                </div>
             </div>
         </div>
 
@@ -132,6 +151,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return new URLSearchParams(formData).toString();
     }
 
+    function updateExportLinks() {
+        const params = buildQuery();
+        document.getElementById('btn-export-excel').href = `{{ route('running_balance.exportExcel') }}?${params}`;
+        document.getElementById('btn-export-pdf').href   = `{{ route('running_balance.exportPdf') }}?${params}`;
+    }
+
     async function loadResults(pushState = true) {
         if (!results) {
             return;
@@ -195,6 +220,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         await loadResults(true);
+    });
+
+    updateExportLinks();
+
+    form.querySelectorAll('input, select').forEach((field) => {
+        const eventName = field.tagName === 'SELECT' || field.type === 'date' ? 'change' : 'input';
+        field.addEventListener(eventName, () => updateExportLinks());
     });
 
     bindFilters();

@@ -101,6 +101,8 @@ Route::middleware(['auth', 'route.access'])->group(function () {
     Route::resource('admin', AdminController::class);
     Route::get('/running-balance', [RunningBalanceController::class, 'index'])->name('running_balance.index');
     Route::post('/running-balance/store', [RunningBalanceController::class, 'store'])->name('running_balance.store');
+    Route::get('/running-balance/export/excel', [RunningBalanceController::class, 'exportExcel'])->name('running_balance.exportExcel');
+    Route::get('/running-balance/export/pdf', [RunningBalanceController::class, 'exportPdf'])->name('running_balance.exportPdf');
     Route::get('/reports/deliveryRequest', [ReportsController::class, 'deliveryRequestReport'])->name('reports.dr');
     Route::get('/reports/cashVoucher', [ReportsController::class, 'cashVoucherReport'])->name('reports.cv');
     Route::get('/reports/rpm', [ReportsController::class, 'rpmCashVoucherReport'])->name('reports.rpm');

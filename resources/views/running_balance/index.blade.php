@@ -20,16 +20,34 @@
                     </div>
                 </div>
 
-                <button
-                    type="button"
-                    onclick="openModal()"
-                    class="inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-indigo-600 px-5 py-3 text-[15px] font-semibold text-white shadow-[0_12px_24px_rgba(79,70,229,0.22)] transition hover:-translate-y-0.5 hover:bg-indigo-700 sm:w-auto"
-                >
-                    <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
-                        <i class="fas fa-plus"></i>
-                    </span>
-                    New Transaction
-                </button>
+                <div class="flex flex-wrap items-center gap-2">
+                    <a
+                        id="btn-export-excel"
+                        href="{{ route('running_balance.exportExcel') }}"
+                        class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-[15px] font-semibold text-emerald-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-100 sm:w-auto"
+                    >
+                        <i class="fas fa-file-excel"></i>
+                        Excel
+                    </a>
+                    <a
+                        id="btn-export-pdf"
+                        href="{{ route('running_balance.exportPdf') }}"
+                        class="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-300 bg-rose-50 px-4 py-3 text-[15px] font-semibold text-rose-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-rose-100 sm:w-auto"
+                    >
+                        <i class="fas fa-file-pdf"></i>
+                        PDF
+                    </a>
+                    <button
+                        type="button"
+                        onclick="openModal()"
+                        class="inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-indigo-600 px-5 py-3 text-[15px] font-semibold text-white shadow-[0_12px_24px_rgba(79,70,229,0.22)] transition hover:-translate-y-0.5 hover:bg-indigo-700 sm:w-auto"
+                    >
+                        <span class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/20">
+                            <i class="fas fa-plus"></i>
+                        </span>
+                        New Transaction
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -257,6 +275,12 @@
             return new URLSearchParams(formData).toString();
         }
 
+        function updateExportLinks() {
+            const params = buildQuery();
+            document.getElementById('btn-export-excel').href = `{{ route('running_balance.exportExcel') }}?${params}`;
+            document.getElementById('btn-export-pdf').href   = `{{ route('running_balance.exportPdf') }}?${params}`;
+        }
+
         async function loadResults(pushState = true) {
             if (!results) {
                 return;
@@ -289,11 +313,14 @@
             }
         }
 
+        updateExportLinks();
+
         form.querySelectorAll('input, select').forEach((field) => {
             const eventName = field.tagName === 'SELECT' || field.type === 'date' ? 'change' : 'input';
             field.addEventListener(eventName, () => {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => loadResults(true), 300);
+                updateExportLinks();
             });
         });
 
