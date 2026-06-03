@@ -7,15 +7,15 @@
         h1 { font-size: 14px; font-weight: bold; margin: 0 0 2px; }
         .subtitle { font-size: 9px; color: #64748b; margin-bottom: 12px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        thead tr { background-color: #4f46e5; color: #fff; }
-        th { padding: 5px 6px; text-align: left; font-size: 8px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+        .thead-row { background-color: #4f46e5; color: #fff; }
+        th { padding: 5px 6px; text-align: left; font-size: 8px; font-weight: 600; text-transform: uppercase; }
         td { padding: 4px 6px; border-bottom: 1px solid #e2e8f0; font-size: 8.5px; }
-        tr:nth-child(even) td { background-color: #f8fafc; }
+        .row-even td { background-color: #f8fafc; }
         .in  { color: #065f46; }
         .out { color: #991b1b; }
         .flt { color: #92400e; }
-        .amount { text-align: right; font-variant-numeric: tabular-nums; }
-        tfoot td { font-weight: bold; background: #f1f5f9; border-top: 2px solid #cbd5e1; }
+        .amount { text-align: right; }
+        .tfoot-row td { font-weight: bold; background: #f1f5f9; border-top: 2px solid #cbd5e1; }
     </style>
 </head>
 <body>
@@ -30,7 +30,7 @@
 
     <table>
         <thead>
-            <tr>
+            <tr class="thead-row">
                 <th>Date</th>
                 <th>CVR Number</th>
                 <th>Type</th>
@@ -43,7 +43,7 @@
             </tr>
         </thead>
         <tbody>
-            @php $total = 0; @endphp
+            @php $total = 0; $rowIdx = 0; @endphp
             @forelse($records as $record)
                 @php
                     $party = '';
@@ -53,10 +53,11 @@
                         $party = $record->suppliers->supplier_name ?? '';
                     }
                     $total += (float) $record->amount;
-                    $mvClass = $record->adjustment_type === 'Out' ? 'out' : ($record->adjustment_type === 'In' ? 'in' : 'flt');
+                    $mvClass  = $record->adjustment_type === 'Out' ? 'out' : ($record->adjustment_type === 'In' ? 'in' : 'flt');
                     $amtClass = (float) $record->amount < 0 ? 'out' : 'in';
+                    $rowClass = ($rowIdx++ % 2 === 1) ? 'row-even' : '';
                 @endphp
-                <tr>
+                <tr class="{{ $rowClass }}">
                     <td>{{ optional($record->created_at)->format('M d, Y') }}</td>
                     <td>{{ $record->cvr_number ?? '—' }}</td>
                     <td>
@@ -89,7 +90,7 @@
             @endforelse
         </tbody>
         <tfoot>
-            <tr>
+            <tr class="tfoot-row">
                 <td colspan="8" style="text-align:right; font-size:9px;">Grand Total</td>
                 <td class="amount {{ $total < 0 ? 'out' : 'in' }}">{{ number_format($total, 2) }}</td>
             </tr>

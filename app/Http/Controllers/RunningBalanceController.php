@@ -452,13 +452,19 @@ class RunningBalanceController extends Controller
 
     public function exportPdf(Request $request)
     {
+        ini_set('memory_limit', '256M');
+        set_time_limit(120);
+
         ['records' => $records, 'locationLabel' => $locationLabel, 'dateFrom' => $dateFrom, 'dateTo' => $dateTo] = $this->getExportRecords($request);
 
         $slug     = preg_replace('/[^a-z0-9]+/', '-', strtolower($locationLabel));
         $filename = 'running-balance-' . $slug . '-' . now()->format('Y-m-d') . '.pdf';
 
         $pdf = Pdf::loadView('running_balance.export-pdf', compact('records', 'locationLabel', 'dateFrom', 'dateTo'))
-            ->setPaper('a4', 'landscape');
+            ->setPaper('a4', 'landscape')
+            ->setOption('isHtml5ParserEnabled', true)
+            ->setOption('isFontSubsettingEnabled', true)
+            ->setOption('defaultFont', 'dejavu sans');
 
         return $pdf->download($filename);
     }
