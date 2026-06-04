@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\LiquidationListExport;
 use App\Models\Approver;
 use App\Models\Liquidation;
 use App\Models\cvr_approval;
@@ -18,7 +19,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 class LiquidationController extends Controller
 {
@@ -1184,10 +1187,36 @@ class LiquidationController extends Controller
         $endDate   = $request->input('end_date');
         $cvrNumber = trim((string) $request->input('cvr_number', ''));
 
-        // Base query
+        $query = $this->buildLiquidationListQuery($startDate, $endDate, $cvrNumber);
+
+        // Paginate results (10 per page)
+        $liquidations = $query->paginate(10)->withQueryString();
+        $this->appendLiquidationListComputedFields($liquidations->getCollection());
+
+        return view('liquidations.liquidationList', compact('liquidations', 'startDate', 'endDate', 'cvrNumber'));
+    }
+
+    public function exportLiquidationListExcel(Request $request)
+    {
+        $startDate = $request->input('start_date');
+        $endDate   = $request->input('end_date');
+        $cvrNumber = trim((string) $request->input('cvr_number', ''));
+
+        $query = $this->buildLiquidationListQuery($startDate, $endDate, $cvrNumber);
+        $liquidations = $query->get();
+        $this->appendLiquidationListComputedFields($liquidations);
+
+        return Excel::download(
+            new LiquidationListExport($liquidations),
+            'liquidation_list_' . now()->format('Ymd_His') . '.xlsx'
+        );
+    }
+
+    private function buildLiquidationListQuery(?string $startDate, ?string $endDate, string $cvrNumber)
+    {
         $query = Liquidation::with('cashVoucher');
 
-        // Apply date filter only when date input is provided
+        // Apply date filter only when date input is provided.
         if ($startDate || $endDate) {
             $start = $startDate
                 ? Carbon::parse($startDate)->startOfDay()
@@ -1199,18 +1228,18 @@ class LiquidationController extends Controller
             $query->whereBetween('created_at', [$start, $end]);
         }
 
-        // Add CVR filter if present
         if ($cvrNumber !== '') {
             $query->whereHas('cashVoucher', function ($q) use ($cvrNumber) {
                 $q->where('cvr_number', 'like', '%' . $cvrNumber . '%');
             });
         }
 
-        // Paginate results (10 per page)
-        $liquidations = $query->paginate(10)->withQueryString();
+        return $query;
+    }
 
-        // Compute total expenses for each item
-        $liquidations->getCollection()->transform(function ($liquidation) {
+    private function appendLiquidationListComputedFields(Collection $liquidations): void
+    {
+        $liquidations->transform(function ($liquidation) {
             $cashVoucher = $liquidation->cashVoucher;
             $totalExpenses = 0;
 
@@ -1286,8 +1315,6 @@ class LiquidationController extends Controller
             $liquidation->total_expense = $totalExpenses;
             return $liquidation;
         });
-
-        return view('liquidations.liquidationList', compact('liquidations', 'startDate', 'endDate', 'cvrNumber'));
     }
 
 

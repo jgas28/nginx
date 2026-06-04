@@ -129,6 +129,8 @@ Route::middleware(['auth', 'route.access'])->group(function () {
 
     Route::get('/liquidations/liquidationList', [LiquidationController::class, 'liquidationList'])
     ->name('liquidations.liquidationList');
+    Route::get('/liquidations/liquidationList/export/excel', [LiquidationController::class, 'exportLiquidationListExcel'])
+    ->name('liquidations.liquidationList.exportExcel');
     Route::get('/liquidations/{id}/reject-edit', [LiquidationController::class, 'rejectEdit'])->name('liquidations.rejectEdit');
     Route::put('/liquidations/{id}/reject-update', [LiquidationController::class, 'rejectUpdate'])->name('liquidations.rejectUpdate');
 

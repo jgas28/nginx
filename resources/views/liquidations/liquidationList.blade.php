@@ -32,6 +32,13 @@
                     Filter
                 </button>
             </div>
+
+            <div class="self-end">
+                <a href="{{ route('liquidations.liquidationList.exportExcel', request()->query()) }}"
+                    class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-white hover:bg-green-700 transition">
+                    Download Excel
+                </a>
+            </div>
         </form>
 
         {{-- Table --}}
