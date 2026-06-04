@@ -1182,22 +1182,25 @@ class LiquidationController extends Controller
     {
         $startDate = $request->input('start_date');
         $endDate   = $request->input('end_date');
-        $cvrNumber = $request->input('cvr_number');
-
-        if ($startDate && $endDate) {
-            $start = Carbon::parse($startDate)->startOfDay();
-            $end   = Carbon::parse($endDate)->endOfDay();
-        } else {
-            $start = Carbon::today();
-            $end   = Carbon::today()->endOfDay();
-        }
+        $cvrNumber = trim((string) $request->input('cvr_number', ''));
 
         // Base query
-        $query = Liquidation::with('cashVoucher')
-            ->whereBetween('created_at', [$start, $end]);
+        $query = Liquidation::with('cashVoucher');
+
+        // Apply date filter only when date input is provided
+        if ($startDate || $endDate) {
+            $start = $startDate
+                ? Carbon::parse($startDate)->startOfDay()
+                : Carbon::minValue();
+            $end = $endDate
+                ? Carbon::parse($endDate)->endOfDay()
+                : Carbon::maxValue();
+
+            $query->whereBetween('created_at', [$start, $end]);
+        }
 
         // Add CVR filter if present
-        if ($cvrNumber) {
+        if ($cvrNumber !== '') {
             $query->whereHas('cashVoucher', function ($q) use ($cvrNumber) {
                 $q->where('cvr_number', 'like', '%' . $cvrNumber . '%');
             });
