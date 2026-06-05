@@ -669,7 +669,7 @@
             @endif
 
             {{-- Allocation List nav (role_id = 9) --}}
-            @if($user->hasAnyRoleId([1, 2, 30]))
+            @if($user->hasAnyRoleId([1, 2, 8, 9, 30]))
             <div x-data="{ openAllocate: false }">
                 <button @click="openAllocate = !openAllocate" class="w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-gray-100 transition hover:bg-gray-700/80 hover:text-white">
                     <div class="flex items-center gap-3">
