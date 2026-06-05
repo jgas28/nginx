@@ -45,7 +45,6 @@ class AllocationController extends Controller
         ])
         ->where('status', '!=', 0)
         ->where('delivery_status', 8) // For Truck Allocation
-        ->when(!$user->isAdmin() && $user->company_id, fn($q) => $q->where('company_id', $user->company_id))
         ->when($search, function ($query, $search) {
             $query->where(function ($q) use ($search) {
                 $q->where('mtm', 'like', '%' . $search . '%')
