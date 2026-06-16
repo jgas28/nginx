@@ -82,7 +82,9 @@
                     <tr>
                         <th class="px-4 py-3">MTM / CVR</th>
                         <th class="px-4 py-3">Company / Expense</th>
+                        <th class="px-4 py-3">Requestor</th>
                         <th class="px-4 py-3">Amount</th>
+                        <th class="px-4 py-3">Pending Liquidation</th>
                         <th class="px-4 py-3">Request Type</th>
                         <th class="px-4 py-3 text-right">Actions</th>
                     </tr>
@@ -107,9 +109,48 @@
                                 <div class="mt-1 text-xs text-slate-500">Expense: {{ $expenseTypeCode }}</div>
                             </td>
                             <td class="px-4 py-4 align-top">
+                                @php
+                                    $requestorUser = $deliveryRequest->employee;
+                                    $requestorName = $requestorUser ? trim(($requestorUser->fname ?? '') . ' ' . ($requestorUser->lname ?? '')) : 'N/A';
+                                @endphp
+                                <div class="font-medium text-slate-900">{{ $requestorName ?: 'N/A' }}</div>
+                            </td>
+                            <td class="px-4 py-4 align-top">
                                 <span class="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-100">
                                     PHP {{ number_format((float) $deliveryRequest->amount, 2) }}
                                 </span>
+                            </td>
+                            <td class="px-4 py-4 align-top">
+                                @php
+                                    $pendingCvrs = $deliveryRequest->pending_cvrs ?? collect();
+                                    $pendingTotal = $deliveryRequest->pending_liquidation_total ?? 0;
+                                    $pendingRows = $pendingCvrs->map(function ($p) {
+                                        $liq = $p->liquidations->sortByDesc('updated_at')->first();
+                                        return [
+                                            'cvr'    => preg_replace('/\/\d+$/', '', $p->cvr_number),
+                                            'status' => match ((string) ($liq->status ?? '')) {
+                                                '1'  => 'For Validation',
+                                                '3'  => 'For Collection',
+                                                '4'  => 'For Approved',
+                                                '10' => 'Liq. Rejected',
+                                                default => 'For Liquidation',
+                                            },
+                                            'amount' => number_format((float) $p->amount, 2),
+                                        ];
+                                    })->values()->toArray();
+                                @endphp
+                                @if ($pendingCvrs->isNotEmpty())
+                                    <button
+                                        type="button"
+                                        class="pending-liq-trigger inline-flex items-center gap-1.5 rounded-full bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 ring-1 ring-rose-100 transition-colors hover:bg-rose-100"
+                                        data-rows="{{ json_encode($pendingRows) }}"
+                                    >
+                                        PHP {{ number_format($pendingTotal, 2) }}
+                                        <i class="fas fa-chevron-down text-[9px]"></i>
+                                    </button>
+                                @else
+                                    <span class="text-xs text-slate-400">None</span>
+                                @endif
                             </td>
                             <td class="px-4 py-4 align-top">
                                 <span class="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 ring-1 ring-amber-100">
@@ -135,7 +176,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="px-4 py-12 text-center text-sm text-slate-500">
+                            <td colspan="7" class="px-4 py-12 text-center text-sm text-slate-500">
                                 No cash voucher approvals found for the current filters.
                             </td>
                         </tr>

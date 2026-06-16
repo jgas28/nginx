@@ -73,6 +73,32 @@
     </div>
 </div>
 
+<!-- Shared floating panel for pending liquidation breakdown -->
+<div
+    id="pending-liq-panel"
+    class="fixed z-50 hidden w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15"
+    style="min-width:280px;"
+>
+    <div class="flex items-center gap-2 border-b border-slate-100 bg-slate-50 px-4 py-3">
+        <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+            <i class="fas fa-clock-rotate-left text-[10px]"></i>
+        </span>
+        <p class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">Pending Liquidations</p>
+    </div>
+    <div class="overflow-y-auto" style="max-height:220px;">
+        <table class="min-w-full text-xs">
+            <thead class="sticky top-0 bg-slate-50">
+                <tr class="border-b border-slate-100">
+                    <th class="px-3 py-2 text-left font-semibold uppercase tracking-wide text-slate-400">CVR No</th>
+                    <th class="px-3 py-2 text-left font-semibold uppercase tracking-wide text-slate-400">Status</th>
+                    <th class="px-3 py-2 text-right font-semibold uppercase tracking-wide text-slate-400">Amount</th>
+                </tr>
+            </thead>
+            <tbody id="pending-liq-body" class="divide-y divide-slate-100"></tbody>
+        </table>
+    </div>
+</div>
+
 <style>
     .searchable-select-source {
         position: absolute;
@@ -256,6 +282,66 @@
 
         updateLabel();
         renderOptions();
+    })();
+
+    (() => {
+        const panel  = document.getElementById('pending-liq-panel');
+        const tbody  = document.getElementById('pending-liq-body');
+        if (!panel || !tbody) return;
+
+        let activeTrigger = null;
+
+        const STATUS_COLOR = {
+            'For Validation': 'text-violet-600',
+            'For Collection': 'text-amber-600',
+            'For Approved':   'text-blue-600',
+            'Liq. Rejected':  'text-red-600',
+            'For Liquidation':'text-slate-500',
+        };
+
+        function openPanel(trigger) {
+            const rows = JSON.parse(trigger.dataset.rows || '[]');
+
+            tbody.innerHTML = rows.map(r => {
+                const color = STATUS_COLOR[r.status] || 'text-slate-500';
+                return `<tr class="hover:bg-slate-50">
+                    <td class="px-3 py-2 font-medium text-slate-700">${r.cvr}</td>
+                    <td class="px-3 py-2 ${color}">${r.status}</td>
+                    <td class="px-3 py-2 text-right font-semibold text-slate-700">${r.amount}</td>
+                </tr>`;
+            }).join('');
+
+            panel.classList.remove('hidden');
+
+            const rect   = trigger.getBoundingClientRect();
+            const pw     = panel.offsetWidth || 280;
+            let   left   = rect.left;
+            if (left + pw > window.innerWidth - 8) left = window.innerWidth - pw - 8;
+            if (left < 8) left = 8;
+
+            panel.style.top  = (rect.bottom + 6) + 'px';
+            panel.style.left = left + 'px';
+
+            activeTrigger = trigger;
+        }
+
+        function closePanel() {
+            panel.classList.add('hidden');
+            activeTrigger = null;
+        }
+
+        document.addEventListener('click', function (e) {
+            const trigger = e.target.closest('.pending-liq-trigger');
+            if (trigger) {
+                e.stopPropagation();
+                activeTrigger === trigger ? closePanel() : openPanel(trigger);
+                return;
+            }
+            if (!panel.contains(e.target)) closePanel();
+        });
+
+        document.addEventListener('scroll', closePanel, true);
+        window.addEventListener('resize', closePanel);
     })();
 </script>
 @endsection

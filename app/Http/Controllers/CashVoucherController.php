@@ -90,6 +90,7 @@ class CashVoucherController extends Controller
             'deliveryRequest.company',
             'deliveryRequest.expenseType',
             'cvrTypes',
+            'employee',
         ])
             ->where('status', 1)
             ->whereNotIn('cvr_type', ['admin', 'rpm']);
@@ -125,6 +126,17 @@ class CashVoucherController extends Controller
             ->paginate($perPage)
             ->appends($request->query());
 
+        $requestorIds = $deliveryRequests->pluck('requestor')->filter()->unique();
+
+        $pendingCvrsByRequestor = CashVoucher::with('liquidations')
+            ->whereIn('requestor', $requestorIds)
+            ->where('status', 2)
+            ->whereDoesntHave('liquidations', function ($q) {
+                $q->where('status', 5);
+            })
+            ->get(['id', 'requestor', 'cvr_number', 'amount'])
+            ->groupBy('requestor');
+
         foreach ($deliveryRequests as $cashVoucher) {
             $allAllocations = collect([
                 ...($cashVoucher->deliveryRequest->deliveryAllocations ?? []),
@@ -140,8 +152,11 @@ class CashVoucherController extends Controller
                     $allocation->sequence == $cashVoucher->sequence;
             });
 
-            // Add this to the model temporarily so you can access in the view
+            $pendingCvrs = $pendingCvrsByRequestor[$cashVoucher->requestor] ?? collect();
+
             $cashVoucher->matched_allocation = $matchedAllocation;
+            $cashVoucher->pending_cvrs = $pendingCvrs;
+            $cashVoucher->pending_liquidation_total = (float) $pendingCvrs->sum('amount');
         }
 
         $availableTypes = CashVoucher::query()
