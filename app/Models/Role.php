@@ -16,4 +16,17 @@ class Role extends Model
     {
         return $this->belongsToMany(User::class);
     }
+
+    public function modulePermissions()
+    {
+        return $this->hasMany(RoleModulePermission::class);
+    }
+
+    public function canOnModule(string $moduleSlug, string $action): bool
+    {
+        return $this->modulePermissions()
+            ->whereHas('module', fn ($query) => $query->where('slug', $moduleSlug))
+            ->where("can_{$action}", true)
+            ->exists();
+    }
 }

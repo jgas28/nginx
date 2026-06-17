@@ -501,6 +501,8 @@ class RunningBalanceController extends Controller
 
         $party = $this->resolvePartySelection($request);
 
+        app(\App\Support\AuditContext::class)->tag('running_balance.created', "Recorded Running Balance Entry");
+
         $amount = $request->amount;
 
         if (in_array($request->type, [3, 4, 8])) {
@@ -601,10 +603,12 @@ class RunningBalanceController extends Controller
         $this->applyPartyMatch($existing, $validated['employee_id'], $validated['supplier_id']);
         $existing = $existing->first();
 
-        if ($existing) {     
+        if ($existing) {
             return redirect()->route('liquidations.review', $liquidation_id)
                 ->with('info', 'Reimbursement already submitted.');
         }
+
+        app(\App\Support\AuditContext::class)->tag('running_balance.refund_recorded', "Recorded Refund");
 
         $reimbursement = RunningBalance::create($validated);
 
@@ -623,6 +627,8 @@ class RunningBalanceController extends Controller
             'created_by' => 'required|exists:users,id',
             'cvr_number' => 'required|string',
         ]);
+
+        app(\App\Support\AuditContext::class)->tag('running_balance.admin_refund_recorded', 'Recorded Admin Refund');
 
         $party = $this->resolvePartySelection($request, true);
         $validated['employee_id'] = $party['employee_id'];
@@ -732,6 +738,8 @@ class RunningBalanceController extends Controller
             'cvr_number_collected' => 'required|string', // CVR Number
         ]);
 
+        app(\App\Support\AuditContext::class)->tag('running_balance.collected_recorded', 'Recorded Collected Funds');
+
         $party = $this->resolvePartySelection($request, true);
 
         // Create a new reimbursement entry for the collected amount
@@ -769,6 +777,8 @@ class RunningBalanceController extends Controller
             'cvr_number_uncollected' => 'required|string', // CVR Number
             'description_uncollected' => 'required|string',
         ]);
+
+        app(\App\Support\AuditContext::class)->tag('running_balance.uncollected_recorded', 'Recorded Uncollected Funds');
 
         // Store uncollected amounts for each employee
         $employeeIds = $validated['employee_id_uncollected'];
@@ -809,6 +819,8 @@ class RunningBalanceController extends Controller
             'created_by' => 'required|exists:users,id',
             'cvr_number' => 'required|string',
         ]);
+
+        app(\App\Support\AuditContext::class)->tag('running_balance.admin_collected_recorded', 'Recorded Admin Collected Funds');
 
         // 1. Returned Cash Record
         $reimbursement=RunningBalance::create([
@@ -853,6 +865,7 @@ class RunningBalanceController extends Controller
         ]);
 
         $refund = RunningBalance::findOrFail($id);
+        app(\App\Support\AuditContext::class)->tag('running_balance.refund_updated', "Updated Refund #{$refund->id}");
         $refund->update($request->only('description', 'amount'));
 
         $liquidation_id = $request->input('liquidation_id');
@@ -876,6 +889,7 @@ class RunningBalanceController extends Controller
         ]);
 
         $return = RunningBalance::findOrFail($id);
+        app(\App\Support\AuditContext::class)->tag('running_balance.return_updated', "Updated Return #{$return->id}");
         $return->update($request->only('description', 'amount'));
        
         $liquidation_id = $request->input('liquidation_id');
@@ -892,6 +906,8 @@ class RunningBalanceController extends Controller
             'amount' => 'required|numeric|not_in:0', // Allow both positive and negative
             'description' => 'required|string|max:255',
         ]);
+
+        app(\App\Support\AuditContext::class)->tag('running_balance.admin_adjustment', 'Recorded Admin Adjustment');
 
         RunningBalance::create([
             'approver_id' => $request->approver_id,
@@ -915,6 +931,8 @@ class RunningBalanceController extends Controller
         ]);
 
         $adjustedAmount = $request->amount; // ✅ Keep raw amount (+ or -)
+
+        app(\App\Support\AuditContext::class)->tag('running_balance.uncollected_adjustment', 'Recorded Uncollected Adjustment');
 
         RunningBalance::create([
             'approver_id' => $request->approver_id,

@@ -529,6 +529,22 @@
                             <span class="font-medium leading-none">Change Password</span>
                         </a>
                     @endif
+                    @if($user->hasAnyRoleId([1, 2]))
+                        <a href="{{ route('roles.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-300">
+                                <i class="fas fa-user-shield text-xs"></i>
+                            </span>
+                            <span class="font-medium leading-none">Role Permissions</span>
+                        </a>
+                    @endif
+                    @if($user->hasAnyRoleId([1, 2]))
+                        <a href="{{ route('audit-logs.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-300 transition hover:bg-gray-700/70 hover:text-white">
+                            <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-500/15 text-slate-300">
+                                <i class="fas fa-clipboard-list text-xs"></i>
+                            </span>
+                            <span class="font-medium leading-none">Audit Logs</span>
+                        </a>
+                    @endif
                     {{-- Basic Settings (role_id = 3) --}}
                     @if($user->hasAnyRoleId([1, 2, 3, 36]))
                     <div>

@@ -322,6 +322,8 @@ class CashVoucherController extends Controller
             return redirect()->back()->withErrors($e->errors())->withInput();
         }
 
+        app(\App\Support\AuditContext::class)->tag('cash_voucher.created', "Created Cash Voucher");
+
         $sequence = CashVoucher::where('dr_id', $request->dr_id)
             ->where('cvr_type', $request->cvr_type)
             ->count() + 1;
@@ -453,6 +455,8 @@ class CashVoucherController extends Controller
             return redirect()->back()->withErrors($e->errors())->withInput();
         }
 
+        app(\App\Support\AuditContext::class)->tag('cash_voucher.accessorial_created', "Created Accessorial Cash Voucher");
+
         // Create a new CashVoucher
         $cashVoucher = new CashVoucher([
             'cvr_number' => $request->cvr_number,
@@ -551,6 +555,8 @@ class CashVoucherController extends Controller
         //     $cashVoucher_approval->save();
         // }
 
+        app(\App\Support\AuditContext::class)->tag('cash_voucher.rejected', "Rejected Cash Voucher #{$request->cvr_id}");
+
         if ($cashVoucher) {
             $cashVoucher->status = 3; 
 
@@ -606,6 +612,7 @@ class CashVoucherController extends Controller
             'cheque_charge' => 'nullable|numeric',
         ]);
 
+        app(\App\Support\AuditContext::class)->tag('cash_voucher.approved', "Approved Cash Voucher #{$request->cvr_id}");
 
         Log::info('Full Request Data', $request->all());
 
@@ -1056,6 +1063,7 @@ class CashVoucherController extends Controller
 
         try {
             $cvrApproval = cvr_approval::findOrFail($id);
+            app(\App\Support\AuditContext::class)->tag('cash_voucher.reference_updated', "Updated Reference Number for Cash Voucher #{$cvrApproval->id}");
             $cvrApproval->reference_number = $request->reference_number;
             $cvrApproval->save();
 
@@ -1187,6 +1195,8 @@ class CashVoucherController extends Controller
         $cvrIds = $request->input('cvr_ids', []);
         $voucherIds = $request->input('voucher_ids', []);
 
+        app(\App\Support\AuditContext::class)->tag('cash_voucher.marked_printed', 'Marked Cash Voucher(s) as Printed');
+
         // Log the ids being updated
         Log::info('Received CVR IDs:', ['cvr_ids' => $cvrIds]);
         Log::info('Received Voucher IDs:', ['voucher_ids' => $voucherIds]);
@@ -1269,6 +1279,8 @@ class CashVoucherController extends Controller
         ]);
 
         $cashVoucher = CashVoucher::findOrFail($id);
+
+        app(\App\Support\AuditContext::class)->tag('cash_voucher.edited', "Edited Cash Voucher #{$cashVoucher->id}");
 
         $cashVoucher->amount = $validated['amount'];
         $cashVoucher->request_type = $validated['request_type'];
@@ -1603,6 +1615,8 @@ class CashVoucherController extends Controller
             if (!$cashVoucher) {
                 return redirect()->back()->with('error', 'Cash Voucher not found.');
             }
+
+            app(\App\Support\AuditContext::class)->tag('cash_voucher.resubmitted', "Resubmitted Cash Voucher #{$cashVoucher->id}");
 
             // Update the fields
             $cashVoucher->dr_id = $request->dr_id;

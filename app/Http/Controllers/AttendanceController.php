@@ -188,6 +188,8 @@ class AttendanceController extends Controller
 
     public function store(Request $request)
     {
+        app(\App\Support\AuditContext::class)->tag('attendance.recorded', 'Recorded Attendance');
+
         if ($request->input('mode') === 'employee_dates') {
             $request->validate([
                 'user_id' => 'required|exists:users,id',

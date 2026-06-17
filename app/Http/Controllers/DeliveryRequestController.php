@@ -188,6 +188,8 @@ class DeliveryRequestController extends Controller
         $employeeCode = $user->id;
         $deliveryRequestTable = DeliveryRequest::resolveTableName();
 
+        app(\App\Support\AuditContext::class)->tag('delivery_request.created', 'Created Delivery Request');
+
         Log::debug('Delivery Type:', ['delivery_type' => $request->delivery_type]);
 
         // Validate the request data
@@ -411,6 +413,8 @@ class DeliveryRequestController extends Controller
         Log::debug('Delivery Type:', ['delivery_type' => $request->delivery_type]);
         $deliveryRequestTable = DeliveryRequest::resolveTableName();
 
+        app(\App\Support\AuditContext::class)->tag('delivery_request.updated', "Updated Delivery Request #{$deliveryRequest->id}");
+
 
         // Validate the request data
         $validationRules = [
@@ -571,6 +575,8 @@ class DeliveryRequestController extends Controller
      */
     public function destroy(DeliveryRequest $deliveryRequest)
     {
+        app(\App\Support\AuditContext::class)->tag('delivery_request.deleted', "Deleted Delivery Request #{$deliveryRequest->id}");
+
         // Change the status of the DeliveryRequest to 0
         $deliveryRequest->status = 0;
         $deliveryRequest->update();
@@ -769,6 +775,8 @@ class DeliveryRequestController extends Controller
 
         // Step 2: Retrieve the existing delivery request using the provided $id
         $deliveryRequest = DeliveryRequest::findOrFail($id);
+
+        app(\App\Support\AuditContext::class)->tag('delivery_request.split', "Split Delivery Request #{$id}");
 
         // Step 3: Initialize the lineItemIds array
         $lineItemIds = [];

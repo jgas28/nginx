@@ -30,6 +30,9 @@ use App\Http\Controllers\CashVoucherController;
 use App\Http\Controllers\CoordinatorsController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\LiquidationController;
+use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\RunningBalanceController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\DashboardController;
@@ -95,6 +98,15 @@ Route::middleware(['auth', 'route.access'])->group(function () {
     Route::resource('deliveryRequest', DeliveryRequestController::class);
     Route::resource('cashVoucherRequests', CashVoucherController::class);
     Route::resource('employees', EmployeeController::class);
+    Route::get('/employees/{employee}/permissions', [UserPermissionController::class, 'edit'])->name('employees.permissions.edit');
+    Route::put('/employees/{employee}/permissions', [UserPermissionController::class, 'update'])->name('employees.permissions.update');
+    Route::delete('/employees/{employee}/permissions', [UserPermissionController::class, 'reset'])->name('employees.permissions.reset');
+    Route::get('/roles', [PermissionController::class, 'index'])->name('roles.index');
+    Route::get('/roles/{role}/permissions', [PermissionController::class, 'edit'])->name('roles.permissions.edit');
+    Route::put('/roles/{role}/permissions', [PermissionController::class, 'update'])->name('roles.permissions.update');
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])->name('audit-logs.index');
+    Route::get('/audit-logs/export/excel', [AuditLogController::class, 'exportExcel'])->name('audit-logs.exportExcel');
+    Route::get('/audit-logs/export/pdf', [AuditLogController::class, 'exportPdf'])->name('audit-logs.exportPdf');
     Route::resource('coordinators', CoordinatorsController::class)
         ->parameters(['coordinators' => 'deliveryRequest'])
         ->except(['show']);

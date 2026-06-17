@@ -253,6 +253,7 @@ class CoordinatorsController extends Controller
                 'created_by' => $employeeCode,
                 'delivery_status' => $request->delivery_status,
             ]);
+            app(\App\Support\AuditContext::class)->tag('delivery_request.created_by_coordinator', "Created Delivery Request via Coordinator");
             $deliveryRequest->save();
 
             $deliveryRequestId = $deliveryRequest->id;
@@ -502,6 +503,7 @@ class CoordinatorsController extends Controller
             $deliveryRequest->expense_type_id = $request->expense_type_id;
             $deliveryRequest->delivery_status = $request->delivery_status;
 
+            app(\App\Support\AuditContext::class)->tag('delivery_request.updated_by_coordinator', "Updated Delivery Request #{$deliveryRequest->id} via Coordinator");
             $deliveryRequest->update();
             Log::debug('DeliveryRequest saved:', $deliveryRequest->toArray());
 
@@ -525,6 +527,7 @@ class CoordinatorsController extends Controller
 
     public function destroy(DeliveryRequest $deliveryRequest)
     {
+        app(\App\Support\AuditContext::class)->tag('delivery_request.deleted_by_coordinator', "Deleted Delivery Request #{$deliveryRequest->id} via Coordinator");
         // Change the status of the DeliveryRequest to 0
         $deliveryRequest->status = 0;
         $deliveryRequest->update();
@@ -680,6 +683,8 @@ class CoordinatorsController extends Controller
 
         // Step 2: Retrieve the existing delivery request using the provided $id
         $deliveryRequest = DeliveryRequest::findOrFail($id);
+
+        app(\App\Support\AuditContext::class)->tag('delivery_request.split', "Split Delivery Request #{$id}");
 
         // Step 3: Initialize the lineItemIds array
         $lineItemIds = [];
@@ -854,6 +859,8 @@ class CoordinatorsController extends Controller
         $user = Auth::user();
         $employeeCode = $user->id;
 
+        app(\App\Support\AuditContext::class)->tag('delivery_request.allocation_updated', "Updated Allocation for Delivery Request #{$deliveryRequest->id}");
+
         // Start transaction
         DB::beginTransaction();
 
@@ -998,6 +1005,8 @@ class CoordinatorsController extends Controller
     {
         $user = Auth::user();
         $employeeCode = $user->id;
+
+        app(\App\Support\AuditContext::class)->tag('delivery_request.allocated', "Allocated Delivery Request #{$deliveryRequest->id}");
 
         // Start transaction
         DB::beginTransaction();
@@ -1228,6 +1237,8 @@ class CoordinatorsController extends Controller
             ]);
             Log::info('Validation Passed:', ['validated_data' => $validated]);
 
+            app(\App\Support\AuditContext::class)->tag('delivery_request_cvr.pullout_created', "Created Pullout Cash Voucher for MTM {$request->mtm}");
+
         } catch (ValidationException $e) {
             Log::error('Validation Errors:', ['errors' => $e->errors()]);
             return redirect()->back()->withErrors($e->errors())->withInput();
@@ -1433,6 +1444,8 @@ class CoordinatorsController extends Controller
                 'tax_base_amount' => 'nullable|numeric|min:0',
             ]);
             Log::info('Validation Passed:', ['validated_data' => $validated]);
+
+            app(\App\Support\AuditContext::class)->tag('delivery_request_cvr.accessorial_created', "Created Accessorial Cash Voucher for MTM {$request->mtm}");
 
         } catch (ValidationException $e) {
             Log::error('Validation Errors:', ['errors' => $e->errors()]);

@@ -121,6 +121,8 @@ class AdminController extends Controller
 
     $request->validate($validationRules);
 
+    app(\App\Support\AuditContext::class)->tag('admin_cvr.created', 'Created Admin/RPM Cash Voucher');
+
     DB::transaction(function () use ($request, $employeeCode, $company_id) {
         // Calculate current (or next) month and year
         $currentDate = new DateTime(); // Always current date
@@ -376,6 +378,8 @@ class AdminController extends Controller
         $cvr_id = $request->cvr_id;
         $cashVouchers = CashVoucher::where('id', $cvr_id)->first();
 
+        app(\App\Support\AuditContext::class)->tag('admin_cvr.approved', "Approved Admin/RPM Cash Voucher #{$cvr_id}");
+
         if ($cashVouchers) {
             $cashVouchers->status = 2;
             $cashVouchers->save();
@@ -522,6 +526,8 @@ class AdminController extends Controller
 
         $cashVoucher = CashVoucher::find($request->cvr_id);
 
+        app(\App\Support\AuditContext::class)->tag('admin_cvr.rejected', "Rejected Admin/RPM Cash Voucher #{$request->cvr_id}");
+
         if ($cashVoucher) {
             $cashVoucher->status = 3;
 
@@ -630,6 +636,8 @@ class AdminController extends Controller
         ]);
 
         $cashVoucher = CashVoucher::findOrFail($id);
+
+        app(\App\Support\AuditContext::class)->tag('admin_cvr.resubmitted', "Resubmitted Admin/RPM Cash Voucher #{$cashVoucher->id}");
 
         $cashVoucher->cvr_type = $request->cvr_type;
         $cashVoucher->company_id = $request->company_id;
@@ -805,6 +813,7 @@ class AdminController extends Controller
 
         try {
             $voucher = cvr_approval::findOrFail($id);
+            app(\App\Support\AuditContext::class)->tag('admin_cvr.reference_updated', "Updated Reference Number for Admin/RPM Cash Voucher #{$voucher->id}");
             $voucher->reference_number = $request->reference_number;
             $voucher->save();
 
@@ -973,6 +982,8 @@ class AdminController extends Controller
             // Validate & extract ids
             $cvrIds = $request->input('cvr_ids', []);
             $voucherIds = $request->input('voucher_ids', []);
+
+            app(\App\Support\AuditContext::class)->tag('admin_cvr.marked_printed', 'Marked Admin/RPM Cash Voucher(s) as Printed');
 
             // Log the ids being updated
             Log::info('Received CVR IDs:', ['cvr_ids' => $cvrIds]);

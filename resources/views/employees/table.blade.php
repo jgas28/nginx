@@ -69,6 +69,9 @@
                     <td class="px-4 py-3.5 sm:px-6">
                         <div class="flex flex-wrap items-center justify-end gap-2">
                             <a href="{{ route('employees.edit', $employee) }}" class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-yellow-50 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm transition hover:-translate-y-0.5 hover:from-amber-100 hover:to-yellow-100 hover:shadow"><span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-amber-600"><i class="fas fa-pen text-[10px]"></i></span>Edit</a>
+                            @if(auth()->user()->isAdmin())
+                                <a href="{{ route('employees.permissions.edit', $employee) }}" class="inline-flex items-center justify-center gap-1.5 rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-blue-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm transition hover:-translate-y-0.5 hover:from-indigo-100 hover:to-blue-100 hover:shadow"><span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-indigo-600"><i class="fas fa-user-shield text-[10px]"></i></span>Permissions</a>
+                            @endif
                             <form action="{{ route('employees.destroy', $employee) }}" method="POST" class="employee-delete-form">
                                 @csrf
                                 @method('DELETE')

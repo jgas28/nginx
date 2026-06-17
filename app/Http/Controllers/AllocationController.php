@@ -88,6 +88,8 @@ class AllocationController extends Controller
         $remarks = $request->remarks ?? [];
         $employeeCode = Auth::id();
 
+        app(\App\Support\AuditContext::class)->tag('allocation.allocated', 'Allocated Delivery Request(s)');
+
         Log::info('Starting the allocation process.', [
             'user_id' => $employeeCode,
             'truck_id' => $truckId,

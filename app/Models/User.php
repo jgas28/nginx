@@ -100,6 +100,28 @@ class User extends Authenticatable
         return $this->roles->whereIn('id', $roleIds)->isNotEmpty();
     }
 
+    public function modulePermissions()
+    {
+        return $this->hasMany(UserModulePermission::class);
+    }
+
+    public function canOnModule(string $moduleSlug, string $action): bool
+    {
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        $override = $this->modulePermissions()
+            ->whereHas('module', fn ($query) => $query->where('slug', $moduleSlug))
+            ->first();
+
+        if ($override) {
+            return (bool) $override->{"can_{$action}"};
+        }
+
+        return $this->roles->contains(fn ($role) => $role->canOnModule($moduleSlug, $action));
+    }
+
     public function hasDashboardAccess(): bool
     {
         return $this->hasAnyRoleId(array_keys(self::DASHBOARD_ROLE_VIEW_MAP));

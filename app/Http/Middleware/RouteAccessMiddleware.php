@@ -28,9 +28,12 @@ use App\Http\Controllers\ExpenseTypeController;
 use App\Http\Controllers\FleetCardController;
 use App\Http\Controllers\HRController;
 use App\Http\Controllers\LiquidationController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\MonthlySeriesResetController;
 use App\Http\Controllers\Auth\PasswordController;
+use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RegionController;
+use App\Http\Controllers\UserPermissionController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\RunningBalanceController;
 use App\Http\Controllers\SupplierController;
@@ -38,14 +41,34 @@ use App\Http\Controllers\TruckController;
 use App\Http\Controllers\TruckTypeController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\WithholdingTaxController;
+use App\Models\Module;
+use App\Models\RoleModulePermission;
+use App\Models\User;
+use App\Models\UserModulePermission;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Symfony\Component\HttpFoundation\Response;
 
 class RouteAccessMiddleware
 {
     private const SUPER_ADMIN_ROLE_IDS = [1, 2];
+
+    /**
+     * Resourceful CRUD methods governed by the per-module role_module_permissions table.
+     * `show` is deliberately excluded -- some controllers (e.g. AllocationController) gate it
+     * with a role list distinct from `index`, which a single coarse "view" action can't
+     * represent without widening access. `show` always falls through to the legacy arrays below.
+     */
+    private const CRUD_METHOD_ACTION_MAP = [
+        'index' => 'view',
+        'create' => 'create',
+        'store' => 'create',
+        'edit' => 'edit',
+        'update' => 'edit',
+        'destroy' => 'delete',
+    ];
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -53,6 +76,12 @@ class RouteAccessMiddleware
 
         if (!$user) {
             return $next($request);
+        }
+
+        $userOverride = $this->resolveUserOverride($request, $user);
+
+        if ($userOverride !== null) {
+            return $userOverride ? $next($request) : abort(403, 'Unauthorized');
         }
 
         $allowedRoleIds = $this->resolveAllowedRoleIds($request);
@@ -68,25 +97,62 @@ class RouteAccessMiddleware
         abort(403, 'Unauthorized');
     }
 
+    /**
+     * Per-employee permission override, checked before the role-based resolution below.
+     * Unlike role-based access (an allow-list that can only ever grant), an override is
+     * authoritative when present -- it can both grant beyond the employee's role(s) and
+     * restrict below them. Returns null when no override applies, meaning the caller should
+     * fall through to the existing role-based resolution unchanged.
+     */
+    private function resolveUserOverride(Request $request, User $user): ?bool
+    {
+        if ($user->isAdmin()) {
+            return null;
+        }
+
+        [$controller, $method] = $this->routeControllerMethod($request) ?? [null, null];
+
+        if ($controller === null || !array_key_exists($method, self::CRUD_METHOD_ACTION_MAP)) {
+            return null;
+        }
+
+        $moduleId = $this->moduleMap()[$controller] ?? null;
+
+        if ($moduleId === null) {
+            return null;
+        }
+
+        $override = UserModulePermission::where('user_id', $user->id)
+            ->where('module_id', $moduleId)
+            ->first();
+
+        if (!$override) {
+            return null;
+        }
+
+        $action = self::CRUD_METHOD_ACTION_MAP[$method];
+
+        return (bool) $override->{"can_{$action}"};
+    }
+
     private function resolveAllowedRoleIds(Request $request): ?array
     {
-        $route = $request->route();
+        [$controller, $method] = $this->routeControllerMethod($request) ?? [null, null];
 
-        if (!$route) {
+        if ($controller === null) {
             return null;
         }
-
-        $action = (string) $route->getActionName();
-
-        if ($action === '' || $action === 'Closure' || !str_contains($action, '@')) {
-            return null;
-        }
-
-        [$controller, $method] = explode('@', $action, 2);
-        $controller = ltrim($controller, '\\');
 
         if ($this->shouldAllowAllAuthenticated($controller, $method)) {
             return [];
+        }
+
+        if (array_key_exists($method, self::CRUD_METHOD_ACTION_MAP)) {
+            $moduleRoleIds = $this->resolveModuleRoleIds($controller, self::CRUD_METHOD_ACTION_MAP[$method]);
+
+            if ($moduleRoleIds !== null) {
+                return $this->withSuperAdmins($moduleRoleIds);
+            }
         }
 
         foreach ($this->controllerMethodRules()[$controller] ?? [] as $rule) {
@@ -102,6 +168,29 @@ class RouteAccessMiddleware
         }
 
         return self::SUPER_ADMIN_ROLE_IDS;
+    }
+
+    /**
+     * Shared route parsing used by both resolveUserOverride() and resolveAllowedRoleIds().
+     * Returns [controllerFqcn, method] or null when the route has no controller action.
+     */
+    private function routeControllerMethod(Request $request): ?array
+    {
+        $route = $request->route();
+
+        if (!$route) {
+            return null;
+        }
+
+        $action = (string) $route->getActionName();
+
+        if ($action === '' || $action === 'Closure' || !str_contains($action, '@')) {
+            return null;
+        }
+
+        [$controller, $method] = explode('@', $action, 2);
+
+        return [ltrim($controller, '\\'), $method];
     }
 
     private function shouldAllowAllAuthenticated(string $controller, string $method): bool
@@ -124,6 +213,36 @@ class RouteAccessMiddleware
             ...self::SUPER_ADMIN_ROLE_IDS,
             ...$roleIds,
         ]));
+    }
+
+    /**
+     * Resolves the allowed role ids for a CRUD action via the module permission table.
+     * Returns null when the controller has no Module row -- meaning it isn't governed by
+     * this system at all, and the caller should fall through to the legacy arrays.
+     */
+    private function resolveModuleRoleIds(string $controller, string $action): ?array
+    {
+        $moduleId = $this->moduleMap()[$controller] ?? null;
+
+        if ($moduleId === null) {
+            return null;
+        }
+
+        return RoleModulePermission::where('module_id', $moduleId)
+            ->where("can_{$action}", true)
+            ->pluck('role_id')
+            ->all();
+    }
+
+    /**
+     * Controller FQCN => module id, cached indefinitely. Modules only change via migrations,
+     * not at runtime, so there is no invalidation path -- bust manually (cache:clear) if needed.
+     */
+    private function moduleMap(): array
+    {
+        return Cache::rememberForever('modules.controller_map', function () {
+            return Module::query()->pluck('id', 'controller')->all();
+        });
     }
 
     private function controllerRules(): array
@@ -155,6 +274,9 @@ class RouteAccessMiddleware
             DashboardController::class => [37, 38, 39, 40, 41],
             DetailsController::class => [40, 41],
             LiquidationController::class => [20, 21, 22, 23, 24, 25, 26, 27],
+            PermissionController::class => [1, 2],
+            AuditLogController::class => [1, 2],
+            UserPermissionController::class => [1, 2],
         ];
     }
 

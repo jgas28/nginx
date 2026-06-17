@@ -173,6 +173,8 @@ class BillingController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
+        app(\App\Support\AuditContext::class)->tag('soa.updated', "Updated SOA #{$soa->id}");
+
         $deliveryRequestIds = collect($request->delivery_request_ids)
             ->map(fn ($id) => (int) $id)
             ->unique()
@@ -356,6 +358,8 @@ class BillingController extends Controller
 
     public function destroySOA(Soa $soa)
     {
+        app(\App\Support\AuditContext::class)->tag('soa.deleted', "Deleted SOA #{$soa->id}");
+
         DB::beginTransaction();
 
         try {
@@ -373,6 +377,8 @@ class BillingController extends Controller
 
     public function markAsPaid(Soa $soa)
     {
+        app(\App\Support\AuditContext::class)->tag('soa.marked_paid', "Marked SOA #{$soa->id} as Paid");
+
         try {
             $totalAmount = (float) ($soa->total_amount ?? 0);
 
@@ -650,6 +656,8 @@ class BillingController extends Controller
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
+
+        app(\App\Support\AuditContext::class)->tag('soa.created', "Created SOA");
 
         try {
             DB::beginTransaction();

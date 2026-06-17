@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Role;
+use App\Support\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -32,10 +33,13 @@ class AuthController extends Controller
             ->first();
 
             if (!$user || !Hash::check($request->password, $user->password)) {
+                AuditLogger::recordAuth('login_failed', null, "Failed login attempt for employee_code: {$request->employee_code}");
+
                 return back()->withErrors(['employee_code' => 'Invalid credentials']);
             }
 
             Auth::login($user);
+            AuditLogger::recordAuth('login', $user, 'Logged in');
 
             $roleIds = $user->roles->pluck('id')->toArray();
 
@@ -100,7 +104,9 @@ class AuthController extends Controller
     // Handle logout
     public function logout()
     {
+        $user = Auth::user();
         Auth::logout();
+        AuditLogger::recordAuth('logout', $user, 'Logged out');
         return redirect()->route('login');
     }
 }

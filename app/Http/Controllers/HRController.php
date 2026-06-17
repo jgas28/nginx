@@ -267,6 +267,8 @@ class HRController extends Controller
         
         $employee = User::findOrFail($request->user_id);
 
+        app(\App\Support\AuditContext::class)->tag('payroll.created', "Created Payroll for {$employee->fname} {$employee->lname}");
+
         $existingPayroll = Payroll::where('user_id', $employee->id)
             ->whereDate('cutoff_from', $request->cutoff_from)
             ->whereDate('cutoff_to', $request->cutoff_to)
@@ -375,6 +377,8 @@ class HRController extends Controller
         if (!empty($validationRules)) {
             $request->validate($validationRules);
         }
+
+        app(\App\Support\AuditContext::class)->tag('hr_compensation.updated', 'Updated Employee Compensation Rates');
 
         $userIds = collect([
             array_keys($request->input('daily_rates', [])),

@@ -262,6 +262,7 @@ class LiquidationController extends Controller
         ];
 
         // Create the Liquidation record
+        app(\App\Support\AuditContext::class)->tag('liquidation.submitted', "Submitted Liquidation for DR #{$request->input('cvr_number')}");
         Liquidation::create($data);
         $cvrId = $request->input('cvr_id');
         CashVoucher::where('id', $cvrId)->update(['status' => 4]);
@@ -514,6 +515,8 @@ class LiquidationController extends Controller
     public function validateLiquidation(Request $request, $id)
     {
         $liquidation = Liquidation::findOrFail($id);
+
+        app(\App\Support\AuditContext::class)->tag('liquidation.validated', "Validated Liquidation #{$liquidation->id}");
 
         $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
 
@@ -814,6 +817,7 @@ class LiquidationController extends Controller
         ]);
 
         $liquidation = Liquidation::findOrFail($id);
+        app(\App\Support\AuditContext::class)->tag('liquidation.rejected', "Rejected Liquidation #{$liquidation->id}");
         $liquidation->status = 10; // Rejected
         $liquidation->validated_by = $request->validated_by;
         $liquidation->validated_at = now();
@@ -830,6 +834,8 @@ class LiquidationController extends Controller
         ]);
 
         $liquidation = Liquidation::findOrFail($id);
+
+        app(\App\Support\AuditContext::class)->tag('liquidation.collected', "Collected Liquidation #{$liquidation->id}");
 
         $liquidation->collected_by = $request->validated_by;
         $liquidation->collected_at = now();
@@ -1121,6 +1127,8 @@ class LiquidationController extends Controller
 
         $liquidation = Liquidation::findOrFail($id);
 
+        app(\App\Support\AuditContext::class)->tag('liquidation.approved', "Approved Liquidation #{$liquidation->id}");
+
         $liquidation->approved_by = 54;
         $liquidation->approved_at = now();
         $liquidation->status = 5;
@@ -1137,8 +1145,10 @@ class LiquidationController extends Controller
 
         $liquidation = Liquidation::findOrFail($id);
 
+        app(\App\Support\AuditContext::class)->tag('liquidation.moved_to_approval', "Moved Liquidation #{$liquidation->id} to Approval");
+
         $approvedAmount = floatval($liquidation->cvrApproval->amount ?? 0) + floatval($liquidation->cvrApproval->charge ?? 0);
- 
+
         // Recalculate the total like in your `validated` method
         $totalCash = 0;
 
@@ -1387,6 +1397,8 @@ class LiquidationController extends Controller
         // Find the liquidation by ID
         $liquidation = Liquidation::findOrFail($id);
 
+        app(\App\Support\AuditContext::class)->tag('liquidation.expenses_updated', "Updated Expenses for Liquidation #{$liquidation->id}");
+
         // Validate the request data (e.g., approved_by and expenses)
         $request->validate([
             'allowance'    => 'nullable|numeric',
@@ -1435,6 +1447,8 @@ class LiquidationController extends Controller
         // Find the liquidation by ID
         $liquidation = Liquidation::findOrFail($id);
 
+        app(\App\Support\AuditContext::class)->tag('liquidation.collection_updated', "Updated Collection for Liquidation #{$liquidation->id}");
+
         // Validate the request data (e.g., approved_by and expenses)
         $request->validate([
             'allowance'    => 'nullable|numeric',
@@ -1482,6 +1496,8 @@ class LiquidationController extends Controller
     {
         // Find the liquidation by ID
         $liquidation = Liquidation::findOrFail($id);
+
+        app(\App\Support\AuditContext::class)->tag('liquidation.validation_updated', "Updated Validation for Liquidation #{$liquidation->id}");
 
         // Validate the request data (e.g., approved_by and expenses)
         $request->validate([
@@ -1657,6 +1673,8 @@ class LiquidationController extends Controller
         Log::info('Reject Update Request:', $request->all());
 
         $liquidation = Liquidation::findOrFail($id);
+
+        app(\App\Support\AuditContext::class)->tag('liquidation.resubmitted', "Resubmitted Liquidation #{$liquidation->id}");
 
         $data = $request->validate([
             'allowance'    => 'nullable|numeric',
