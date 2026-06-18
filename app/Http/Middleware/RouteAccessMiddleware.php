@@ -68,6 +68,10 @@ class RouteAccessMiddleware
         'edit' => 'edit',
         'update' => 'edit',
         'destroy' => 'delete',
+        'editAllocation' => 'edit',
+        'updateAllocation' => 'edit',
+        'editAllocated' => 'edit',
+        'updateAllocated' => 'edit',
     ];
 
     public function handle(Request $request, Closure $next): Response
