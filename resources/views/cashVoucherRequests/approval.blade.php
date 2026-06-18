@@ -340,7 +340,10 @@
             if (!panel.contains(e.target)) closePanel();
         });
 
-        document.addEventListener('scroll', closePanel, true);
+        document.addEventListener('scroll', function (e) {
+            if (panel.contains(e.target)) return;
+            closePanel();
+        }, true);
         window.addEventListener('resize', closePanel);
     })();
 </script>
