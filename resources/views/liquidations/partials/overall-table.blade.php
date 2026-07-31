@@ -39,6 +39,7 @@
                     <th class="px-4 py-4 text-right sm:px-6">Liquidated Cash</th>
                     <th class="px-4 py-4 text-right sm:px-6">Liquidated Card</th>
                     <th class="px-4 py-4 text-left sm:px-6">Status</th>
+                    <th class="px-4 py-4 text-left sm:px-6">Created By</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 bg-white">
@@ -62,10 +63,11 @@
                                 {{ $voucher->overall_status }}
                             </span>
                         </td>
+                        <td class="px-4 py-4 sm:px-6">{{ $voucher->created_by ?: 'N/A' }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8" class="px-4 py-12 text-center text-slate-500 sm:px-6">
+                        <td colspan="9" class="px-4 py-12 text-center text-slate-500 sm:px-6">
                             No records found for the selected filters.
                         </td>
                     </tr>

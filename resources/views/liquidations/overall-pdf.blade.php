@@ -43,6 +43,7 @@
                 <th style="text-align:right">Liquidated</th>
                 <th>Status</th>
                 <th>Date</th>
+                <th>Created By</th>
             </tr>
         </thead>
         <tbody>
@@ -80,6 +81,7 @@
                     <td class="amount">{{ number_format((float) $row->liquidated_cash, 2) }}</td>
                     <td><span class="badge {{ $badgeClass }}">{{ $row->overall_status }}</span></td>
                     <td>{{ $row->date_created }}</td>
+                    <td>{{ $row->created_by ?: '-' }}</td>
                 </tr>
             @endforeach
         </tbody>
@@ -89,7 +91,7 @@
                 <td class="amount">{{ number_format($totalReq, 2) }}</td>
                 <td class="amount">{{ number_format($totalApproved, 2) }}</td>
                 <td class="amount">{{ number_format($totalLiq, 2) }}</td>
-                <td colspan="2"></td>
+                <td colspan="3"></td>
             </tr>
         </tfoot>
     </table>

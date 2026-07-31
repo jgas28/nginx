@@ -1802,7 +1802,8 @@ class LiquidationController extends Controller
                 c.company_code,
                 et.expense_code,
                 crt.request_type AS request_code,
-                CASE 
+                TRIM(CONCAT(COALESCE(cu.fname, ''), ' ', COALESCE(cu.lname, ''))) AS created_by,
+                CASE
                     WHEN cv.cvr_type IN ('admin','rpm') THEN (
                         SELECT SUM(CAST(JSON_UNQUOTE(amt.value) AS DECIMAL(10,2)))
                         FROM JSON_TABLE(cv.amount_details, '$[*]' COLUMNS (value JSON PATH '$')) AS amt
@@ -1891,6 +1892,7 @@ class LiquidationController extends Controller
                                                                     ELSE dr.expense_type_id 
                                                                 END
             LEFT JOIN fczcnyx.cvr_request_type crt ON crt.id = cv.request_type
+            LEFT JOIN fczcnyx.users cu ON cu.id = cv.created_by
             $conditions
         ";
 
@@ -2018,6 +2020,7 @@ class LiquidationController extends Controller
             SELECT
                 cv.cvr_number, cv.cvr_type, t.truck_name, c.company_code, et.expense_code,
                 crt.request_type AS request_code,
+                TRIM(CONCAT(COALESCE(cu.fname, ''), ' ', COALESCE(cu.lname, ''))) AS created_by,
                 CASE WHEN cv.cvr_type IN ('admin','rpm') THEN (
                     SELECT SUM(CAST(JSON_UNQUOTE(amt.value) AS DECIMAL(10,2)))
                     FROM JSON_TABLE(cv.amount_details, '\$[*]' COLUMNS (value JSON PATH '\$')) AS amt
@@ -2044,6 +2047,7 @@ class LiquidationController extends Controller
             LEFT JOIN fczcnyx.companies c ON c.id = CASE WHEN cv.cvr_type IN ('admin','rpm') THEN cv.company_id ELSE dr.company_id END
             LEFT JOIN fczcnyx.expense_types et ON et.id = CASE WHEN cv.cvr_type IN ('admin','rpm') THEN cv.expense_type_id ELSE dr.expense_type_id END
             LEFT JOIN fczcnyx.cvr_request_type crt ON crt.id = cv.request_type
+            LEFT JOIN fczcnyx.users cu ON cu.id = cv.created_by
             $conditions
         ";
 
@@ -2079,7 +2083,7 @@ class LiquidationController extends Controller
             fputcsv($file, []);
 
             // Header
-            fputcsv($file, ['CVR Number', 'Type', 'Company', 'Truck', 'Expense Code', 'Request Type', 'Requested', 'Approved', 'Liquidated (Cash)', 'Status', 'Date']);
+            fputcsv($file, ['CVR Number', 'Type', 'Company', 'Truck', 'Expense Code', 'Request Type', 'Requested', 'Approved', 'Liquidated (Cash)', 'Status', 'Date', 'Created By']);
 
             foreach ($rows as $row) {
                 fputcsv($file, [
@@ -2094,6 +2098,7 @@ class LiquidationController extends Controller
                     number_format((float) $row->liquidated_cash, 2),
                     $row->overall_status,
                     $row->date_created,
+                    $row->created_by ?: 'N/A',
                 ]);
             }
 
