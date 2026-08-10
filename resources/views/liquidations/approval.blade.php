@@ -880,6 +880,23 @@
         reimbursementModal?.classList.add('hidden');
     });
 
+    // Auto-fill the uncollected description based on the entered period
+    const periodInput = document.getElementById('period');
+    const descriptionUncollectedInput = document.getElementById('description_uncollected');
+
+    function updateUncollectedDescription() {
+        const periodValue = periodInput.value.trim();
+        if (periodValue) {
+            descriptionUncollectedInput.value = `SD - Period ${periodValue}`;
+        } else {
+            descriptionUncollectedInput.value = '';
+        }
+    }
+
+    if (periodInput && descriptionUncollectedInput) {
+        periodInput.addEventListener('input', updateUncollectedDescription);
+    }
+
     // Additional dynamic functionality for uncollected modal
     const addEmployeeUncollectedBtn = document.getElementById('add-employee-uncollected-btn');
     const employeeDeductionsUncollectedContainer = document.getElementById('employee-deductions-uncollected-container');
