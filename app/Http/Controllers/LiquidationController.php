@@ -590,7 +590,7 @@ class LiquidationController extends Controller
             'cashVoucher.deliveryRequest.expenseType',
         ])->where('status', 3);
 
-        if (!in_array($user->id, [1, 53, 54])) {
+        if (!in_array($user->id, [1, 5, 53, 54])) {
             $query->where('collector_id', $user->id);
         }
 
