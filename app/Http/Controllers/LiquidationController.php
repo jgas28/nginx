@@ -388,7 +388,7 @@ class LiquidationController extends Controller
         $employees = User::whereIn('id', [41,5,15,53,1,9,16,22])->get(); // You can adjust this condition as needed
         $staffs = User::where('status', '!=', 0)->get();
         $approvers = Approver::all();
-        $collectors = User::whereIn('id', [15,35,54])->get();
+        $collectors = User::whereIn('id', [15,35,54,1,5])->get();
         $suppliers = Supplier::orderBy('supplier_name')->get();
 
         // Calculate total liquidated cash (cash only)
